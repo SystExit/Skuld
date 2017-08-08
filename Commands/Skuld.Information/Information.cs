@@ -127,7 +127,7 @@ namespace Skuld.Commands
         public async Task DInfo()
         {
             var user = await Context.User.GetOrCreateDMChannelAsync();
-            await MessageHandler.SendDMs(Context.Channel, user,$"Hey. I'm Skuld, a utility bot that aims to bring tools and fun stuff to your server! :blush:\n\nThanks for using the bot. It means a lot. <3");
+            await MessageHandler.SendDMs(Context.Channel, user,$"Hey. I'm Skuld, a utility bot that aims to bring tools and fun stuff to your server! :blush:\n\nThanks for using the bot. It means a lot. <3\n\nP.S. I also have a twitter where you can also get support from: <https://twitter.com/SkuldDiscordBot> \n\nOr there's the Support server: http://discord.gg/JYzvjah");
         }
 
         [Command("id", RunMode = RunMode.Async), Summary("Gets the users ID only")]
@@ -155,7 +155,7 @@ namespace Skuld.Commands
         public async Task DevDisc()
         {
             var user = await Context.User.GetOrCreateDMChannelAsync();
-            await MessageHandler.SendDMs(Context.Channel, user, $"Join the support server at: http://discord.gg/6jcAP38");
+            await MessageHandler.SendDMs(Context.Channel, user, $"Join the support server at: http://discord.gg/JYzvjah");
         }
         [Command("botinvite", RunMode = RunMode.Async), Summary("OAuth2 Invite")]
         public async Task Bot()
@@ -172,7 +172,7 @@ namespace Skuld.Commands
             int bots = guild.Users.Where(x => x.IsBot == true).Count();
             int humans = guild.Users.Where(x=>x.IsBot == false).Count();
             int guildusers = guild.DownloadedMemberCount;
-            double perc = (double)bots / (double)guildusers;
+            double perc = bots / guildusers;
             string percentage = Math.Round(perc, 2)*100+"%";
             await MessageHandler.SendChannel(Context.Channel, $"Current Bots are: {bots}\nCurrent Users are: {humans}\nTotal Guild Users: {guildusers}\n{percentage} of the Guild Users are bots");
         }

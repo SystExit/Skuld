@@ -22,7 +22,6 @@ using System.Collections.Generic;
 using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Imgur.API.Models;
-using System.Collections.Immutable;
 
 namespace Skuld.Commands
 {
