@@ -179,9 +179,18 @@ namespace Skuld.Events
             
             foreach (var guild in bot.Guilds)
             {
-                int nonbots = guild.Users.Where(x => x.IsBot == false).Count();
-                gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\\"").Replace("\'", "\\\'")}\" , {nonbots} , \"{Config.Load().Prefix}\" , 0 ), ";
-                guildcount = guildcount + 1;
+                var cmd = new MySqlCommand("select ID from guild where ID = @guildid");
+                cmd.Parameters.AddWithValue("@guildid", guild.Id);
+                var resp = await Sql.GetAsync(cmd);
+                while (await resp.ReadAsync())
+                {
+                    if (await resp.IsDBNullAsync(0))
+                    {
+                        int nonbots = guild.Users.Where(x => x.IsBot == false).Count();
+                        gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\\"").Replace("\'", "\\\'")}\" , {nonbots} , \"{Config.Load().Prefix}\" , 0 ), ";
+                        guildcount = guildcount + 1;
+                    }
+                }
             }
             if (gcmd.CommandText.Contains(Config.Load().Prefix))
             {
@@ -190,7 +199,6 @@ namespace Skuld.Events
                     gcmd.CommandText = gcmd.CommandText.Substring(0, gcmd.CommandText.Length - 2);
                     Logs.Add(new Models.LogMessage("IsrtGld", $"Added {guildcount} Guild(s) to the database", LogSeverity.Info));
                     await Sql.InsertAsync(gcmd);
-                    await PopulateUsers();
                 }
             }
             Logs.Add(new Models.LogMessage("IsrtGld", $"Finished!", LogSeverity.Info));
