@@ -5,6 +5,7 @@ using Discord;
 using Skuld.Tools;
 using Skuld.APIS;
 using MySql.Data.MySqlClient;
+using System.Linq;
 
 namespace Skuld.Commands
 {
@@ -12,46 +13,44 @@ namespace Skuld.Commands
     public class Actions : ModuleBase
     {
         [Command("slap", RunMode = RunMode.Async), Summary("Slap a user")]
-        public async Task Slap(IGuildUser usertoslap)
+        public async Task Slap([Remainder]IGuildUser guilduser)
         {
-            if (usertoslap == Context.User)
-            {
-                await Send($"B-Baka.... {Bot.bot.CurrentUser.Username} slapped {usertoslap.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=slap")));
-            }
+            var contuser = Context.User as IGuildUser;
+            var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
+            if (guilduser == contuser)
+                await Send($"B-Baka.... {botguild.Nickname ?? botguild.Username} slapped {contuser.Nickname??contuser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=slap")));
             else
-            {
-                await Send($"{Context.User.Username} slapped {usertoslap.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=slap")));
-            }
+                await Send($"{contuser.Nickname??contuser.Username} slapped {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=slap")));
         }
-
+        
         [Command("kill", RunMode = RunMode.Async), Summary("Kill a user with an item")]
-        public async Task Kill(IGuildUser usertokill)
+        public async Task Kill([Remainder]IGuildUser guilduser)
         {
-            var curruser = Context.User as IGuildUser;
-            if (Context.User.Id == usertokill.Id)
-                await Send($"{curruser.Username} killed themself", "http://i.giphy.com/l2JeiuwmhZlkrVOkU.gif");
+            var contuser = Context.User as IGuildUser;
+            if (contuser == guilduser)
+                await Send($"{contuser.Nickname ?? contuser.Username} killed themself", "http://i.giphy.com/l2JeiuwmhZlkrVOkU.gif");
             else
-                await Send($"{curruser.Username} killed {usertokill.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=kill")));
+                await Send($"{contuser.Nickname ?? contuser.Username} killed {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=kill")));
         }
-
+        
         [Command("stab", RunMode = RunMode.Async), Summary("Stabs a user")]
-        public async Task Stab(IGuildUser usertostab)
+        public async Task Stab([Remainder]IGuildUser guilduser)
         {
-            if (Context.User == usertostab) { await Send($"{Bot.bot.CurrentUser.Username} stabbed {usertostab.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=stab"))); }
+            var contuser = Context.User as IGuildUser;
+            var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
+            if (contuser == guilduser)
+                await Send($"URUSAI!! {botguild.Nickname??botguild.Username} stabbed {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=stab")));
+            else if (guilduser.IsBot)
+                await Send($"{contuser.Nickname ?? contuser.Username} stabbed {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=stab")));
             else
             {
                 int dhp = Bot.random.Next(0, 100);
-
                 MySqlCommand command = new MySqlCommand();
                 command.CommandText = "select HP from accounts where ID = @userid";
-                command.Parameters.AddWithValue("@userid", usertostab.Id);
+                command.Parameters.AddWithValue("@userid", guilduser.Id);
                 var resp = await Sql.GetSingleAsync(command);
-
-                var curruser = Context.User as IGuildUser;
                 if (String.IsNullOrEmpty(resp))
-                {
-                    await InsertUser(usertostab);
-                }
+                    await InsertUser(guilduser);
                 else
                 {
                     var uhp = Convert.ToUInt32(resp);
@@ -61,107 +60,100 @@ namespace Skuld.Commands
                         command = new MySqlCommand();
                         command.CommandText = "UPDATE accounts SET hp = @hp where ID = @userid";
                         command.Parameters.AddWithValue("@hp", hp);
-                        command.Parameters.AddWithValue("@userid", usertostab.Id);
+                        command.Parameters.AddWithValue("@userid", guilduser.Id);
                         await Sql.InsertAsync(command);
-
-                        await Send($"{curruser.Username} just stabbed {usertostab.Username} for {dhp} HP, they now have {hp} HP left", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=stab")));
+                        await Send($"{contuser.Nickname??contuser.Username} just stabbed {guilduser.Nickname??guilduser.Username} for {dhp} HP, they now have {hp} HP left", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=stab")));
                     }
                     else
                     {
                         command = new MySqlCommand();
                         command.CommandText = "UPDATE accounts SET hp = 0 where ID = @userid";
-                        command.Parameters.AddWithValue("@userid", usertostab.Id);
+                        command.Parameters.AddWithValue("@userid", guilduser.Id);
                         await Sql.InsertAsync(command);
-
-                        await Send($"{curruser.Username} just stabbed {usertostab.Username} for {dhp} HP, they have no HP left", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=stab")));
+                        await Send($"{contuser.Nickname??contuser.Username} just stabbed {contuser.Nickname??guilduser.Username} for {dhp} HP, they have no HP left", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=stab")));
                     }
                 }
             }
         }
-
+        
         [Command("hug", RunMode = RunMode.Async), Summary("hugs a user")]
-        public async Task Hug(IGuildUser usertohug)
+        public async Task Hug([Remainder]IGuildUser guilduser)
         {
-            if (usertohug == Context.User)
-            {
-                await Send($"{Bot.bot.CurrentUser.Username} hugs {usertohug.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=hug")));
-            }
+            var contuser = Context.User as IGuildUser;
+            var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
+            if (guilduser == contuser)
+                await Send($"{botguild.Nickname ?? botguild.Username} hugs {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=hug")));
             else
-            {
-                var curruser = Context.User as IGuildUser;
-                await Send($"{curruser.Username} just hugged {usertohug.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=hug")));
-            }
+                await Send($"{contuser.Nickname ?? contuser.Username} just hugged {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=hug")));
+        }
+        
+        [Command("punch", RunMode = RunMode.Async), Summary("Punch a user")]
+        public async Task Punch([Remainder]IGuildUser guilduser)
+        {
+            var contuser = Context.User as IGuildUser;
+            var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
+            if (guilduser == contuser)
+                await Send($"URUSAI!! {botguild.Nickname ?? botguild.Username} just punched {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=punch")));
+            else
+                await Send($"{contuser.Nickname ?? contuser.Username} just punched {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=punch")));
         }
 
-        [Command("punch", RunMode = RunMode.Async), Summary("Punch a user")]
-        public async Task Punch(IGuildUser usertopunch)
-        {
-            if(usertopunch == Context.User)
-            {
-                await Send($"B-Baka... {Bot.bot.CurrentUser.Username} glares at {usertopunch.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=punch")));
-            }
-            else
-            {
-                var curruser = Context.User as IGuildUser;
-                await Send($"{curruser.Username} just punched {usertopunch.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=punch")));
-            }
-        }
         [Command("shrug", RunMode = RunMode.Async), Summary("Shrugs")]
-        public async Task Punch()
-        {
-            await Send($"{Context.User.Username} shrugs.", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=shrug")));
-        }
+        public async Task Punch() => 
+            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} shrugs.", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=shrug")));
+                
         [Command("adore", RunMode = RunMode.Async), Summary("Adore a user")]
-        public async Task Adore(IGuildUser usertoadore)
+        public async Task Adore([Remainder]IGuildUser guilduser)
         {
-            if (usertoadore == Context.User)
-            {
-                await Send($"I-it's not like I like you or anything... {Bot.bot.CurrentUser.Username} glares at {usertoadore.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=adore")));
-            }
+            var contuser = Context.User as IGuildUser;
+            var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
+            if (guilduser == contuser)
+                await Send($"I-it's not like I like you or anything... {botguild.Nickname ?? botguild.Username} adores {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=adore")));
             else
-            {
-                var curruser = Context.User as IGuildUser;
-                await Send($"{curruser.Username} adores {usertoadore.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=adore")));
-            }
+                await Send($"{contuser.Nickname ?? contuser.Username} adores {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=adore")));
+
         }
+
         [Command("kiss", RunMode = RunMode.Async), Summary("Kiss a user")]
-        public async Task Kiss(IGuildUser usertokiss)
+        public async Task Kiss([Remainder]IGuildUser guilduser)
         {
-            if (usertokiss == Context.User)
-            {
-                await Send($"I-it's not like I like you or anything... {Bot.bot.CurrentUser.Username} glares at {usertokiss.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=kiss")));
-            }
+            var contuser = Context.User as IGuildUser;
+            var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
+            if (guilduser == contuser)
+                await Send($"I-it's not like I like you or anything... {botguild.Nickname ?? botguild.Username} just kissed {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=kiss")));
             else
-            {
-                var curruser = Context.User as IGuildUser;
-                await Send($"{curruser.Username} just kissed {usertokiss.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=kiss")));
-            }
+                await Send($"{contuser.Nickname ?? contuser.Username} just kissed {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=kiss")));
         }
+
         [Command("grope", RunMode = RunMode.Async), Summary("Grope a user")]
-        public async Task Grope(IGuildUser usertogrope)
+        public async Task Grope([Remainder]IGuildUser guilduser)
         {
-            var curruser = Context.User as IGuildUser;
-            await Send($"{curruser.Username} just groped {usertogrope.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=grope")));
+            var contuser = Context.User as IGuildUser;
+            var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
+            if (guilduser == contuser)
+                await Send($"{botguild.Nickname??botguild.Username} just groped {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=grope")));
+            else
+                await Send($"{contuser.Nickname?? contuser.Username} just groped {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=grope")));
         }
 
         [Command("pet", RunMode = RunMode.Async), Summary("Pets a user")]
-        public async Task Pet(IGuildUser usertopet)
+        public async Task Pet([Remainder]IGuildUser guilduser)
         {
-            if (Context.User == usertopet)
-            {
-                await Send($"{Bot.bot.CurrentUser.Username} glares at {usertopet.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=pet")));
-            }
+            var contuser = Context.User as IGuildUser;
+            var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
+            if (contuser == guilduser)
+                await Send($"{botguild.Nickname??botguild.Username} just petted {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=pet")));
+            else if (guilduser.IsBot)
+                await Send($"{contuser.Nickname?? contuser.Username} just petted {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=pet")));
             else
             {
-                var curruser = Context.User as IGuildUser;
-
                 MySqlCommand command = new MySqlCommand();
                 command.CommandText = "SELECT pets from accounts where id = @userid";
                 command.Parameters.AddWithValue("@userid", Context.User.Id);
 
                 var resp1 = await Sql.GetSingleAsync(command);
                 if(String.IsNullOrEmpty(resp1)) {
-                    await InsertUser(Context.User);
+                    await InsertUser(contuser);
                 }
                 else {
                     int pets = Convert.ToInt32(resp1);
@@ -170,17 +162,17 @@ namespace Skuld.Commands
                     command = new MySqlCommand();
                     command.CommandText = "UPDATE accounts SET pets = @newpets WHERE id = @userid";
                     command.Parameters.AddWithValue("@newpets", newpets);
-                    command.Parameters.AddWithValue("@userid", Context.User.Id);
+                    command.Parameters.AddWithValue("@userid", contuser.Id);
 
                     await Sql.InsertAsync(command);
 
                     command = new MySqlCommand();
                     command.CommandText = "SELECT petted from accounts where id = @userid";
-                    command.Parameters.AddWithValue("@userid", Context.User.Id);
+                    command.Parameters.AddWithValue("@userid", guilduser.Id);
 
                     var resp2 = await Sql.GetSingleAsync(command);
                     if (resp2==null) {
-                        await InsertUser(usertopet);
+                        await InsertUser(guilduser);
                     }
                     else {
                         int petted = Convert.ToInt32(resp2);
@@ -189,33 +181,33 @@ namespace Skuld.Commands
                         command = new MySqlCommand();
                         command.CommandText = "UPDATE accounts SET petted = @newpetted WHERE id = @userid";
                         command.Parameters.AddWithValue("@newpetted", newpetted);
-                        command.Parameters.AddWithValue("@userid", Context.User.Id);
+                        command.Parameters.AddWithValue("@userid", guilduser.Id);
 
                         await Sql.InsertAsync(command);
-                        await Send($"{curruser.Username} just petted {usertopet.Username}, they've been petted {newpetted} time(s)!", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=pet")));
+                        await Send($"{contuser.Nickname?? contuser.Username} just petted {guilduser.Nickname??guilduser.Username}, they've been petted {newpetted} time(s)!", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=pet")));
                     }
                 }
             }                
         }
 
         [Command("glare", RunMode = RunMode.Async),Summary("Glares at a user")]
-        public async Task Glare(IGuildUser usertoglareat)
+        public async Task Glare([Remainder]IGuildUser guilduser)
         {
-            if (Context.User == usertoglareat)
-            {
-                await Send($"{Bot.bot.CurrentUser.Username} glares at {usertoglareat.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=glare")));
-            }
+            var contuser = Context.User as IGuildUser;
+            var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
+            if (contuser == guilduser)
+                await Send($"{botguild.Nickname??botguild.Username} glares at {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=glare")));
+            else if(guilduser.IsBot)
+                await Send($"{contuser.Nickname?? contuser.Username} glares at {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=glare")));
             else
             {
-                var curruser = Context.User as IGuildUser;
-
                 MySqlCommand command = new MySqlCommand();
                 command.CommandText = "SELECT glares from accounts where id = @userid";
-                command.Parameters.AddWithValue("@userid", Context.User.Id);
+                command.Parameters.AddWithValue("@userid", contuser.Id);
                 var resp1 = await Sql.GetSingleAsync(command);
 
                 if (String.IsNullOrEmpty(resp1)) {
-                    await InsertUser(usertoglareat);
+                    await InsertUser(contuser);
                 }
                 else {
                     int glares = Convert.ToInt32(resp1);
@@ -224,16 +216,16 @@ namespace Skuld.Commands
                     command = new MySqlCommand();
                     command.CommandText = "UPDATE accounts SET glares = @newglares WHERE id = @userid";
                     command.Parameters.AddWithValue("@newglares", newglares);
-                    command.Parameters.AddWithValue("@userid", Context.User.Id);
+                    command.Parameters.AddWithValue("@userid", contuser.Id);
                     await Sql.InsertAsync(command);
 
                     command = new MySqlCommand();
                     command.CommandText = "SELECT glaredat from accounts where id = @userid";
-                    command.Parameters.AddWithValue("@userid", Context.User.Id);
+                    command.Parameters.AddWithValue("@userid", guilduser.Id);
                     var resp2 = await Sql.GetSingleAsync(command);
 
                     if (String.IsNullOrEmpty(resp2)) {
-                        await InsertUser(usertoglareat);
+                        await InsertUser(guilduser);
                     }
                     else
                     {
@@ -243,10 +235,10 @@ namespace Skuld.Commands
                         command = new MySqlCommand();
                         command.CommandText = "UPDATE accounts SET glaredat = @glaredat WHERE id = @userid";
                         command.Parameters.AddWithValue("@glaredat", newglaredat);
-                        command.Parameters.AddWithValue("@userid", Context.User.Id);
+                        command.Parameters.AddWithValue("@userid", guilduser.Id);
                         await Sql.InsertAsync(command);
                         
-                        await Send($"{curruser.Username} glares at {usertoglareat.Username}, they've been glared at {newglaredat} time(s)!", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=glare")));
+                        await Send($"{contuser.Nickname?? contuser.Username} glares at {guilduser.Nickname??guilduser.Username}, they've been glared at {newglaredat} time(s)!", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=glare")));
                     }
                 }
             }
@@ -255,17 +247,11 @@ namespace Skuld.Commands
         private async Task InsertUser(IUser user)
         {
             MySqlCommand command = new MySqlCommand();
-            command.CommandText = "INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username , \"I have no description\");";
+            command.CommandText = "INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , \"I have no description\");";
             command.Parameters.AddWithValue("@userid",user.Id);
-            command.Parameters.AddWithValue("@username", $"{user.Username.Replace("\"", "\\\"").Replace("\'", "\\'")}#{user.DiscriminatorValue}");
             await Sql.InsertAsync(command);
         }
-        private async Task Send(string message, string image)
-        {
-            EmbedBuilder embed = new EmbedBuilder();
-            embed.Color = RandColor.RandomColor();
-            embed.ImageUrl = image;
-            await MessageHandler.SendChannel(Context.Channel, message, embed);
-        }
+        private async Task Send(string message, string image) =>
+            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = message, Color = RandColor.RandomColor(), ImageUrl = image });
     }
 }

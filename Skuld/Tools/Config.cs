@@ -7,7 +7,7 @@ namespace Skuld.Tools
     public class Config
     {
         [JsonIgnore]
-        public static readonly string appdir = AppDomain.CurrentDomain.BaseDirectory;
+        private static readonly string appdir = AppDomain.CurrentDomain.BaseDirectory;
         public string Prefix { get; set; }
         public ulong[] Owners { get; set; }
         public string Token { get; set; }

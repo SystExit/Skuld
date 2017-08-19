@@ -10,13 +10,110 @@ using System.Globalization;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using MySql.Data.MySqlClient;
+using CowsaySharp.Library;
+using System.IO;
 
 namespace Skuld.Fun
 {
     [Group,Name("Fun")]
     public class Fun : ModuleBase
     {
-        static string[] eightball = { "It is certain", "It is decidedly so", "Without a doubt", "Yes, definitely", "You may rely on it", "As I see it, yes", "Most likely", "Outlook good", "Yes", "Signs point to yes", "Reply hazy, try again", "Ask again later", "Better not tell you now", "Cannot predict now", "Concentrate and ask again", "Don't count on it", "My reply is no", "My sources say no", "Outlook not so good", "Very doubtful" };
+        
+        static string[] eightball = {
+            "It is certain",
+            "It is decidedly so",
+            "Without a doubt",
+            "Yes, definitely",
+            "You may rely on it",
+            "As I see it, yes",
+            "Most likely",
+            "Outlook good",
+            "Yes",
+            "Signs point to yes",
+            "Reply hazy, try again",
+            "Ask again later",
+            "Better not tell you now",
+            "Cannot predict now",
+            "Concentrate and ask again",
+            "Don't count on it",
+            "My reply is no",
+            "My sources say no",
+            "Outlook not so good",
+            "Very doubtful"
+        };
+        string[] videoext = new string[] {
+            ".webm",
+            ".mkv",
+            ".flv",
+            ".vob",
+            ".ogv",
+            ".ogg",
+            ".avi",
+            ".mov",
+            ".qt",
+            ".wmv",
+            ".mp4",
+            ".m4v",
+            ".mpg",
+            ".mpeg"
+        };
+        string[] Roasts = new string[] {
+            "You suck.",
+            "Keep rolling your eyes. Maybe one day you'll find a brain back there.",
+            "I'm no proctologist, but I know an asshole when I see one.",
+            "If you are going to be two faced, at least make one of them pretty.",
+            "You look like a before picture.",
+            "So, a thought crossed your mind? Must've been a long and lonely journey.",
+            "The smartass in me really doesn't like the dumbass in you.",
+            "100,000 sperm, you were the fastest?",
+            "Are you made of Gallium, Yitrium, Boron, Oxygen and Iodine? Because damn you are GA Y B O I.",
+            "You're the reason the gene pool needs a lifeguard." };
+        string[,] DadJokes = new string[,] { 
+            {"What do you call a pile of cats?", "A \"meow\"ntain." },
+            { "Why did the picture go to jail?", "Because it was framed." },
+            { "You're 'Merican when you go into the bathroom and you're 'Merican when you come out. But do you know what you are while you're in there?","You're a \"peeing\"" },
+            {"What did the ocean say to the shore?","Nothing. It just waved." },
+            {"What do you do when you see a space man?","You park, man." },
+            {"Why do bananas need sunscreen?","Because they peel." },
+            {"Why does a chicken coup only have 2 doors?","Because if it had 4 doors, it would be a chicken sedan." },
+            {"You've heard the rumor going around about butter?","Nevermind. I shouldn't spread it." },
+            {"Why did the can-crusher quit his job?","Because it was \"soda\"pressing." },
+            {"What do you call a man who never toots in public?","A private tooter." },
+            {"What time did the man go to the dentist?","Tooth-hurty." },
+            {"What's brown and sticky?","A stick." },
+            {"What does an annoying pepper do?","It gets \"Jalapeno\" face." },
+            {"What do you call a pony with a sore throat?", "A little \"Hoarse\"." },
+            {"What happened when frogs parked illegally?","They get \"Toad\"." },
+            {"What did the buffalo say to his son when he left for college?","Bison." },
+            {"If the first french fries weren't cooked in France, where were they cooked?","They were cooked in Greece." },
+            {"Did you hear about the circus fire?", "It was \"in tents\"." },
+            {"What did the horse say after it tripped?","\"Help, I've fallen and I can't giddyup.\"" },
+            {"I had a dream that I was a muffler last night.", "I woke up exhauseted." },
+            {"What do you call cheese that isn't yours?","Nacho Cheese." },
+            {"How do you make Holy Water?","You boil the *Hell* out of it." },
+            { "What do you can a fish with two knees?","A two-knee fish." },
+            {"What's Forest Gump's password?", "1forest1" },
+            {"How many tickles does it take to make an octopus laugh?","Ten-tickles" },
+            {"I bought some shoes from a drug dealer","I don't know what he laced them with, but I was tripping all day." },
+            {"Where does Fonzie like to go to eat?","Chick-fil-AAAAYYYY!" }
+        };
+        string[,] PickUpLines = new string[,] { 
+            {"Is your dad a terrorist?", "Because you're the bomb." },
+            {"Did you sit on a pile of sugar?","Because that is a sweet ass you got there." },
+            {"Did you fall from heaven?","Because you look like you're in pain." },
+            {"Are you a Butcher?","Because you seem good with meat." },
+            {"Are you from Tennessee?","Because you're the only 10 I see" },
+            {"Are you from Japan?", "Because I wanna get in Japanties." },
+            {"Baby, you make my floppy disk turn into a hard drive.",null },
+            {"Baby, you turn my software into hardware",null },
+            {"Are you from Hell?", "Because you're hot AF." },
+            {"Are you a magnet?", "Because I'm attracted to you." },
+            {"Are you Mexican?","Because you're the Mex I Can handle." },
+            {"If you were a chicken, you'd be impeccable.",null },
+            {"You're like a candy bar;", "Half sweet, and half nuts."},
+            {"You must be Jamaican,","because Jamaican me crazy." },
+            {"Charmanders are red, mudkips are blue;","If you were a Pokemon, I'd choose you." }
+        };        
 
         [Command("neko", RunMode = RunMode.Async),Summary("neko grill")]
         public async Task Neko()
@@ -33,10 +130,24 @@ namespace Skuld.Fun
 
         [Command("kitty", RunMode = RunMode.Async), Summary("kitty")]
         [Alias("cat", "cats", "kittycat", "kitty cat", "meow", "kitties", "kittys")]
-        public async Task Kitty() { var kitty = await APIS.Kitty.WebReq.GetKitty(); await MessageHandler.SendChannel(Context.Channel,"", new EmbedBuilder() { Color = RandColor.RandomColor(), Title = kitty.ImageURL, ImageUrl = kitty.ImageURL }); }
+        public async Task Kitty()
+        {
+            var kitty = await APIS.Kitty.WebReq.GetKitty();
+            if (videoext.Any(kitty.ImageURL.Contains))
+                await MessageHandler.SendChannel(Context.Channel, kitty.ImageURL);
+            else
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = RandColor.RandomColor(), Title = kitty.ImageURL, ImageUrl = kitty.ImageURL });
+        }
         [Command("doggo", RunMode = RunMode.Async), Summary("doggo")]
         [Alias("dog", "dogs", "doggy")]
-        public async Task Doggo() { var doggo = await APIS.Doggo.WebReq.GetDoggo(); await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = RandColor.RandomColor(), Title = doggo.ImageURL, ImageUrl = doggo.ImageURL }); }
+        public async Task Doggo()
+        {            
+            var doggo = await APIS.Doggo.WebReq.GetDoggo();
+            if (videoext.Any(doggo.ImageURL.Contains))
+                await MessageHandler.SendChannel(Context.Channel, doggo.ImageURL);
+            else
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = RandColor.RandomColor(), Title = doggo.ImageURL, ImageUrl = doggo.ImageURL });
+        }
         
         [Command("eightball", RunMode = RunMode.Async), Summary("Eightball")]
         [Alias("8ball")]
@@ -86,11 +197,11 @@ namespace Skuld.Fun
             {
                 Pasta.PastaName = reader["pastaname"].ToString();
                 Pasta.Content = reader["content"].ToString();
-                Pasta.Username = reader["username"].ToString();
+                Pasta.OwnerID = Convert.ToUInt64(reader["ownerid"].ToString());
+                Pasta.Username = Bot.bot.GetUser(Pasta.OwnerID).Username;
                 Pasta.Created = reader["created"].ToString();
                 Pasta.Upvotes = Convert.ToUInt32(reader["upvotes"].ToString());
                 Pasta.Downvotes = Convert.ToUInt32(reader["downvotes"].ToString());
-                Pasta.OwnerID = Convert.ToUInt64(reader["ownerid"].ToString());
             }
             reader.Close();
             await Sql.getconn.CloseAsync();
@@ -98,34 +209,16 @@ namespace Skuld.Fun
             {
                 if (cmd == "who" || cmd == "?")
                 {
-                    Console.WriteLine(Context.User.Id);
-                    Console.WriteLine(Pasta.OwnerID);
                     EmbedBuilder _embed = new EmbedBuilder();
                     _embed.Color = RandColor.RandomColor();
                     _embed.Title = Pasta.PastaName;
-                    _embed.AddField(x =>
-                    {
-                        x.Name = "Author";
-                        x.Value = Pasta.Username;
-                    });
-                    _embed.AddField(x =>
-                    {
-                        x.Name = "Created";
-                        x.Value = Pasta.Created;
-                    });
-                    _embed.AddField(x =>
-                    {
-                        x.Name = "UpVotes";
-                        x.Value = Pasta.Upvotes;
-                    });
-                    _embed.AddField(x =>
-                    {
-                        x.Name = "DownVotes";
-                        x.Value = Pasta.Downvotes;
-                    });
+                    _embed.AddInlineField("Author",Pasta.Username);
+                    _embed.AddInlineField("Created", Pasta.Created);
+                    _embed.AddInlineField("UpVotes", Pasta.Upvotes);
+                    _embed.AddInlineField("DownVotes", Pasta.Downvotes);
                     await MessageHandler.SendChannel(Context.Channel, "", _embed);
                 }
-                if (cmd == "upvote")
+                /*if (cmd == "upvote")
                 {
                     command = new MySqlCommand("SELECT upvotes FROM pasta WHERE pastaname = @title");
                     command.Parameters.AddWithValue("@title", title);
@@ -156,7 +249,7 @@ namespace Skuld.Fun
                     uint Downvote = Convert.ToUInt32(await Sql.GetSingleAsync(command));
                     if (downvotes == Downvote)
                         await MessageHandler.SendChannel(Context.Channel, $"Downvote added to **{title}** it currently has: {downvotes} Downvote");
-                }
+                }*/
                 if (cmd == "delete")
                 {
                     if(Convert.ToUInt64(Pasta.OwnerID) == Context.User.Id)
@@ -182,7 +275,7 @@ namespace Skuld.Fun
         {
             if (cmd == "new" || cmd == "+")
             {
-                if (title == "list")
+                if (title == "list" || title == "help")
                 {
                     await MessageHandler.SendChannel(Context.Channel, "Nope");
                 }
@@ -200,11 +293,10 @@ namespace Skuld.Fun
                         content = content.Replace("\'", "\\\'");
                         content = content.Replace("\"", "\\\"");
 
-                        command = new MySqlCommand("INSERT INTO pasta (content,ownerid,created,username,pastaname) VALUES ( @content , @ownerid , @created , @username , @pastatitle )");
+                        command = new MySqlCommand("INSERT INTO pasta (content,ownerid,created,pastaname) VALUES ( @content , @ownerid , @created , @pastatitle )");
                         command.Parameters.AddWithValue("@content", content);
-                        command.Parameters.AddWithValue("@ownerid", Context.User);
+                        command.Parameters.AddWithValue("@ownerid", Context.User.Id);
                         command.Parameters.AddWithValue("@created", DateTime.UtcNow);
-                        command.Parameters.AddWithValue("@username", Context.User.Username.Replace("\"", "\\\"").Replace("\'", "\\'") + "#" + Context.User.DiscriminatorValue);
                         command.Parameters.AddWithValue("@pastatitle", title);
 
                         await Sql.InsertAsync(command).ContinueWith(async x =>
@@ -277,6 +369,23 @@ namespace Skuld.Fun
                 }
                 await MessageHandler.SendChannel(Context.Channel, $"I found:\n{columndata}");
             }
+            if (title == "help")
+            {
+                string help = "Here's how to do stuff with **pasta**:\n\n" +
+                    "```\n"+
+                    "   give   : Give a user your pasta\n" +
+                    "   list   : List all pasta\n" +
+                    "   edit   : Change the content of your pasta\n" +
+                    "  change  : Same as above\n" +
+                    "   new    : Creates a new pasta\n" +
+                    "    +     : Same as above\n" +
+                    "   who    : Gets information about a pasta\n" +
+                    "    ?     : Same as above\n" +
+                    "  upvote  : Upvotes a pasta\n" +
+                    " downvote : Downvotes a pasta\n" +
+                    "  delete  : deletes a pasta```";
+                await MessageHandler.SendChannel(Context.Channel, help);
+            }
             else
             {
                 var command = new MySqlCommand("SELECT content FROM pasta WHERE pastaname = @title");
@@ -291,7 +400,7 @@ namespace Skuld.Fun
         [Command("pasta", RunMode = RunMode.Async), Summary("Pastas are nice")]
         public async Task Pasta(string cmd, IUser user, string title)
         {
-            if (cmd == "give")
+            /*if (cmd == "give")
             {
                 var command = new MySqlCommand("SELECT ownerid FROM pasta where pastaname = @title");
                 command.Parameters.AddWithValue("@title", title);
@@ -299,9 +408,8 @@ namespace Skuld.Fun
                 var OldUser = Bot.bot.GetUser(id);
                 if (Context.User.Id == OldUser.Id)
                 {
-                    command = new MySqlCommand("UPDATE pasta SET ownerid = {user.Id}, username = \'{}\' WHERE ownerid = {} AND pastaname = \'{title}\'");
+                    command = new MySqlCommand("UPDATE pasta SET ownerid = @ownerid WHERE ownerid = @oldownerid AND pastaname = @title");
                     command.Parameters.AddWithValue("@ownerid", user.Id);
-                    command.Parameters.AddWithValue("@username", user.Username.Replace("\"", "\\\"").Replace("\'", "\\'")+"#"+user.Discriminator);
                     command.Parameters.AddWithValue("@oldownerid", Context.User.Id);
                     command.Parameters.AddWithValue("@title",title);
                     await Sql.InsertAsync(command).ContinueWith(async x =>
@@ -312,7 +420,7 @@ namespace Skuld.Fun
                             await MessageHandler.SendChannel(Context.Channel, $"Successfully gave {user.Mention} pasta `{title}`");
                     });
                 }
-            }
+            }*/
         }
 
         [Command("fuse", RunMode = RunMode.Async), Summary("Fuses 2 of the 1st generation pokemon")]
@@ -489,6 +597,146 @@ namespace Skuld.Fun
             DateTimeOffset DTOffset = new DateTimeOffset(DateTime.UtcNow);
             var ndtof = DTOffset.ToOffset(nts);
             await MessageHandler.SendChannel(Context.Channel,ndtof.ToString());
+        }
+
+        [Command("roast", RunMode = RunMode.Async), Summary("\"Roasts\" a user, these are all taken as jokes, and aren't actually meant to cause harm.")]
+        public async Task RoastCmd(IGuildUser user) =>
+            await Roast(user);
+        [Command("roastme", RunMode = RunMode.Async), Summary("\"Roast\" yourself, these are all taken as jokes, and aren't actually meant to cause harm.")]
+        public async Task RoastYourselfCmd() =>
+            await Roast((Context.User as IGuildUser));
+        public async Task Roast(IGuildUser user) =>
+            await MessageHandler.SendChannel(Context.Channel, user.Mention + " " + Roasts[Bot.random.Next(0, Roasts.Length)]);
+        [Command("dadjoke", RunMode = RunMode.Async), Summary("Gives you a bad dad joke to facepalm at.")]
+        public async Task DadJoke()
+        {
+            try
+            {
+                int index = Bot.random.Next(0, DadJokes.GetLength(0));
+                string joke = DadJokes[index, 0];
+                string punchline = DadJokes[index, 1]??"";
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder()
+                {
+                    Title = joke,
+                    Description = punchline,
+                    Color = RandColor.RandomColor()
+                });
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+
+        }
+        [Command("pickup",RunMode = RunMode.Async),Summary("Cringe at these bad user-submitted pick up lines. (Don't actually use these or else you'll get laughed at. :3)"),Alias("pickupline")]
+        public async Task PickUp()
+        {
+            int index = Bot.random.Next(0, PickUpLines.GetLength(0));
+            index = Bot.random.Next(0, PickUpLines.GetLength(0));
+            string part1 = PickUpLines[index, 0];
+            string part2 = PickUpLines[index, 1];
+            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder()
+            {
+                Title = part1,
+                Description = part2??"",
+                Color = RandColor.RandomColor()
+            });
+        }
+        [Command("cowsay",RunMode = RunMode.Async),Summary("Make an ascii cow say some things.")]
+        public async Task CowSay([Remainder]string message)
+        {
+            try
+            {
+                string cowdir = Path.Combine(Path.Combine(AppContext.BaseDirectory + "storage"), "cows");
+                string[] cows = Directory.GetFiles(cowdir);
+                string cow = null;
+                if (message.StartsWith("-b"))
+                { 
+                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("=="));
+                    message = message.Remove(0, 3);
+                }
+                if (message.StartsWith("-d"))
+                {
+                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("XX"));
+                    message = message.Remove(0, 3);
+                }                    
+                if (message.StartsWith("-g"))
+                {
+                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("$$"));
+                    message = message.Remove(0, 3);
+                }                    
+                if (message.StartsWith("-p"))
+                {
+                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("@@"));
+                    message = message.Remove(0, 3);
+                }                    
+                if (message.StartsWith("-s"))
+                {
+                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("**"));
+                    message = message.Remove(0, 3);
+                }
+                if (message.StartsWith("--think"))
+                {
+                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", true, new CowFace("oo"));
+                    message = message.Remove(0, 8);
+                }
+                if (message.StartsWith("-t"))
+                {
+                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("--"));
+                    message = message.Remove(0, 3);
+                }                    
+                if (message.StartsWith("-w"))
+                {
+                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("00"));
+                    message = message.Remove(0, 3);
+                }                    
+                if (message.StartsWith("-y"))
+                {
+                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace(".."));
+                    message = message.Remove(0, 3);
+                }                    
+                if (message.StartsWith("-T"))
+                {
+                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("oo", message.Split(null)[1]));
+                    message = message.Remove(0, message.Split(null)[1].Length+4);
+                }                    
+                if (message.StartsWith("-e"))
+                {
+                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace(message.Split(null)[1]));
+                    message = message.Remove(0, message.Split(null)[1].Length+4);
+                }                    
+                if (message.StartsWith("-f"))
+                {
+                    string cowfile = message.Split(null)[1] + ".cow";
+                    if (cows.Contains(cowdir+"\\"+cowfile))
+                    {
+                        cow = GetCow.ReturnCow(cowdir + "\\" +cowfile, false, new CowFace());
+                        message = message.Remove(0, message.Split(null)[1].Length+4);
+                    }
+                    else
+                    {
+                        throw new FileNotFoundException("Cannot find cow \"" + cowfile + "\" in \"" + cowdir + "\"");
+                    }
+                }
+                string cowsay = "```\n"+message+"\n";
+                if (!String.IsNullOrEmpty(cow))
+                    cowsay += cow + "```";
+                else
+                    cowsay += GetCow.ReturnCow(cowdir+"\\default.cow", false, new CowFace("oo")) + "```";
+                if (cowsay.Length > 2000)
+                {
+                    cowsay = cowsay.Remove(0, 3);
+                    cowsay = cowsay.Remove(cowsay.Length - 3, 3);
+                    File.WriteAllText(AppContext.BaseDirectory + "\\cowsay.txt", cowsay);
+                    await Context.Channel.SendFileAsync(AppContext.BaseDirectory + "\\cowsay.txt", "It's over 2000 characters D: Here's the file.");
+                }
+                else
+                    await MessageHandler.SendChannel(Context.Channel, cowsay);
+            }
+            catch ( Exception ex )
+            {
+                Console.WriteLine(ex);
+            }
         }
     }
 }

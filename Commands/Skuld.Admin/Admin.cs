@@ -13,6 +13,10 @@ namespace Skuld.Commands
     [Group,Name("Admin"),RequireRolePrecondition(AccessLevel.ServerMod)]
     public class Admin : ModuleBase
     {
+        [Command("say", RunMode = RunMode.Async), Summary("Say something to a channel")]
+        public async Task Say(IMessageChannel channel, [Remainder] string message) =>
+            await MessageHandler.SendChannel(Context.Channel, message);
+
         [Command("roleids", RunMode = RunMode.Async), Summary("Gets all role ids")]
         public async Task GetRoleIds()
         {
@@ -198,7 +202,7 @@ namespace Skuld.Commands
         [RequireUserPermission(GuildPermission.BanMembers)]
         public async Task SoftBan(IUser user)
         {
-            var reason = "Softban";
+            var reason = "Softban - No Reason Given - Responsible Moderator: "+Context.User.Username+"#"+Context.User.DiscriminatorValue;
             var guild = Context.Guild;
             try
             {
@@ -207,6 +211,23 @@ namespace Skuld.Commands
                 await guild.RemoveBanAsync(user);
             }
             catch(Exception ex)
+            {
+            }
+        }
+        [Command("softban", RunMode = RunMode.Async), Summary("Softbans a user")]
+        [RequireBotPermission(GuildPermission.BanMembers)]
+        [RequireUserPermission(GuildPermission.BanMembers)]
+        public async Task SoftBan(IUser user, [Remainder]string reason)
+        {
+            var newreason = "Softban - "+reason+" - Responsible Moderator: " + Context.User.Username + "#" + Context.User.DiscriminatorValue;
+            var guild = Context.Guild;
+            try
+            {
+                await guild.AddBanAsync(user, 7, newreason);
+                await MessageHandler.SendChannel(Context.Channel, $"Successfully softbanned: `{user.Username}#{user.Discriminator}`\nReason given: {newreason}");
+                await guild.RemoveBanAsync(user);
+            }
+            catch (Exception ex)
             {
             }
         }

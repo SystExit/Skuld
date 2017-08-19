@@ -17,7 +17,6 @@ namespace Skuld
         public static ObservableCollection<Models.LogMessage> Logs = new ObservableCollection<Models.LogMessage>();
         public static DiscordShardedClient bot;
         public static CommandService commands;
-        public static CommandServiceConfig config;
         public static IServiceProvider map;
         public static string logfile;
         public static StreamWriter sw;
@@ -45,6 +44,8 @@ namespace Skuld
                 Logs.Add(new Models.LogMessage("FrameWk", $"Loaded {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
                 bot = new DiscordShardedClient(new DiscordSocketConfig()
                 {
+                    MessageCacheSize = 1000,
+                    LargeThreshold = 250,
                     AlwaysDownloadUsers = true,
                     DefaultRetryMode = RetryMode.RetryTimeouts,
                     LogLevel = LogSeverity.Info,
@@ -52,8 +53,12 @@ namespace Skuld
                 });
                 bot.Log += Events.SkuldEvents.Bot_Log;
                 Events.DiscordEvents.RegisterEvents();
-                commands = new CommandService();
-                config = new CommandServiceConfig();
+                commands = new CommandService(new CommandServiceConfig()
+                {
+                    CaseSensitiveCommands = false,
+                    DefaultRunMode = RunMode.Async,
+                    LogLevel = LogSeverity.Info
+                });
                 await Modules.ModuleHandler.LoadAll();
                 await Modules.ModuleHandler.CountModulesCommands();
                 await StartBot(Config.Load().Token);

@@ -65,9 +65,9 @@ namespace Skuld.Events
             {
                 var guild = arg.Guild;
                 MySqlCommand command = new MySqlCommand();
-                command.CommandText = "INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username , \"I have no description\");";
+                command.CommandText = "INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");";
+                command.Parameters.AddWithValue("@username", arg.Username.Replace("\"","\\").Replace("\'","\\'")+"#"+arg.DiscriminatorValue);
                 command.Parameters.AddWithValue("@userid", arg.Id);
-                command.Parameters.AddWithValue("@username", $"{arg.Username.Replace("\"", "\\\"").Replace("\'", "\\'")}#{arg.DiscriminatorValue}");
                 await Sql.InsertAsync(command);
 
                 command = new MySqlCommand();
@@ -77,7 +77,7 @@ namespace Skuld.Events
 
                 var joinrole = guild.GetRole(joinroleid);
                 await arg.AddRoleAsync(joinrole);
-                Logs.Add(new Models.LogMessage("UsrJoin", $"Gave User {arg.Username} the role {joinrole.Name} as per request.", LogSeverity.Info));
+                Logs.Add(new Models.LogMessage("UsrJoin", $"Gave a user, the join role as per request.", LogSeverity.Info));
 
 
                 command = new MySqlCommand();
@@ -145,21 +145,20 @@ namespace Skuld.Events
                 command.Parameters.AddWithValue("@guildid", arg.Id);
                 await Sql.InsertAsync(command);
             }
-            Logs.Add(new Models.LogMessage("LeftGld", $"Left {arg.Name}", LogSeverity.Info));
+            Logs.Add(new Models.LogMessage("LeftGld", $"Left a guild", LogSeverity.Info));
         }
 
         private static async Task Bot_JoinedGuild(SocketGuild arg)
         {
+            await arg.DownloadUsersAsync();
             int bots = arg.Users.Where(x => x.IsBot == true).Count();
             int humans = arg.Users.Where(x => x.IsBot == false).Count();
-            int guildusers = arg.MemberCount;
-            double perc = bots / guildusers;
-            double ratio = Math.Round(perc, 2) * 100;
-            var ratioperc = ratio + "%";
-            Logs.Add(new Models.LogMessage("JoinGld",arg.Name + " has a bot-to-user-ratio of " + ratio+"%",LogSeverity.Info));
+            int guildusers = arg.Users.Count;
+            var ratio = (decimal)bots / guildusers * 100m;
+            Logs.Add(new Models.LogMessage("JoinGld", arg.Name+" has a bot-to-user-ratio of " + ratio + "% out of a total member count of: "+guildusers,LogSeverity.Info));
             if (ratio > 60)
             {
-                Logs.Add(new Models.LogMessage("JoinGld", $"Leaving {arg.Name} most likely a Bot Farm server, ratio of Huams-to-Bots is: {ratio}$",LogSeverity.Info));
+                Logs.Add(new Models.LogMessage("JoinGld", $"Leaving {arg.Name} most likely a Bot Farm server.",LogSeverity.Info));
                 await arg.LeaveAsync();
             }
             else
@@ -175,7 +174,7 @@ namespace Skuld.Events
         {
             int guildcount=0;
             MySqlCommand gcmd = new MySqlCommand();
-            gcmd.CommandText = "INSERT IGNORE INTO `guild` (`ID`,`name`,`users`,`prefix`,`logenabled`) VALUES ";
+            gcmd.CommandText = "INSERT IGNORE INTO `guild` (`ID`,`name`,`prefix`,`logenabled`) VALUES ";
             
             foreach (var guild in bot.Guilds)
             {
@@ -187,7 +186,7 @@ namespace Skuld.Events
                     if (await resp.IsDBNullAsync(0))
                     {
                         int nonbots = guild.Users.Where(x => x.IsBot == false).Count();
-                        gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\\"").Replace("\'", "\\\'")}\" , {nonbots} , \"{Config.Load().Prefix}\" , 0 ), ";
+                        gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Config.Load().Prefix}\" , 0 ), ";
                         guildcount = guildcount + 1;
                     }
                 }
@@ -222,7 +221,7 @@ namespace Skuld.Events
                         {
                             if (await resp.IsDBNullAsync(0))
                             {
-                                ucmd.CommandText += $"( {user.Id} , {user.Username.Replace("\"", "\\\"").Replace("\'", "\\'")}#{user.DiscriminatorValue} , \"I have no description\" ), ";
+                                ucmd.CommandText += $"( {user.Id} , \"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{user.DiscriminatorValue}\", \"I have no description\" ), ";
                                 usercount = usercount + 1;
                             }
                             else { }

@@ -210,6 +210,8 @@ namespace Skuld.Commands
                 if (items != null)
                 {
                     var item = items.FirstOrDefault();
+                    var item2 = items.ElementAtOrDefault(1);
+                    var item3 = items.ElementAtOrDefault(2);
                     EmbedBuilder embed = null;
                     try
                     {
@@ -219,13 +221,16 @@ namespace Skuld.Commands
                             {
                                 Name = $"Google search for: {query}",
                                 IconUrl = "https://www.google.com/favicon.ico",
-                                Url = $"https://google.com/?q={query.Replace(" ", "%20")}"
+                                Url = $"https://google.com/search?q={query.Replace(" ", "%20")}"
                             },
                             Description = "I found this:\n" +
-                                $"**{item.Title}\n" +
-                                $"{item.Link}**\n\n" +
+                                $"**{item.Title}**\n" +
+                                $"{item.Link}\n\n" +
+                                "__**Also Relevant**__\n"+
+                                $"**{item2.Title}**\n{item2.Link}\n\n"+
+                                $"**{item3.Title}**\n{item3.Link}\n\n"+
                                 "If I didn't find what you're looking for, use this link:\n" +
-                                $"https://google.com/?q={query.Replace(" ", "%20")}",
+                                $"https://google.com/search?q={query.Replace(" ", "%20")}",
                             Color = RandColor.RandomColor()
                         };
                         await MessageHandler.SendChannel(Context.Channel, "", embed);
@@ -301,9 +306,7 @@ namespace Skuld.Commands
                     }
                 }
                 else
-                {
                     await MessageHandler.SendChannel(Context.Channel, "I found nothing sorry. :/");
-                }
             }
             catch (Exception ex)
             {
@@ -385,7 +388,11 @@ namespace Skuld.Commands
 
         [Command("wikipedia", RunMode = RunMode.Async), Summary("Gets wikipedia information, supports all languages that wikipedia offers")]
         [Alias("wiki")]
-        public async Task Getwiki(string langcode, [Remainder]string query)
+        public async Task Wiki(string langcode, [Remainder]string query) => await GetWiki(langcode, query);
+        [Command("wikipedia", RunMode = RunMode.Async), Summary("Gets wikipedia information, supports all languages that wikipedia offers")]
+        [Alias("wiki")]
+        public async Task Wiki([Remainder]string query) => await GetWiki("en", query);
+        public async Task GetWiki(string langcode, string query)
         {
             JObject jsonresp = JObject.Parse((await APIWebReq.ReturnString(new Uri($"https://{langcode}.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles={query}"))));
             dynamic item = jsonresp["query"]["pages"].First.First;
@@ -408,25 +415,17 @@ namespace Skuld.Commands
         }
 
         [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
-        public async Task Getpokemon(string pokemon, string group)
-        {
-            await SendPokemon(await WebReq.GetPocketMonster(pokemon), group);
-        }
+        public async Task Getpokemon(string pokemon, string group)=>
+            await SendPokemon(await WebReq.GetPocketMonster(pokemon.ToLowerInvariant()), group);
         [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
-        public async Task Getpokemon(string pokemon)
-        {
-            await SendPokemon(await WebReq.GetPocketMonster(pokemon),"default");
-        }
+        public async Task Getpokemon(string pokemon)=>
+            await SendPokemon(await WebReq.GetPocketMonster(pokemon.ToLowerInvariant()),"default");
         [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
-        public async Task Getpokemon(int pokemonid, string group)
-        {
+        public async Task Getpokemon(int pokemonid, string group)=>
             await SendPokemon(await WebReq.GetPocketMonster(pokemonid), group);
-        }
         [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
-        public async Task Getpokemon(int pokemonid)
-        {
+        public async Task Getpokemon(int pokemonid)=>
             await SendPokemon(await WebReq.GetPocketMonster(pokemonid), "default");
-        }
 
         public async Task SendPokemon(PocketMonster pokemon, string group)
         {

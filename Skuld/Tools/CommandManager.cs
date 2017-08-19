@@ -9,12 +9,14 @@ namespace Skuld.Tools
 {
     class CommandManager : Bot
     {
+        private static string defaultPrefix = Config.Load().Prefix;
+        private static string customPrefix = null;
         public static async Task Bot_MessageReceived(SocketMessage arg)
         {
             if (!arg.Author.IsBot)
             {
                 var message = arg as SocketUserMessage;
-                string defaultPrefix = Config.Load().Prefix;
+                
                 if (message == null) return;
                 int argPos = 0;
                 var chan = message.Channel as SocketGuildChannel;
@@ -23,61 +25,57 @@ namespace Skuld.Tools
                 MySqlCommand command = new MySqlCommand();
                 command.CommandText = "SELECT prefix FROM guild WHERE ID = @guildid";
                 command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
-                string customPrefix = await Sql.GetSingleAsync(command);
-                if (!String.IsNullOrEmpty(customPrefix))
+                customPrefix = await Sql.GetSingleAsync(command);
+                if (message.Content.ToLower() == $"{bot.CurrentUser.Username.ToLower()}.resetprefix")
                 {
-                    if (message.Content.ToLower() == "skuld.resetprefix")
+                    var guilduser = message.Author as SocketGuildUser;
+                    Logs.Add(new Models.LogMessage("HandCmd", $"Prefix reset on guild {context.Guild.Name}", Discord.LogSeverity.Info));
+                    if (guilduser.GuildPermissions.ManageGuild)
                     {
-                        var guilduser = message.Author as SocketGuildUser;
-                        Logs.Add(new Models.LogMessage("HandCmds", $"Prefix reset on a guild", Discord.LogSeverity.Info));
-                        if (guilduser.GuildPermissions.ManageGuild)
+                        command = new MySqlCommand();
+                        command.CommandText = "UPDATE guild SET prefix = @prefix WHERE ID = @guildid";
+                        command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
+                        command.Parameters.AddWithValue("@prefix", defaultPrefix);
+                        await Sql.InsertAsync(command).ContinueWith(async x =>
                         {
                             command = new MySqlCommand();
-                            command.CommandText = "UPDATE guild SET prefix = @prefix WHERE ID = @guildid";
+                            command.CommandText = "SELECT prefix FROM guild WHERE ID = @guildid";
                             command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
-                            command.Parameters.AddWithValue("@prefix", defaultPrefix);
-                            await Sql.InsertAsync(command).ContinueWith(async x =>
-                            {
-                                command = new MySqlCommand();
-                                command.CommandText = "SELECT prefix FROM guild WHERE ID = @guildid";
-                                command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
-                                string newprefix = await Sql.GetSingleAsync(command);
-                                if (newprefix == defaultPrefix)
-                                    await MessageHandler.SendChannel(message.Channel as SocketTextChannel, $"Successfully reset the prefix, it is now `{newprefix}`");
-                            });
-                        }
-                        else
-                            await MessageHandler.SendChannel(message.Channel, "I'm sorry, you don't have permissions to reset the prefix, you need `MANAGE_SERVER`");
+                            string newprefix = await Sql.GetSingleAsync(command);
+                            if (newprefix == defaultPrefix)
+                                await MessageHandler.SendChannel(message.Channel as SocketTextChannel, $"Successfully reset the prefix, it is now `{newprefix}`");
+                        });
                     }
                     else
-                        await DispatchCommand(customPrefix, message, context, argPos, arg);
+                        await MessageHandler.SendChannel(message.Channel, "I'm sorry, you don't have permissions to reset the prefix, you need `MANAGE_SERVER` or `ADMINISTRATOR`");
                 }
-                else
-                    await DispatchCommand(defaultPrefix, message, context, argPos, arg);
+                await DispatchCommand(message, context, argPos, arg);
             }
+
         }
-        private static async Task DispatchCommand(string prefix, SocketUserMessage message, ShardedCommandContext context, int argPos, SocketMessage arg)
+        private static async Task DispatchCommand(SocketUserMessage message, ShardedCommandContext context, int argPos, SocketMessage arg)
         {
             try
-            {
-                if (!(message.HasStringPrefix(prefix, ref argPos))) return;
-                {
-                    await InsertCommand(prefix, arg);
+            { 
+                if (!(message.HasStringPrefix(customPrefix, ref argPos)||message.HasStringPrefix(defaultPrefix, ref argPos))) return;
+                {                    
+                    await InsertCommand(customPrefix??defaultPrefix, arg);
                     string[] messagearr = arg.Content.Split(' ');
-                    string msg = messagearr[0].Remove(0, prefix.Length);
+                    int prefixlength = 0;
+                    if (customPrefix != null)
+                        prefixlength = customPrefix.Length;
+                    else
+                        prefixlength = defaultPrefix.Length;
+                    string msg = messagearr[0].Remove(0, prefixlength);
                     var result = await commands.ExecuteAsync(context, argPos, map);
-                    MySqlCommand command = new MySqlCommand();
-                    command.CommandText = "UPDATE accounts SET PrevCmd = @command WHERE ID = @userid";
-                    command.Parameters.AddWithValue("@command", msg);
-                    command.Parameters.AddWithValue("@userid", message.Author.Id);
-                    await Sql.InsertAsync(command);
                     if (!result.IsSuccess)
                     {
                         if(result.Error != CommandError.UnknownCommand)
                         {
                             var cmd = commands.Commands.FirstOrDefault(x => x.Name == msg);
                             Logs.Add(new Models.LogMessage("CmdHand", "Error with command, Error is: " + result, Discord.LogSeverity.Error));
-                            await MessageHandler.SendChannel(context.Channel, "", new Discord.EmbedBuilder() { Author = new Discord.EmbedAuthorBuilder() { Name = "Error with the command" }, Description = Convert.ToString(result.ErrorReason), Color = new Discord.Color(255, 0, 0) });
+                            if(result.Error == CommandError.UnmetPrecondition || result.Error == CommandError.BadArgCount)
+                                await MessageHandler.SendChannel(context.Channel, "", new Discord.EmbedBuilder() { Author = new Discord.EmbedAuthorBuilder() { Name = "Error with the command" }, Description = Convert.ToString(result.ErrorReason), Color = new Discord.Color(255, 0, 0) });
                         }
                     }
                 }
