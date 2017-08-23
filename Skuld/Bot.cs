@@ -8,6 +8,9 @@ using Discord.WebSocket;
 using System.IO;
 using System.Collections.ObjectModel;
 using NTwitch.Rest;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
 
 namespace Skuld
 {
@@ -69,7 +72,7 @@ namespace Skuld
                 Console.ReadLine();
             }
         }
-        
+
         public static async Task StartBot(string token)
         {
             try
@@ -77,6 +80,9 @@ namespace Skuld
                 await APIS.Twitch.TwitchClient.CreateTwitchClient(Config.Load().TwitchToken, Config.Load().TwitchClientID);
                 await bot.LoginAsync(TokenType.Bot, token);
                 await bot.StartAsync();
+                foreach (var shard in bot.Shards)
+                    if(shard.ConnectionState == ConnectionState.Connected)
+                        await PublishStats(shard.ShardId);
                 await Task.Delay(-1);
             }
             catch(Exception ex)
@@ -95,7 +101,22 @@ namespace Skuld
             sw.Close();
             await Console.Out.WriteLineAsync("Bot shutdown");
             Console.ReadLine();
-            Environment.Exit(0);
+            Environment.Exit(0);            
+        }
+        public static async Task PublishStats(int shardid)
+        {
+            using (var webclient = new HttpClient())
+            using (var content = new StringContent($"{{ \"server_count\": {bot.GetShard(shardid).Guilds.Count}, \"shard_id\": {shardid}, \"shard_count\": {bot.Shards.Count}}}", Encoding.UTF8, "application/json"))
+            {
+                webclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(Config.Load().DBotsOrgKey);
+                HttpResponseMessage response = await webclient.PostAsync(new Uri($"https://discordbots.org/api/bots/{Bot.bot.CurrentUser.Id}/stats"), content);
+            }
+            using (var webclient = new HttpClient())
+            using (var content = new StringContent($"{{ \"server_count\": {bot.GetShard(shardid).Guilds.Count}, \"shard_id\": {shardid}, \"shard_count\": {bot.Shards.Count}}}", Encoding.UTF8, "application/json"))
+            {
+                webclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(Config.Load().DiscordPWKey);
+                HttpResponseMessage response = await webclient.PostAsync(new Uri($"https://bots.discord.pw/api/bots/{Bot.bot.CurrentUser.Id}/stats"), content);
+            }
         }
 
         public static void EnsureConfigExists()

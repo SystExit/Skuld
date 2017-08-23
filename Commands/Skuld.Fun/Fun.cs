@@ -13,7 +13,7 @@ using MySql.Data.MySqlClient;
 using CowsaySharp.Library;
 using System.IO;
 
-namespace Skuld.Fun
+namespace Skuld.Commands
 {
     [Group,Name("Fun")]
     public class Fun : ModuleBase
@@ -88,7 +88,7 @@ namespace Skuld.Fun
             {"If the first french fries weren't cooked in France, where were they cooked?","They were cooked in Greece." },
             {"Did you hear about the circus fire?", "It was \"in tents\"." },
             {"What did the horse say after it tripped?","\"Help, I've fallen and I can't giddyup.\"" },
-            {"I had a dream that I was a muffler last night.", "I woke up exhauseted." },
+            {"I had a dream that I was a muffler last night.", "I woke up exhausted." },
             {"What do you call cheese that isn't yours?","Nacho Cheese." },
             {"How do you make Holy Water?","You boil the *Hell* out of it." },
             { "What do you can a fish with two knees?","A two-knee fish." },
@@ -273,7 +273,7 @@ namespace Skuld.Fun
         [Command("pasta", RunMode = RunMode.Async), Summary("Pastas are nice")]
         public async Task Pasta(string cmd, string title, [Remainder]string content)
         {
-            if (cmd == "new" || cmd == "+")
+            if (cmd == "new" || cmd == "+" || cmd == "create")
             {
                 if (title == "list" || title == "help")
                 {
@@ -312,7 +312,7 @@ namespace Skuld.Fun
                     }
                 }
             }
-            if (cmd == "edit" || cmd == "change")
+            if (cmd == "edit" || cmd == "change" || cmd == "modify")
             {
                 var command = new MySqlCommand("SELECT ownerid from pasta where pastaname = @title");
                 command.Parameters.AddWithValue("@title", title);
@@ -369,10 +369,10 @@ namespace Skuld.Fun
                 }
                 await MessageHandler.SendChannel(Context.Channel, $"I found:\n{columndata}");
             }
-            if (title == "help")
+            else if (title == "help")
             {
                 string help = "Here's how to do stuff with **pasta**:\n\n" +
-                    "```\n"+
+                    "```cs\n"+
                     "   give   : Give a user your pasta\n" +
                     "   list   : List all pasta\n" +
                     "   edit   : Change the content of your pasta\n" +
@@ -397,10 +397,10 @@ namespace Skuld.Fun
                     await MessageHandler.SendChannel(Context.Channel, $"Whoops, `{title}` doesn't exist");
             }
         }
-        [Command("pasta", RunMode = RunMode.Async), Summary("Pastas are nice")]
+        /*[Command("pasta", RunMode = RunMode.Async), Summary("Pastas are nice")]
         public async Task Pasta(string cmd, IUser user, string title)
         {
-            /*if (cmd == "give")
+            if (cmd == "give")
             {
                 var command = new MySqlCommand("SELECT ownerid FROM pasta where pastaname = @title");
                 command.Parameters.AddWithValue("@title", title);
@@ -420,8 +420,8 @@ namespace Skuld.Fun
                             await MessageHandler.SendChannel(Context.Channel, $"Successfully gave {user.Mention} pasta `{title}`");
                     });
                 }
-            }*/
-        }
+            }
+        }*/
 
         [Command("fuse", RunMode = RunMode.Async), Summary("Fuses 2 of the 1st generation pokemon")]
         public async Task Fuse(int int1, int int2)
@@ -492,6 +492,18 @@ namespace Skuld.Fun
             }
 
             await MessageHandler.SendChannel(Context.Channel, "", _embed);
+        }
+
+        [Command("emoji", RunMode = RunMode.Async), Summary("Turns text into bigmoji")]
+        public async Task Emojify([Remainder]string message)
+        {
+            string newmessage = "";
+            foreach(var character in message)
+            {
+                if(!Char.IsWhiteSpace(character))
+                    newmessage += ":regional_indicator_" + character + ": ";
+            }
+            await MessageHandler.SendChannel(Context.Channel, newmessage);
         }
 
         /*[Command("slots", RunMode= RunMode.Async),Summary("Test your luck")]

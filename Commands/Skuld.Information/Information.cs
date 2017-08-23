@@ -5,7 +5,6 @@ using Discord.Commands;
 using System.Linq;
 using Skuld.Tools;
 using Discord.WebSocket;
-using System.Collections.Generic;
 
 namespace Skuld.Commands
 {
@@ -156,74 +155,64 @@ namespace Skuld.Commands
             var total = Math.Round(oldperc, 2);
             await MessageHandler.SendChannel(Context.Channel, $"Current Bots are: {bots}\nCurrent Users are: {humans}\nTotal Guild Users: {guildusers}\n{total}% of the Guild Users are bots");
         }
+        [Command("avatar",RunMode = RunMode.Async), Summary("Gets your avatar url")]
+        public async Task Avatar() =>
+            await MessageHandler.SendChannel(Context.Channel, Context.User.GetAvatarUrl(ImageFormat.Auto) ?? "You have no avatar set");
+        [Command("avatar", RunMode = RunMode.Async), Summary("Gets your avatar url")]
+        public async Task Avatar([Remainder]IGuildUser user) =>
+            await MessageHandler.SendChannel(Context.Channel, user.GetAvatarUrl(ImageFormat.Auto) ?? $"User {user.Nickname??user.Username} have no avatar set");
 
         [Command("mods", RunMode = RunMode.Async),Summary("Gives online status of Moderators/Admins")]
         public async Task ModsOnline()
         {
-            await Context.Guild.DownloadUsersAsync();
+            var guild = Context.Guild as SocketGuild;
+            await guild.DownloadUsersAsync();
             string streamingemote = "<:streaming:313956277132853248>";
             string onlineemote = "<:online:313956277808005120>";
             string idleemote = "<:away:313956277220802560>";
             string dontdisturbemote = "<:dnd:313956276893646850>";
             string invisibleemote = "<:invisible:313956277107556352>";
             string offlineemote = "<:offline:313956277237710868>";
-            List<IGuildUser> Mods = new List<IGuildUser>();
-            List<IGuildUser> Admins = new List<IGuildUser>();
-            foreach (var user in await Context.Guild.GetUsersAsync())
-            {
-                if (!user.IsBot)
-                {
-                    if (user.GuildPermissions.Administrator)
-                        Admins.Add(user);
-                    else if (user.GuildPermissions.KickMembers && user.GuildPermissions.ManageMessages)
-                        Mods.Add(user);
-                }
-            }
             string modstatus = "__Moderators__\n";
             string adminstatus = "__Administrators__\n";
-            Console.WriteLine(Mods.Count);
-            Console.WriteLine(modstatus);
-            Console.WriteLine(adminstatus);
-            int test = 0;
-            foreach(var user in Mods)
+            foreach (var user in guild.Users)
             {
-                Console.WriteLine(user.Username);
-                Console.WriteLine("mods " + test++);
-                if (user.Game.Value.StreamType != StreamType.NotStreaming)
-                    modstatus += streamingemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
-                if (user.Status == UserStatus.Online)
-                    modstatus += onlineemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
-                if (user.Status == UserStatus.AFK || user.Status == UserStatus.Idle)
-                    modstatus += idleemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
-                if (user.Status == UserStatus.DoNotDisturb)
-                    modstatus += dontdisturbemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
-                if (user.Status == UserStatus.Invisible)
-                    modstatus += invisibleemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
-                if (user.Status == UserStatus.Offline)
-                    modstatus += offlineemote + " " + user.Username + "#" + user.DiscriminatorValue+"\n";
-                Console.WriteLine(modstatus);
+                if (user.IsBot) { }
+                else
+                {
+                    if (user.GuildPermissions.Administrator)
+                    {
+                        if (user.Game.HasValue &&user.Game.Value.StreamType != StreamType.NotStreaming)
+                            adminstatus += streamingemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        if (user.Status == UserStatus.Online)
+                            adminstatus += onlineemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        if (user.Status == UserStatus.AFK || user.Status == UserStatus.Idle)
+                            adminstatus += idleemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        if (user.Status == UserStatus.DoNotDisturb)
+                            adminstatus += dontdisturbemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        if (user.Status == UserStatus.Invisible)
+                            adminstatus += invisibleemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        if (user.Status == UserStatus.Offline)
+                            adminstatus += offlineemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                    }
+                    else if (user.GuildPermissions.KickMembers && user.GuildPermissions.ManageMessages)
+                    {
+                        if(user.Game.HasValue && user.Game.Value.StreamType != StreamType.NotStreaming)
+                            modstatus += streamingemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        if (user.Status == UserStatus.Online)
+                            modstatus += onlineemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        if (user.Status == UserStatus.AFK || user.Status == UserStatus.Idle)
+                            modstatus += idleemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        if (user.Status == UserStatus.DoNotDisturb)
+                            modstatus += dontdisturbemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        if (user.Status == UserStatus.Invisible)
+                            modstatus += invisibleemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        if (user.Status == UserStatus.Offline)
+                            modstatus += offlineemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                    }
+                }
             }
-            test = 0;
-            foreach (var user in Admins)
-            {
-                Console.WriteLine("admin "+test++);
-                if (user.Game.Value.StreamType != StreamType.NotStreaming)
-                    adminstatus += streamingemote + " " + user.Username + "#" + user.DiscriminatorValue+"\n";
-                if (user.Status == UserStatus.Online)
-                    adminstatus += onlineemote + " " + user.Username + "#" + user.DiscriminatorValue+"\n";
-                if (user.Status == UserStatus.AFK || user.Status == UserStatus.Idle)
-                    adminstatus += idleemote + " " + user.Username + "#" + user.DiscriminatorValue+"\n";
-                if (user.Status == UserStatus.DoNotDisturb)
-                    adminstatus += dontdisturbemote + " " + user.Username + "#" + user.DiscriminatorValue+"\n";
-                if (user.Status == UserStatus.Invisible)
-                    adminstatus += invisibleemote + " " + user.Username + "#" + user.DiscriminatorValue+"\n";
-                if (user.Status == UserStatus.Offline)
-                    adminstatus += offlineemote + " " + user.Username + "#" + user.DiscriminatorValue+"\n";
-            }
-
-            Console.WriteLine(modstatus);
-            Console.WriteLine(adminstatus);
-            string message = modstatus + "\n\n" + adminstatus;
+            string message = modstatus + "\n" + adminstatus;
             await MessageHandler.SendChannel(Context.Channel, message);
         }
     }

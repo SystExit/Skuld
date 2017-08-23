@@ -29,6 +29,9 @@ namespace Skuld.Tools
         public string TwitchClientID { get; set; }
         public string ImgurClientID { get; set; }
         public string ImgurClientSecret { get; set; }
+        public string DBotsOrgKey { get; set; }
+        public string DiscordPWKey { get; set; }
+
 
         public Config()
         {
@@ -58,8 +61,7 @@ namespace Skuld.Tools
         public static Config Load(string dir = "storage/configuration.json")
         {
             Bot.EnsureConfigExists();
-            string file = Path.Combine(appdir, dir);
-            return JsonConvert.DeserializeObject<Config>(File.ReadAllText(file));
+            return JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(appdir, dir)));
         }
     }
 }

@@ -57,7 +57,7 @@ namespace Skuld.Tools
         {
             try
             { 
-                if (!(message.HasStringPrefix(customPrefix, ref argPos)||message.HasStringPrefix(defaultPrefix, ref argPos))) return;
+                if (!(message.HasStringPrefix(customPrefix, ref argPos)|| message.HasStringPrefix(defaultPrefix, ref argPos) || message.HasStringPrefix(Config.Load().Prefix, ref argPos))) return;
                 {                    
                     await InsertCommand(customPrefix??defaultPrefix, arg);
                     string[] messagearr = arg.Content.Split(' ');

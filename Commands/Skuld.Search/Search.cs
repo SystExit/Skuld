@@ -317,16 +317,11 @@ namespace Skuld.Commands
 
         public string urbanphrase = null;
         [Command("urban", RunMode = RunMode.Async), Summary("Gets a thing from urban dictionary")]
-        public async Task Urban([Remainder]string phrase)
-        {
-            urbanphrase = phrase;
+        public async Task Urban([Remainder]string phrase) =>
             await Geturban(new Uri($"http://api.urbandictionary.com/v0/define?term={phrase}"));
-        }
         [Command("urban", RunMode = RunMode.Async), Summary("Gets a random thing from urban dictionary")]
-        public async Task Urban()
-        {
+        public async Task Urban() => 
             await Geturban(new Uri("http://api.urbandictionary.com/v0/random"));
-        }
         private async Task Geturban(Uri url)
         {
             var rnd = Bot.random;
@@ -388,10 +383,12 @@ namespace Skuld.Commands
 
         [Command("wikipedia", RunMode = RunMode.Async), Summary("Gets wikipedia information, supports all languages that wikipedia offers")]
         [Alias("wiki")]
-        public async Task Wiki(string langcode, [Remainder]string query) => await GetWiki(langcode, query);
+        public async Task Wiki(string langcode, [Remainder]string query) => 
+            await GetWiki(langcode, query);
         [Command("wikipedia", RunMode = RunMode.Async), Summary("Gets wikipedia information, supports all languages that wikipedia offers")]
         [Alias("wiki")]
-        public async Task Wiki([Remainder]string query) => await GetWiki("en", query);
+        public async Task Wiki([Remainder]string query) => 
+            await GetWiki("en", query);
         public async Task GetWiki(string langcode, string query)
         {
             JObject jsonresp = JObject.Parse((await APIWebReq.ReturnString(new Uri($"https://{langcode}.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles={query}"))));
@@ -426,7 +423,6 @@ namespace Skuld.Commands
         [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
         public async Task Getpokemon(int pokemonid)=>
             await SendPokemon(await WebReq.GetPocketMonster(pokemonid), "default");
-
         public async Task SendPokemon(PocketMonster pokemon, string group)
         {
             EmbedBuilder embed;
@@ -555,13 +551,12 @@ namespace Skuld.Commands
         public async Task WeebGif()
         {
             var gif = await APIWebReq.ReturnString(new Uri("http://lucoa.systemexit.co.uk/gifs/reactions/"));
-            EmbedBuilder embed = new EmbedBuilder()
+            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder()
             {
                 Title = gif,
                 ImageUrl = gif,
                 Color = RandColor.RandomColor()
-        };
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
+            });
         }
 
         [Command("define", RunMode = RunMode.Async), Summary("Defines a word")]
@@ -583,42 +578,10 @@ namespace Skuld.Commands
             _embed.Color = RandColor.RandomColor();
             _auth.Name = definedword.Word;
 
-            _embed.AddField(x =>
-            {
-                x.IsInline = false;
-                x.Name = "Definition";
-                if (!String.IsNullOrEmpty(definedword.Definition))
-                    x.Value = definedword.Definition;
-                else
-                    x.Value = "None Available";
-            });
-            _embed.AddField(x =>
-            {
-                x.IsInline = false;
-                x.Name = "Example";
-                if (!String.IsNullOrEmpty(definedword.Example))
-                    x.Value = definedword.Example;
-                else
-                    x.Value = "Not Available";
-            });
-            _embed.AddField(x =>
-            {
-                x.IsInline = true;
-                x.Name = "Part of speech";
-                if (!String.IsNullOrEmpty(definedword.PartOfSpeech))
-                    x.Value = definedword.PartOfSpeech;
-                else
-                    x.Value = "Not Available";
-            });
-            _embed.AddField(x =>
-            {
-                x.IsInline = true;
-                x.Name = "Terms";
-                if (!String.IsNullOrEmpty(definedword.Terms))
-                    x.Value = definedword.Terms;
-                else
-                    x.Value = "Not Available";
-            });
+            _embed.AddField("Definition",definedword.Definition??"None Available");
+            _embed.AddField("Example",definedword.Example??"Not Available");
+            _embed.AddInlineField("Part of speech",definedword.PartOfSpeech??"Not Available");
+            _embed.AddInlineField("Terms", definedword.Terms??"Not Available");
 
             _embed.Author = _auth;
             await MessageHandler.SendChannel(Context.Channel, "", _embed);

@@ -10,7 +10,8 @@ namespace Skuld.Commands
     public class Help : ModuleBase
     {
         [Command("help", RunMode = RunMode.Async), Summary("Gets all commands")]
-        public async Task _Help(){await MessageHandler.SendChannel(Context.Channel, "All of the commands are available on the wiki: <https://github.com/exsersewo/Skuld/wiki/Commands>"); }
+        public async Task _Help()=>
+            await MessageHandler.SendChannel(Context.Channel, "All of the commands are available on the wiki: <https://github.com/exsersewo/Skuld/wiki/Commands>");
         [Command("help", RunMode = RunMode.Async), Summary("Gets specific command information")]
         public async Task _Help(string command)
         {

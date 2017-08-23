@@ -5,7 +5,6 @@ using Discord;
 using Skuld.Tools;
 using Skuld.APIS;
 using MySql.Data.MySqlClient;
-using System.Linq;
 
 namespace Skuld.Commands
 {
@@ -247,7 +246,8 @@ namespace Skuld.Commands
         private async Task InsertUser(IUser user)
         {
             MySqlCommand command = new MySqlCommand();
-            command.CommandText = "INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , \"I have no description\");";
+            command.CommandText = "INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");";
+            command.Parameters.AddWithValue("@username", $"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{user.DiscriminatorValue}");
             command.Parameters.AddWithValue("@userid",user.Id);
             await Sql.InsertAsync(command);
         }

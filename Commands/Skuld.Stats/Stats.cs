@@ -96,7 +96,8 @@ namespace Skuld.Commands
             
             embed.AddInlineField("CPU Load", getCurrentCpuUsage());
             embed.AddInlineField("Total Free Ram", getAvailableRAM()); 
-            embed.AddInlineField("Uptime", UpTime);
+            embed.AddInlineField("Uptime", $"{UpTime.Days} day(s) {UpTime.Hours}:{UpTime.Minutes}:{UpTime.Seconds}");
+            embed.AddInlineField("OS", Environment.OSVersion+" "+RuntimeInformation.OSArchitecture);
             await MessageHandler.SendChannel(Context.Channel, "", embed);
         }
 

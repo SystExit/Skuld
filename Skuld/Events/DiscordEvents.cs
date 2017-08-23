@@ -5,6 +5,7 @@ using Discord;
 using System.Linq;
 using System;
 using MySql.Data.MySqlClient;
+using System.Threading;
 
 namespace Skuld.Events
 {
@@ -70,28 +71,28 @@ namespace Skuld.Events
                 command.Parameters.AddWithValue("@userid", arg.Id);
                 await Sql.InsertAsync(command);
 
-                command = new MySqlCommand();
-                command.CommandText = "select autojoinrole from guild where id = @guildid";
-                command.Parameters.AddWithValue("@guildid", guild.Id);
-                ulong joinroleid = Convert.ToUInt64(await Sql.GetSingleAsync(command));
+                var cmd2 = new MySqlCommand();
+                cmd2.CommandText = "select autojoinrole from guild where id = @guildid";
+                cmd2.Parameters.AddWithValue("@guildid", guild.Id);
+                var autorole = await Sql.GetSingleAsync(cmd2);
+                if (!String.IsNullOrEmpty(autorole))
+                {
+                    ulong joinroleid = Convert.ToUInt64(autorole);
+                    var joinrole = guild.GetRole(joinroleid);
+                    await arg.AddRoleAsync(joinrole);
+                    Logs.Add(new Models.LogMessage("UsrJoin", $"Gave a user, the join role as per request.", LogSeverity.Info));
+                }
 
-                var joinrole = guild.GetRole(joinroleid);
-                await arg.AddRoleAsync(joinrole);
-                Logs.Add(new Models.LogMessage("UsrJoin", $"Gave a user, the join role as per request.", LogSeverity.Info));
-
-
-                command = new MySqlCommand();
-                command.CommandText = "SELECT JoinMessage from guild WHERE ID = @guildid";
-                command.Parameters.AddWithValue("@guildid", guild.Id);
-                string welcomemessage = await Sql.GetSingleAsync(command);
-
+                var cmd3 = new MySqlCommand();
+                cmd3.CommandText = "SELECT JoinMessage from guild WHERE ID = @guildid";
+                cmd3.Parameters.AddWithValue("@guildid", guild.Id);
+                string welcomemessage = await Sql.GetSingleAsync(cmd3);
                 if(!String.IsNullOrEmpty(welcomemessage))
                 {
-                    command = new MySqlCommand();
-                    command.CommandText = "SELECT UserJoinChan FROM guild WHERE ID = @guildid";
-                    command.Parameters.AddWithValue("@guildid", guild.Id);
-                    ulong eventchan = Convert.ToUInt64(await Sql.GetSingleAsync(command));
-
+                    var cmd4 = new MySqlCommand();
+                    cmd4.CommandText = "SELECT UserJoinChan FROM guild WHERE ID = @guildid";
+                    cmd4.Parameters.AddWithValue("@guildid", guild.Id);
+                    ulong eventchan = Convert.ToUInt64(await Sql.GetSingleAsync(cmd4));
                     var channel = guild.GetTextChannel(eventchan);
                     welcomemessage = welcomemessage.Replace("-m", "**"+arg.Mention+"**");
                     welcomemessage = welcomemessage.Replace("-s", "**" + guild.Name + "**");
@@ -150,23 +151,7 @@ namespace Skuld.Events
 
         private static async Task Bot_JoinedGuild(SocketGuild arg)
         {
-            await arg.DownloadUsersAsync();
-            int bots = arg.Users.Where(x => x.IsBot == true).Count();
-            int humans = arg.Users.Where(x => x.IsBot == false).Count();
-            int guildusers = arg.Users.Count;
-            var ratio = (decimal)bots / guildusers * 100m;
-            Logs.Add(new Models.LogMessage("JoinGld", arg.Name+" has a bot-to-user-ratio of " + ratio + "% out of a total member count of: "+guildusers,LogSeverity.Info));
-            if (ratio > 60)
-            {
-                Logs.Add(new Models.LogMessage("JoinGld", $"Leaving {arg.Name} most likely a Bot Farm server.",LogSeverity.Info));
-                await arg.LeaveAsync();
-            }
-            else
-            {
-                var bot = Bot.bot.CurrentUser as IGuildUser;
-                if (!string.IsNullOrEmpty(SqlHost))
-                    await PopulateGuilds();
-            }
+            await Task.Run(() => PopulateGuilds());
         }
         //End Guilds
         
@@ -180,15 +165,12 @@ namespace Skuld.Events
             {
                 var cmd = new MySqlCommand("select ID from guild where ID = @guildid");
                 cmd.Parameters.AddWithValue("@guildid", guild.Id);
-                var resp = await Sql.GetAsync(cmd);
-                while (await resp.ReadAsync())
+                var resp = await Sql.GetSingleAsync(cmd);
+                if (String.IsNullOrEmpty(resp))
                 {
-                    if (await resp.IsDBNullAsync(0))
-                    {
-                        int nonbots = guild.Users.Where(x => x.IsBot == false).Count();
-                        gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Config.Load().Prefix}\" , 0 ), ";
-                        guildcount = guildcount + 1;
-                    }
+                    int nonbots = guild.Users.Where(x => x.IsBot == false).Count();
+                    gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Config.Load().Prefix}\" , 0 ), ";
+                    guildcount = guildcount + 1;
                 }
             }
             if (gcmd.CommandText.Contains(Config.Load().Prefix))
@@ -216,18 +198,12 @@ namespace Skuld.Events
                     {
                         var cmd = new MySqlCommand("select ID from accounts where ID = @userid");
                         cmd.Parameters.AddWithValue("@userid", user.Id);
-                        var resp = await Sql.GetAsync(cmd);
-                        while (await resp.ReadAsync())
+                        var resp = await Sql.GetSingleAsync(cmd);
+                        if (String.IsNullOrEmpty(resp))
                         {
-                            if (await resp.IsDBNullAsync(0))
-                            {
-                                ucmd.CommandText += $"( {user.Id} , \"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{user.DiscriminatorValue}\", \"I have no description\" ), ";
+                            ucmd.CommandText += $"( {user.Id} , \"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{user.DiscriminatorValue}\", \"I have no description\" ), ";
                                 usercount = usercount + 1;
-                            }
-                            else { }
                         }
-                        resp.Close();
-                        await Sql.getconn.CloseAsync();
                     }
                 }
             }
