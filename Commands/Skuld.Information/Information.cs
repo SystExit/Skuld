@@ -160,7 +160,7 @@ namespace Skuld.Commands
             await MessageHandler.SendChannel(Context.Channel, Context.User.GetAvatarUrl(ImageFormat.Auto) ?? "You have no avatar set");
         [Command("avatar", RunMode = RunMode.Async), Summary("Gets your avatar url")]
         public async Task Avatar([Remainder]IGuildUser user) =>
-            await MessageHandler.SendChannel(Context.Channel, user.GetAvatarUrl(ImageFormat.Auto) ?? $"User {user.Nickname??user.Username} have no avatar set");
+            await MessageHandler.SendChannel(Context.Channel, user.GetAvatarUrl(ImageFormat.Auto) ?? $"User {user.Nickname??user.Username} has no avatar set");
 
         [Command("mods", RunMode = RunMode.Async),Summary("Gives online status of Moderators/Admins")]
         public async Task ModsOnline()
