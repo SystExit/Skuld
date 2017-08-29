@@ -11,6 +11,7 @@ using NTwitch.Rest;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using AIMLbot;
 
 namespace Skuld
 {
@@ -27,6 +28,9 @@ namespace Skuld
         public static string Prefix = null;
         public static TwitchRestClient NTwitchClient;
         public static FileSystemWatcher fsw;
+        public static AIMLbot.Bot ChatService;
+        public static User ChatUser;
+        public static string PathToUserData;
         /*END VARS*/
 
         static void Main(string[] args) => CreateBot().GetAwaiter().GetResult();
@@ -36,15 +40,13 @@ namespace Skuld
             try
             {
                 EnsureConfigExists();
-                fsw = new FileSystemWatcher(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "modules"))
-                {
-                    EnableRaisingEvents = true
-                };
-                sw = new StreamWriter(logfile, false, System.Text.Encoding.UTF8);
+                fsw = new FileSystemWatcher(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "modules")){EnableRaisingEvents = true};
+                sw = new StreamWriter(logfile, false, Encoding.UTF8);
                 Prefix = Config.Load().Prefix;
-                fsw.Changed += Events.SkuldEvents.Fsw_Changed;
+                fsw.Deleted += Events.SkuldEvents.Fsw_Deleted;
+                fsw.Created += Events.SkuldEvents.Fsw_Created;
                 Logs.CollectionChanged += Events.SkuldEvents.Logs_CollectionChanged;
-                Logs.Add(new Models.LogMessage("FrameWk", $"Loaded {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
+                Logs.Add(new Models.LogMessage("FrameWk", $"Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
                 bot = new DiscordShardedClient(new DiscordSocketConfig()
                 {
                     MessageCacheSize = 1000,
@@ -62,9 +64,12 @@ namespace Skuld
                     DefaultRunMode = RunMode.Async,
                     LogLevel = LogSeverity.Info
                 });
-                await Modules.ModuleHandler.LoadAll();
-                await Modules.ModuleHandler.CountModulesCommands();
+                if(Config.Load().ChatServiceEnabled)
+                    InstallChatService();
+                await ModuleHandler.LoadAll();
+                await ModuleHandler.CountModulesCommands();
                 await StartBot(Config.Load().Token);
+                await Task.Delay(-1);
             }
             catch (Exception ex)
             {
@@ -96,13 +101,38 @@ namespace Skuld
         {
             Events.DiscordEvents.UnRegisterEvents();
             await bot.SetStatusAsync(UserStatus.Offline);
-            Logs.Add(new Models.LogMessage(source, "Skuld is shutting down", Discord.LogSeverity.Info));
+            Logs.Add(new Models.LogMessage(source, "Skuld is shutting down", LogSeverity.Info));
             await sw.WriteLineAsync("-------------------------------------------");
             sw.Close();
             await Console.Out.WriteLineAsync("Bot shutdown");
             Console.ReadLine();
             Environment.Exit(0);            
         }
+
+        public static void InstallChatService()
+        {
+            try
+            {
+                string path = Path.Combine(AppContext.BaseDirectory, "config", "Settings.xml");
+                if (File.Exists(path))
+                {
+                    ChatService = new AIMLbot.Bot();
+                    ChatService.AdminEmail = Config.Load().ChatServiceAdminEmail;
+                    ChatService.loadSettings(path);
+                    ChatService.isAcceptingUserInput = false;
+                    ChatService.loadAIMLFromFiles();
+                    ChatService.isAcceptingUserInput = true;
+                    PathToUserData = Path.Combine(AppContext.BaseDirectory, "aimlusers");
+                    Logs.Add(new Models.LogMessage("ChtSrvc","Loaded: Chat Service",LogSeverity.Info));
+                }
+                else { }
+            }
+            catch(Exception ex)
+            {
+                Logs.Add(new Models.LogMessage("ChtSrvc", "Error loading Chat Service", LogSeverity.Error,ex));
+            }
+        }
+
         public static async Task PublishStats(int shardid)
         {
             using (var webclient = new HttpClient())
@@ -123,21 +153,21 @@ namespace Skuld
         {
             try
             {
-                if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "storage")))
-                    Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "storage"));
-                if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "modules")))
+                if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "storage")))
+                    Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "storage"));
+                if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "modules")))
                     Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "modules"));
-                if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs")))
-                    Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs"));
+                if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "logs")))
+                    Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "logs"));
 
-                string loc = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "storage/configuration.json");
-                logfile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs") + "/" + String.Format("{0:MM-dd-yy}", DateTime.Now.Date) + ".log";
+                string loc = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "storage", "configuration.json");
+                logfile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "logs") + "/" + String.Format("{0:MM-dd-yy}", DateTime.Now.Date) + ".log";
 
                 if (!File.Exists(loc))
                 {
                     var config = new Config();
                     config.Save();
-                    Console.WriteLine("The configuration file has been created at '" + AppDomain.CurrentDomain.BaseDirectory + "storage/configuration.json'");
+                    Console.WriteLine("The configuration file has been created at '" + AppDomain.CurrentDomain.BaseDirectory + "\\skuld\\storage\\configuration.json'");
                     Console.ReadLine();
                     Environment.Exit(0);
                 }

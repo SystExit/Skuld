@@ -13,7 +13,7 @@ namespace PokeSharp.Deserializer
     {
         public static async Task<PocketMonster> GetPocketMonster(int id)
         {
-            var path = Path.Combine(AppContext.BaseDirectory + "/storage/pokemon/");
+            var path = Path.Combine(AppContext.BaseDirectory + "/skuld/storage/pokemon/");
             PocketMonster poket = null;
             Directory.CreateDirectory(path);
             string get = null;
@@ -44,7 +44,7 @@ namespace PokeSharp.Deserializer
         }
         public static async Task<PocketMonster> GetPocketMonster(string name)
         {
-            var path = Path.Combine(AppContext.BaseDirectory + "/storage/pokemon/");
+            var path = Path.Combine(AppContext.BaseDirectory + "/skuld/storage/pokemon/");
             PocketMonster poket = null;
             Directory.CreateDirectory(path);
             string get = null;

@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Skuld.Tools;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 
 namespace Skuld.Events
 {
@@ -20,18 +19,18 @@ namespace Skuld.Events
                     {
                         List<string[]> consolelines = new List<string[]>();
                         if (item.DSeverity != null)
-                            consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy hh:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.DSeverity.ToString() + "]", item.Message });
+                            consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.DSeverity.ToString() + "]", item.Message });
                         if (item.TSeverity != null)
-                            consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy hh:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.TSeverity.ToString() + "]", item.Message });
+                            consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.TSeverity.ToString() + "]", item.Message });
                         string toconsole = ConsoleUtils.PrettyLines(consolelines, 2);
                         string tolog = null;
                         if (item.Exception != null)
                         {
                             List<string[]> loglines = new List<string[]>();
                             if(item.DSeverity!=null)
-                                loglines.Add(new string[] { String.Format("{0:dd/MM/yyyy hh:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.DSeverity.ToString() + "]", item.Message + Environment.NewLine + item.Exception });
+                                loglines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.DSeverity.ToString() + "]", item.Message + Environment.NewLine + item.Exception });
                             if (item.TSeverity != null)
-                                loglines.Add(new string[] { String.Format("{0:dd/MM/yyyy hh:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.TSeverity.ToString() + "]", item.Message + Environment.NewLine + item.Exception });
+                                loglines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.TSeverity.ToString() + "]", item.Message + Environment.NewLine + item.Exception });
                             tolog = ConsoleUtils.PrettyLines(loglines, 2);
                             toconsole = toconsole + " CHECK LOGS FOR MORE INFO!";
                         }
@@ -60,16 +59,18 @@ namespace Skuld.Events
         public static Task Bot_Log(Discord.LogMessage arg)
         {
             Logs.Add(new Models.LogMessage(arg.Source, arg.Message, arg.Severity, arg.Exception));
-            return null;
+            return Task.CompletedTask;
         }
         //End logging
 
         //Start FSW
-        public async static void Fsw_Changed(object sender, FileSystemEventArgs e)
+        public async static void Fsw_Created(object sender, FileSystemEventArgs e)
         {
-            await Modules.ModuleHandler.UnloadSpecificModule(e.Name);
-            Thread.Sleep(TimeSpan.FromSeconds(5));
-            await Modules.ModuleHandler.LoadSpecificModule(e.Name);
+            await ModuleHandler.LoadSpecificModule(e.Name);
+        }
+        public async static void Fsw_Deleted(object sender, FileSystemEventArgs e)
+        {
+            await ModuleHandler.UnloadSpecificModule(e.Name);
         }
         //End FSW
 

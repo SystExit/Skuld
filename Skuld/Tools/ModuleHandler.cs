@@ -7,17 +7,29 @@ using System.Diagnostics;
 using System;
 using System.Collections.Generic;
 
-namespace Skuld.Modules
+namespace Skuld.Tools
 {
     public class ModuleHandler
     {
         static readonly List<Discord.Commands.ModuleInfo> Modules = new List<Discord.Commands.ModuleInfo>();
-        static string CurrentDir = Directory.GetCurrentDirectory()+@"\modules\";
+        static string CurrentDir = Path.Combine(AppContext.BaseDirectory,"skuld","modules");
+        static Config config = Config.Load();
+        static Dictionary<string, bool> ModuleMap = new Dictionary<string, bool>() {
+            { "Accounts", config.AccountsModuleEnabled },
+            { "Actions", config.ActionsModuleEnabled },
+            { "Admin",config.AdminModuleEnabled },
+            { "Fun", config.FunModuleEnabled },
+            { "Information", config.InformationModuleEnabled },
+            { "Search", config.SearchModuleEnabled },
+            { "Stats", config.StatsModuleEnabled }
+        };
         public static async Task LoadAll()
         {
             if (await CheckDir())
+            {
                 foreach (string mod in Directory.GetFiles(CurrentDir))
                     await LoadModule(mod);
+            }                
             else
                 return;
         }
@@ -86,8 +98,12 @@ namespace Skuld.Modules
                     if (newMod == module)
                     {
                         if (!mod.EndsWith(".dll")) continue;
-                        await LoadModule(mod);
-                        return true;
+                        {
+                            if (await LoadModule(mod))
+                                return true;
+                            else
+                                return false;
+                        }
                     }
                 }
                 return false;
@@ -133,28 +149,34 @@ namespace Skuld.Modules
 
         private static async Task<bool> LoadModule(string mod)
         {
-            FileVersionInfo fvi = FileVersionInfo.GetVersionInfo(mod);
-            Assembly assemblymod = Assembly.Load(File.ReadAllBytes(mod));
-            foreach (var module in Bot.commands.Modules)
+            string modulename = mod.Split('\\')[mod.Split('\\').Count() - 1];
+            modulename = modulename.Remove(modulename.Length - 4);
+            if (ModuleMap.Where(x=> x.Key == modulename).FirstOrDefault().Value||modulename.ToLower()=="help"||modulename.ToLower()=="owner")
             {
-                if (module.Name == assemblymod.GetName().Name) return false;
-            }
-            if (assemblymod.GetName().Version < Assembly.GetExecutingAssembly().GetName().Version) throw new Exceptions.IncorrectVersionException($"{assemblymod.GetName().Name}.lmod will not work with this version of Skuld!");
-            try
-            {
-                await Bot.commands.AddModulesAsync(assemblymod);
+                FileVersionInfo fvi = FileVersionInfo.GetVersionInfo(mod);
+                Assembly assemblymod = Assembly.Load(File.ReadAllBytes(mod));
                 foreach (var module in Bot.commands.Modules)
-                    if (module.Name == assemblymod.GetName().Name)
-                    {
-                        Bot.Logs.Add(new Models.LogMessage("ModH-LM", $"Loaded: {assemblymod.GetName().Name}.lmod", LogSeverity.Info));
-                        return true;
-                    }
-            }
-            catch (Exception ex)
-            {
-                var typeLoadException = ex as ReflectionTypeLoadException;
-                var loaderException = typeLoadException.LoaderExceptions;
-                Bot.Logs.Add(new Models.LogMessage("ModH-LS", $"Module {assemblymod.GetName().Name}.lmod failed to install", LogSeverity.Error, loaderException.FirstOrDefault()));
+                {
+                    if (module.Name == assemblymod.GetName().Name) return false;
+                }
+                if (assemblymod.GetName().Version < Assembly.GetExecutingAssembly().GetName().Version) throw new Exceptions.IncorrectVersionException($"{assemblymod.GetName().Name}.lmod will not work with this version of Skuld!");
+                try
+                {
+                    await Bot.commands.AddModulesAsync(assemblymod);
+                    foreach (var module in Bot.commands.Modules)
+                        if (module.Name == assemblymod.GetName().Name)
+                        {
+                            Bot.Logs.Add(new Models.LogMessage("ModH-LM", $"Loaded Module: {assemblymod.GetName().Name}.lmod", LogSeverity.Info));
+                            return true;
+                        }
+                }
+                catch (Exception ex)
+                {
+                    var typeLoadException = ex as ReflectionTypeLoadException;
+                    var loaderException = typeLoadException.LoaderExceptions;
+                    Bot.Logs.Add(new Models.LogMessage("ModH-LS", $"Module {assemblymod.GetName().Name}.lmod failed to install", LogSeverity.Error, loaderException.FirstOrDefault()));
+                    return false;
+                }
                 return false;
             }
             return false;
@@ -164,7 +186,7 @@ namespace Skuld.Modules
             await Bot.commands.RemoveModuleAsync(mod).ContinueWith(x =>
             {
                 if(!Bot.commands.Modules.Contains(mod))
-                    Bot.Logs.Add(new Models.LogMessage("ModH-UM", $"Removed: {mod.Name}.lmod", LogSeverity.Info));
+                    Bot.Logs.Add(new Models.LogMessage("ModH-UM", $"Removed Module: {mod.Name}.lmod", LogSeverity.Info));
             });
             if (Bot.commands.Modules.Contains(mod)) return false;
             else return true;

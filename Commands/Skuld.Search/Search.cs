@@ -315,6 +315,29 @@ namespace Skuld.Commands
             }
         }
 
+        [Command("lmgtfy",RunMode = RunMode.Async), Summary("Creates a \"lmgtfy\"(Let me google that for you) link")]
+        public async Task LMGTFY(string engine, [Remainder]string query)
+        {
+            string url = "https://lmgtfy.com/";
+            engine = engine.ToLowerInvariant();
+            if(engine == "g"||engine == "google")
+                url = url + "?q=" + query.Replace(" ", "%20");
+            if(engine == "b"||engine == "bing")
+                url = url + "?s=b&q=" + query.Replace(" ", "%20");
+            if(engine == "y"||engine == "yahoo")
+                url = url + "?s=y&q=" + query.Replace(" ", "%20");
+            if(engine == "a"||engine == "aol")
+                url = url + "?a=b&q=" + query.Replace(" ", "%20");
+            if(engine == "k"||engine == "ask")
+                url = url + "?k=b&q=" + query.Replace(" ", "%20");
+            if(engine == "d"||engine == "duckduckgo")
+                url = url + "?s=d&q=" + query.Replace(" ", "%20");
+            if(url != "https://lmgtfy.com/")
+                await MessageHandler.SendChannel(Context.Channel, url);
+            else
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with command" }, Color = new Color(255, 0, 0), Description = $"Ensure your parameters are correct, example: `{Config.Load().Prefix}lmgtfy g How to use lmgtfy`" });
+        }
+
         public string urbanphrase = null;
         [Command("urban", RunMode = RunMode.Async), Summary("Gets a thing from urban dictionary")]
         public async Task Urban([Remainder]string phrase) =>
@@ -586,8 +609,7 @@ namespace Skuld.Commands
             _embed.Author = _auth;
             await MessageHandler.SendChannel(Context.Channel, "", _embed);
         }
-
-        //Coming back to soon, will fix issues
+        
         private MangaArr MangaArray;
         private Timer MangaTimer = new Timer(60000);
         [Command("manga", RunMode = RunMode.Async), Summary("Gets a manga from MyAnimeList.Net")]

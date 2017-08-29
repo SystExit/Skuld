@@ -38,9 +38,9 @@ namespace Skuld.APIS.PokeAPI
             {
                 if(id.HasValue)
                 {
-                    if (!Directory.Exists(AppContext.BaseDirectory + "/storage/pokemon/"))
-                        Directory.CreateDirectory(AppContext.BaseDirectory + "/storage/pokemon/");
-                    string pokejson = AppContext.BaseDirectory + $"/storage/pokemon/{id.Value}.json";
+                    if (!Directory.Exists(AppContext.BaseDirectory + "/skuld/storage/pokemon/"))
+                        Directory.CreateDirectory(AppContext.BaseDirectory + "/skuld/storage/pokemon/");
+                    string pokejson = AppContext.BaseDirectory + $"/skuld/storage/pokemon/{id.Value}.json";
                     var result = await APIWebReq.ReturnString(new Uri($"https://pokeapi.co/api/v2/pokemon/{id.Value}/"));
                     if (!String.IsNullOrEmpty(result))
                     {
@@ -55,9 +55,9 @@ namespace Skuld.APIS.PokeAPI
                     if(HighestID.HasValue && HighestID.Value > 0)
                     {
                         var random = Bot.random.Next(0, HighestID.Value);
-                        if (!Directory.Exists(AppContext.BaseDirectory + "/storage/pokemon/"))
-                            Directory.CreateDirectory(AppContext.BaseDirectory + "/storage/pokemon/");
-                        string pokejson = AppContext.BaseDirectory + $"/storage/pokemon/{random}.json";
+                        if (!Directory.Exists(AppContext.BaseDirectory + "/skuld/storage/pokemon/"))
+                            Directory.CreateDirectory(AppContext.BaseDirectory + "/skuld/storage/pokemon/");
+                        string pokejson = AppContext.BaseDirectory + $"/skuld/storage/pokemon/{random}.json";
                         var result = await APIWebReq.ReturnString(new Uri($"https://pokeapi.co/api/v2/pokemon/{random}/"));
                         if (!String.IsNullOrEmpty(result))
                         {

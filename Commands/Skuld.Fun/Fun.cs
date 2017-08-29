@@ -218,9 +218,10 @@ namespace Skuld.Commands
                     _embed.AddInlineField("DownVotes", Pasta.Downvotes);
                     await MessageHandler.SendChannel(Context.Channel, "", _embed);
                 }
-                /*if (cmd == "upvote")
+                if (cmd == "upvote")
                 {
-                    command = new MySqlCommand("SELECT upvotes FROM pasta WHERE pastaname = @title");
+                    await MessageHandler.SendChannel(Context.Channel, "This function is currently disabled due to a new update coming soon. :( Sorry for the inconvenience");
+                    /*command = new MySqlCommand("SELECT upvotes FROM pasta WHERE pastaname = @title");
                     command.Parameters.AddWithValue("@title", title);
                     uint upvotes = Convert.ToUInt32(await Sql.GetSingleAsync(command));
                     upvotes = upvotes+1;
@@ -232,11 +233,12 @@ namespace Skuld.Commands
                     command.Parameters.AddWithValue("@title", title);
                     uint upvote = Convert.ToUInt32(await Sql.GetSingleAsync(command));
                     if (upvotes == upvote)
-                        await MessageHandler.SendChannel(Context.Channel, $"Upvote added to **{title}** it currently has: {upvotes} Upvotes");
+                        await MessageHandler.SendChannel(Context.Channel, $"Upvote added to **{title}** it currently has: {upvotes} Upvotes");*/
                 }
                 if (cmd == "downvote")
                 {
-                    command = new MySqlCommand("SELECT downvotes FROM pasta WHERE pastaname = @title");
+                    await MessageHandler.SendChannel(Context.Channel, "This function is currently disabled due to a new update coming soon. :( Sorry for the inconvenience");
+                    /*command = new MySqlCommand("SELECT downvotes FROM pasta WHERE pastaname = @title");
                     command.Parameters.AddWithValue("@title", title);
                     uint downvotes = Convert.ToUInt32(await Sql.GetSingleAsync(command));
                     downvotes = downvotes + 1;
@@ -248,8 +250,8 @@ namespace Skuld.Commands
                     command.Parameters.AddWithValue("@title", title);
                     uint Downvote = Convert.ToUInt32(await Sql.GetSingleAsync(command));
                     if (downvotes == Downvote)
-                        await MessageHandler.SendChannel(Context.Channel, $"Downvote added to **{title}** it currently has: {downvotes} Downvote");
-                }*/
+                        await MessageHandler.SendChannel(Context.Channel, $"Downvote added to **{title}** it currently has: {downvotes} Downvote");*/
+                }
                 if (cmd == "delete")
                 {
                     if(Convert.ToUInt64(Pasta.OwnerID) == Context.User.Id)
@@ -258,7 +260,6 @@ namespace Skuld.Commands
                         command.Parameters.AddWithValue("@title", title);
                         await Sql.InsertAsync(command).ContinueWith(async x =>
                         {
-                            Console.WriteLine(x);
                             if (x.IsCompleted)
                                 await MessageHandler.SendChannel(Context.Channel, $"Successfully deleted: **{title}**");
                         });
@@ -293,8 +294,9 @@ namespace Skuld.Commands
                         content = content.Replace("\'", "\\\'");
                         content = content.Replace("\"", "\\\"");
 
-                        command = new MySqlCommand("INSERT INTO pasta (content,ownerid,created,pastaname) VALUES ( @content , @ownerid , @created , @pastatitle )");
+                        command = new MySqlCommand("INSERT INTO pasta (content,username,ownerid,created,pastaname) VALUES ( @content , @username , @ownerid , @created , @pastatitle )");
                         command.Parameters.AddWithValue("@content", content);
+                        command.Parameters.AddWithValue("@username", Context.User.Username.Replace("\'", "\\\'").Replace("\"", "\\\"") + "#" + Context.User.DiscriminatorValue);                    
                         command.Parameters.AddWithValue("@ownerid", Context.User.Id);
                         command.Parameters.AddWithValue("@created", DateTime.UtcNow);
                         command.Parameters.AddWithValue("@pastatitle", title);
@@ -622,23 +624,15 @@ namespace Skuld.Commands
         [Command("dadjoke", RunMode = RunMode.Async), Summary("Gives you a bad dad joke to facepalm at.")]
         public async Task DadJoke()
         {
-            try
+            int index = Bot.random.Next(0, DadJokes.GetLength(0));
+            string joke = DadJokes[index, 0];
+            string punchline = DadJokes[index, 1]??"";
+            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder()
             {
-                int index = Bot.random.Next(0, DadJokes.GetLength(0));
-                string joke = DadJokes[index, 0];
-                string punchline = DadJokes[index, 1]??"";
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder()
-                {
-                    Title = joke,
-                    Description = punchline,
-                    Color = RandColor.RandomColor()
-                });
-            }
-            catch(Exception ex)
-            {
-                Console.WriteLine(ex);
-            }
-
+                Title = joke,
+                Description = punchline,
+                Color = RandColor.RandomColor()
+            });
         }
         [Command("pickup",RunMode = RunMode.Async),Summary("Cringe at these bad user-submitted pick up lines. (Don't actually use these or else you'll get laughed at. :3)"),Alias("pickupline")]
         public async Task PickUp()
@@ -659,7 +653,7 @@ namespace Skuld.Commands
         {
             try
             {
-                string cowdir = Path.Combine(Path.Combine(AppContext.BaseDirectory + "storage"), "cows");
+                string cowdir = Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "cows");
                 string[] cows = Directory.GetFiles(cowdir);
                 string cow = null;
                 if (message.StartsWith("-b"))
@@ -749,6 +743,11 @@ namespace Skuld.Commands
             {
                 Console.WriteLine(ex);
             }
+        }
+        [Command("chat",RunMode = RunMode.Async), Summary("Talk to Skuld, is another form of @Skuld message")]
+        public async Task Chat([Remainder]string message)
+        {
+            await CommandManager.HandleAI(Context, message);
         }
     }
 }

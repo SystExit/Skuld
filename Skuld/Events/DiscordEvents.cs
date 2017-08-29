@@ -151,7 +151,11 @@ namespace Skuld.Events
 
         private static async Task Bot_JoinedGuild(SocketGuild arg)
         {
-            await Task.Run(() => PopulateGuilds());
+            new Thread(() =>
+            {
+                Thread.CurrentThread.IsBackground = true;
+                PopulateSpecificGuild(arg).Wait();
+            }).Start();
         }
         //End Guilds
         
@@ -171,6 +175,7 @@ namespace Skuld.Events
                     int nonbots = guild.Users.Where(x => x.IsBot == false).Count();
                     gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Config.Load().Prefix}\" , 0 ), ";
                     guildcount = guildcount + 1;
+                    Logs.Add(new Models.LogMessage("IsrtGld", $"Added {guild.Name} to queue", LogSeverity.Info));
                 }
             }
             if (gcmd.CommandText.Contains(Config.Load().Prefix))
@@ -185,6 +190,23 @@ namespace Skuld.Events
             Logs.Add(new Models.LogMessage("IsrtGld", $"Finished!", LogSeverity.Info));
             await PopulateUsers();
         }
+        public static async Task PopulateSpecificGuild(SocketGuild guild)
+        {
+            int guildcount = 0;
+            MySqlCommand gcmd = new MySqlCommand();
+            gcmd.CommandText = "INSERT IGNORE INTO `guild` (`ID`,`name`,`prefix`,`logenabled`) VALUES ";
+            var cmd = new MySqlCommand("select ID from guild where ID = @guildid");
+            cmd.Parameters.AddWithValue("@guildid", guild.Id);
+            int nonbots = guild.Users.Where(x => x.IsBot == false).Count();
+            gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Config.Load().Prefix}\" , 0 ), ";
+            guildcount = guildcount + 1;
+            Logs.Add(new Models.LogMessage("IsrtGld", $"Added {guild.Name} to queue", LogSeverity.Info));
+            gcmd.CommandText = gcmd.CommandText.Substring(0, gcmd.CommandText.Length - 2);
+            Logs.Add(new Models.LogMessage("IsrtGld", $"Added {guildcount} Guild(s) to the database", LogSeverity.Info));
+            await Sql.InsertAsync(gcmd);
+            Logs.Add(new Models.LogMessage("IsrtGld", $"Finished!", LogSeverity.Info));
+            await PopulateEntireGuildUsers(guild);
+        }
         private static async Task PopulateUsers()
         {
             int usercount = 0;
@@ -192,6 +214,7 @@ namespace Skuld.Events
             
             foreach (var guild in bot.Guilds)
             {
+                await   guild.DownloadUsersAsync();
                 foreach (var user in guild.Users)
                 {
                     if (user.IsBot == false && user != null)
@@ -202,7 +225,8 @@ namespace Skuld.Events
                         if (String.IsNullOrEmpty(resp))
                         {
                             ucmd.CommandText += $"( {user.Id} , \"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{user.DiscriminatorValue}\", \"I have no description\" ), ";
-                                usercount = usercount + 1;
+                            Logs.Add(new Models.LogMessage("IsrtUsr", $"Added {user.Username} to queue", LogSeverity.Info));
+                            usercount = usercount + 1;
                         }
                     }
                 }
@@ -215,5 +239,34 @@ namespace Skuld.Events
             }
             Logs.Add(new Models.LogMessage("IsrtUsr", $"Finished!", LogSeverity.Info));
         }        
+        private static async Task PopulateEntireGuildUsers(SocketGuild guild)
+        {
+            int usercount = 0;
+            MySqlCommand ucmd = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES ");
+            
+            await guild.DownloadUsersAsync();
+            foreach (var user in guild.Users)
+            {
+                if (user.IsBot == false && user != null)
+                {
+                    var cmd = new MySqlCommand("select ID from accounts where ID = @userid");
+                    cmd.Parameters.AddWithValue("@userid", user.Id);
+                    var resp = await Sql.GetSingleAsync(cmd);
+                    if (String.IsNullOrEmpty(resp))
+                    {
+                        ucmd.CommandText += $"( {user.Id} , \"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{user.DiscriminatorValue}\", \"I have no description\" ), ";
+                        Logs.Add(new Models.LogMessage("IsrtUsr", $"Added {user.Username} to queue", LogSeverity.Info));
+                        usercount = usercount + 1;
+                    }
+                }
+            }
+            if (ucmd.CommandText.Contains("#"))
+            {
+                ucmd.CommandText = ucmd.CommandText.Substring(0, ucmd.CommandText.Length - 2);
+                Logs.Add(new Models.LogMessage("IsrtUsr", $"Added {usercount} Users to the database", LogSeverity.Info));
+                await Sql.InsertAsync(ucmd);
+            }
+            Logs.Add(new Models.LogMessage("IsrtUsr", $"Finished!", LogSeverity.Info));
+        }
     }
 }

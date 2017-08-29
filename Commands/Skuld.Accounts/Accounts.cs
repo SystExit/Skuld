@@ -180,60 +180,6 @@ namespace Skuld.Commands
             await MessageHandler.SendChannel(Context.Channel, $"Successfully set your description to **{await Sql.GetSingleAsync(command)}**");
         }
 
-        [Command("me", RunMode = RunMode.Async), Summary("Alias of sk!whois {tag yourself}")]
-        public async Task Whois() =>
-            await GetProile(Context.User as IGuildUser);
-        [Command("whois", RunMode = RunMode.Async), Summary("Get's information about a user"),Alias("user")]
-        public async Task GetProile([Remainder]IGuildUser whois)
-        {
-            EmbedBuilder embed = new EmbedBuilder()
-            {
-                Color = RandColor.RandomColor(),
-                Author = new EmbedAuthorBuilder() { IconUrl = whois.GetAvatarUrl(ImageFormat.Auto)??"", Name = whois.Username??"Unknown" },
-                ImageUrl = whois.GetAvatarUrl(ImageFormat.Auto)??""
-            };
-            int seencount = 0;
-            foreach (var item in Bot.bot.Guilds)
-                if (item.GetUser(whois.Id) != null)
-                    seencount++;
-            string game = null;
-            if (whois.Game.HasValue)
-            {
-                if (whois.Game.Value.StreamType != StreamType.NotStreaming)
-                    game = $"[{whois.Game.Value.Name}]({whois.Game.Value.StreamUrl})";
-                else
-                    game = whois.Game.Value.Name;
-            }                    
-            else
-                game = "Nothing";
-            embed.AddInlineField(":id: ID", whois.Id.ToString()??"Unknown");
-            embed.AddInlineField(":video_game: Currently Playing",game);
-            embed.AddInlineField(":information_source: Status", whois.Status.ToString()??"Unknown");
-            embed.AddInlineField(":robot: Bot?", whois.IsBot.ToString()??"Unknown");
-            embed.AddInlineField(":eyes: Mutual Servers", $"{seencount} servers");
-            embed.AddInlineField(":eyes: Last Seen", "Shard: "+(Bot.bot.GetShardIdFor(Context.Guild).ToString()??"Unknown"));
-            embed.AddInlineField(":shield: Roles", $"Do `{Config.Load().Prefix}roles` to see your roles");
-            embed.AddField(":inbox_tray: Server Join", whois.JoinedAt.Value.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")+"\t`DD/MM/YYYY`");
-            embed.AddField(":globe_with_meridians: Discord Join", whois.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
-        }
-        [Command("roles", RunMode = RunMode.Async), Summary("Gets your current roles")]
-        public async Task GetRole() =>
-            await GetRole(Context.User as IGuildUser);
-        [Command("roles", RunMode = RunMode.Async), Summary("Gets a users current roles")]
-        public async Task GetRole(IGuildUser user)
-        {
-            var guild = Context.Guild;
-            var userroles = user.RoleIds;
-            var roles = userroles.Select(query => guild.GetRole(query).Name).Aggregate((current, next) => current.TrimStart('@') + ", " + next);
-            string username=null;
-            if (!String.IsNullOrEmpty(user.Nickname))
-                username = user.Nickname + "#" + user.DiscriminatorValue;
-            else
-                username = user.Username + "#" + user.DiscriminatorValue;
-            await MessageHandler.SendChannel(Context.Channel, "Roles of __**" + username + "**__\n\n`" + (roles??"No roles")+"`");
-        }
-
         [Command("daily", RunMode = RunMode.Async), Summary("Daily Money")]
         public async Task Daily()
         {
@@ -263,7 +209,7 @@ namespace Skuld.Commands
         private async Task NewDaily(IUser user)
         {
             ulong oldmoney = 0;
-            var command = new MySqlCommand("select money from accounts where ID = @userid");
+            var command = new MySqlCommand("SELECT `money` FROM `accounts` WHERE ID = @userid");
             command.Parameters.AddWithValue("@userid", Context.User.Id);
             var tresp = await Sql.GetSingleAsync(command);
             if (!String.IsNullOrEmpty(tresp))
@@ -283,13 +229,13 @@ namespace Skuld.Commands
             });
         }
         [Command("daily", RunMode = RunMode.Async), Summary("Daily Money")]
-        public async Task GiveDaily(IUser usertogive)
+        public async Task GiveDaily([Remainder]IGuildUser usertogive)
         {
             if (usertogive.IsBot) { await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = "Bot Accounts cannot be given any money", Color = new Color(255,0,0) }); }
             else
             {
                 DateTime olddate = new DateTime();
-                var command = new MySqlCommand("select daily from accounts where ID = @userid");
+                var command = new MySqlCommand("SELECT `daily` FROM `accounts` WHERE ID = @userid");
                 command.Parameters.AddWithValue("@userid", Context.User.Id);
                 var resp = await Sql.GetSingleAsync(command);
                 if (!String.IsNullOrEmpty(resp))
@@ -308,21 +254,21 @@ namespace Skuld.Commands
                     else
                     {
                         ulong oldmoney = 0;
-                        command = new MySqlCommand("select money from accounts where ID = @userid");
+                        command = new MySqlCommand("SELECT `money` FROM `accounts` WHERE ID = @userid");
                         command.Parameters.AddWithValue("@userid", usertogive.Id);
                         var tresp = await Sql.GetSingleAsync(command);
                         if (!String.IsNullOrEmpty(tresp))
                             oldmoney = Convert.ToUInt64(tresp);
                         ulong newamount = oldmoney + Config.Load().DailyAmount;
 
-                        command = new MySqlCommand("UPDATE ACCOUNTS SET Daily = @daily from accounts where ID = @userid");
+                        command = new MySqlCommand("UPDATE ACCOUNTS SET Daily = @daily WHERE ID = @userid");
                         command.Parameters.AddWithValue("@userid", Context.User.Id);
                         command.Parameters.AddWithValue("@daily", DateTime.UtcNow);
                         await Sql.InsertAsync(command).ContinueWith(async x =>
                         {
                             if (x.IsCompleted)
                             {
-                                command = new MySqlCommand("UPDATE ACCOUNTS SET money = @money from accounts where ID = @userid");
+                                command = new MySqlCommand("UPDATE ACCOUNTS SET money = @money WHERE ID = @userid");
                                 command.Parameters.AddWithValue("@userid", usertogive.Id);
                                 command.Parameters.AddWithValue("@money", newamount);
                                 await Sql.InsertAsync(command).ContinueWith(async z =>
@@ -337,8 +283,30 @@ namespace Skuld.Commands
                     }
                 }
                 else
-                    await NewDaily(usertogive);
-            }            
+                    await NewDailyGive(usertogive);
+            }
+        }
+        private async Task NewDailyGive(IGuildUser user)
+        {
+            ulong oldmoney = 0;
+            var command = new MySqlCommand("SELECT `money` FROM `accounts` WHERE ID = @userid");
+            command.Parameters.AddWithValue("@userid", Context.User.Id);
+            var tresp = await Sql.GetSingleAsync(command);
+            if (!String.IsNullOrEmpty(tresp))
+                oldmoney = Convert.ToUInt64(tresp);
+            ulong newamount = oldmoney + Config.Load().DailyAmount;
+
+            command = new MySqlCommand("UPDATE accounts SET money = @money, daily = @daily WHERE ID = @userid");
+            command.Parameters.AddWithValue("@userid", Context.User.Id);
+            command.Parameters.AddWithValue("@money", newamount);
+            command.Parameters.AddWithValue("@daily", DateTime.UtcNow);
+            await Sql.InsertAsync(command).ContinueWith(async x =>
+            {
+                if (x.IsCompleted)
+                {
+                    await MessageHandler.SendChannel(Context.Channel, $"You just gave {user.Mention} {Config.Load().MoneySymbol + Config.Load().DailyAmount}");
+                }
+            });
         }
 
         [Command("give", RunMode = RunMode.Async), Summary("Give away ur money")]
@@ -430,6 +398,7 @@ namespace Skuld.Commands
                 await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error" }, Description = "Your username is already the same as the one I have on record.", Color = new Color(255, 0, 0) });
             }
         }
+
         private async Task InsertUser(IUser user)
         {
             MySqlCommand command = new MySqlCommand();

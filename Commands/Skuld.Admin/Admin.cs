@@ -15,7 +15,7 @@ namespace Skuld.Commands
     {
         [Command("say", RunMode = RunMode.Async), Summary("Say something to a channel")]
         public async Task Say(IMessageChannel channel, [Remainder] string message) =>
-            await MessageHandler.SendChannel(Context.Channel, message);
+            await MessageHandler.SendChannel(channel, message);
 
         [Command("roleids", RunMode = RunMode.Async), Summary("Gets all role ids")]
         public async Task GetRoleIds()
@@ -29,7 +29,22 @@ namespace Skuld.Commands
                 lines.Add(new string[] { "\"" + item.Name + "\"", Convert.ToString(item.Id) });
             }
             var padded = ConsoleUtils.PrettyLines(lines, 3);
-            await MessageHandler.SendChannel(Context.Channel,"```cs\n" + padded + "```");
+            if(padded.Length>2000)
+            {
+                var paddedlines = padded.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+                var paddedlinesptone = paddedlines.Take(paddedlines.Length / 2);
+                var paddedlinespttwo = paddedlines.Skip(paddedlines.Length / 2).Take(paddedlines.Length / 2);
+                string paddedlineone = null, paddedlinetwo = null;
+                foreach (var item in paddedlinesptone)
+                    paddedlineone += item+"\n";
+                foreach (var item in paddedlinespttwo)
+                    paddedlinetwo += item+"\n";
+
+                await MessageHandler.SendChannel(Context.Channel, "Pt 1/2```cs\n" + paddedlineone + "```");
+                await MessageHandler.SendChannel(Context.Channel, "Pt 2/2```cs\n" + paddedlinetwo + "```");
+            }
+            else
+                await MessageHandler.SendChannel(Context.Channel, "```cs\n" + padded + "```");
         }
 
         [Command("mute", RunMode = RunMode.Async), Summary("Mutes a user")]
@@ -197,6 +212,36 @@ namespace Skuld.Commands
             await guild.AddBanAsync(user, 7, reason);
             await MessageHandler.SendChannel(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}`\nReason given: {reason}");
         }
+        [RequireBotPermission(GuildPermission.BanMembers)]
+        [RequireUserPermission(GuildPermission.BanMembers)]
+        [Command("hackban", RunMode = RunMode.Async), Summary("Hackbans a userid")]
+        public async Task HackBan(ulong ID)
+        {
+            try
+            {
+                await Context.Guild.AddBanAsync(ID);
+                await MessageHandler.SendChannel(Context.Channel, $"Banned ID: {ID}");
+            }
+            catch(Exception ex)
+            {}
+        }
+        [RequireBotPermission(GuildPermission.BanMembers)]
+        [RequireUserPermission(GuildPermission.BanMembers)]
+        [Command("hackban", RunMode = RunMode.Async), Summary("Hackbans a set of userids Must be in this format hackban [id1],[id2],[id3]")]
+        public async Task HackBan([Remainder]string IDs)
+        {
+            try
+            {
+                var ids = IDs.Split(',');
+                foreach (var id in ids)
+                {
+                    await Context.Guild.AddBanAsync(Convert.ToUInt64(id));
+                }
+                await MessageHandler.SendChannel(Context.Channel, $"Banned IDs: {IDs}");
+            }
+            catch(Exception ex)
+            {}
+        }
         [Command("softban", RunMode = RunMode.Async), Summary("Softbans a user")]
         [RequireBotPermission(GuildPermission.BanMembers)]
         [RequireUserPermission(GuildPermission.BanMembers)]
@@ -233,7 +278,7 @@ namespace Skuld.Commands
         }
 
         [Command("setjrole", RunMode = RunMode.Async), Summary("Clears the autojoinrole")]
-        public async Task RemoveAutoRoll()
+        public async Task RemoveAutoRole()
         {
             var guild = Context.Guild;
             var cmd = new MySqlCommand("select autojoinrole from guild where id = @guildid");

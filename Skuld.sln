@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.16
+VisualStudioVersion = 15.0.26730.10
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Skuld", "Skuld\Skuld.csproj", "{4A0569A7-4FAF-461A-9B4A-603956AF7CC3}"
 EndProject
@@ -27,6 +27,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Skuld.Search", "Commands\Sk
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "References", "References", "{5C56A68A-D80A-4B9C-A437-D82A323BEF18}"
 	ProjectSection(SolutionItems) = preProject
+		References\AIMLbot.dll = References\AIMLbot.dll
 		References\CowsaySharp.Library.dll = References\CowsaySharp.Library.dll
 	EndProjectSection
 EndProject
@@ -90,5 +91,8 @@ Global
 		{0CEC14E9-3714-4C8D-99A0-8BE33715310F} = {7E8973A2-55E8-4999-B80F-75D78D2028B4}
 		{9D6138DF-B28F-4112-BC3A-BD8E45BED478} = {7E8973A2-55E8-4999-B80F-75D78D2028B4}
 		{A324E088-F05C-4844-886B-9264222E9F09} = {7E8973A2-55E8-4999-B80F-75D78D2028B4}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7040FD0C-A982-4959-B8DF-133C9695B7CE}
 	EndGlobalSection
 EndGlobal

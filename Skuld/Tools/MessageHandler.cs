@@ -64,16 +64,16 @@ namespace Skuld.Tools
         {
             try
             {
-                await channel.TriggerTypingAsync();
-                await channel.SendMessageAsync(":ok_hand: Check your DMs.");
                 if (embed == null)
                     await user.SendMessageAsync(message);
                 else
                     await user.SendMessageAsync(message, false, embed);
+                await SendChannel(channel, $":ok_hand: <@{user.Recipient.Id}> Check your DMs.");
             }
             catch (Exception ex)
             {
-                Bot.Logs.Add(new Models.LogMessage("MsgH-DM", "Error dispatching Direct Message to user, printed exception to logs.", LogSeverity.Warning, ex));
+                Bot.Logs.Add(new Models.LogMessage("MsgH-DM", "Error dispatching Direct Message to user, sending to channel instead. Printed exception to logs.", LogSeverity.Warning, ex));
+                await SendChannel(channel, "I couldn't send it to your DMs, so I sent it here instead... I hope you're not mad. <:blobcry:350681079415439361> " + message, embed);
             }
         }
     }
