@@ -63,9 +63,11 @@ namespace Skuld.Commands
                     return;
                 }
 
-                EmbedBuilder embed = new EmbedBuilder();
-                embed.Description = $"Here are some commands like **{command}**";
-                embed.Color = RandColor.RandomColor();
+                EmbedBuilder embed = new EmbedBuilder()
+                {
+                    Description = $"Here are some commands like **{command}**",
+                    Color = RandColor.RandomColor()
+                };
 
                 foreach (var match in result.Commands)
                 {

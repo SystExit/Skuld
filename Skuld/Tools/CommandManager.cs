@@ -37,8 +37,7 @@ namespace Skuld.Tools
                 {
                     if(!String.IsNullOrEmpty(Config.Load().SqlDBHost))
                     {
-                        MySqlCommand command = new MySqlCommand();
-                        command.CommandText = "SELECT prefix FROM guild WHERE ID = @guildid";
+                        MySqlCommand command = new MySqlCommand("SELECT prefix FROM guild WHERE ID = @guildid");
                         command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
                         customPrefix = await Sql.GetSingleAsync(command);
                         if (message.Content.ToLower() == $"{bot.CurrentUser.Username.ToLower()}.resetprefix")
@@ -47,14 +46,12 @@ namespace Skuld.Tools
                             Logs.Add(new Models.LogMessage("HandCmd", $"Prefix reset on guild {context.Guild.Name}", Discord.LogSeverity.Info));
                             if (guilduser.GuildPermissions.ManageGuild)
                             {
-                                command = new MySqlCommand();
-                                command.CommandText = "UPDATE guild SET prefix = @prefix WHERE ID = @guildid";
+                                command = new MySqlCommand("UPDATE guild SET prefix = @prefix WHERE ID = @guildid");
                                 command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
                                 command.Parameters.AddWithValue("@prefix", defaultPrefix);
                                 await Sql.InsertAsync(command).ContinueWith(async x =>
                                 {
-                                    command = new MySqlCommand();
-                                    command.CommandText = "SELECT prefix FROM guild WHERE ID = @guildid";
+                                    command = new MySqlCommand("SELECT prefix FROM guild WHERE ID = @guildid");
                                     command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
                                     string newprefix = await Sql.GetSingleAsync(command);
                                     if (newprefix == defaultPrefix)
@@ -65,7 +62,7 @@ namespace Skuld.Tools
                                 await MessageHandler.SendChannel(message.Channel, "I'm sorry, you don't have permissions to reset the prefix, you need `MANAGE_SERVER` or `ADMINISTRATOR`");
                         }
                     }
-                    if (String.IsNullOrEmpty(customPrefix) && String.IsNullOrEmpty(Config.Load().SqlDBHost))
+                    if (String.IsNullOrEmpty(customPrefix) || String.IsNullOrEmpty(Config.Load().SqlDBHost))
                         customPrefix = defaultPrefix;
                     await DispatchCommand(message, context, argPos, arg);
                 }
@@ -103,6 +100,7 @@ namespace Skuld.Tools
                     var r = new AIMLbot.Request(chatmessage, ChatUser, ChatService);
                     var userresp = ChatService.Chat(r);
                     var responce = userresp.Output;
+                    ChatService.writeToLog(ChatService.LastLogMessage);
                     ChatUser.Predicates.DictionaryAsXML.Save(PathToUserData + "\\" + Context.User.Id + ".dat");
                     await MessageHandler.SendChannel(Context.Channel, $"{Context.User.Mention}, {responce}");
                 }
@@ -122,29 +120,22 @@ namespace Skuld.Tools
         {
             try
             {
-                if (!(message.HasStringPrefix(customPrefix, ref argPos) || message.HasStringPrefix(defaultPrefix, ref argPos))) return;
+                if (message.HasStringPrefix(customPrefix, ref argPos) || message.HasStringPrefix(defaultPrefix, ref argPos))
                 {
-                    if(!String.IsNullOrEmpty(Config.Load().SqlDBHost))
-                        await InsertCommand(customPrefix??defaultPrefix, arg);
-                    string[] messagearr = arg.Content.Split(' ');
-                    int prefixlength = 0;
-                    if (customPrefix != null)
-                        prefixlength = customPrefix.Length;
-                    else
-                        prefixlength = defaultPrefix.Length;
-                    string msg = messagearr[0].Remove(0, prefixlength);
+                    if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
+                        await InsertCommand(customPrefix ?? defaultPrefix, arg);
                     var result = await commands.ExecuteAsync(context, argPos, map);
                     if (!result.IsSuccess)
                     {
-                        if(result.Error != CommandError.UnknownCommand)
+                        if (result.Error != CommandError.UnknownCommand)
                         {
-                            var cmd = commands.Commands.FirstOrDefault(x => x.Name == msg);
                             Logs.Add(new Models.LogMessage("CmdHand", "Error with command, Error is: " + result, LogSeverity.Error));
-                            if(result.Error == CommandError.UnmetPrecondition || result.Error == CommandError.BadArgCount)
+                            if (result.Error == CommandError.UnmetPrecondition || result.Error == CommandError.BadArgCount)
                                 await MessageHandler.SendChannel(context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = Convert.ToString(result.ErrorReason), Color = new Color(255, 0, 0) });
                         }
                     }
                 }
+                else { }
             }
             catch(Exception ex)
             {
@@ -153,56 +144,64 @@ namespace Skuld.Tools
         }
         private static async Task InsertCommand(string prefix, SocketMessage arg)
         {
-            int prefixlength = prefix.Length;
-            var user = arg.Author;
-            string[] messagearr = arg.Content.Split(' ');
-            string message = messagearr[0].Remove(0,prefixlength);
-            message = message.ToLower();
-            foreach (var item in commands.Commands)
+            try
             {
-                if (item.Name != message) { }
-                else
+                int prefixlength = prefix.Length;
+                var user = arg.Author;
+                string[] messagearr = arg.Content.Split(' ');
+                string message = messagearr[0];
+                message = message.ToLower();
+                if (message.Contains(prefix))
+                    message = message.Replace(prefix, "");
+                foreach (var module in commands.Modules)
                 {
-                    MySqlCommand command = new MySqlCommand();
-                    command.CommandText = "SELECT * FROM commandusage WHERE UserID = @userid AND Command = @command";
-                    command.Parameters.AddWithValue("@userid", user.Id);
-                    command.Parameters.AddWithValue("@command", message);
-                    var respsql = await Sql.GetAsync(command);
-                    if (respsql.HasRows)
+                    if (message == module.Name)
                     {
-                        while(await respsql.ReadAsync())
+                        if (!String.IsNullOrEmpty(messagearr[1]))
+                            message = messagearr[1].ToLower();
+                        else
+                            message = messagearr[0].ToLower();
+                        return;
+                    }
+                    else { }
+                }
+                foreach (var item in commands.Commands)
+                {
+                    if (item.Name != message) { }
+                    else
+                    {
+                        MySqlCommand command = new MySqlCommand("SELECT UserUsage FROM commandusage WHERE UserID = @userid AND Command = @command");
+                        command.Parameters.AddWithValue("@userid", user.Id);
+                        command.Parameters.AddWithValue("@command", message);
+                        var resp = await Sql.GetSingleAsync(command);
+                        if (!String.IsNullOrEmpty(resp))
                         {
-                            var cmd = Convert.ToString(respsql["command"]);
-                            var cmdusg = Convert.ToUInt64(respsql["UserUsage"]);
-                            cmdusg=cmdusg+1;
-                            command = new MySqlCommand();
-                            command.CommandText = "UPDATE commandusage SET UserUsage = @userusg WHERE UserID = @userid AND Command = @command";
+                            var cmdusg = Convert.ToInt32(resp);
+                            cmdusg = cmdusg + 1;
+                            command = new MySqlCommand("UPDATE commandusage SET UserUsage = @userusg WHERE UserID = @userid AND Command = @command");
                             command.Parameters.AddWithValue("@userusg", cmdusg);
                             command.Parameters.AddWithValue("@userid", user.Id);
                             command.Parameters.AddWithValue("@command", message);
                             await Sql.InsertAsync(command);
+                            return;
                         }
-                        respsql.Close();
-                        await Sql.getconn.CloseAsync();
-                        return;
-                    }
-                    else
-                    {
-                        command = new MySqlCommand();
-                        command.CommandText = "INSERT INTO commandusage (`UserID`, `UserUsage`, `Command`) VALUES (@userid , @userusg , @command)";
-                        command.Parameters.AddWithValue("@userusg", 1);
-                        command.Parameters.AddWithValue("@userid", user.Id);
-                        command.Parameters.AddWithValue("@command", message);
-                        await Sql.InsertAsync(command);
-                        return;
+                        else
+                        {
+                            command = new MySqlCommand("INSERT INTO commandusage (`UserID`, `UserUsage`, `Command`) VALUES (@userid , @userusg , @command)");
+                            command.Parameters.AddWithValue("@userusg", 1);
+                            command.Parameters.AddWithValue("@userid", user.Id);
+                            command.Parameters.AddWithValue("@command", message);
+                            await Sql.InsertAsync(command);
+                            return;
+                        }
                     }
                 }
-            }                        
+            }
+            catch (Exception ex) { Console.WriteLine(ex); }
         }
         private static async Task InsertAI(IUser user)
         {
-            MySqlCommand command = new MySqlCommand();
-            command.CommandText = "SELECT * FROM commandusage WHERE UserID = @userid AND Command = @command";
+            MySqlCommand command = new MySqlCommand("SELECT * FROM commandusage WHERE UserID = @userid AND Command = @command");
             command.Parameters.AddWithValue("@userid", user.Id);
             command.Parameters.AddWithValue("@command", "chat");
             var respsql = await Sql.GetAsync(command);
@@ -213,8 +212,7 @@ namespace Skuld.Tools
                     var cmd = Convert.ToString(respsql["command"]);
                     var cmdusg = Convert.ToUInt64(respsql["UserUsage"]);
                     cmdusg = cmdusg + 1;
-                    command = new MySqlCommand();
-                    command.CommandText = "UPDATE commandusage SET UserUsage = @userusg WHERE UserID = @userid AND Command = @command";
+                    command = new MySqlCommand("UPDATE commandusage SET UserUsage = @userusg WHERE UserID = @userid AND Command = @command");
                     command.Parameters.AddWithValue("@userusg", cmdusg);
                     command.Parameters.AddWithValue("@userid", user.Id);
                     command.Parameters.AddWithValue("@command", "chat");
@@ -225,8 +223,7 @@ namespace Skuld.Tools
             }
             else
             {
-                command = new MySqlCommand();
-                command.CommandText = "INSERT INTO commandusage (`UserID`, `UserUsage`, `Command`) VALUES (@userid , @userusg , @command)";
+                command = new MySqlCommand("INSERT INTO commandusage (`UserID`, `UserUsage`, `Command`) VALUES (@userid , @userusg , @command)");
                 command.Parameters.AddWithValue("@userusg", 1);
                 command.Parameters.AddWithValue("@userid", user.Id);
                 command.Parameters.AddWithValue("@command", "chat");

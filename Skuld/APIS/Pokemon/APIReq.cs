@@ -5,11 +5,11 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.IO;
 
-namespace Skuld.APIS.PokeAPI
+namespace Skuld.APIS
 {
-    public class PokeAPI
+    public partial class APIWebReq
     {
-        public static int? HighestID = GetHighestPokemon().Result;
+        public static int? HighestPokeID = GetHighestPokemon().Result;
         private static async Task<int> GetHighestPokemon()
         {
             try
@@ -52,9 +52,9 @@ namespace Skuld.APIS.PokeAPI
                 }
                 else
                 {
-                    if(HighestID.HasValue && HighestID.Value > 0)
+                    if(HighestPokeID.HasValue && HighestPokeID.Value > 0)
                     {
-                        var random = Bot.random.Next(0, HighestID.Value);
+                        var random = Bot.random.Next(0, HighestPokeID.Value);
                         if (!Directory.Exists(AppContext.BaseDirectory + "/skuld/storage/pokemon/"))
                             Directory.CreateDirectory(AppContext.BaseDirectory + "/skuld/storage/pokemon/");
                         string pokejson = AppContext.BaseDirectory + $"/skuld/storage/pokemon/{random}.json";

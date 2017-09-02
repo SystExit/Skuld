@@ -64,10 +64,6 @@ namespace Skuld.Events
         //End logging
 
         //Start FSW
-        public async static void Fsw_Created(object sender, FileSystemEventArgs e)
-        {
-            await ModuleHandler.LoadSpecificModule(e.Name);
-        }
         public async static void Fsw_Deleted(object sender, FileSystemEventArgs e)
         {
             await ModuleHandler.UnloadSpecificModule(e.Name);
@@ -81,5 +77,10 @@ namespace Skuld.Events
             return Task.CompletedTask;
         }
         //End Twitch        
+        //AimlBot
+        public static void ChatService_WrittenToLog()
+        {
+            Logs.Add(new Models.LogMessage("ChtSrvc", ChatService.LastLogMessage, Discord.LogSeverity.Info));
+        }
     }
 }

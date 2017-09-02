@@ -2,51 +2,82 @@
 using System.Threading.Tasks;
 using Discord;
 using System.Timers;
+using System.Diagnostics;
+using System.Linq;
 
 namespace Skuld.Tools
 {
-    public class MessageHandler
+    public partial class MessageHandler
     {
-        private static IUserMessage dmsg = null;
-        public static async Task SendChannel(IMessageChannel channel, string message, Embed embed = null, double? Timeout = null)
+        public static async Task<IUserMessage> SendChannel(IChannel channel, string message, Embed embed = null)
         {
-            await channel.TriggerTypingAsync();
-            if (Timeout.HasValue)
+            var TextChan = (ITextChannel)channel;
+            var MesgChan = (IMessageChannel)channel;
+            await MesgChan.TriggerTypingAsync();
+            try
             {
-                try
-                {                    
-                    if (embed == null)
-                        dmsg = await channel.SendMessageAsync(message);
-                    else
-                    {
-                        dmsg = await channel.SendMessageAsync(message, false, embed);
-                    }                        
-                    Bot.Logs.Add(new Models.LogMessage("MsgDisp", $"Dispactched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
-                    Timer timer = new Timer(Timeout.Value*1000);
-                    timer.Elapsed += Timer_Elapsed;
-                    timer.Start();
-                }
-                catch (Exception ex)
+                if (embed == null)
+                    return await MesgChan.SendMessageAsync(message);
+                else
                 {
-                    Bot.Logs.Add(new Models.LogMessage("MH-ChHV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
+                    var perm = (await TextChan.Guild.GetUserAsync(Bot.bot.CurrentUser.Id)).GetPermissions(TextChan).EmbedLinks;
+                    if (!perm)
+                    {
+                        if (message != null)
+                            return await MesgChan.SendMessageAsync(message + "\n" + ConvertEmbedToText(embed));
+                        else
+                            return await MesgChan.SendMessageAsync(ConvertEmbedToText(embed));             
+                    }
+                    else
+                        return await MesgChan.SendMessageAsync(message, false, embed);
+                }                        
+                Bot.Logs.Add(new Models.LogMessage("MsgDisp", $"Dispactched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
+            }
+            catch (Exception ex)
+            {
+                Bot.Logs.Add(new Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
+                return null;
+            }
+        }
+        private static IUserMessage dmsg = null;
+        public static async Task SendChannel(IChannel channel, string message, double Timeout, Embed embed = null)
+        {
+            var TextChan = (ITextChannel)channel;
+            var MesgChan = (IMessageChannel)channel;
+            await MesgChan.TriggerTypingAsync();
+            try
+            {
+                if (embed == null)
+                    dmsg = await MesgChan.SendMessageAsync(message);
+                else
+                {
+                    var perm = (await TextChan.Guild.GetUserAsync(Bot.bot.CurrentUser.Id)).GetPermissions(TextChan).EmbedLinks;
+                    if (!perm)
+                    {
+                        if (message != null)
+                            dmsg = await MesgChan.SendMessageAsync(message + "\n" + ConvertEmbedToText(embed));
+                        else
+                            dmsg = await MesgChan.SendMessageAsync(ConvertEmbedToText(embed));
+                    }
+                    else if (perm)
+                        dmsg = await MesgChan.SendMessageAsync(message, false, embed);
+                }
+                Bot.Logs.Add(new Models.LogMessage("MsgDisp", $"Dispactched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
+                Stopwatch timer = new Stopwatch();
+                timer.Start();
+                while (timer.IsRunning)
+                {
+                    if (timer.ElapsedMilliseconds == Timeout * 1000)
+                    {
+                        await dmsg.DeleteAsync();
+                        timer.Stop();
+                        Bot.Logs.Add(new Models.LogMessage("MsgDisp", $"Deleted a timed message in channel: {(channel as IGuildChannel)} in guild: {(channel as IGuildChannel).Guild}", LogSeverity.Info));
+                    }
                 }
             }
-            else
+            catch (Exception ex)
             {
-                try
-                {
-                    if (embed == null)
-                        await channel.SendMessageAsync(message);
-                    else
-                    {
-                        await channel.SendMessageAsync(message, false, embed);
-                    }                        
-                    Bot.Logs.Add(new Models.LogMessage("MsgDisp", $"Dispactched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
-                }
-                catch (Exception ex)
-                {
-                    Bot.Logs.Add(new Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
-                }
+                Bot.Logs.Add(new Models.LogMessage("MH-ChHV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
             }
         }
 
@@ -56,24 +87,26 @@ namespace Skuld.Tools
             {
                 dmsg.DeleteAsync().Wait();
                 dmsg = null;
-            }
-            
+            }            
         }
 
-        public static async Task SendDMs(IMessageChannel channel, IDMChannel user, string message, Embed embed = null)
+        public static async Task<IUserMessage> SendDMs(IMessageChannel channel, IDMChannel user, string message, Embed embed = null)
         {
             try
             {
+                IUserMessage dmsg = null;
                 if (embed == null)
-                    await user.SendMessageAsync(message);
+                    dmsg = await user.SendMessageAsync(message);
                 else
-                    await user.SendMessageAsync(message, false, embed);
+                    dmsg = await user.SendMessageAsync(message, false, embed);
                 await SendChannel(channel, $":ok_hand: <@{user.Recipient.Id}> Check your DMs.");
+                return dmsg;
             }
             catch (Exception ex)
             {
                 Bot.Logs.Add(new Models.LogMessage("MsgH-DM", "Error dispatching Direct Message to user, sending to channel instead. Printed exception to logs.", LogSeverity.Warning, ex));
                 await SendChannel(channel, "I couldn't send it to your DMs, so I sent it here instead... I hope you're not mad. <:blobcry:350681079415439361> " + message, embed);
+                return null;
             }
         }
     }

@@ -11,7 +11,7 @@ namespace Skuld.APIS.Twitch
             NTwitchClient = new TwitchRestClient(new TwitchRestConfig()
             {
                 ClientId = clientid,
-                LogLevel = LogSeverity.Info
+                LogLevel = LogSeverity.Verbose
             });
             NTwitchClient.Log += Events.SkuldEvents.NTwitchClient_Log;
             await NTwitchClient.LoginAsync(token);

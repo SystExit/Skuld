@@ -4,12 +4,12 @@ using Newtonsoft.Json.Linq;
 using Skuld.Models.API;
 using Newtonsoft.Json;
 
-namespace Skuld.APIS.XKCD
+namespace Skuld.APIS
 {
-    public class WebReq
+    public partial class APIWebReq
     {
-        public static int? LastPage = GetLastPage().Result;
-        public static async Task<int?> GetLastPage()
+        public static int? XKCDLastPage = GetXKCDLastPage().Result;
+        public static async Task<int?> GetXKCDLastPage()
         {
             var rawresp = await APIWebReq.ReturnString(new Uri("https://xkcd.com/info.0.json"));
             JObject jsonresp = JObject.Parse(rawresp);
@@ -22,13 +22,13 @@ namespace Skuld.APIS.XKCD
             else
                 return null;
         }
-        public static async Task<XKCDComic> GetComic(int comicid)
+        public static async Task<XKCDComic> GetXKCDComic(int comicid)
         {
-            if (LastPage.HasValue)
+            if (XKCDLastPage.HasValue)
                 return JsonConvert.DeserializeObject<XKCDComic>((await APIWebReq.ReturnString(new Uri($"https://xkcd.com/{comicid}/info.0.json"))));
             else
             {
-                await GetLastPage();
+                await GetXKCDLastPage();
                 return null;
             }
         }

@@ -20,14 +20,17 @@ namespace Skuld.Commands
         public async Task GetMoney(IGuildUser user)
         {
             var command = new MySqlCommand("select money from accounts where ID = @id");
-            command.Parameters.AddWithValue("@id", Context.User.Id);
+            command.Parameters.AddWithValue("@id", user.Id);
             var resp = await Sql.GetSingleAsync(command);
             ulong money = 0;
             if (!String.IsNullOrEmpty(resp))
                 money = Convert.ToUInt64(resp);
             else
                 await InsertUser(Context.User);
-            await MessageHandler.SendChannel(Context.Channel, $"You have: {Config.Load().MoneySymbol + money.ToString("N0")}");
+            if(Context.User == user)
+                await MessageHandler.SendChannel(Context.Channel, $"You have: {Config.Load().MoneySymbol + money.ToString("N0")}");
+            else
+                await MessageHandler.SendChannel(Context.Channel, $"**{user.Nickname??user.Username}** has: {Config.Load().MoneySymbol + money.ToString("N0")}");
         }
 
         [Command("profile", RunMode= RunMode.Async), Summary("Get your profile")]
@@ -36,54 +39,71 @@ namespace Skuld.Commands
         [Command("profile", RunMode = RunMode.Async), Summary("Get users profile")]
         public async Task GetProfile([Remainder]IGuildUser user)
         {
-            SkuldUser User = new SkuldUser();
-            EmbedBuilder embed = new EmbedBuilder();
-            embed.Color = RandColor.RandomColor();
-            var command = new MySqlCommand("SELECT * FROM accounts WHERE ID = @userid");
-            command.Parameters.AddWithValue("@userid", user.Id);
-            using (var reader = await Sql.GetAsync(command))
+            try
             {
-                if (reader.HasRows)
+                SkuldUser User = new SkuldUser();
+                EmbedBuilder embed = new EmbedBuilder()
                 {
-                    while (await reader.ReadAsync())
+                    Color = RandColor.RandomColor()
+                };
+                var command = new MySqlCommand("SELECT * FROM accounts WHERE ID = @userid");
+                command.Parameters.AddWithValue("@userid", user.Id);
+                using (var reader = await Sql.GetAsync(command))
+                {
+                    if (reader.HasRows)
                     {
-                        User.Username = Convert.ToString(reader["username"]);
-                        User.Description = Convert.ToString(reader["description"]);
-                        User.Money = Convert.ToUInt64(reader["money"]);
-                        User.LuckFactor = Convert.ToDouble(reader["luckfactor"]);
-                        User.Daily = reader["daily"].ToString();
-                    }
-                    command = new MySqlCommand("SELECT * FROM commandusage WHERE UserID = @userid ORDER BY UserUsage DESC LIMIT 1");
-                    command.Parameters.AddWithValue("@userid", user.Id);
-                    var resp = await Sql.GetAsync(command);
-                    if (resp.HasRows)
-                    {
-                        while (await resp.ReadAsync())
+                        while (await reader.ReadAsync())
                         {
-                            var com = Convert.ToString(resp["command"]);
-                            var comusg = Convert.ToUInt64(resp["UserUsage"]);
-                            User.FavCmd = com;
-                            User.FavCmdUsg = comusg;
+                            User.Username = Convert.ToString(reader["username"]);
+                            User.Description = Convert.ToString(reader["description"]);
+                            User.Money = Convert.ToUInt64(reader["money"]);
+                            User.LuckFactor = Convert.ToDouble(reader["luckfactor"]);
+                            User.Daily = reader["daily"].ToString();
                         }
+                        command = new MySqlCommand("SELECT * FROM commandusage WHERE UserID = @userid ORDER BY UserUsage DESC LIMIT 1");
+                        command.Parameters.AddWithValue("@userid", user.Id);
+                        var resp = await Sql.GetAsync(command);
+                        if (resp.HasRows)
+                        {
+                            while (await resp.ReadAsync())
+                            {
+                                var com = Convert.ToString(resp["command"]);
+                                var comusg = Convert.ToUInt64(resp["UserUsage"]);
+                                User.FavCmd = com;
+                                User.FavCmdUsg = comusg;
+                            }
+                        }
+                        embed.Author = new EmbedAuthorBuilder()
+                        {
+                            Name = User.Username,
+                            IconUrl = user.GetAvatarUrl() ?? "http://www.emoji.co.uk/files/mozilla-emojis/smileys-people-mozilla/11419-bust-in-silhouette.png"
+                        };
+                        embed.AddInlineField("Description", User.Description ?? "No Description");
+                        embed.AddInlineField(Config.Load().MoneyName, User.Money.Value.ToString("N0") ?? "No Money");
+                        embed.AddInlineField("Luck Factor", User.LuckFactor.ToString("P2") ?? "No LuckFactor");
+                        if (!String.IsNullOrEmpty(User.Daily))
+                            embed.AddInlineField("Daily", User.Daily);
+                        else
+                            embed.AddInlineField("Daily", "Not used Daily");
+                        if (User.FavCmd != null && User.FavCmdUsg != null)
+                            embed.AddInlineField("Favourite Command", $"`{User.FavCmd}` and it has been used {User.FavCmdUsg} times");
+                        else
+                            embed.AddInlineField("Favourite Command", "No favourite Command");
+                        await MessageHandler.SendChannel(Context.Channel, "", embed);
                     }
-                    embed.Author = new EmbedAuthorBuilder()
+                    else
                     {
-                        Name = User.Username,
-                        IconUrl = user.GetAvatarUrl() ?? "http://www.emoji.co.uk/files/mozilla-emojis/smileys-people-mozilla/11419-bust-in-silhouette.png"
-                    };
-                    embed.AddInlineField("Description", User.Description ?? "No Description");
-                    embed.AddInlineField(Config.Load().MoneyName, User.Money.Value.ToString("N0") ?? "No Money");
-                    embed.AddInlineField("Luck Factor", User.LuckFactor.ToString("P2") ?? "No LuckFactor");
-                    embed.AddInlineField("Daily", User.Daily ?? "Not used Daily");
-                    embed.AddInlineField("Favourite Command", $"`{User.FavCmd}` and it has been used {User.FavCmdUsg} times" ?? "No favourite Command");
-                    await MessageHandler.SendChannel(Context.Channel, "", embed);
-                }
-                else
-                {
-                    await MessageHandler.SendChannel(Context.Channel, "Error!! Fixing...", null, 5);
-                    await InsertUser(user);
+                        await MessageHandler.SendChannel(Context.Channel, "Error!! Fixing...", 5);
+                        await InsertUser(user);
+                    }
                 }
             }
+            catch (Exception ex)
+            {
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = ex.Message, Color = new Color(255, 0, 0) });
+                Console.WriteLine(ex);
+            }
+            
         }
 
         [Command("profile-ext", RunMode = RunMode.Async), Summary("Gets extended information about you")]
@@ -92,72 +112,89 @@ namespace Skuld.Commands
         [Command("profile-ext", RunMode = RunMode.Async), Summary("Gets extended information about a user")]
         public async Task GetProfileExt([Remainder]IGuildUser user)
         {
-            SkuldUser User = new SkuldUser();
-            EmbedBuilder embed = new EmbedBuilder();
-            EmbedAuthorBuilder auth = new EmbedAuthorBuilder();
-            embed.Color = RandColor.RandomColor();
-            var command = new MySqlCommand("SELECT * FROM accounts WHERE ID = @userid");
-            command.Parameters.AddWithValue("@userid", user.Id);
-            using (var reader = await Sql.GetAsync(command))
+            try
             {
-                if (reader.HasRows)
+                SkuldUser User = new SkuldUser();
+                EmbedBuilder embed = new EmbedBuilder();
+                EmbedAuthorBuilder auth = new EmbedAuthorBuilder();
+                embed.Color = RandColor.RandomColor();
+                var command = new MySqlCommand("SELECT * FROM accounts WHERE ID = @userid");
+                command.Parameters.AddWithValue("@userid", user.Id);
+                using (var reader = await Sql.GetAsync(command))
                 {
-                    while (await reader.ReadAsync())
+                    if (reader.HasRows)
                     {
-                        User.Username = User.Username = Convert.ToString(reader["username"]);
-                        User.Description = Convert.ToString(reader["description"]);
-                        User.Money = Convert.ToUInt64(reader["money"]);
-                        User.LuckFactor = Convert.ToDouble(reader["luckfactor"]);
-                        User.Daily = reader["daily"].ToString();
-                        User.Glares = Convert.ToUInt32(reader["glares"]);
-                        User.GlaredAt = Convert.ToUInt32(reader["glaredat"]);
-                        User.Pets = Convert.ToUInt32(reader["pets"]);
-                        User.Petted = Convert.ToUInt32(reader["petted"]);
-                        User.HP = Convert.ToUInt32(reader["hp"]);
-                    }
-                    command = new MySqlCommand("SELECT * FROM commandusage WHERE UserID = @userid ORDER BY UserUsage DESC LIMIT 1");
-                    command.Parameters.AddWithValue("@userid", user.Id);
-                    var resp = await Sql.GetAsync(command);
-                    if (resp.HasRows)
-                    {
-                        while (await resp.ReadAsync())
+                        while (await reader.ReadAsync())
                         {
-                            var com = Convert.ToString(resp["command"]);
-                            var comusg = Convert.ToUInt64(resp["UserUsage"]);
-                            User.FavCmd = com;
-                            User.FavCmdUsg = comusg;
+                            User.Username = User.Username = Convert.ToString(reader["username"]);
+                            User.Description = Convert.ToString(reader["description"]);
+                            User.Money = Convert.ToUInt64(reader["money"]);
+                            User.LuckFactor = Convert.ToDouble(reader["luckfactor"]);
+                            User.Daily = reader["daily"].ToString();
+                            User.Glares = Convert.ToUInt32(reader["glares"]);
+                            User.GlaredAt = Convert.ToUInt32(reader["glaredat"]);
+                            User.Pets = Convert.ToUInt32(reader["pets"]);
+                            User.Petted = Convert.ToUInt32(reader["petted"]);
+                            User.HP = Convert.ToUInt32(reader["hp"]);
                         }
+                        command = new MySqlCommand("SELECT * FROM commandusage WHERE UserID = @userid ORDER BY UserUsage DESC LIMIT 1");
+                        command.Parameters.AddWithValue("@userid", user.Id);
+                        var resp = await Sql.GetAsync(command);
+                        if (resp.HasRows)
+                        {
+                            while (await resp.ReadAsync())
+                            {
+                                User.FavCmd = Convert.ToString(resp["command"]);
+                                User.FavCmdUsg = Convert.ToUInt64(resp["UserUsage"]);
+                            }
+                        }
+                        embed.Author = new EmbedAuthorBuilder() { Name = User.Username, IconUrl = user.GetAvatarUrl() ?? "http://www.emoji.co.uk/files/mozilla-emojis/smileys-people-mozilla/11419-bust-in-silhouette.png" };
+                        embed.AddInlineField("Description", User.Description ?? "No Description");
+                        embed.AddInlineField(Config.Load().MoneyName, User.Money.Value.ToString("N0") ?? "No Money");
+                        embed.AddInlineField("Luck Factor", User.LuckFactor.ToString("P2") ?? "No LuckFactor");
+                        if (!String.IsNullOrEmpty(User.Daily))
+                            embed.AddInlineField("Daily", User.Daily);
+                        else
+                            embed.AddInlineField("Daily", "Not used Daily");
+                        if (User.Glares > 0)
+                            embed.AddInlineField("Glares", User.Glares + " times");
+                        else
+                            embed.AddInlineField("Glares", "Not glared at anyone");
+                        if (User.GlaredAt > 0)
+                            embed.AddInlineField("Glared At", User.GlaredAt + " times");
+                        else
+                            embed.AddInlineField("Glared At", "Not been glared at");
+                        if (User.Pets > 0)
+                            embed.AddInlineField("Pets", User.Pets + " times");
+                        else
+                            embed.AddInlineField("Pets", "Not been petted");
+                        if (User.Petted > 0)
+                            embed.AddInlineField("Petted", User.Petted + " times");
+                        else
+                            embed.AddInlineField("Petted", "Not petted anyone");
+                        if (User.HP > 0)
+                            embed.AddInlineField("HP", User.HP);
+                        else
+                            embed.AddInlineField("HP", "No HP");
+                        if (User.FavCmd != null && User.FavCmdUsg != null)
+                            embed.AddInlineField("Favourite Command", $"`{User.FavCmd}` and it has been used {User.FavCmdUsg} times");
+                        else
+                            embed.AddInlineField("Favourite Command", "No favourite Command");
+                        await MessageHandler.SendChannel(Context.Channel, "", embed);
                     }
-                    auth.Name = User.Username;
-                    auth.IconUrl = user.GetAvatarUrl();
-                    embed.Author = new EmbedAuthorBuilder(){Name = User.Username,IconUrl = user.GetAvatarUrl() ?? "http://www.emoji.co.uk/files/mozilla-emojis/smileys-people-mozilla/11419-bust-in-silhouette.png"};
-                    embed.AddInlineField("Description", User.Description ?? "No Description");
-                    embed.AddInlineField(Config.Load().MoneyName, User.Money.Value.ToString("N0") ?? "No Money");
-                    embed.AddInlineField("Luck Factor", User.LuckFactor.ToString("P2") ?? "No LuckFactor");
-                    embed.AddInlineField("Daily", User.Daily ?? "Not used Daily");
-                    embed.AddInlineField("Glares", User.Glares + " times" ?? "Not glared at anyone");
-                    embed.AddInlineField("Glared At", User.GlaredAt + " times" ?? "Not been glared at");
-                    if(User.Pets>0)
-                        embed.AddInlineField("Pets",User.Pets + " times");
                     else
-                        embed.AddInlineField("Pets", "Not been petted");
-                    if (User.Petted>0)
-                        embed.AddInlineField("Petted", User.Petted + " times");
-                    else
-                        embed.AddInlineField("Petted", "Not petted anyone");
-                    if(User.HP>0)
-                        embed.AddInlineField("HP",User.HP);
-                    else
-                        embed.AddInlineField("HP", "No HP");
-                    embed.AddInlineField("Favourite Command", $"`{User.FavCmd}` and it has been used {User.FavCmdUsg} times" ?? "No favourite Command");
-                    await MessageHandler.SendChannel(Context.Channel, "", embed);
-                }
-                else
-                {
-                    await MessageHandler.SendChannel(Context.Channel, "Error!! Fixing...", null, 5);
-                    await InsertUser(user);
+                    {
+                        await MessageHandler.SendChannel(Context.Channel, "Error!! Fixing...", 5);
+                        await InsertUser(user);
+                    }
                 }
             }
+            catch(Exception ex)
+            {
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = ex.Message, Color = new Color(255, 0, 0) });
+                var appinfo = await Bot.bot.GetApplicationInfoAsync();
+                await appinfo.Owner.SendMessageAsync(ex.ToString());
+            }            
         }
 
         [Command("description", RunMode = RunMode.Async), Summary("Sets description, this is archived and will be stored")]
@@ -372,18 +409,12 @@ namespace Skuld.Commands
         [Command("syncname", RunMode = RunMode.Async), Summary("Syncs your username in the database")]
         public async Task SyncName()
         {
-            MySqlCommand command = new MySqlCommand()
-            {
-                CommandText = "SELECT username FROM accounts WHERE ID = @userid"
-            };
+            MySqlCommand command = new MySqlCommand("SELECT username FROM accounts WHERE ID = @userid");
             command.Parameters.AddWithValue("@userid", Context.User.Id);
             var username = await Sql.GetSingleAsync(command);
             if(Context.User.Username+"#"+Context.User.DiscriminatorValue != username)
             {
-                MySqlCommand cmd = new MySqlCommand()
-                {
-                    CommandText = "UPDATE accounts SET username = @username WHERE ID = @userid"
-                };
+                MySqlCommand cmd = new MySqlCommand("UPDATE accounts SET username = @username WHERE ID = @userid");
                 cmd.Parameters.AddWithValue("@username", $"{Context.User.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{Context.User.DiscriminatorValue}");
                 cmd.Parameters.AddWithValue("@userid", Context.User.Id);
                 await Sql.InsertAsync(cmd).ContinueWith(async x=>
@@ -401,8 +432,7 @@ namespace Skuld.Commands
 
         private async Task InsertUser(IUser user)
         {
-            MySqlCommand command = new MySqlCommand();
-            command.CommandText = "INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");";
+            MySqlCommand command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");");
             command.Parameters.AddWithValue("@username", $"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{user.DiscriminatorValue}");
             command.Parameters.AddWithValue("@userid", user.Id);
             await Sql.InsertAsync(command);

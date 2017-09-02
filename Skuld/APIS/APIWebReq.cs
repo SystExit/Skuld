@@ -6,7 +6,7 @@ using System.IO;
 
 namespace Skuld.APIS
 {
-    public class APIWebReq
+    public partial class APIWebReq
     {
         public static async Task<string> ReturnString(Uri url)
         {
@@ -101,7 +101,7 @@ namespace Skuld.APIS
         {
             using (HttpClient client = new HttpClient())
             {
-                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(headers));
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(headers));
                 using (HttpResponseMessage resp = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
                 {
                     if (resp.IsSuccessStatusCode)
@@ -124,7 +124,7 @@ namespace Skuld.APIS
         {
             using (HttpClient client = new HttpClient())
             {
-                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(headers));
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(headers));
                 using (HttpResponseMessage resp = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
                 {
                     if (resp.IsSuccessStatusCode)

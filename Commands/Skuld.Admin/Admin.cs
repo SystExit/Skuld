@@ -20,8 +20,10 @@ namespace Skuld.Commands
         [Command("roleids", RunMode = RunMode.Async), Summary("Gets all role ids")]
         public async Task GetRoleIds()
         {
-            List<string[]> lines = new List<string[]>();
-            lines.Add(new string[] { "Role Name", "ID" });
+            List<string[]> lines = new List<string[]>()
+            {
+                new string[] { "Role Name", "ID" }
+            };
             var guild = Context.Guild;
             var roles = guild.Roles;
             foreach (var item in roles)
@@ -127,7 +129,7 @@ namespace Skuld.Commands
                 await Context.Channel.DeleteMessagesAsync(messages).ContinueWith(async x =>
                 {
                     if (x.IsCompleted)
-                        await MessageHandler.SendChannel(Context.Channel, ":ok_hand: Done!", null, 5000);
+                        await MessageHandler.SendChannel(Context.Channel, ":ok_hand: Done!", 5000);
                 });
             }
         }
@@ -146,7 +148,7 @@ namespace Skuld.Commands
                 await Context.Channel.DeleteMessagesAsync(usermessages).ContinueWith(async x =>
                 {
                     if(x.IsCompleted)
-                        await MessageHandler.SendChannel(Context.Channel, ":ok_hand: Done!",null,5000);
+                        await MessageHandler.SendChannel(Context.Channel, ":ok_hand: Done!",5000);
                 });
             }
         }
@@ -384,8 +386,9 @@ namespace Skuld.Commands
                     await MessageHandler.SendChannel(Context.Channel, $"Successfully reset the Guild's prefix");
             });
         }
-        
+
         //Set Channel
+        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
         [Command("setwelcome", RunMode = RunMode.Async), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
         public async Task SetWelcome([Remainder]string welcome)
         {
@@ -403,6 +406,7 @@ namespace Skuld.Commands
         }
 
         //Current Channel
+        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
         [Command("setwelcome", RunMode = RunMode.Async), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
         public async Task SetWelcome(ITextChannel channel, [Remainder]string welcome)
         {
@@ -420,6 +424,7 @@ namespace Skuld.Commands
         }
 
         //Deletes
+        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
         [Command("setwelcome", RunMode = RunMode.Async), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
         public async Task SetWelcome()
         {
@@ -432,6 +437,7 @@ namespace Skuld.Commands
         }
 
         //Set Channel
+        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
         [Command("setleave", RunMode = RunMode.Async), Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
         public async Task SetLeave(ITextChannel channel, [Remainder]string leave)
         {
@@ -449,6 +455,7 @@ namespace Skuld.Commands
         }
 
         //Current Channel
+        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
         [Command("setleave", RunMode = RunMode.Async), Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
         public async Task SetLeave([Remainder]string leave)
         {
@@ -466,6 +473,7 @@ namespace Skuld.Commands
         }
 
         //Deletes
+        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
         [Command("setleave", RunMode = RunMode.Async), Summary("Clears the leave message")]
         public async Task SetLeave()
         {
@@ -475,6 +483,42 @@ namespace Skuld.Commands
             {
                 await MessageHandler.SendChannel(Context.Channel, $"Removed Leave message!");
             });
+        }
+
+        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
+        [Command("guildconfig", RunMode = RunMode.Async), Summary("Configures guild stuff")]
+        public async Task ConfigureGuildSettings(string module, int value)
+        {
+            if (value > 1) await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
+            if (value < 0) await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
+            else
+            {
+                module = module.ToLowerInvariant();
+                Dictionary<string, string> settings = new Dictionary<string, string>()
+                {
+                    {"starboard","starboard" },
+                    {"levels","experience" },
+                    {"userjoin", "userjoinleave" },
+                    {"userleave","userjoinleave" },
+                    {"usermod", "usermodification" },
+                    {"guildmod", "guildmodification" },
+                    {"chanmod", "guildchannelmodification" },
+                    {"rolemod", "guildrolemodification" }
+                };
+                if (settings.ContainsKey(module) || settings.ContainsValue(module))
+                {
+
+                }
+                else
+                {
+                    string modulelist = "";
+                    foreach (var mod in settings)
+                        modulelist += mod.Key + " ("+mod.Value+")"+ ", ";
+                    modulelist = modulelist.Remove(modulelist.Length - 2);
+                    await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules (raw name in brackets). \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) });
+                }
+                    
+            }
         }
     }
 }

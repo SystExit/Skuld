@@ -31,21 +31,23 @@ namespace Skuld.Commands
         [Command("", RunMode = RunMode.Async), Summary("All stats")]
         public async Task AllStats()
         {
-            EmbedBuilder embed = new EmbedBuilder();
-            embed.Footer = new EmbedFooterBuilder()
+            EmbedBuilder embed = new EmbedBuilder()
             {
-                Text = "Generated"
-            };
-            embed.Author = new EmbedAuthorBuilder()
-            {
-                IconUrl = (await Context.Guild.GetCurrentUserAsync()).GetAvatarUrl(),
-                Name = (await Context.Guild.GetCurrentUserAsync()).Username
-            };
+                Footer = new EmbedFooterBuilder()
+                {
+                    Text = "Generated"
+                },
+                Author = new EmbedAuthorBuilder()
+                {
+                    IconUrl = (await Context.Guild.GetCurrentUserAsync()).GetAvatarUrl(),
+                    Name = (await Context.Guild.GetCurrentUserAsync()).Username
+                },
 
-            embed.ThumbnailUrl = (await Context.Guild.GetCurrentUserAsync()).GetAvatarUrl();
-            embed.Timestamp = DateTime.Now;
-            embed.Title = "Stats";
-            embed.Color = RandColor.RandomColor();
+                ThumbnailUrl = (await Context.Guild.GetCurrentUserAsync()).GetAvatarUrl(),
+                Timestamp = DateTime.Now,
+                Title = "Stats",
+                Color = RandColor.RandomColor()
+            };
             
             embed.AddInlineField("Version",Assembly.GetEntryAssembly().GetName().Version);
             embed.AddInlineField("Uptime",string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime)));
@@ -58,16 +60,14 @@ namespace Skuld.Commands
             ramCounter = new PerformanceCounter("Memory", "Available MBytes");
 
             embed.AddInlineField("Commands", Bot.commands.Commands.Count());
-            embed.AddInlineField("CPU Load", getCurrentCpuUsage());
+            embed.AddInlineField("CPU Load", GetCurrentCpuUsage());
             embed.AddInlineField("Memory Used", (currProcess.WorkingSet64 / 1024) / 1024 + "MB");
 
             await MessageHandler.SendChannel(Context.Channel, "", embed);
         }
         [Command("netfw", RunMode = RunMode.Async), Summary(".Net Info")]
-        public async Task Netinfo()
-        {
+        public async Task Netinfo()=>
             await MessageHandler.SendChannel(Context.Channel, $"{RuntimeInformation.FrameworkDescription} {RuntimeInformation.OSArchitecture}");
-        }
         [Command("discord", RunMode = RunMode.Async), Summary("Discord Info")]
         public async Task Discnet()
         {
@@ -76,39 +76,38 @@ namespace Skuld.Commands
         [Command("system", RunMode = RunMode.Async), Summary("System load")]
         public async Task System()
         {
-            EmbedFooterBuilder footer = new EmbedFooterBuilder();
-            footer.Text = "Generated";
-
-            EmbedBuilder embed = new EmbedBuilder();
-            embed.Footer = footer;
-            embed.ThumbnailUrl = (await Context.Guild.GetCurrentUserAsync()).GetAvatarUrl();
-            embed.Timestamp = DateTime.Now;
-            embed.Title = "System Load";
-            embed.Color = RandColor.RandomColor();
-
-            EmbedAuthorBuilder auth = new EmbedAuthorBuilder();
-            auth.IconUrl = (await Context.Guild.GetCurrentUserAsync()).GetAvatarUrl();
-            auth.Name = (await Context.Guild.GetCurrentUserAsync()).Username;
-            embed.Author = auth;
+            EmbedBuilder embed = new EmbedBuilder()
+            {
+                Footer = new EmbedFooterBuilder() { Text = "Generated" },
+                ThumbnailUrl = (await Context.Guild.GetCurrentUserAsync()).GetAvatarUrl(),
+                Timestamp = DateTime.Now,
+                Title = "System Load",
+                Color = RandColor.RandomColor(),
+                Author = new EmbedAuthorBuilder()
+                {
+                    IconUrl = (await Context.Guild.GetCurrentUserAsync()).GetAvatarUrl(),
+                    Name = (await Context.Guild.GetCurrentUserAsync()).Username
+                }
+            };
 
             cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
             ramCounter = new PerformanceCounter("Memory", "Available MBytes");
             
-            embed.AddInlineField("CPU Load", getCurrentCpuUsage());
-            embed.AddInlineField("Total Free Ram", getAvailableRAM()); 
+            embed.AddInlineField("CPU Load", GetCurrentCpuUsage());
+            embed.AddInlineField("Total Free Ram", GetAvailableRAM()); 
             embed.AddInlineField("Uptime", $"{UpTime.Days} day(s) {UpTime.Hours}:{UpTime.Minutes}:{UpTime.Seconds}");
             embed.AddInlineField("OS", Environment.OSVersion+" "+RuntimeInformation.OSArchitecture);
             await MessageHandler.SendChannel(Context.Channel, "", embed);
         }
 
-        public string getCurrentCpuUsage()
+        public string GetCurrentCpuUsage()
         {
             cpuCounter.NextValue();
             Thread.Sleep(500);
             return String.Format("{0:0.00}%", cpuCounter.NextValue());
         }
 
-        public string getAvailableRAM()
+        public string GetAvailableRAM()
         {
             float value = ramCounter.NextValue();
             var totalinbytes = new ComputerInfo().TotalPhysicalMemory;

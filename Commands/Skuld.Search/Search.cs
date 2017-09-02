@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Imgur.API.Models;
+using System.Web;
 
 namespace Skuld.Commands
 {
@@ -139,8 +140,10 @@ namespace Skuld.Commands
             var users = await twicli.GetUsersAsync(TwitchStreamer);
             var chan = await users.FirstOrDefault().GetChannelAsync();
             var stream = await chan.GetStreamAsync();
-            EmbedBuilder _embed = new EmbedBuilder();
-            _embed.Color = RandColor.RandomColor();
+            var _embed = new EmbedBuilder()
+            {
+                Color = RandColor.RandomColor()
+            };
             if (stream != null)
             {
                 _embed.Author = new EmbedAuthorBuilder()
@@ -206,7 +209,7 @@ namespace Skuld.Commands
                 listRequest.Cx = Config.Load().GoogleCx;
                 listRequest.Safe = CseResource.ListRequest.SafeEnum.High;
                 Google.Apis.Customsearch.v1.Data.Search search = await listRequest.ExecuteAsync();
-                List<Result> items = search.Items as List<Result>;
+                var items = search.Items;
                 if (items != null)
                 {
                     var item = items.FirstOrDefault();
@@ -270,8 +273,8 @@ namespace Skuld.Commands
                         Url = item.Url,
                         IconUrl = "https://youtube.com/favicon.ico"
                     },
-                    Title = $"{item.Title}",
-                    Description = $"{item.Url}\nDuration: {item.Duration}",
+                    Title = $"{HttpUtility.HtmlDecode(item.Title)}",
+                    Description = $"{item.Url}\nDuration: {HttpUtility.HtmlDecode(item.Duration)}",
                     ImageUrl = item.Thumbnail,
                     Color = RandColor.RandomColor()
                 };
@@ -291,7 +294,7 @@ namespace Skuld.Commands
                 var endpoint = new GalleryEndpoint(client);
                 var images = await endpoint.SearchGalleryAsync(query);
                 var albm = images.ElementAtOrDefault(Bot.random.Next(0,images.Count()));
-                var album = albm as IGalleryAlbum;
+                var album = (IGalleryAlbum)albm;
                 if (album != null)
                 {
                     if (album.Nsfw != true)
@@ -360,47 +363,20 @@ namespace Skuld.Commands
                 item["author"].ToString(),
                 item["thumbs_up"].ToString(),
                 item["thumbs_down"].ToString());
-            EmbedBuilder _embed = new EmbedBuilder();
-            EmbedAuthorBuilder _auth = new EmbedAuthorBuilder();
-            _embed.Color = RandColor.RandomColor();
-            _auth.Name = word.Word;
-            _auth.Url = word.PermaLink;
-            _embed.Author = _auth;
-            _embed.AddField(x =>
+            EmbedBuilder _embed = new EmbedBuilder()
             {
-                x.IsInline = false;
-                x.Name = "Author";
-                if (!String.IsNullOrEmpty(word.Author))
-                    x.Value = word.Author;
-            });
-            _embed.AddField(x =>
-            {
-                x.IsInline = false;
-                x.Name = "Definition";
-                if (!String.IsNullOrEmpty(word.Definition))
-                    x.Value = word.Definition;
-            });
-            _embed.AddField(x =>
-            {
-                x.IsInline = false;
-                x.Name = "Example";
-                if (!String.IsNullOrEmpty(word.Example))
-                    x.Value = word.Example;
-            });
-            _embed.AddField(x =>
-            {
-                x.IsInline = true;
-                x.Name = "Upvotes";
-                if (!String.IsNullOrEmpty(word.UpVotes))
-                    x.Value = word.UpVotes;
-            });
-            _embed.AddField(x =>
-            {
-                x.IsInline = true;
-                x.Name = "Downvotes";
-                if (!String.IsNullOrEmpty(word.DownVotes))
-                    x.Value = word.DownVotes;
-            });
+                Color = RandColor.RandomColor(),
+                Author = new EmbedAuthorBuilder()
+                {
+                    Name = word.Word,
+                    Url = word.PermaLink
+                }
+            };
+            _embed.AddField("Author", word.Author ?? "Not Available");
+            _embed.AddField("Definition", word.Definition ?? "Not Available");
+            _embed.AddField("Example", word.Example??"Not Available");
+            _embed.AddField("Upvotes", word.UpVotes??"Not Available");
+            _embed.AddField("Downvotes", word.DownVotes??"Not Available");
             await MessageHandler.SendChannel(Context.Channel, "", _embed);
         }
 
@@ -417,20 +393,22 @@ namespace Skuld.Commands
             JObject jsonresp = JObject.Parse((await APIWebReq.ReturnString(new Uri($"https://{langcode}.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles={query}"))));
             dynamic item = jsonresp["query"]["pages"].First.First;
             string Desc = Convert.ToString(item["extract"]);
-            Wiki page = new Wiki();
-            page.Name = item["title"].ToString();
-            page.Description = Desc.Remove(500) + "...\nRead more at the article.";
-            page.Url = $"https://{langcode}.wikipedia.org/wiki/{query}";
-            var _embed = new EmbedBuilder();
-            var _auth = new EmbedAuthorBuilder();
-            _embed.Color = RandColor.RandomColor();
-
-            _auth.Name = page.Name;
-            _auth.Url = page.Url;
-            _embed.Author = _auth;
-            if (!String.IsNullOrEmpty(page.Description))
-                _embed.AddInlineField("Description", page.Description);
-            else { _embed.AddInlineField("Description", "N/A"); }
+            Wiki page = new Wiki()
+            {
+                Name = item["title"].ToString(),
+                Description = Desc.Remove(500) + "...\nRead more at the article.",
+                Url = $"https://{langcode}.wikipedia.org/wiki/{query}"
+            };
+            var _embed = new EmbedBuilder()
+            {
+                Author = new EmbedAuthorBuilder()
+                {
+                    Name = page.Name,
+                    Url = page.Url
+                },
+                Color = RandColor.RandomColor()
+            };
+            _embed.AddInlineField("Description", page.Description??"Not Available");
             await MessageHandler.SendChannel(Context.Channel, "", _embed);
         }
 
@@ -543,13 +521,15 @@ namespace Skuld.Commands
         public async Task Gifcommand([Remainder]string query)
         {
             var rnd = Bot.random;
-            var embed = new EmbedBuilder();
-            embed.Color = RandColor.RandomColor();
-            embed.Author = new EmbedAuthorBuilder()
+            var embed = new EmbedBuilder()
             {
-                Name = "Giphy",
-                IconUrl = "https://giphy.com/favicon.ico",
-                Url = "https://giphy.com/"
+                Color = RandColor.RandomColor(),
+                Author = new EmbedAuthorBuilder()
+                {
+                    Name = "Giphy",
+                    IconUrl = "https://giphy.com/favicon.ico",
+                    Url = "https://giphy.com/"
+                }
             };
             try
             {
@@ -576,7 +556,6 @@ namespace Skuld.Commands
             var gif = await APIWebReq.ReturnString(new Uri("http://lucoa.systemexit.co.uk/gifs/reactions/"));
             await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder()
             {
-                Title = gif,
                 ImageUrl = gif,
                 Color = RandColor.RandomColor()
             });
@@ -591,22 +570,19 @@ namespace Skuld.Commands
             XObject XNode = XDocument.Parse(xml.InnerXml);
             JObject jobject = JObject.Parse(JsonConvert.SerializeXNode(XNode));
             dynamic item = jobject["results"]["result"].First();
-            Define definedword = new Define(word,
-                item["definition"].ToString(),
-                item["example"].ToString(),
-                item["partofspeech"].ToString(),
-                item["term"].ToString());
-            EmbedBuilder _embed = new EmbedBuilder();
-            EmbedAuthorBuilder _auth = new EmbedAuthorBuilder();
-            _embed.Color = RandColor.RandomColor();
-            _auth.Name = definedword.Word;
-
+            Define definedword = new Define(word,item["definition"].ToString(),item["example"].ToString(),item["partofspeech"].ToString(),item["term"].ToString());
+            EmbedBuilder _embed = new EmbedBuilder()
+            {
+                Color = RandColor.RandomColor(),
+                Author = new EmbedAuthorBuilder()
+                {
+                    Name = definedword.Word
+                }
+            };
             _embed.AddField("Definition",definedword.Definition??"None Available");
             _embed.AddField("Example",definedword.Example??"Not Available");
             _embed.AddInlineField("Part of speech",definedword.PartOfSpeech??"Not Available");
             _embed.AddInlineField("Terms", definedword.Terms??"Not Available");
-
-            _embed.Author = _auth;
             await MessageHandler.SendChannel(Context.Channel, "", _embed);
         }
         
@@ -625,14 +601,27 @@ namespace Skuld.Commands
             int manganode = MangaArray.Entry.Count;
             if (manganode > 1)
             {
-                string entries = "__Make your selection__\n";
+                string entrymessage = "__Make your selection__ Say `cancel` to end your selection\n";
                 int count = 0;
+                List<string> Entries = new List<string>();
                 foreach (var item in MangaArray.Entry)
                 {
                     count++;
-                    entries += $"**{count}. {item.Title}**\n";
+                    Entries.Add($"**{count}. {item.Title}**");
                 }
-                await MessageHandler.SendChannel(Context.Channel, entries);
+                if(Entries.Count>=20)
+                {
+                    entrymessage += String.Join(Environment.NewLine, Entries.Take(Entries.Count / 2).ToArray());
+                    await MessageHandler.SendChannel(Context.Channel, entrymessage);
+                    entrymessage = "";
+                    entrymessage += String.Join(Environment.NewLine, Entries.Skip(Entries.Count / 2).ToArray());
+                    await MessageHandler.SendChannel(Context.Channel, entrymessage);
+                }
+                else
+                {
+                    entrymessage += String.Join(Environment.NewLine, Entries.ToArray());
+                    await MessageHandler.SendChannel(Context.Channel, entrymessage);
+                }
                 Bot.bot.MessageReceived += _MessageReceivedManga;
                 MangaTimer.Elapsed += Timer_ElapsedManga;
                 MangaTimer.Start();
@@ -651,12 +640,19 @@ namespace Skuld.Commands
             if (Context.User.Id == arg.Author.Id)
             {
                 MangaTimer.Stop();
-                await GetMangaAtPosition(Convert.ToInt32(arg.Content));
+                if (arg.Content.ToLowerInvariant() == "cancel")
+                {
+                    Bot.bot.MessageReceived -= _MessageReceivedManga;
+                    await MessageHandler.SendChannel(Context.Channel, ":ok_hand: Cancelled your search");
+                }
+                else
+                {
+                    await GetMangaAtPosition(Convert.ToInt32(arg.Content));
+                }
             }
         }
         private async Task GetMangaAtZeroNonSearch()
         {
-
             await SendManga(MangaArray.Entry.First());
         }
         private async Task GetMangaAtPosition(int position)
@@ -667,92 +663,25 @@ namespace Skuld.Commands
         }
         public async Task SendManga(Manga mango)
         {
-            try
+            var _embed = new EmbedBuilder()
             {
-                EmbedBuilder _embed = new EmbedBuilder();
-                EmbedAuthorBuilder _auth = new EmbedAuthorBuilder();
-                _embed.Color = RandColor.RandomColor();
-                _auth.Url = $"https://myanimelist.net/manga/{mango.Id}/";
-
-                _embed.AddField(x =>
+                Color = RandColor.RandomColor(),
+                Author = new EmbedAuthorBuilder()
                 {
-                    x.IsInline = true;
-                    x.Name = "English Title";
-                    if (!String.IsNullOrEmpty(mango.EnglishTitle))
-                        x.Value = mango.EnglishTitle;
-                    else
-                        x.Value = "None Exist";
-                });
-                _embed.AddField(x =>
-                {
-                    x.IsInline = true;
-                    x.Name = "Synonyms";
-                    if (!String.IsNullOrEmpty(mango.Synonyms))
-                        x.Value = mango.Synonyms;
-                    else
-                        x.Value = "None Exist";
-                });
-                _embed.AddField(x =>
-                {
-                    x.IsInline = true;
-                    x.Name = "Synopsis";
-                    if (!String.IsNullOrEmpty(mango.Synopsis))
-                        x.Value = mango.Synopsis.Split('<')[0];
-                    else
-                        x.Value = "None Exist";
-                });
-                _embed.AddField(x =>
-                {
-                    x.IsInline = true;
-                    x.Name = "Chapters";
-                    if (!String.IsNullOrEmpty(mango.Chapters))
-                        x.Value = mango.Chapters;
-                    else
-                        x.Value = "None Exist";
-                });
-                _embed.AddField(x =>
-                {
-                    x.IsInline = true;
-                    x.Name = "Volumes";
-                    if (!String.IsNullOrEmpty(mango.Volumes))
-                        x.Value = mango.Volumes;
-                    else
-                        x.Value = "None Exist";
-                });
-                _embed.AddField(x =>
-                {
-                    x.IsInline = true;
-                    x.Name = "Started";
-                    if (!String.IsNullOrEmpty(mango.StartDate))
-                        x.Value = mango.StartDate;
-                    else
-                        x.Value = "None Exist";
-                });
-                _embed.AddField(x =>
-                {
-                    x.IsInline = true;
-                    x.Name = "Ended";
-                    if (!String.IsNullOrEmpty(mango.EndDate))
-                        x.Value = mango.EndDate;
-                    else
-                        x.Value = "None Exist";
-                });
-                _embed.AddField(x =>
-                {
-                    x.IsInline = true;
-                    x.Name = "Score";
-                    x.Value = mango.Score;
-                });
-
-                _auth.Name = mango.Title;
-                _embed.Author = _auth;
-                _embed.ThumbnailUrl = mango.Image;
-                await MessageHandler.SendChannel(Context.Channel, "", _embed);
-            }
-            catch(Exception ex)
-            {
-            }
-
+                    Url = $"https://myanimelist.net/manga/{mango.Id}/",
+                    Name = mango.Title
+                },
+                ThumbnailUrl = mango.Image
+            };
+            _embed.AddInlineField("English Title", mango.EnglishTitle ?? "None Available");
+            _embed.AddInlineField("Synonyms", mango.Synonyms ?? "Not Available");
+            _embed.AddInlineField("Chapters", mango.Chapters ?? "Not Available");
+            _embed.AddInlineField("Volumes", mango.Volumes ?? "Not Available");
+            _embed.AddInlineField("Start Date", mango.StartDate ?? "Not Available");
+            _embed.AddInlineField("End Date", mango.EndDate ?? "Not Available");
+            _embed.AddInlineField("Score", mango.Score ?? "Not Available");
+            _embed.AddInlineField("Synopsis", HttpUtility.HtmlDecode(mango.Synopsis.Split('<')[0]) ?? "Not Available");
+            await MessageHandler.SendChannel(Context.Channel, "", _embed);
         }
 
         private AnimeArr AnimeArray;
@@ -770,14 +699,27 @@ namespace Skuld.Commands
             int animenode = AnimeArray.Entry.Count;      
             if (animenode > 1)
             {
-                string entries = "__Make your selection__\n";
+                string entrymessage = "__Make your selection__ Say `cancel` to end your selection\n";
                 int count = 0;
+                List<string> Entries = new List<string>();
                 foreach (var item in AnimeArray.Entry)
                 {
                     count++;
-                    entries += $"**{count}. {item.Title}**\n";
+                    Entries.Add($"**{count}. {item.Title}**");
                 }
-                await MessageHandler.SendChannel(Context.Channel, entries, null, 60);
+                if (Entries.Count >= 20)
+                {
+                    entrymessage += String.Join(Environment.NewLine, Entries.Take(Entries.Count / 2).ToArray());
+                    await MessageHandler.SendChannel(Context.Channel, entrymessage);
+                    entrymessage = "";
+                    entrymessage += String.Join(Environment.NewLine, Entries.Skip(Entries.Count / 2).ToArray());
+                    await MessageHandler.SendChannel(Context.Channel, entrymessage);
+                }
+                else
+                {
+                    entrymessage += String.Join(Environment.NewLine, Entries.ToArray());
+                    await MessageHandler.SendChannel(Context.Channel, entrymessage);
+                }
                 Bot.bot.MessageReceived += _MessageReceivedAnime;
                 AnimeTimer.Elapsed += Timer_ElapsedAnime;
                 AnimeTimer.Start();
@@ -796,7 +738,15 @@ namespace Skuld.Commands
             if (Context.User.Id == arg.Author.Id)
             {
                 AnimeTimer.Stop();
-                await GetAnimeAtPosition(Convert.ToInt32(arg.Content));
+                if (arg.Content.ToLowerInvariant() == "cancel")
+                {
+                    await MessageHandler.SendChannel(Context.Channel, ":ok_hand: Cancelled your search");
+                    Bot.bot.MessageReceived -= _MessageReceivedAnime;
+                }                    
+                else
+                {
+                    await GetAnimeAtPosition(Convert.ToInt32(arg.Content));
+                }
             }
         }
         public async Task GetAnimeAtZeroNonSearch()
@@ -811,92 +761,23 @@ namespace Skuld.Commands
         }
         private async Task SendAnime(Anime animu)
         {
-            EmbedBuilder _embed = new EmbedBuilder();
-            EmbedAuthorBuilder _auth = new EmbedAuthorBuilder();
-            _embed.Color = RandColor.RandomColor();
-            _auth.Url = $"https://myanimelist.net/anime/{animu.Id}/";
-            _embed.AddField(x =>
+            var _embed = new EmbedBuilder()
             {
-                x.IsInline = true;
-                x.Name = "English Title";
-                if (!String.IsNullOrEmpty(animu.EnglishTitle))
-                    x.Value = animu.EnglishTitle;
-                else
+                Color = RandColor.RandomColor(),
+                Author = new EmbedAuthorBuilder()
                 {
-                    x.Value = "None Available";
-                }
-            });
-            _embed.AddField(x =>
-            {
-                x.IsInline = true;
-                x.Name = "Synonyms";
-                if (!String.IsNullOrEmpty(animu.Synonyms))
-                    x.Value = animu.Synonyms;
-                else
-                {
-                    x.Value = "Not Available";
-                }
-            });
-            _embed.AddField(x =>
-            {
-                x.IsInline = true;
-                x.Name = "Synopsis";
-                if (!String.IsNullOrEmpty(animu.Synopsis))
-                {
-                    x.Value = animu.Synopsis.Split('<')[0];
-                }
-                else
-                {
-                    x.Value = "Not Available";
-                }
-            });
-            _embed.AddField(x =>
-            {
-                x.IsInline = true;
-                x.Name = "Episodes";
-                if (!String.IsNullOrEmpty(animu.Episodes))
-                    x.Value = animu.Episodes;
-                else
-                {
-                    x.Value = "Not Available";
-                }
-            });
-            _embed.AddField(x =>
-            {
-                x.IsInline = true;
-                x.Name = "Start Date";
-                if (!String.IsNullOrEmpty(animu.StartDate))
-                    x.Value = animu.StartDate;
-                else
-                {
-                    x.Value = "Not Available";
-                }
-            });
-            _embed.AddField(x =>
-            {
-                x.IsInline = true;
-                x.Name = "End Date";
-                if (!String.IsNullOrEmpty(animu.EndDate))
-                    x.Value = animu.EndDate;
-                else
-                {
-                    x.Value = "Not Available";
-                }
-            });
-            _embed.AddField(x =>
-            {
-                x.IsInline = true;
-                x.Name = "Score";
-                if (!String.IsNullOrEmpty(animu.Score))
-                    x.Value = animu.Score;
-                else
-                {
-                    x.Value = "Not Available";
-                }
-            });
-            _auth.Name = animu.Title;
-            _embed.Author = _auth;
-            _embed.ThumbnailUrl = animu.Image;
+                    Url = $"https://myanimelist.net/anime/{animu.Id}/",
+                    Name = animu.Title
+                },
+                ThumbnailUrl = animu.Image
+            };
+            _embed.AddInlineField("English Title",animu.EnglishTitle??"None Available");
+            _embed.AddInlineField("Synonyms",animu.Synonyms??"Not Available");
+            _embed.AddInlineField("Episodes",animu.Episodes??"Not Available");
+            _embed.AddInlineField("Start Date",animu.StartDate??"Not Available");
+            _embed.AddInlineField("End Date",animu.EndDate??"Not Available");
+            _embed.AddInlineField("Score",animu.Score??"Not Available");
+            _embed.AddInlineField("Synopsis",HttpUtility.HtmlDecode(animu.Synopsis.Split('<')[0])??"Not Available");
             await MessageHandler.SendChannel(Context.Channel, "", _embed);
         }
     }

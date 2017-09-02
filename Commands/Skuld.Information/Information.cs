@@ -25,8 +25,7 @@ namespace Skuld.Commands
             var bot = Skuld.Bot.bot;
             var guild = Context.Guild;
             var roles = guild.Roles;
-            EmbedBuilder _embed = new EmbedBuilder();
-            _embed.Color = RandColor.RandomColor();
+            EmbedBuilder _embed = new EmbedBuilder() { Color = RandColor.RandomColor() };
             if (!String.IsNullOrEmpty(guild.IconUrl))
                 _embed.ThumbnailUrl = guild.IconUrl;
             _embed.Author = new EmbedAuthorBuilder() { Name = guild.Name };
@@ -57,9 +56,9 @@ namespace Skuld.Commands
             }
             _embed.AddInlineField("Default Notifications", guild.DefaultMessageNotifications.ToString());            
             _embed.AddInlineField("Created", guild.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
-            _embed.AddInlineField("Emojis", guild.Emotes.Count.ToString() + Environment.NewLine + $"Use `{Skuld.Bot.Prefix}server emojis` to view all of the emojis");
-            _embed.AddInlineField("Roles", guild.Roles.Count() + Environment.NewLine + $"Use `{Skuld.Bot.Prefix}server roles` to view all of the roles");
-            await MessageHandler.SendChannel(Context.Channel,"", _embed);
+            _embed.AddInlineField("Emojis", guild.Emotes.Count.ToString() + Environment.NewLine + $"Use `{Bot.Prefix}server emojis` to view all of the emojis");
+            _embed.AddInlineField("Roles", guild.Roles.Count() + Environment.NewLine + $"Use `{Bot.Prefix}server roles` to view all of the roles");
+            await MessageHandler.SendChannel((ITextChannel)Context.Channel,"", _embed);
         }
         [Command("server emojis", RunMode = RunMode.Async), Alias("server emoji")]
         public async Task ServerEmoji()
@@ -113,7 +112,7 @@ namespace Skuld.Commands
 
         [Command("bot", RunMode = RunMode.Async)]
         public async Task DInfo() =>
-            await MessageHandler.SendDMs(Context.Channel, await Context.User.GetOrCreateDMChannelAsync(), $"Hey. I'm Skuld, a utility bot that aims to bring tools and fun stuff to your server! :blush:\n\nThanks for using the bot. It means a lot. <3\n\nP.S. I also have a twitter where you can also get support from: <https://twitter.com/SkuldDiscordBot> \n\nOr there's the Support server: http://discord.gg/JYzvjah \n\n" +
+            await MessageHandler.SendDMs((ITextChannel)Context.Channel, await Context.User.GetOrCreateDMChannelAsync(), $"Hey. I'm Skuld, a utility bot that aims to bring tools and fun stuff to your server! :blush:\n\nThanks for using the bot. It means a lot. <3\n\nP.S. I also have a twitter where you can also get support from: <https://twitter.com/SkuldDiscordBot> \n\nOr there's the Support server: http://discord.gg/JYzvjah \n\n" +
                 "P.S. from the Dev:\n" +
                 "By using this command and all others, past-present-future, you consent to having your User Data be stored for proper functionality of the commands. This also applies to the server information if you are a server admin/moderator");
 
@@ -142,14 +141,14 @@ namespace Skuld.Commands
         public async Task DevDisc()
         {
             var user = await Context.User.GetOrCreateDMChannelAsync();
-            await MessageHandler.SendDMs(Context.Channel, user, $"Join the support server at: http://discord.gg/JYzvjah");
+            await MessageHandler.SendDMs((ITextChannel)Context.Channel, user, $"Join the support server at: http://discord.gg/JYzvjah");
         }
         [Command("botinvite", RunMode = RunMode.Async), Summary("OAuth2 Invite")]
         public async Task BotInvite()
         {
             var bot = await Skuld.Bot.bot.GetApplicationInfoAsync();
             var user = await Context.User.GetOrCreateDMChannelAsync();
-            await MessageHandler.SendDMs(Context.Channel, user, $"Invite me using: https://discordapp.com/oauth2/authorize?client_id={bot.Id}&scope=bot&permissions=1073802246");
+            await MessageHandler.SendDMs((ITextChannel)Context.Channel, user, $"Invite me using: https://discordapp.com/oauth2/authorize?client_id={bot.Id}&scope=bot&permissions=1073802246");
         }
         [Command("userratio", RunMode = RunMode.Async), Summary("Gets the ratio of users to bots")]
         public async Task HumanToBotRatio()

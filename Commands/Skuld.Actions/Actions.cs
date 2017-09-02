@@ -47,8 +47,7 @@ namespace Skuld.Commands
                 if(!String.IsNullOrEmpty(Config.Load().SqlDBHost))
                 {
                     int dhp = Bot.random.Next(0, 100);
-                    MySqlCommand command = new MySqlCommand();
-                    command.CommandText = "select HP from accounts where ID = @userid";
+                    MySqlCommand command = new MySqlCommand("select HP from accounts where ID = @userid");
                     command.Parameters.AddWithValue("@userid", guilduser.Id);
                     var resp = await Sql.GetSingleAsync(command);
                     if (String.IsNullOrEmpty(resp))
@@ -59,8 +58,7 @@ namespace Skuld.Commands
                         var hp = uhp - dhp;
                         if (hp > 0)
                         {
-                            command = new MySqlCommand();
-                            command.CommandText = "UPDATE accounts SET hp = @hp where ID = @userid";
+                            command = new MySqlCommand("UPDATE accounts SET hp = @hp where ID = @userid");
                             command.Parameters.AddWithValue("@hp", hp);
                             command.Parameters.AddWithValue("@userid", guilduser.Id);
                             await Sql.InsertAsync(command);
@@ -68,8 +66,7 @@ namespace Skuld.Commands
                         }
                         else
                         {
-                            command = new MySqlCommand();
-                            command.CommandText = "UPDATE accounts SET hp = 0 where ID = @userid";
+                            command = new MySqlCommand("UPDATE accounts SET hp = 0 where ID = @userid");
                             command.Parameters.AddWithValue("@userid", guilduser.Id);
                             await Sql.InsertAsync(command);
                             await Send($"{contuser.Nickname ?? contuser.Username} just stabbed {guilduser.Nickname ?? guilduser.Username} for {dhp} HP, they have no HP left", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=stab")));
@@ -156,8 +153,7 @@ namespace Skuld.Commands
             {
                 if(!String.IsNullOrEmpty(Config.Load().SqlDBHost))
                 {
-                    MySqlCommand command = new MySqlCommand();
-                    command.CommandText = "SELECT pets from accounts where id = @userid";
+                    MySqlCommand command = new MySqlCommand("SELECT pets from accounts where id = @userid");
                     command.Parameters.AddWithValue("@userid", Context.User.Id);
 
                     var resp1 = await Sql.GetSingleAsync(command);
@@ -170,15 +166,13 @@ namespace Skuld.Commands
                         int pets = Convert.ToInt32(resp1);
                         int newpets = pets + 1;
 
-                        command = new MySqlCommand();
-                        command.CommandText = "UPDATE accounts SET pets = @newpets WHERE id = @userid";
+                        command = new MySqlCommand("UPDATE accounts SET pets = @newpets WHERE id = @userid");
                         command.Parameters.AddWithValue("@newpets", newpets);
                         command.Parameters.AddWithValue("@userid", contuser.Id);
 
                         await Sql.InsertAsync(command);
 
-                        command = new MySqlCommand();
-                        command.CommandText = "SELECT petted from accounts where id = @userid";
+                        command = new MySqlCommand("SELECT petted from accounts where id = @userid");
                         command.Parameters.AddWithValue("@userid", guilduser.Id);
 
                         var resp2 = await Sql.GetSingleAsync(command);
@@ -191,8 +185,7 @@ namespace Skuld.Commands
                             int petted = Convert.ToInt32(resp2);
                             int newpetted = petted + 1;
 
-                            command = new MySqlCommand();
-                            command.CommandText = "UPDATE accounts SET petted = @newpetted WHERE id = @userid";
+                            command = new MySqlCommand("UPDATE accounts SET petted = @newpetted WHERE id = @userid");
                             command.Parameters.AddWithValue("@newpetted", newpetted);
                             command.Parameters.AddWithValue("@userid", guilduser.Id);
 
@@ -221,8 +214,7 @@ namespace Skuld.Commands
             {
                 if(!String.IsNullOrEmpty(Config.Load().SqlDBHost))
                 {
-                    MySqlCommand command = new MySqlCommand();
-                    command.CommandText = "SELECT glares from accounts where id = @userid";
+                    MySqlCommand command = new MySqlCommand("SELECT glares from accounts where id = @userid");
                     command.Parameters.AddWithValue("@userid", contuser.Id);
                     var resp1 = await Sql.GetSingleAsync(command);
 
@@ -235,14 +227,12 @@ namespace Skuld.Commands
                         int glares = Convert.ToInt32(resp1);
                         int newglares = glares + 1;
 
-                        command = new MySqlCommand();
-                        command.CommandText = "UPDATE accounts SET glares = @newglares WHERE id = @userid";
+                        command = new MySqlCommand("UPDATE accounts SET glares = @newglares WHERE id = @userid");
                         command.Parameters.AddWithValue("@newglares", newglares);
                         command.Parameters.AddWithValue("@userid", contuser.Id);
                         await Sql.InsertAsync(command);
 
-                        command = new MySqlCommand();
-                        command.CommandText = "SELECT glaredat from accounts where id = @userid";
+                        command = new MySqlCommand("SELECT glaredat from accounts where id = @userid");
                         command.Parameters.AddWithValue("@userid", guilduser.Id);
                         var resp2 = await Sql.GetSingleAsync(command);
 
@@ -255,8 +245,7 @@ namespace Skuld.Commands
                             int glaredat = Convert.ToInt32(resp2);
                             int newglaredat = glaredat + 1;
 
-                            command = new MySqlCommand();
-                            command.CommandText = "UPDATE accounts SET glaredat = @glaredat WHERE id = @userid";
+                            command = new MySqlCommand("UPDATE accounts SET glaredat = @glaredat WHERE id = @userid");
                             command.Parameters.AddWithValue("@glaredat", newglaredat);
                             command.Parameters.AddWithValue("@userid", guilduser.Id);
                             await Sql.InsertAsync(command);
@@ -317,8 +306,7 @@ namespace Skuld.Commands
 
         private async Task InsertUser(IUser user)
         {
-            MySqlCommand command = new MySqlCommand();
-            command.CommandText = "INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");";
+            MySqlCommand command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");");
             command.Parameters.AddWithValue("@username", $"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{user.DiscriminatorValue}");
             command.Parameters.AddWithValue("@userid",user.Id);
             await Sql.InsertAsync(command);

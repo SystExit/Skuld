@@ -23,7 +23,11 @@ namespace Skuld.Tools
         public string SqlDB { get; set; }
         //End Region
 
-        //Economy
+        //Variables
+        public int StarboardThreshold { get; set; }
+        public int PinboardThreshold { get; set; }
+        public int StarboardDateLimit { get; set; }
+        public int PinboardDateLimit { get; set; }
         public ulong DailyAmount { get; set; }
         public string MoneyName { get; set; }
         public string MoneySymbol { get; set; }
@@ -40,6 +44,7 @@ namespace Skuld.Tools
         public string TwitchClientID { get; set; }
         public string ImgurClientID { get; set; }
         public string ImgurClientSecret { get; set; }
+        public string NASAApiKey { get; set; }
         //End Region
 
         //Bot Listing Tokens
@@ -48,6 +53,7 @@ namespace Skuld.Tools
         //End Region
 
         //Module Management
+        public bool TwitchModule { get; set; }
         public bool ChatServiceEnabled { get; set; }
         public string ChatServiceAdminEmail { get; set; }
         public bool AccountsModuleEnabled { get; set; }
@@ -58,7 +64,7 @@ namespace Skuld.Tools
         public bool SearchModuleEnabled { get; set; }
         public bool StatsModuleEnabled { get; set; }
         public Dictionary<string, string> TriggerPhrases { get; set; }
-        //End Region
+        //End Region        
 
         public Config()
         {
@@ -74,7 +80,11 @@ namespace Skuld.Tools
             SqlPass = "";
             SqlDB = "";
 
-            //Economy
+            //Variables
+            StarboardThreshold = 5;
+            PinboardThreshold = 5;
+            StarboardDateLimit = 7;
+            PinboardDateLimit = 7;
             DailyAmount = 50;
             MoneyName = "";
             MoneySymbol = "";
@@ -88,8 +98,10 @@ namespace Skuld.Tools
             STANDSToken = "";
             TwitchToken = "";
             TwitchClientID = "";
+            NASAApiKey = "";
 
             //Modules
+            TwitchModule = false;
             ChatServiceEnabled = true;
             ChatServiceAdminEmail = "";
             AccountsModuleEnabled = true;

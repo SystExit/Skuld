@@ -5,9 +5,9 @@ using Newtonsoft.Json;
 using System.Text;
 using Skuld.Models.API.Strawpoll;
 
-namespace Skuld.APIS.Strawpoll
+namespace Skuld.APIS
 {
-    public class WebReq
+    public partial class APIWebReq
     {
         public static async Task<RecievePoll> SendPoll(string PollTitle, string[] polloptions)
         {

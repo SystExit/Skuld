@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Discord.Commands;
+using Skuld.APIS;
 using Skuld.Models.API;
 using Skuld.Tools;
 using Discord;
@@ -12,6 +13,8 @@ using Newtonsoft.Json.Linq;
 using MySql.Data.MySqlClient;
 using CowsaySharp.Library;
 using System.IO;
+using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 
 namespace Skuld.Commands
 {
@@ -124,7 +127,7 @@ namespace Skuld.Commands
             if (item["neko"].ToString() != null)
             {
                 var neko = item["neko"];
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = neko, ImageUrl = neko });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { ImageUrl = neko });
             }
         }
 
@@ -136,7 +139,7 @@ namespace Skuld.Commands
             if (videoext.Any(kitty.ImageURL.Contains))
                 await MessageHandler.SendChannel(Context.Channel, kitty.ImageURL);
             else
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = RandColor.RandomColor(), Title = kitty.ImageURL, ImageUrl = kitty.ImageURL });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = RandColor.RandomColor(), ImageUrl = kitty.ImageURL });
         }
         [Command("doggo", RunMode = RunMode.Async), Summary("doggo")]
         [Alias("dog", "dogs", "doggy")]
@@ -146,7 +149,13 @@ namespace Skuld.Commands
             if (videoext.Any(doggo.ImageURL.Contains))
                 await MessageHandler.SendChannel(Context.Channel, doggo.ImageURL);
             else
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = RandColor.RandomColor(), Title = doggo.ImageURL, ImageUrl = doggo.ImageURL });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = RandColor.RandomColor(), ImageUrl = doggo.ImageURL });
+        }
+        [Command("llama", RunMode = RunMode.Async), Summary("Llama")]
+        public async Task Llama()
+        {
+            var llama = JsonConvert.DeserializeObject<Animal>(await APIWebReq.ReturnString(new Uri("https://api.systemexit.co.uk/animals/llama/random")));
+            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = RandColor.RandomColor(), ImageUrl = llama.FileUrl });
         }
         
         [Command("eightball", RunMode = RunMode.Async), Summary("Eightball")]
@@ -189,29 +198,16 @@ namespace Skuld.Commands
         [Command("pasta", RunMode = RunMode.Async), Summary("Pastas are nice")]
         public async Task Pasta(string cmd, string title)
         {
-            var Pasta = new Pasta();
-            var command = new MySqlCommand("SELECT * FROM pasta WHERE pastaname = @pastaname");
-            command.Parameters.AddWithValue("@pastaname", title);
-            var reader = await Sql.GetAsync(command);
-            while (reader.Read())
-            {
-                Pasta.PastaName = reader["pastaname"].ToString();
-                Pasta.Content = reader["content"].ToString();
-                Pasta.OwnerID = Convert.ToUInt64(reader["ownerid"].ToString());
-                Pasta.Username = Bot.bot.GetUser(Pasta.OwnerID).Username;
-                Pasta.Created = reader["created"].ToString();
-                Pasta.Upvotes = Convert.ToUInt32(reader["upvotes"].ToString());
-                Pasta.Downvotes = Convert.ToUInt32(reader["downvotes"].ToString());
-            }
-            reader.Close();
-            await Sql.getconn.CloseAsync();
+            var Pasta = await SqlTools.GetPasta(title);
             if (Pasta != null)
             {
                 if (cmd == "who" || cmd == "?")
                 {
-                    EmbedBuilder _embed = new EmbedBuilder();
-                    _embed.Color = RandColor.RandomColor();
-                    _embed.Title = Pasta.PastaName;
+                    EmbedBuilder _embed = new EmbedBuilder()
+                    {
+                        Color = RandColor.RandomColor(),
+                        Title = Pasta.PastaName
+                    };
                     _embed.AddInlineField("Author",Pasta.Username);
                     _embed.AddInlineField("Created", Pasta.Created);
                     _embed.AddInlineField("UpVotes", Pasta.Upvotes);
@@ -256,7 +252,7 @@ namespace Skuld.Commands
                 {
                     if(Convert.ToUInt64(Pasta.OwnerID) == Context.User.Id)
                     {
-                        command = new MySqlCommand("DELETE FROM pasta WHERE pastaname = @title");
+                        var command = new MySqlCommand("DELETE FROM pasta WHERE pastaname = @title");
                         command.Parameters.AddWithValue("@title", title);
                         await Sql.InsertAsync(command).ContinueWith(async x =>
                         {
@@ -440,58 +436,32 @@ namespace Skuld.Commands
         public async Task StrawpollSend(string Title, [Remainder]string Options)
         {
             string[] options = Options.Split(',');
-            var poll = await APIS.Strawpoll.WebReq.SendPoll(Title, options);            
+            var poll = await APIWebReq.SendPoll(Title, options);            
             await MessageHandler.SendChannel(Context.Channel,$"Strawpoll **{Title}** has been created, here's the link: {poll.Url}");
         }
         [Command("strawpoll", RunMode = RunMode.Async), Summary("Gets a strawpoll")]
-        public async Task StrawpollGet(int id)
-        {
-            var poll = await APIS.Strawpoll.WebReq.GetPoll(id);
-            EmbedBuilder _embed = new EmbedBuilder();
-            EmbedAuthorBuilder _author = new EmbedAuthorBuilder();
-            _embed.Color = RandColor.RandomColor();
-            _author.Name = poll.Title;
-            _author.Url = poll.Url;
-            _embed.Author = _author;
-            EmbedFooterBuilder _footer = new EmbedFooterBuilder();
-            _footer.Text = "Strawpoll ID: " + poll.ID;
-            _embed.Timestamp = DateTime.UtcNow;
-            _embed.Footer = _footer;
-
-            for (int z = 0; z < poll.Options.Length; z++)
-            {
-                _embed.AddField(x =>
-                {
-                    x.Name = poll.Options[z];
-                    x.Value = poll.Votes[z];
-                });
-            }
-
-            await MessageHandler.SendChannel(Context.Channel,"", _embed);
-        }
+        public async Task StrawpollGet(int id) =>
+            await StrawpollGet("http://www.strawpoll.me/" + id);
         [Command("strawpoll", RunMode = RunMode.Async), Summary("Gets a strawpoll")]
         public async Task StrawpollGet(string url)
         {
-            var poll = await APIS.Strawpoll.WebReq.GetPoll(url);
-            EmbedBuilder _embed = new EmbedBuilder();
-            EmbedAuthorBuilder _author = new EmbedAuthorBuilder();
-            _embed.Color = RandColor.RandomColor();
-            _author.Name = poll.Title;
-            _author.Url = poll.Url;
-            _embed.Author = _author;
-            EmbedFooterBuilder _footer = new EmbedFooterBuilder();
-            _footer.Text = "Strawpoll ID: " + poll.ID;
-            _embed.Timestamp = DateTime.UtcNow;
-            _embed.Footer = _footer;
-
-            for (int z = 0; z < poll.Options.Length; z++)
+            var poll = await APIWebReq.GetPoll(url);
+            EmbedBuilder _embed = new EmbedBuilder()
             {
-                _embed.AddField(x =>
+                Author = new EmbedAuthorBuilder()
                 {
-                    x.Name = poll.Options[z];
-                    x.Value = poll.Votes[z];
-                });
-            }
+                    Name = poll.Title,
+                    Url = poll.Url
+                },
+                Color = RandColor.RandomColor(),
+                Footer = new EmbedFooterBuilder()
+                {
+                    Text = "Strawpoll ID: " + poll.ID
+                },
+                Timestamp = DateTime.UtcNow
+            };
+            for (int z = 0; z < poll.Options.Length; z++)
+                _embed.AddField(poll.Options[z], poll.Votes[z]);
 
             await MessageHandler.SendChannel(Context.Channel, "", _embed);
         }
@@ -500,10 +470,15 @@ namespace Skuld.Commands
         public async Task Emojify([Remainder]string message)
         {
             string newmessage = "";
-            foreach(var character in message)
+            var regexItem = new Regex("^[a-zA-Z0-9 ]*$");
+            foreach (var character in message)
             {
-                if(!Char.IsWhiteSpace(character))
+                if(!regexItem.IsMatch(Convert.ToString(character)))
+                    newmessage += character;
+                if (!Char.IsWhiteSpace(character))
                     newmessage += ":regional_indicator_" + character + ": ";
+                else
+                    newmessage += " ";
             }
             await MessageHandler.SendChannel(Context.Channel, newmessage);
         }
@@ -536,21 +511,15 @@ namespace Skuld.Commands
         [Command("xkcd", RunMode = RunMode.Async), Summary("Get's random XKCD comic")]
         public async Task XKCD()
         {
-            try
+            int randComic = 0;
+            await APIWebReq.GetXKCDLastPage();
+            for (int x = 0; x < 10; x++)
             {
-                int randComic = 0;
-                await APIS.XKCD.WebReq.GetLastPage();
-                for (int x = 0; x < 10; x++)
-                {
-                    randComic = Bot.random.Next(0, APIS.XKCD.WebReq.LastPage.Value);
-                }
-                await sendXKCD((await APIS.XKCD.WebReq.GetComic(randComic)));
+                randComic = Bot.random.Next(0, APIWebReq.XKCDLastPage.Value);
             }
-            catch(Exception ex)
-            {
-            }
+            await SendXKCD((await APIWebReq.GetXKCDComic(randComic)));
         }
-        public async Task sendXKCD(XKCDComic comic)
+        public async Task SendXKCD(XKCDComic comic)
         {
             string datefixed;
             string monthfixed;
@@ -745,9 +714,28 @@ namespace Skuld.Commands
             }
         }
         [Command("chat",RunMode = RunMode.Async), Summary("Talk to Skuld, is another form of @Skuld message")]
-        public async Task Chat([Remainder]string message)
-        {
+        public async Task Chat([Remainder]string message)=>
             await CommandManager.HandleAI(Context, message);
+
+        [Command("apod", RunMode = RunMode.Async), Summary("Gets NASA's \"Astronomy Picture of the Day\"")]
+        public async Task APOD()
+        {
+            var PictureOfTheDay = await APIWebReq.NasaAPOD();
+            var embed = new EmbedBuilder()
+            {
+                Color = RandColor.RandomColor(),
+                Title = PictureOfTheDay.Title,
+                Url = "https://apod.nasa.gov/",
+                ImageUrl = PictureOfTheDay.HDUrl,
+                Timestamp = Convert.ToDateTime(PictureOfTheDay.Date)
+            };
+            await MessageHandler.SendChannel(Context.Channel, "", embed);
+        }
+        [Command("choose", RunMode = RunMode.Async), Summary("Choose from things")]
+        public async Task Choose([Remainder]string choices)
+        {
+            var choicearr = choices.Split('|');
+            await MessageHandler.SendChannel(Context.Channel, $"<:blobthinkcool:350673773113901056> | __{(Context.User as IGuildUser).Nickname??Context.User.Username}__ I choose: **{choicearr[Bot.random.Next(0,choicearr.Length)]}**");
         }
     }
 }

@@ -44,7 +44,6 @@ namespace Skuld
                 sw = new StreamWriter(logfile, false, Encoding.UTF8);
                 Prefix = Config.Load().Prefix;
                 fsw.Deleted += Events.SkuldEvents.Fsw_Deleted;
-                fsw.Created += Events.SkuldEvents.Fsw_Created;
                 Logs.CollectionChanged += Events.SkuldEvents.Logs_CollectionChanged;
                 Logs.Add(new Models.LogMessage("FrameWk", $"Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
                 bot = new DiscordShardedClient(new DiscordSocketConfig()
@@ -82,7 +81,8 @@ namespace Skuld
         {
             try
             {
-                await APIS.Twitch.TwitchClient.CreateTwitchClient(Config.Load().TwitchToken, Config.Load().TwitchClientID);
+                if(Config.Load().TwitchModule)
+                    await APIS.Twitch.TwitchClient.CreateTwitchClient(Config.Load().TwitchToken, Config.Load().TwitchClientID);
                 await bot.LoginAsync(TokenType.Bot, token);
                 await bot.StartAsync();
                 foreach (var shard in bot.Shards)
@@ -116,10 +116,14 @@ namespace Skuld
                 string path = Path.Combine(AppContext.BaseDirectory, "config", "Settings.xml");
                 if (File.Exists(path))
                 {
-                    ChatService = new AIMLbot.Bot();
-                    ChatService.AdminEmail = Config.Load().ChatServiceAdminEmail;
+                    ChatService = new AIMLbot.Bot()
+                    {
+                        AdminEmail = Config.Load().ChatServiceAdminEmail,
+                        TrustAIML = true,
+                        isAcceptingUserInput = false                        
+                    };
+                    ChatService.WrittenToLog += Events.SkuldEvents.ChatService_WrittenToLog;
                     ChatService.loadSettings(path);
-                    ChatService.isAcceptingUserInput = false;
                     ChatService.loadAIMLFromFiles();
                     ChatService.isAcceptingUserInput = true;
                     PathToUserData = Path.Combine(AppContext.BaseDirectory, "aimlusers");
@@ -131,7 +135,7 @@ namespace Skuld
             {
                 Logs.Add(new Models.LogMessage("ChtSrvc", "Error loading Chat Service", LogSeverity.Error,ex));
             }
-        }
+        }        
 
         public static async Task PublishStats(int shardid)
         {
