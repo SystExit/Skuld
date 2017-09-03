@@ -21,7 +21,7 @@ namespace Skuld.Commands
         {
             var command = new MySqlCommand("select money from accounts where ID = @id");
             command.Parameters.AddWithValue("@id", user.Id);
-            var resp = await Sql.GetSingleAsync(command);
+            var resp = await SqlTools.GetSingleAsync(command);
             ulong money = 0;
             if (!String.IsNullOrEmpty(resp))
                 money = Convert.ToUInt64(resp);
@@ -48,7 +48,7 @@ namespace Skuld.Commands
                 };
                 var command = new MySqlCommand("SELECT * FROM accounts WHERE ID = @userid");
                 command.Parameters.AddWithValue("@userid", user.Id);
-                using (var reader = await Sql.GetAsync(command))
+                using (var reader = await SqlTools.GetAsync(command))
                 {
                     if (reader.HasRows)
                     {
@@ -62,7 +62,7 @@ namespace Skuld.Commands
                         }
                         command = new MySqlCommand("SELECT * FROM commandusage WHERE UserID = @userid ORDER BY UserUsage DESC LIMIT 1");
                         command.Parameters.AddWithValue("@userid", user.Id);
-                        var resp = await Sql.GetAsync(command);
+                        var resp = await SqlTools.GetAsync(command);
                         if (resp.HasRows)
                         {
                             while (await resp.ReadAsync())
@@ -120,7 +120,7 @@ namespace Skuld.Commands
                 embed.Color = RandColor.RandomColor();
                 var command = new MySqlCommand("SELECT * FROM accounts WHERE ID = @userid");
                 command.Parameters.AddWithValue("@userid", user.Id);
-                using (var reader = await Sql.GetAsync(command))
+                using (var reader = await SqlTools.GetAsync(command))
                 {
                     if (reader.HasRows)
                     {
@@ -139,7 +139,7 @@ namespace Skuld.Commands
                         }
                         command = new MySqlCommand("SELECT * FROM commandusage WHERE UserID = @userid ORDER BY UserUsage DESC LIMIT 1");
                         command.Parameters.AddWithValue("@userid", user.Id);
-                        var resp = await Sql.GetAsync(command);
+                        var resp = await SqlTools.GetAsync(command);
                         if (resp.HasRows)
                         {
                             while (await resp.ReadAsync())
@@ -203,7 +203,7 @@ namespace Skuld.Commands
             var command = new MySqlCommand("UPDATE accounts SET description = @description WHERE ID = @userid");
             command.Parameters.AddWithValue("@userid", Context.User.Id);
             command.Parameters.AddWithValue("@description", description);
-            await Sql.InsertAsync(command).ContinueWith(async x =>
+            await SqlTools.InsertAsync(command).ContinueWith(async x =>
             {
                 if (x.IsCompleted)
                     await MessageHandler.SendChannel(Context.Channel,$"Successfully set your description to **{description}**");
@@ -214,7 +214,7 @@ namespace Skuld.Commands
         {
             var command = new MySqlCommand("SELECT Description FROM accounts WHERE ID = @userid");
             command.Parameters.AddWithValue("@userid", Context.User.Id);
-            await MessageHandler.SendChannel(Context.Channel, $"Successfully set your description to **{await Sql.GetSingleAsync(command)}**");
+            await MessageHandler.SendChannel(Context.Channel, $"Successfully set your description to **{await SqlTools.GetSingleAsync(command)}**");
         }
 
         [Command("daily", RunMode = RunMode.Async), Summary("Daily Money")]
@@ -223,7 +223,7 @@ namespace Skuld.Commands
             DateTime olddate = new DateTime();
             var command = new MySqlCommand("select daily from accounts where ID = @userid");
             command.Parameters.AddWithValue("@userid", Context.User.Id);
-            var resp = await Sql.GetSingleAsync(command);
+            var resp = await SqlTools.GetSingleAsync(command);
             if (!String.IsNullOrEmpty(resp))
             {
                 olddate = Convert.ToDateTime(resp);
@@ -248,7 +248,7 @@ namespace Skuld.Commands
             ulong oldmoney = 0;
             var command = new MySqlCommand("SELECT `money` FROM `accounts` WHERE ID = @userid");
             command.Parameters.AddWithValue("@userid", Context.User.Id);
-            var tresp = await Sql.GetSingleAsync(command);
+            var tresp = await SqlTools.GetSingleAsync(command);
             if (!String.IsNullOrEmpty(tresp))
                 oldmoney = Convert.ToUInt64(tresp);
             ulong newamount = oldmoney + Config.Load().DailyAmount;
@@ -257,7 +257,7 @@ namespace Skuld.Commands
             command.Parameters.AddWithValue("@userid", Context.User.Id);
             command.Parameters.AddWithValue("@money", newamount);
             command.Parameters.AddWithValue("@daily", DateTime.UtcNow);
-            await Sql.InsertAsync(command).ContinueWith(async x =>
+            await SqlTools.InsertAsync(command).ContinueWith(async x =>
             {
                 if (x.IsCompleted)
                 {
@@ -274,7 +274,7 @@ namespace Skuld.Commands
                 DateTime olddate = new DateTime();
                 var command = new MySqlCommand("SELECT `daily` FROM `accounts` WHERE ID = @userid");
                 command.Parameters.AddWithValue("@userid", Context.User.Id);
-                var resp = await Sql.GetSingleAsync(command);
+                var resp = await SqlTools.GetSingleAsync(command);
                 if (!String.IsNullOrEmpty(resp))
                 {
                     olddate = Convert.ToDateTime(resp);
@@ -293,7 +293,7 @@ namespace Skuld.Commands
                         ulong oldmoney = 0;
                         command = new MySqlCommand("SELECT `money` FROM `accounts` WHERE ID = @userid");
                         command.Parameters.AddWithValue("@userid", usertogive.Id);
-                        var tresp = await Sql.GetSingleAsync(command);
+                        var tresp = await SqlTools.GetSingleAsync(command);
                         if (!String.IsNullOrEmpty(tresp))
                             oldmoney = Convert.ToUInt64(tresp);
                         ulong newamount = oldmoney + Config.Load().DailyAmount;
@@ -301,14 +301,14 @@ namespace Skuld.Commands
                         command = new MySqlCommand("UPDATE ACCOUNTS SET Daily = @daily WHERE ID = @userid");
                         command.Parameters.AddWithValue("@userid", Context.User.Id);
                         command.Parameters.AddWithValue("@daily", DateTime.UtcNow);
-                        await Sql.InsertAsync(command).ContinueWith(async x =>
+                        await SqlTools.InsertAsync(command).ContinueWith(async x =>
                         {
                             if (x.IsCompleted)
                             {
                                 command = new MySqlCommand("UPDATE ACCOUNTS SET money = @money WHERE ID = @userid");
                                 command.Parameters.AddWithValue("@userid", usertogive.Id);
                                 command.Parameters.AddWithValue("@money", newamount);
-                                await Sql.InsertAsync(command).ContinueWith(async z =>
+                                await SqlTools.InsertAsync(command).ContinueWith(async z =>
                                 {
                                     if (z.IsCompleted)
                                     {
@@ -328,7 +328,7 @@ namespace Skuld.Commands
             ulong oldmoney = 0;
             var command = new MySqlCommand("SELECT `money` FROM `accounts` WHERE ID = @userid");
             command.Parameters.AddWithValue("@userid", Context.User.Id);
-            var tresp = await Sql.GetSingleAsync(command);
+            var tresp = await SqlTools.GetSingleAsync(command);
             if (!String.IsNullOrEmpty(tresp))
                 oldmoney = Convert.ToUInt64(tresp);
             ulong newamount = oldmoney + Config.Load().DailyAmount;
@@ -337,7 +337,7 @@ namespace Skuld.Commands
             command.Parameters.AddWithValue("@userid", Context.User.Id);
             command.Parameters.AddWithValue("@money", newamount);
             command.Parameters.AddWithValue("@daily", DateTime.UtcNow);
-            await Sql.InsertAsync(command).ContinueWith(async x =>
+            await SqlTools.InsertAsync(command).ContinueWith(async x =>
             {
                 if (x.IsCompleted)
                 {
@@ -358,14 +358,14 @@ namespace Skuld.Commands
                 ulong oldsendmoney = 0;
                 var command = new MySqlCommand("SELECT money FROM accounts WHERE ID = @userid");
                 command.Parameters.AddWithValue("@userid", user.Id);
-                var reader = await Sql.GetSingleAsync(command);
+                var reader = await SqlTools.GetSingleAsync(command);
                 if (!String.IsNullOrEmpty(reader))
                     oldrecipmoney = Convert.ToUInt64(reader);
                 else
                     await InsertUser(Context.User);
                 command = new MySqlCommand("SELECT money FROM accounts WHERE ID = @userid");
                 command.Parameters.AddWithValue("@userid", sender.Id);
-                var reader2 = await Sql.GetSingleAsync(command);
+                var reader2 = await SqlTools.GetSingleAsync(command);
                 if (!String.IsNullOrEmpty(reader2))
                     oldsendmoney = Convert.ToUInt64(reader2);
                 else
@@ -379,23 +379,23 @@ namespace Skuld.Commands
                     command = new MySqlCommand("UPDATE accounts SET money = @money WHERE ID = @userid");
                     command.Parameters.AddWithValue("@userid", user.Id);
                     command.Parameters.AddWithValue("@money", newrecipmoney);
-                    await Sql.InsertAsync(command).ContinueWith(async x =>
+                    await SqlTools.InsertAsync(command).ContinueWith(async x =>
                     {
                         command = new MySqlCommand("UPDATE accounts SET money = @money WHERE ID = @userid");
                         command.Parameters.AddWithValue("@userid", sender.Id);
                         command.Parameters.AddWithValue("@money", newsendmoney);
-                        await Sql.InsertAsync(command);
+                        await SqlTools.InsertAsync(command);
                         ulong temprecp = 0, tempsend = 0;
                         command = new MySqlCommand("SELECT money FROM accounts WHERE ID = @userid");
                         command.Parameters.AddWithValue("@userid", user.Id);
-                        var reader3 = await Sql.GetSingleAsync(command);
+                        var reader3 = await SqlTools.GetSingleAsync(command);
                         if (!String.IsNullOrEmpty(reader3))
                             temprecp = Convert.ToUInt64(reader);
                         else
                             await InsertUser(Context.User);
                         command = new MySqlCommand("SELECT money FROM accounts WHERE ID = @userid");
                         command.Parameters.AddWithValue("@userid", sender.Id);
-                        var reader4 = await Sql.GetSingleAsync(command);
+                        var reader4 = await SqlTools.GetSingleAsync(command);
                         if (!String.IsNullOrEmpty(reader4))
                             tempsend = Convert.ToUInt64(reader);
                         else
@@ -411,13 +411,13 @@ namespace Skuld.Commands
         {
             MySqlCommand command = new MySqlCommand("SELECT username FROM accounts WHERE ID = @userid");
             command.Parameters.AddWithValue("@userid", Context.User.Id);
-            var username = await Sql.GetSingleAsync(command);
+            var username = await SqlTools.GetSingleAsync(command);
             if(Context.User.Username+"#"+Context.User.DiscriminatorValue != username)
             {
                 MySqlCommand cmd = new MySqlCommand("UPDATE accounts SET username = @username WHERE ID = @userid");
                 cmd.Parameters.AddWithValue("@username", $"{Context.User.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{Context.User.DiscriminatorValue}");
                 cmd.Parameters.AddWithValue("@userid", Context.User.Id);
-                await Sql.InsertAsync(cmd).ContinueWith(async x=>
+                await SqlTools.InsertAsync(cmd).ContinueWith(async x=>
                 {
                 if (x.IsCompleted)
                     await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Success" }, Description = "Synced your username :D", Color = RandColor.RandomColor() });
@@ -435,7 +435,7 @@ namespace Skuld.Commands
             MySqlCommand command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");");
             command.Parameters.AddWithValue("@username", $"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{user.DiscriminatorValue}");
             command.Parameters.AddWithValue("@userid", user.Id);
-            await Sql.InsertAsync(command);
+            await SqlTools.InsertAsync(command);
         }
     }
 }

@@ -13,25 +13,27 @@ namespace Skuld.Tools
         {
             var TextChan = (ITextChannel)channel;
             var MesgChan = (IMessageChannel)channel;
+            IUserMessage Message;
             await MesgChan.TriggerTypingAsync();
             try
             {
                 if (embed == null)
-                    return await MesgChan.SendMessageAsync(message);
+                    Message = await MesgChan.SendMessageAsync(message);
                 else
                 {
                     var perm = (await TextChan.Guild.GetUserAsync(Bot.bot.CurrentUser.Id)).GetPermissions(TextChan).EmbedLinks;
                     if (!perm)
                     {
                         if (message != null)
-                            return await MesgChan.SendMessageAsync(message + "\n" + ConvertEmbedToText(embed));
+                            Message = await MesgChan.SendMessageAsync(message + "\n" + ConvertEmbedToText(embed));
                         else
-                            return await MesgChan.SendMessageAsync(ConvertEmbedToText(embed));             
+                            Message = await MesgChan.SendMessageAsync(ConvertEmbedToText(embed));             
                     }
                     else
-                        return await MesgChan.SendMessageAsync(message, false, embed);
-                }                        
+                        Message = await MesgChan.SendMessageAsync(message, false, embed);                    
+                }
                 Bot.Logs.Add(new Models.LogMessage("MsgDisp", $"Dispactched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
+                return Message;
             }
             catch (Exception ex)
             {

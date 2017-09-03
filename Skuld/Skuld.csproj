@@ -199,7 +199,7 @@
     <Compile Include="Tools\JsonTools.cs" />
     <Compile Include="Tools\MessageHandler.cs" />
     <Compile Include="Tools\RandColor.cs" />
-    <Compile Include="Tools\Sql.cs" />
+    <Compile Include="Tools\SqlConnection.cs" />
     <Compile Include="Tools\SqlTools.cs" />
   </ItemGroup>
   <ItemGroup>

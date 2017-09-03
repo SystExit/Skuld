@@ -175,7 +175,7 @@ namespace Skuld.Commands
                 {
                     var cmd = new MySqlCommand("SELECT luckfactor FROM accounts where ID = @userid");
                     cmd.Parameters.AddWithValue("@userid", Context.User.Id);
-                    Double currluckfact= Convert.ToDouble(await Sql.GetSingleAsync(cmd));
+                    Double currluckfact= Convert.ToDouble(await SqlTools.GetSingleAsync(cmd));
                     currluckfact = currluckfact / 1.1;
                     currluckfact = Math.Round(currluckfact, 4);
                     if (currluckfact < 0.1)
@@ -183,7 +183,7 @@ namespace Skuld.Commands
                     cmd = new MySqlCommand("UPDATE accounts SET luckfactor = @luckfactor where ID = @userid");
                     cmd.Parameters.AddWithValue("@userid", Context.User.Id);
                     cmd.Parameters.AddWithValue("@luckfactor", currluckfact);
-                    await Sql.InsertAsync(cmd);
+                    await SqlTools.InsertAsync(cmd);
                     await Context.Channel.SendMessageAsync($"{Context.User.Mention} just rolled and got a {rand} :weary:");
                 }
                 else
@@ -254,7 +254,7 @@ namespace Skuld.Commands
                     {
                         var command = new MySqlCommand("DELETE FROM pasta WHERE pastaname = @title");
                         command.Parameters.AddWithValue("@title", title);
-                        await Sql.InsertAsync(command).ContinueWith(async x =>
+                        await SqlTools.InsertAsync(command).ContinueWith(async x =>
                         {
                             if (x.IsCompleted)
                                 await MessageHandler.SendChannel(Context.Channel, $"Successfully deleted: **{title}**");
@@ -280,7 +280,7 @@ namespace Skuld.Commands
                 {
                     var command = new MySqlCommand("SELECT pastaname FROM pasta WHERE pastaname = @pastatitle");
                     command.Parameters.AddWithValue("@pastatitle", title);
-                    var pastaname = await Sql.GetSingleAsync(command);
+                    var pastaname = await SqlTools.GetSingleAsync(command);
                     if (!string.IsNullOrEmpty(pastaname))
                     {
                         await MessageHandler.SendChannel(Context.Channel, $"Pasta already exists with name: **{title}**");
@@ -297,11 +297,11 @@ namespace Skuld.Commands
                         command.Parameters.AddWithValue("@created", DateTime.UtcNow);
                         command.Parameters.AddWithValue("@pastatitle", title);
 
-                        await Sql.InsertAsync(command).ContinueWith(async x =>
+                        await SqlTools.InsertAsync(command).ContinueWith(async x =>
                         {
                             command = new MySqlCommand("SELECT pastaname FROM pasta WHERE pastaname = @pastatitle");
                             command.Parameters.AddWithValue("@pastatitle", title);
-                            var newpasta = await Sql.GetSingleAsync(command);
+                            var newpasta = await SqlTools.GetSingleAsync(command);
                             if (x.IsCompleted && !string.IsNullOrEmpty(newpasta))
                             {
                                 await MessageHandler.SendChannel(Context.Channel, $"Successfully added: **{title}**");
@@ -314,22 +314,22 @@ namespace Skuld.Commands
             {
                 var command = new MySqlCommand("SELECT ownerid from pasta where pastaname = @title");
                 command.Parameters.AddWithValue("@title", title);
-                var ownerid = await Sql.GetSingleAsync(command);
+                var ownerid = await SqlTools.GetSingleAsync(command);
                 if (Convert.ToUInt64(ownerid) == Context.User.Id)
                 {
                     command = new MySqlCommand("SELECT content FROM pasta where pastaname = @title");
                     command.Parameters.AddWithValue("@title", title);
-                    var oldcontent = await Sql.GetSingleAsync(command);
+                    var oldcontent = await SqlTools.GetSingleAsync(command);
                     content.Replace("\'", "\\\'");
                     content.Replace("\"", "\\\"");
                     command = new MySqlCommand("UPDATE pasta SET content = @content WHERE pastaname = @title");
                     command.Parameters.AddWithValue("@content", content);
                     command.Parameters.AddWithValue("@title", title);
-                    await Sql.InsertAsync(command).ContinueWith(async x =>
+                    await SqlTools.InsertAsync(command).ContinueWith(async x =>
                     {
                         command = new MySqlCommand("SELECT content FROM pasta where pastaname = @title");
                         command.Parameters.AddWithValue("@title", title);
-                        var respnew = await Sql.GetSingleAsync(command);
+                        var respnew = await SqlTools.GetSingleAsync(command);
                         if (x.IsCompleted && respnew != oldcontent)
                             await MessageHandler.SendChannel(Context.Channel, $"Successfully changed the content of **{title}**");
                     });
@@ -348,13 +348,13 @@ namespace Skuld.Commands
             {
                 string columndata = null;
                 List<string> rows = new List<string>();
-                var reader = await Sql.GetAsync(new MySqlCommand($"SELECT PastaName FROM pasta"));
+                var reader = await SqlTools.GetAsync(new MySqlCommand($"SELECT PastaName FROM pasta"));
                 while (await reader.ReadAsync())
                 {
                     rows.Add(reader["PastaName"].ToString());
                 }
                 reader.Close();
-                await Sql.getconn.CloseAsync();
+                await SqlTools.getconn.CloseAsync();
                 if (rows != null)
                 {
                     foreach (var item in rows)
@@ -388,7 +388,7 @@ namespace Skuld.Commands
             {
                 var command = new MySqlCommand("SELECT content FROM pasta WHERE pastaname = @title");
                 command.Parameters.AddWithValue("@title", title);
-                string response = await Sql.GetSingleAsync(command);
+                string response = await SqlTools.GetSingleAsync(command);
                 if (!String.IsNullOrEmpty(response))
                     await MessageHandler.SendChannel(Context.Channel, response);
                 else
@@ -620,102 +620,92 @@ namespace Skuld.Commands
         [Command("cowsay",RunMode = RunMode.Async),Summary("Make an ascii cow say some things.")]
         public async Task CowSay([Remainder]string message)
         {
-            try
+            string cowdir = Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "cows");
+            string[] cows = Directory.GetFiles(cowdir);
+            string cow = null;
+            if (message.StartsWith("-b"))
+            { 
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("=="));
+                message = message.Remove(0, 3);
+            }
+            if (message.StartsWith("-d"))
             {
-                string cowdir = Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "cows");
-                string[] cows = Directory.GetFiles(cowdir);
-                string cow = null;
-                if (message.StartsWith("-b"))
-                { 
-                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("=="));
-                    message = message.Remove(0, 3);
-                }
-                if (message.StartsWith("-d"))
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("XX"));
+                message = message.Remove(0, 3);
+            }                    
+            if (message.StartsWith("-g"))
+            {
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("$$"));
+                message = message.Remove(0, 3);
+            }                    
+            if (message.StartsWith("-p"))
+            {
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("@@"));
+                message = message.Remove(0, 3);
+            }                    
+            if (message.StartsWith("-s"))
+            {
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("**"));
+                message = message.Remove(0, 3);
+            }
+            if (message.StartsWith("--think"))
+            {
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", true, new CowFace("oo"));
+                message = message.Remove(0, 8);
+            }
+            if (message.StartsWith("-t"))
+            {
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("--"));
+                message = message.Remove(0, 3);
+            }                    
+            if (message.StartsWith("-w"))
+            {
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("00"));
+                message = message.Remove(0, 3);
+            }                    
+            if (message.StartsWith("-y"))
+            {
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace(".."));
+                message = message.Remove(0, 3);
+            }                    
+            if (message.StartsWith("-T"))
+            {
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("oo", message.Split(null)[1]));
+                message = message.Remove(0, message.Split(null)[1].Length+4);
+            }                    
+            if (message.StartsWith("-e"))
+            {
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace(message.Split(null)[1]));
+                message = message.Remove(0, message.Split(null)[1].Length+4);
+            }                    
+            if (message.StartsWith("-f"))
+            {
+                string cowfile = message.Split(null)[1] + ".cow";
+                if (cows.Contains(cowdir+"\\"+cowfile))
                 {
-                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("XX"));
-                    message = message.Remove(0, 3);
-                }                    
-                if (message.StartsWith("-g"))
-                {
-                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("$$"));
-                    message = message.Remove(0, 3);
-                }                    
-                if (message.StartsWith("-p"))
-                {
-                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("@@"));
-                    message = message.Remove(0, 3);
-                }                    
-                if (message.StartsWith("-s"))
-                {
-                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("**"));
-                    message = message.Remove(0, 3);
-                }
-                if (message.StartsWith("--think"))
-                {
-                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", true, new CowFace("oo"));
-                    message = message.Remove(0, 8);
-                }
-                if (message.StartsWith("-t"))
-                {
-                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("--"));
-                    message = message.Remove(0, 3);
-                }                    
-                if (message.StartsWith("-w"))
-                {
-                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("00"));
-                    message = message.Remove(0, 3);
-                }                    
-                if (message.StartsWith("-y"))
-                {
-                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace(".."));
-                    message = message.Remove(0, 3);
-                }                    
-                if (message.StartsWith("-T"))
-                {
-                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("oo", message.Split(null)[1]));
+                    cow = GetCow.ReturnCow(cowdir + "\\" +cowfile, false, new CowFace());
                     message = message.Remove(0, message.Split(null)[1].Length+4);
-                }                    
-                if (message.StartsWith("-e"))
-                {
-                    cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace(message.Split(null)[1]));
-                    message = message.Remove(0, message.Split(null)[1].Length+4);
-                }                    
-                if (message.StartsWith("-f"))
-                {
-                    string cowfile = message.Split(null)[1] + ".cow";
-                    if (cows.Contains(cowdir+"\\"+cowfile))
-                    {
-                        cow = GetCow.ReturnCow(cowdir + "\\" +cowfile, false, new CowFace());
-                        message = message.Remove(0, message.Split(null)[1].Length+4);
-                    }
-                    else
-                    {
-                        throw new FileNotFoundException("Cannot find cow \"" + cowfile + "\" in \"" + cowdir + "\"");
-                    }
-                }
-                string cowsay = "```\n"+message+"\n";
-                if (!String.IsNullOrEmpty(cow))
-                    cowsay += cow + "```";
-                else
-                    cowsay += GetCow.ReturnCow(cowdir+"\\default.cow", false, new CowFace("oo")) + "```";
-                if (cowsay.Length > 2000)
-                {
-                    cowsay = cowsay.Remove(0, 3);
-                    cowsay = cowsay.Remove(cowsay.Length - 3, 3);
-                    File.WriteAllText(AppContext.BaseDirectory + "\\cowsay.txt", cowsay);
-                    await Context.Channel.SendFileAsync(AppContext.BaseDirectory + "\\cowsay.txt", "It's over 2000 characters D: Here's the file.");
                 }
                 else
-                    await MessageHandler.SendChannel(Context.Channel, cowsay);
+                {
+                    throw new FileNotFoundException("Cannot find cow \"" + cowfile + "\" in \"" + cowdir + "\"");
+                }
             }
-            catch ( Exception ex )
+            string cowsay = "```\n"+message+"\n";
+            if (!String.IsNullOrEmpty(cow))
+                cowsay += cow + "```";
+            else
+                cowsay += GetCow.ReturnCow(cowdir+"\\default.cow", false, new CowFace("oo")) + "```";
+            if (cowsay.Length > 2000)
             {
-                Console.WriteLine(ex);
+                cowsay = cowsay.Remove(0, 3);
+                cowsay = cowsay.Remove(cowsay.Length - 3, 3);
+                File.WriteAllText(AppContext.BaseDirectory + "\\cowsay.txt", cowsay);
+                await Context.Channel.SendFileAsync(AppContext.BaseDirectory + "\\cowsay.txt", "It's over 2000 characters D: Here's the file.");
             }
-        }
-        [Command("chat",RunMode = RunMode.Async), Summary("Talk to Skuld, is another form of @Skuld message")]
-        public async Task Chat([Remainder]string message)=>
-            await CommandManager.HandleAI(Context, message);
+            else
+                await MessageHandler.SendChannel(Context.Channel, cowsay);
+        }        
 
         [Command("apod", RunMode = RunMode.Async), Summary("Gets NASA's \"Astronomy Picture of the Day\"")]
         public async Task APOD()

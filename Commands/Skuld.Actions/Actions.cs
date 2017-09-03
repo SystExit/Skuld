@@ -49,7 +49,7 @@ namespace Skuld.Commands
                     int dhp = Bot.random.Next(0, 100);
                     MySqlCommand command = new MySqlCommand("select HP from accounts where ID = @userid");
                     command.Parameters.AddWithValue("@userid", guilduser.Id);
-                    var resp = await Sql.GetSingleAsync(command);
+                    var resp = await SqlTools.GetSingleAsync(command);
                     if (String.IsNullOrEmpty(resp))
                         await InsertUser(guilduser);
                     else
@@ -61,14 +61,14 @@ namespace Skuld.Commands
                             command = new MySqlCommand("UPDATE accounts SET hp = @hp where ID = @userid");
                             command.Parameters.AddWithValue("@hp", hp);
                             command.Parameters.AddWithValue("@userid", guilduser.Id);
-                            await Sql.InsertAsync(command);
+                            await SqlTools.InsertAsync(command);
                             await Send($"{contuser.Nickname ?? contuser.Username} just stabbed {guilduser.Nickname ?? guilduser.Username} for {dhp} HP, they now have {hp} HP left", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=stab")));
                         }
                         else
                         {
                             command = new MySqlCommand("UPDATE accounts SET hp = 0 where ID = @userid");
                             command.Parameters.AddWithValue("@userid", guilduser.Id);
-                            await Sql.InsertAsync(command);
+                            await SqlTools.InsertAsync(command);
                             await Send($"{contuser.Nickname ?? contuser.Username} just stabbed {guilduser.Nickname ?? guilduser.Username} for {dhp} HP, they have no HP left", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=stab")));
                         }
                     }
@@ -156,7 +156,7 @@ namespace Skuld.Commands
                     MySqlCommand command = new MySqlCommand("SELECT pets from accounts where id = @userid");
                     command.Parameters.AddWithValue("@userid", Context.User.Id);
 
-                    var resp1 = await Sql.GetSingleAsync(command);
+                    var resp1 = await SqlTools.GetSingleAsync(command);
                     if (String.IsNullOrEmpty(resp1))
                     {
                         await InsertUser(contuser);
@@ -170,12 +170,12 @@ namespace Skuld.Commands
                         command.Parameters.AddWithValue("@newpets", newpets);
                         command.Parameters.AddWithValue("@userid", contuser.Id);
 
-                        await Sql.InsertAsync(command);
+                        await SqlTools.InsertAsync(command);
 
                         command = new MySqlCommand("SELECT petted from accounts where id = @userid");
                         command.Parameters.AddWithValue("@userid", guilduser.Id);
 
-                        var resp2 = await Sql.GetSingleAsync(command);
+                        var resp2 = await SqlTools.GetSingleAsync(command);
                         if (resp2 == null)
                         {
                             await InsertUser(guilduser);
@@ -189,7 +189,7 @@ namespace Skuld.Commands
                             command.Parameters.AddWithValue("@newpetted", newpetted);
                             command.Parameters.AddWithValue("@userid", guilduser.Id);
 
-                            await Sql.InsertAsync(command);
+                            await SqlTools.InsertAsync(command);
                             await Send($"{contuser.Nickname ?? contuser.Username} just petted {guilduser.Nickname ?? guilduser.Username}, they've been petted {newpetted} time(s)!", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=pet")));
                         }
                     }
@@ -216,7 +216,7 @@ namespace Skuld.Commands
                 {
                     MySqlCommand command = new MySqlCommand("SELECT glares from accounts where id = @userid");
                     command.Parameters.AddWithValue("@userid", contuser.Id);
-                    var resp1 = await Sql.GetSingleAsync(command);
+                    var resp1 = await SqlTools.GetSingleAsync(command);
 
                     if (String.IsNullOrEmpty(resp1))
                     {
@@ -230,11 +230,11 @@ namespace Skuld.Commands
                         command = new MySqlCommand("UPDATE accounts SET glares = @newglares WHERE id = @userid");
                         command.Parameters.AddWithValue("@newglares", newglares);
                         command.Parameters.AddWithValue("@userid", contuser.Id);
-                        await Sql.InsertAsync(command);
+                        await SqlTools.InsertAsync(command);
 
                         command = new MySqlCommand("SELECT glaredat from accounts where id = @userid");
                         command.Parameters.AddWithValue("@userid", guilduser.Id);
-                        var resp2 = await Sql.GetSingleAsync(command);
+                        var resp2 = await SqlTools.GetSingleAsync(command);
 
                         if (String.IsNullOrEmpty(resp2))
                         {
@@ -248,7 +248,7 @@ namespace Skuld.Commands
                             command = new MySqlCommand("UPDATE accounts SET glaredat = @glaredat WHERE id = @userid");
                             command.Parameters.AddWithValue("@glaredat", newglaredat);
                             command.Parameters.AddWithValue("@userid", guilduser.Id);
-                            await Sql.InsertAsync(command);
+                            await SqlTools.InsertAsync(command);
 
                             await Send($"{contuser.Nickname ?? contuser.Username} glares at {guilduser.Nickname ?? guilduser.Username}, they've been glared at {newglaredat} time(s)!", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=glare")));
                         }
@@ -309,7 +309,7 @@ namespace Skuld.Commands
             MySqlCommand command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");");
             command.Parameters.AddWithValue("@username", $"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{user.DiscriminatorValue}");
             command.Parameters.AddWithValue("@userid",user.Id);
-            await Sql.InsertAsync(command);
+            await SqlTools.InsertAsync(command);
         }
         private async Task Send(string message, string image) =>
             await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = message, Color = RandColor.RandomColor(), ImageUrl = image });

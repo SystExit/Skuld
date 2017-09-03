@@ -15,7 +15,7 @@ namespace Skuld.Commands
         {
             MySqlCommand cmd = new MySqlCommand("select prefix from guild where id = @guildid");
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-            string resp = await Sql.GetSingleAsync(cmd);
+            string resp = await SqlTools.GetSingleAsync(cmd);
             string Prefix = Config.Load().Prefix;
             var embed = new EmbedBuilder()
             {

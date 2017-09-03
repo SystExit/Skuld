@@ -22,7 +22,7 @@ namespace Skuld.Commands
         [Command("server", RunMode = RunMode.Async), Summary("Gets information about the server")]
         public async Task GetServer()
         {
-            var bot = Skuld.Bot.bot;
+            var bot = Bot.bot;
             var guild = Context.Guild;
             var roles = guild.Roles;
             EmbedBuilder _embed = new EmbedBuilder() { Color = RandColor.RandomColor() };

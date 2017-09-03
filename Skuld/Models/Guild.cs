@@ -8,7 +8,6 @@
         public string LeaveMessage { get; set; }
         public ulong AutoJoinRole { get; set; }
         public string Prefix { get; set; }
-        public uint Users { get; set; }
         public string[] JoinableRoles { get; set; }
         public ulong TwitchNotifChannel { get; set; }
         public ulong TwitterLogChannel { get; set; }
@@ -39,6 +38,7 @@
     public class GuildFeatureModules
     {
         public bool Starboard { get; set; }
+        public bool Pinning { get; set; }
         public bool Experience { get; set; }
         public bool UserJoinLeave { get; set; }
         public bool UserModification { get; set; }

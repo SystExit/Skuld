@@ -6,7 +6,7 @@ using System.Data.Common;
 
 namespace Skuld.Tools
 {
-    public class Sql : Bot
+    public partial class SqlTools : Bot
     {
         private static string cs = $@"server={Config.Load().SqlDBHost};user={Config.Load().SqlUser};password={Config.Load().SqlPass};database={Config.Load().SqlDB};charset=utf8mb4";
 
