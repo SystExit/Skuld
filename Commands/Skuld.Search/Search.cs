@@ -108,7 +108,7 @@ namespace Skuld.Commands
                 _embed.AddInlineField("Genre", media.Genre);
                 _embed.AddInlineField("Rating", media.imdbRating);
                 _embed.AddInlineField("Votes", media.imdbVotes);
-                await MessageHandler.SendChannel(Context.Channel,"", _embed);
+                await MessageHandler.SendChannel(Context.Channel,"", _embed.Build());
             }
             else
             {
@@ -130,7 +130,7 @@ namespace Skuld.Commands
                 _embed.AddInlineField("Genre", media.Genre);
                 _embed.AddInlineField("Rating", media.imdbRating);
                 _embed.AddInlineField("Votes", media.imdbVotes);
-                await MessageHandler.SendChannel(Context.Channel,"", _embed);
+                await MessageHandler.SendChannel(Context.Channel,"", _embed.Build());
             }
         }*/
         [Command("twitch", RunMode = RunMode.Async), Summary("Finds a twitch user")]
@@ -154,8 +154,8 @@ namespace Skuld.Commands
                 };
                 var streamimg = stream.Previews.SkipWhile(x => x.Key != "large").FirstOrDefault().Value;
                 _embed.Description = chan.Status;
-                _embed.AddInlineField("They're currently playing", chan.Game.ToString());
-                _embed.AddInlineField("Current Viewers", $"{stream.Viewers.ToString("N0")}");
+                _embed.AddField("They're currently playing", chan.Game.ToString(),true);
+                _embed.AddField("Current Viewers", $"{stream.Viewers.ToString("N0")}",true);
                 _embed.ImageUrl = streamimg;
             }
             if (stream == null)
@@ -167,18 +167,18 @@ namespace Skuld.Commands
                     Url = chan.Url
                 };
                 if (!String.IsNullOrEmpty(chan.Status))
-                    _embed.AddInlineField("Last stream title", chan.Status);
+                    _embed.AddField("Last stream title", chan.Status,true);
                 else
-                    _embed.AddInlineField("Last stream title", "Unset");
+                    _embed.AddField("Last stream title", "Unset",true);
                 if (!String.IsNullOrEmpty(chan.Game))
-                    _embed.AddInlineField("Was last streaming", chan.Game);
+                    _embed.AddField("Was last streaming", chan.Game,true);
                 else
-                    _embed.AddInlineField("Was last streaming", "Nothing");
-                _embed.AddInlineField("Followers", $"{chan.Followers.ToString("N0")}");
-                _embed.AddInlineField("Total Views", $"{chan.Views.ToString("N0")}");
+                    _embed.AddField("Was last streaming", "Nothing",true);
+                _embed.AddField("Followers", $"{chan.Followers.ToString("N0")}",true);
+                _embed.AddField("Total Views", $"{chan.Views.ToString("N0")}",true);
                 _embed.ThumbnailUrl = chan.VideoBannerUrl;
             }
-            await MessageHandler.SendChannel(Context.Channel, "", _embed);
+            await MessageHandler.SendChannel(Context.Channel, "", _embed.Build());
         }
 
         //Start Search Platforms
@@ -236,7 +236,7 @@ namespace Skuld.Commands
                                 $"https://google.com/search?q={query.Replace(" ", "%20")}",
                             Color = RandColor.RandomColor()
                         };
-                        await MessageHandler.SendChannel(Context.Channel, "", embed);
+                        await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
                     }
                     catch
                     {
@@ -249,13 +249,13 @@ namespace Skuld.Commands
                         Title = "Error with the command",
                         Description = $"I couldn't find anything matching: `{query}`, please try again.",
                         Color = RandColor.RandomColor()
-                    });
+                    }.Build());
                 }
             }
             catch (Exception ex)
             {
                 Bot.Logs.Add(new Models.LogMessage("GogSrch", "Error with google search", LogSeverity.Error, ex));
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Color = RandColor.RandomColor() });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Color = RandColor.RandomColor() }.Build());
             }
         }
         private async Task YoutubeS(string query)
@@ -278,12 +278,12 @@ namespace Skuld.Commands
                     ImageUrl = item.Thumbnail,
                     Color = RandColor.RandomColor()
                 };
-                await MessageHandler.SendChannel(Context.Channel, "", embed);
+                await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
             }
             catch (Exception ex)
             {
                 Bot.Logs.Add(new Models.LogMessage("YTBSrch", "Error with Youtube Search", LogSeverity.Error, ex));
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Description = ex.Message, Color = RandColor.RandomColor() });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Description = ex.Message, Color = RandColor.RandomColor() }.Build());
             }
         }
         private async Task ImgurS(string query)
@@ -302,7 +302,7 @@ namespace Skuld.Commands
                         string message = "I found this:\n" + album.Link;
                         await MessageHandler.SendChannel(Context.Channel, message);
                     }
-                    if (album.Nsfw == true && Context.Channel.IsNsfw == true)
+                    if (album.Nsfw == true && Context.Channel.Name.ToLowerInvariant().StartsWith("nsfw") == true)
                     {
                         string message = "I found this:\n" + album.Link;
                         await MessageHandler.SendChannel(Context.Channel, message);
@@ -314,7 +314,7 @@ namespace Skuld.Commands
             catch (Exception ex)
             {
                 Bot.Logs.Add(new Models.LogMessage("ImgrSch", "Error with Imgur search", LogSeverity.Error, ex));
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Description = ex.Message, Color = RandColor.RandomColor() });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Description = ex.Message, Color = RandColor.RandomColor() }.Build());
             }
         }
 
@@ -338,7 +338,7 @@ namespace Skuld.Commands
             if(url != "https://lmgtfy.com/")
                 await MessageHandler.SendChannel(Context.Channel, url);
             else
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with command" }, Color = new Color(255, 0, 0), Description = $"Ensure your parameters are correct, example: `{Config.Load().Prefix}lmgtfy g How to use lmgtfy`" });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with command" }, Color = new Color(255, 0, 0), Description = $"Ensure your parameters are correct, example: `{Config.Load().Prefix}lmgtfy g How to use lmgtfy`" }.Build());
         }
 
         public string urbanphrase = null;
@@ -377,7 +377,7 @@ namespace Skuld.Commands
             _embed.AddField("Example", word.Example??"Not Available");
             _embed.AddField("Upvotes", word.UpVotes??"Not Available");
             _embed.AddField("Downvotes", word.DownVotes??"Not Available");
-            await MessageHandler.SendChannel(Context.Channel, "", _embed);
+            await MessageHandler.SendChannel(Context.Channel, "", _embed.Build());
         }
 
         [Command("wikipedia", RunMode = RunMode.Async), Summary("Gets wikipedia information, supports all languages that wikipedia offers")]
@@ -408,8 +408,8 @@ namespace Skuld.Commands
                 },
                 Color = RandColor.RandomColor()
             };
-            _embed.AddInlineField("Description", page.Description??"Not Available");
-            await MessageHandler.SendChannel(Context.Channel, "", _embed);
+            _embed.AddField("Description", page.Description??"Not Available",true);
+            await MessageHandler.SendChannel(Context.Channel, "", _embed.Build());
         }
 
         [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
@@ -453,14 +453,14 @@ namespace Skuld.Commands
                 {
                     foreach (var stat in pokemon.Stats)
                     {
-                        embed.AddInlineField(stat.Stat.Name, "Base Stat: " + stat.BaseStat);
+                        embed.AddField(stat.Stat.Name, "Base Stat: " + stat.BaseStat,true);
                     }
                 }
                 if (group == "abilities" || group == "ability")
                 {
                     foreach (var ability in pokemon.Abilities)
                     {
-                        embed.AddInlineField(ability.Ability.Name, "Slot: " + ability.Slot);
+                        embed.AddField(ability.Ability.Name, "Slot: " + ability.Slot,true);
                     }
                 }
                 if (group == "helditems" || group == "hitems" || group == "hitem" || group == "items")
@@ -470,7 +470,7 @@ namespace Skuld.Commands
                         foreach (var hitem in pokemon.HeldItems)
                         {
                             foreach (var game in hitem.VersionDetails)
-                                embed.AddInlineField("Item", hitem.Item.Name + "\n**Game**\n" + game.Version.Name + "\n**Rarity**\n" + game.Rarity);
+                                embed.AddField("Item", hitem.Item.Name + "\n**Game**\n" + game.Version.Name + "\n**Rarity**\n" + game.Rarity,true);
                         }
                     }
                     else
@@ -480,10 +480,10 @@ namespace Skuld.Commands
                 }
                 if (group == "default")
                 {
-                    embed.AddInlineField("Height", pokemon.Height);
-                    embed.AddInlineField("Weight", pokemon.Weight + "kg");
-                    embed.AddInlineField("ID", pokemon.ID);
-                    embed.AddInlineField("Base Experience", pokemon.BaseExperience);
+                    embed.AddField("Height", pokemon.Height,true);
+                    embed.AddField("Weight", pokemon.Weight + "kg",true);
+                    embed.AddField("ID", pokemon.ID,true);
+                    embed.AddField("Base Experience", pokemon.BaseExperience,true);
                 }
                 if (group == "move" || group == "moves")
                 {
@@ -493,7 +493,7 @@ namespace Skuld.Commands
                         string mve = move.Move.Name;
                         mve += "\n**Learned at:**\n" + "Level " + move.VersionGroupDetails.FirstOrDefault().LevelLearnedAt;
                         mve += "\n**Method:**\n" + move.VersionGroupDetails.FirstOrDefault().MoveLearnMethod.Name;
-                        embed.AddInlineField("Move", mve);
+                        embed.AddField("Move", mve,true);
                     }
                     _auth.Url = "https://bulbapedia.bulbagarden.net/wiki/" + pokemon.Name + "_(Pokémon)";
                     embed.Footer = new EmbedFooterBuilder() { Text = "Click the name to view more moves, I limited it to 4 to prevent a wall of text" };
@@ -507,14 +507,14 @@ namespace Skuld.Commands
                         if (game == pokemon.GameIndices.Last())
                             games += game.Version.Name;
                     }
-                    embed.AddInlineField("Game", games);
+                    embed.AddField("Game", games,true);
                 }
                 string name = pokemon.Name;
                 _auth.Name = char.ToUpper(name[0]) + name.Substring(1);
                 embed.Author = _auth;
                 embed.ThumbnailUrl = sprite;
             }
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
+            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
         }
 
         [Command("gif", RunMode = RunMode.Async), Summary("Gets a gif")]
@@ -541,7 +541,7 @@ namespace Skuld.Commands
                 var gif = new Gif(item["id"].ToString());
                 embed.Url = gif.Url;
                 embed.ImageUrl = gif.Url;
-                await MessageHandler.SendChannel(Context.Channel, "", embed);
+                await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
             }
             catch (Exception ex)
             {
@@ -558,7 +558,7 @@ namespace Skuld.Commands
             {
                 ImageUrl = gif,
                 Color = RandColor.RandomColor()
-            });
+            }.Build());
         }
 
         [Command("define", RunMode = RunMode.Async), Summary("Defines a word")]
@@ -581,9 +581,9 @@ namespace Skuld.Commands
             };
             _embed.AddField("Definition",definedword.Definition??"None Available");
             _embed.AddField("Example",definedword.Example??"Not Available");
-            _embed.AddInlineField("Part of speech",definedword.PartOfSpeech??"Not Available");
-            _embed.AddInlineField("Terms", definedword.Terms??"Not Available");
-            await MessageHandler.SendChannel(Context.Channel, "", _embed);
+            _embed.AddField("Part of speech",definedword.PartOfSpeech??"Not Available",true);
+            _embed.AddField("Terms", definedword.Terms??"Not Available",true);
+            await MessageHandler.SendChannel(Context.Channel, "", _embed.Build());
         }
         
         private MangaArr MangaArray;
@@ -673,15 +673,15 @@ namespace Skuld.Commands
                 },
                 ThumbnailUrl = mango.Image
             };
-            _embed.AddInlineField("English Title", mango.EnglishTitle ?? "None Available");
-            _embed.AddInlineField("Synonyms", mango.Synonyms ?? "Not Available");
-            _embed.AddInlineField("Chapters", mango.Chapters ?? "Not Available");
-            _embed.AddInlineField("Volumes", mango.Volumes ?? "Not Available");
-            _embed.AddInlineField("Start Date", mango.StartDate ?? "Not Available");
-            _embed.AddInlineField("End Date", mango.EndDate ?? "Not Available");
-            _embed.AddInlineField("Score", mango.Score ?? "Not Available");
-            _embed.AddInlineField("Synopsis", HttpUtility.HtmlDecode(mango.Synopsis.Split('<')[0]) ?? "Not Available");
-            await MessageHandler.SendChannel(Context.Channel, "", _embed);
+            _embed.AddField("English Title", mango.EnglishTitle ?? "None Available",true);
+            _embed.AddField("Synonyms", mango.Synonyms ?? "Not Available",true);
+            _embed.AddField("Chapters", mango.Chapters ?? "Not Available",true);
+            _embed.AddField("Volumes", mango.Volumes ?? "Not Available",true);
+            _embed.AddField("Start Date", mango.StartDate ?? "Not Available",true);
+            _embed.AddField("End Date", mango.EndDate ?? "Not Available",true);
+            _embed.AddField("Score", mango.Score ?? "Not Available",true);
+            _embed.AddField("Synopsis", HttpUtility.HtmlDecode(mango.Synopsis.Split('<')[0]) ?? "Not Available",true);
+            await MessageHandler.SendChannel(Context.Channel, "", _embed.Build());
         }
 
         private AnimeArr AnimeArray;
@@ -771,14 +771,14 @@ namespace Skuld.Commands
                 },
                 ThumbnailUrl = animu.Image
             };
-            _embed.AddInlineField("English Title",animu.EnglishTitle??"None Available");
-            _embed.AddInlineField("Synonyms",animu.Synonyms??"Not Available");
-            _embed.AddInlineField("Episodes",animu.Episodes??"Not Available");
-            _embed.AddInlineField("Start Date",animu.StartDate??"Not Available");
-            _embed.AddInlineField("End Date",animu.EndDate??"Not Available");
-            _embed.AddInlineField("Score",animu.Score??"Not Available");
-            _embed.AddInlineField("Synopsis",HttpUtility.HtmlDecode(animu.Synopsis.Split('<')[0])??"Not Available");
-            await MessageHandler.SendChannel(Context.Channel, "", _embed);
+            _embed.AddField("English Title",animu.EnglishTitle??"None Available",true);
+            _embed.AddField("Synonyms",animu.Synonyms??"Not Available",true);
+            _embed.AddField("Episodes",animu.Episodes??"Not Available",true);
+            _embed.AddField("Start Date",animu.StartDate??"Not Available",true);
+            _embed.AddField("End Date",animu.EndDate??"Not Available",true);
+            _embed.AddField("Score",animu.Score??"Not Available",true);
+            _embed.AddField("Synopsis",HttpUtility.HtmlDecode(animu.Synopsis.Split('<')[0])??"Not Available",true);
+            await MessageHandler.SendChannel(Context.Channel, "", _embed.Build());
         }
     }
 }

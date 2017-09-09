@@ -312,6 +312,6 @@ namespace Skuld.Commands
             await SqlTools.InsertAsync(command);
         }
         private async Task Send(string message, string image) =>
-            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = message, Color = RandColor.RandomColor(), ImageUrl = image });
+            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = message, Color = RandColor.RandomColor(), ImageUrl = image }.Build());
     }
 }

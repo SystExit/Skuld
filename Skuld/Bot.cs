@@ -52,7 +52,7 @@ namespace Skuld
                     LargeThreshold = 250,
                     AlwaysDownloadUsers = true,
                     DefaultRetryMode = RetryMode.RetryTimeouts,
-                    LogLevel = LogSeverity.Info,
+                    LogLevel = LogSeverity.Verbose,
                     TotalShards = Config.Load().Shards
                 });
                 bot.Log += Events.SkuldEvents.Bot_Log;
@@ -61,7 +61,7 @@ namespace Skuld
                 {
                     CaseSensitiveCommands = false,
                     DefaultRunMode = RunMode.Async,
-                    LogLevel = LogSeverity.Info
+                    LogLevel = LogSeverity.Verbose
                 });
                 if(Config.Load().ChatServiceEnabled)
                     InstallChatService();

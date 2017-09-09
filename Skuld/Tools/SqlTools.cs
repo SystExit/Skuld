@@ -13,7 +13,7 @@ namespace Skuld.Tools
             var User = new SkuldUser();
             var command = new MySqlCommand("SELECT * FROM `accounts` WHERE ID = @userid");
             command.Parameters.AddWithValue("@userid", ID);
-            var reader = await SqlTools.GetAsync(command);
+            var reader = await GetAsync(command);
             while(await reader.ReadAsync())
             {
                 User.ID = Convert.ToUInt64(reader["ID"]);
@@ -29,17 +29,17 @@ namespace Skuld.Tools
                 User.Glares = Convert.ToUInt32(reader["glares"]);
             }
             reader.Close();
-            await SqlTools.getconn.CloseAsync();
+            await getconn.CloseAsync();
             command = new MySqlCommand("SELECT * FROM commandusage WHERE UserID = @userid ORDER BY UserUsage DESC LIMIT 1");
             command.Parameters.AddWithValue("@userid", ID);
-            reader = await SqlTools.GetAsync(command);
+            reader = await GetAsync(command);
             while (await reader.ReadAsync())
             {
                 User.FavCmd = Convert.ToString(reader["command"]);
                 User.FavCmdUsg = Convert.ToUInt64(reader["UserUsage"]);
             }
             reader.Close();
-            await SqlTools.getconn.CloseAsync();
+            await getconn.CloseAsync();
             return User;
         }
         public static async Task<SkuldGuild> GetGuild(ulong ID)
@@ -47,58 +47,89 @@ namespace Skuld.Tools
             var Guild = new SkuldGuild();
             var command = new MySqlCommand("SELECT * FROM `guild` WHERE ID = @guildid");
             command.Parameters.AddWithValue("@guildid", ID);
-            var reader = await SqlTools.GetAsync(command);
+            var reader = await GetAsync(command);
             if(reader.HasRows)
             {
                 while (await reader.ReadAsync())
                 {
-                    Guild.ID = Convert.ToUInt64(reader["ID"]);
-                    Guild.Name = Convert.ToString(reader["name"]);
-                    Guild.JoinMessage = Convert.ToString(reader["joinmessage"]);
-                    Guild.LeaveMessage = Convert.ToString(reader["leavemessage"]);
-                    if(reader["autojoinrole"]!=DBNull.Value)
+                    if (reader["ID"] != DBNull.Value)
+                        Guild.ID = Convert.ToUInt64(reader["ID"]);
+                    else
+                        Guild.ID = 0;
+
+                    if (reader["name"] != DBNull.Value)
+                        Guild.Name = Convert.ToString(reader["name"]);
+                    else
+                        Guild.Name = null;
+
+                    if (reader["joinmessage"] != DBNull.Value)
+                        Guild.JoinMessage = Convert.ToString(reader["joinmessage"]);
+                    else
+                        Guild.JoinMessage = null;
+
+                    if (reader["leavemessage"] != DBNull.Value)
+                        Guild.LeaveMessage = Convert.ToString(reader["leavemessage"]);
+                    else
+                        Guild.LeaveMessage = null;
+
+                    if (reader["autojoinrole"]!=DBNull.Value)
                         Guild.AutoJoinRole = Convert.ToUInt64(reader["autojoinrole"]);
                     else
                         Guild.AutoJoinRole = 0;
-                    Guild.Prefix = Convert.ToString(reader["prefix"]);
-                    Guild.JoinableRoles = Convert.ToString(reader["joinableroles"]).Split(',');
+
+                    if (reader["prefix"] != DBNull.Value)
+                        Guild.Prefix = Convert.ToString(reader["prefix"]);
+                    else
+                        Guild.Prefix = null;
+
+                    if (reader["joinableroles"] != DBNull.Value)
+                        Guild.JoinableRoles = Convert.ToString(reader["joinableroles"]).Split(',');
+                    else
+                        Guild.JoinableRoles = null;
+
                     if (reader["twitchnotifchannel"] != DBNull.Value)
                         Guild.TwitchNotifChannel = Convert.ToUInt64(reader["twitchnotifchannel"]);
                     else
                         Guild.TwitchNotifChannel = 0;
+
                     if (reader["twitterlogchannel"] != DBNull.Value)
                         Guild.TwitterLogChannel = Convert.ToUInt64(reader["twitterlogchannel"]);
                     else
                         Guild.TwitterLogChannel = 0;
+
                     if (reader["mutedrole"] != DBNull.Value)
                         Guild.MutedRole = Convert.ToUInt64(reader["mutedrole"]);
                     else
                         Guild.MutedRole = 0;
+
                     if (reader["auditchannel"] != DBNull.Value)
                         Guild.AuditChannel = Convert.ToUInt64(reader["auditchannel"]);
                     else
                         Guild.AuditChannel = 0;
+
                     if (reader["userjoinchan"] != DBNull.Value)
                         Guild.UserJoinChannel = Convert.ToUInt64(reader["userjoinchan"]);
                     else
                         Guild.UserJoinChannel = 0;
+
                     if (reader["userleavechan"] != DBNull.Value)
                         Guild.UserLeaveChannel = Convert.ToUInt64(reader["userleavechan"]);
                     else
                         Guild.UserLeaveChannel = 0;
+
                     if (reader["starboardchannel"] != DBNull.Value)
                         Guild.StarboardChannel = Convert.ToUInt64(reader["starboardchannel"]);
                     else
                         Guild.StarboardChannel = 0;
                 }
                 reader.Close();
-                await SqlTools.getconn.CloseAsync();
+                await getconn.CloseAsync();
                 var GuildSetts = new GuildSettings();
                 var ComSetts = new GuildCommandModules();
                 var FeatSetts = new GuildFeatureModules();
                 command = new MySqlCommand("SELECT * FROM `guildcommandmodules` WHERE ID = @guildid");
                 command.Parameters.AddWithValue("@guildid", ID);
-                reader = await SqlTools.GetAsync(command);
+                reader = await GetAsync(command);
                 while (await reader.ReadAsync())
                 {
                     ComSetts.AccountsEnabled = Convert.ToBoolean(reader["accounts"]);
@@ -111,10 +142,10 @@ namespace Skuld.Tools
                     ComSetts.StatsEnabled = Convert.ToBoolean(reader["stats"]);
                 }
                 reader.Close();
-                await SqlTools.getconn.CloseAsync();
+                await getconn.CloseAsync();
                 command = new MySqlCommand("SELECT * FROM `guildfeaturemodules` WHERE ID = @guildid");
                 command.Parameters.AddWithValue("@guildid", ID);
-                reader = await SqlTools.GetAsync(command);
+                reader = await GetAsync(command);
                 while (await reader.ReadAsync())
                 {
                     FeatSetts.Starboard = Convert.ToBoolean(reader["starboard"]);
@@ -128,7 +159,7 @@ namespace Skuld.Tools
                     FeatSetts.GuildRoleModification = Convert.ToBoolean(reader["guildrolemodification"]);
                 }
                 reader.Close();
-                await SqlTools.getconn.CloseAsync();
+                await getconn.CloseAsync();
                 GuildSetts.Modules = ComSetts;
                 GuildSetts.Features = FeatSetts;
                 Guild.GuildSettings = GuildSetts;
@@ -144,7 +175,7 @@ namespace Skuld.Tools
             var Pasta = new Pasta();
             var command = new MySqlCommand("SELECT * FROM pasta WHERE pastaname = @pastaname");
             command.Parameters.AddWithValue("@pastaname", Name);
-            var reader = await SqlTools.GetAsync(command);
+            var reader = await GetAsync(command);
             while (reader.Read())
             {
                 Pasta.PastaName = reader["pastaname"].ToString();
@@ -156,7 +187,7 @@ namespace Skuld.Tools
                 Pasta.Downvotes = Convert.ToUInt32(reader["downvotes"].ToString());
             }
             reader.Close();
-            await SqlTools.getconn.CloseAsync();
+            await getconn.CloseAsync();
             return Pasta;
         }
         public static async Task InsertAdvancedSettings(bool feature, SocketGuild Guild)

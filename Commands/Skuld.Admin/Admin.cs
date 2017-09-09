@@ -219,30 +219,20 @@ namespace Skuld.Commands
         [Command("hackban", RunMode = RunMode.Async), Summary("Hackbans a userid")]
         public async Task HackBan(ulong ID)
         {
-            try
-            {
-                await Context.Guild.AddBanAsync(ID);
-                await MessageHandler.SendChannel(Context.Channel, $"Banned ID: {ID}");
-            }
-            catch(Exception ex)
-            {}
+            await Context.Guild.AddBanAsync(ID);
+            await MessageHandler.SendChannel(Context.Channel, $"Banned ID: {ID}");
         }
         [RequireBotPermission(GuildPermission.BanMembers)]
         [RequireUserPermission(GuildPermission.BanMembers)]
         [Command("hackban", RunMode = RunMode.Async), Summary("Hackbans a set of userids Must be in this format hackban [id1],[id2],[id3]")]
         public async Task HackBan([Remainder]string IDs)
         {
-            try
+            var ids = IDs.Split(',');
+            foreach (var id in ids)
             {
-                var ids = IDs.Split(',');
-                foreach (var id in ids)
-                {
-                    await Context.Guild.AddBanAsync(Convert.ToUInt64(id));
-                }
-                await MessageHandler.SendChannel(Context.Channel, $"Banned IDs: {IDs}");
+                await Context.Guild.AddBanAsync(Convert.ToUInt64(id));
             }
-            catch(Exception ex)
-            {}
+            await MessageHandler.SendChannel(Context.Channel, $"Banned IDs: {IDs}");
         }
         [Command("softban", RunMode = RunMode.Async), Summary("Softbans a user")]
         [RequireBotPermission(GuildPermission.BanMembers)]
@@ -251,15 +241,9 @@ namespace Skuld.Commands
         {
             var reason = "Softban - No Reason Given - Responsible Moderator: "+Context.User.Username+"#"+Context.User.DiscriminatorValue;
             var guild = Context.Guild;
-            try
-            {
-                await guild.AddBanAsync(user, 7, reason);
-                await MessageHandler.SendChannel(Context.Channel, $"Successfully softbanned: `{user.Username}#{user.Discriminator}`\nReason given: {reason}");
-                await guild.RemoveBanAsync(user);
-            }
-            catch(Exception ex)
-            {
-            }
+            await guild.AddBanAsync(user, 7, reason);
+            await MessageHandler.SendChannel(Context.Channel, $"Successfully softbanned: `{user.Username}#{user.Discriminator}`\nReason given: {reason}");
+            await guild.RemoveBanAsync(user);
         }
         [Command("softban", RunMode = RunMode.Async), Summary("Softbans a user")]
         [RequireBotPermission(GuildPermission.BanMembers)]
@@ -268,15 +252,9 @@ namespace Skuld.Commands
         {
             var newreason = "Softban - "+reason+" - Responsible Moderator: " + Context.User.Username + "#" + Context.User.DiscriminatorValue;
             var guild = Context.Guild;
-            try
-            {
-                await guild.AddBanAsync(user, 7, newreason);
-                await MessageHandler.SendChannel(Context.Channel, $"Successfully softbanned: `{user.Username}#{user.Discriminator}`\nReason given: {newreason}");
-                await guild.RemoveBanAsync(user);
-            }
-            catch (Exception ex)
-            {
-            }
+            await guild.AddBanAsync(user, 7, newreason);
+            await MessageHandler.SendChannel(Context.Channel, $"Successfully softbanned: `{user.Username}#{user.Discriminator}`\nReason given: {newreason}");
+            await guild.RemoveBanAsync(user);
         }
 
         [Command("setjrole", RunMode = RunMode.Async), Summary("Clears the autojoinrole")]
@@ -343,7 +321,7 @@ namespace Skuld.Commands
             await SqlTools.getconn.CloseAsync();
         }
 
-        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
+        [RequireUserPermission(GuildPermission.Administrator), RequireUserPermission(GuildPermission.ManageGuild)]
         [Command("setprefix", RunMode = RunMode.Async), Summary("Sets the prefix")]
         public async Task SetPrefix(string prefix)
         {
@@ -365,7 +343,8 @@ namespace Skuld.Commands
                         await MessageHandler.SendChannel(Context.Channel, $":thinking: It didn't change. Probably because it is the same as the current prefix.");
             });
         }
-        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
+
+        [RequireUserPermission(GuildPermission.Administrator), RequireUserPermission(GuildPermission.ManageGuild)]
         [Command("resetprefix", RunMode = RunMode.Async), Summary("Resets the prefix")]
         public async Task ResetPrefix()
         {
@@ -388,7 +367,7 @@ namespace Skuld.Commands
         }
 
         //Set Channel
-        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
+        [RequireUserPermission(GuildPermission.Administrator), RequireUserPermission(GuildPermission.ManageGuild)]
         [Command("setwelcome", RunMode = RunMode.Async), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
         public async Task SetWelcome([Remainder]string welcome)
         {
@@ -406,7 +385,7 @@ namespace Skuld.Commands
         }
 
         //Current Channel
-        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
+        [RequireUserPermission(GuildPermission.Administrator), RequireUserPermission(GuildPermission.ManageGuild)]
         [Command("setwelcome", RunMode = RunMode.Async), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
         public async Task SetWelcome(ITextChannel channel, [Remainder]string welcome)
         {
@@ -424,7 +403,7 @@ namespace Skuld.Commands
         }
 
         //Deletes
-        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
+        [RequireUserPermission(GuildPermission.Administrator), RequireUserPermission(GuildPermission.ManageGuild)]
         [Command("setwelcome", RunMode = RunMode.Async), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
         public async Task SetWelcome()
         {
@@ -437,7 +416,7 @@ namespace Skuld.Commands
         }
 
         //Set Channel
-        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
+        [RequireUserPermission(GuildPermission.Administrator), RequireUserPermission(GuildPermission.ManageGuild)]
         [Command("setleave", RunMode = RunMode.Async), Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
         public async Task SetLeave(ITextChannel channel, [Remainder]string leave)
         {
@@ -455,7 +434,7 @@ namespace Skuld.Commands
         }
 
         //Current Channel
-        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
+        [RequireUserPermission(GuildPermission.Administrator), RequireUserPermission(GuildPermission.ManageGuild)]
         [Command("setleave", RunMode = RunMode.Async), Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
         public async Task SetLeave([Remainder]string leave)
         {
@@ -473,7 +452,7 @@ namespace Skuld.Commands
         }
 
         //Deletes
-        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
+        [RequireUserPermission(GuildPermission.Administrator), RequireUserPermission(GuildPermission.ManageGuild)]
         [Command("setleave", RunMode = RunMode.Async), Summary("Clears the leave message")]
         public async Task SetLeave()
         {
@@ -485,12 +464,12 @@ namespace Skuld.Commands
             });
         }
 
-        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
+        [RequireUserPermission(GuildPermission.Administrator), RequireUserPermission(GuildPermission.ManageGuild)]
         [Command("guildfeature", RunMode = RunMode.Async), Summary("Configures guild features")]
         public async Task ConfigureGuildFeatures(string module, int value)
         {
-            if (value > 1) await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
-            if (value < 0) await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
+            if (value > 1) await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build());
+            if (value < 0) await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build());
             else
             {
                 module = module.ToLowerInvariant();
@@ -527,17 +506,17 @@ namespace Skuld.Commands
                     foreach (var mod in settings)
                         modulelist += mod.Key + " ("+mod.Value+")"+ ", ";
                     modulelist = modulelist.Remove(modulelist.Length - 2);
-                    await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules (raw name in brackets). \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) });
+                    await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules (raw name in brackets). \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build());
                 }                    
             }
         }
 
-        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
+        [RequireUserPermission(GuildPermission.Administrator), RequireUserPermission(GuildPermission.ManageGuild)]
         [Command("guildmodule", RunMode = RunMode.Async), Summary("Configures guild modules")]
         public async Task ConfigureGuildModules(string module, int value)
         {
-            if (value > 1) await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
-            if (value < 0) await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
+            if (value > 1) await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build());
+            if (value < 0) await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build());
             else
             {
                 module = module.ToLowerInvariant();
@@ -561,12 +540,12 @@ namespace Skuld.Commands
                 {
                     string modulelist = string.Join(", ",modules);
                     modulelist = modulelist.Remove(modulelist.Length - 2);
-                    await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) });
+                    await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build());
                 }
             }
         }
 
-        [RequireRolePrecondition(AccessLevel.ServerAdmin)]
+        [RequireUserPermission(GuildPermission.Administrator),RequireUserPermission(GuildPermission.ManageGuild)]
         [Command("configurechannel", RunMode = RunMode.Async), Summary("Some features require channels to be set")]
         public async Task ConfigureChannel(string module, IChannel Channel)
         {
@@ -603,7 +582,7 @@ namespace Skuld.Commands
             {
                 string modulelist = string.Join(", ", modules);
                 modulelist = modulelist.Remove(modulelist.Length - 2);
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build());
             }
         }
     }

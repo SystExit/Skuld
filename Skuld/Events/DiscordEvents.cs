@@ -5,10 +5,10 @@ using Discord;
 using System.Linq;
 using System;
 using MySql.Data.MySqlClient;
-using System.Threading;
 using Skuld.Models;
 using System.Collections.Generic;
-using System.IO;
+using System.Threading;
+using System.Diagnostics;
 
 namespace Skuld.Events
 {
@@ -71,15 +71,7 @@ namespace Skuld.Events
         {
             if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
-                SocketGuild Gld = null;
-                foreach (var guild in bot.Guilds)
-                {
-                    if (guild.Channels.Where(x => x.Id == arg2.Id).FirstOrDefault() != null)
-                    {
-                        Gld = guild;
-                        break;
-                    }
-                }
+                SocketGuild Gld = bot.Guilds.Where(x => x.TextChannels.Where(z => z.Id == arg2.Id).FirstOrDefault() != null).FirstOrDefault();
                 var Guild = await SqlTools.GetGuild(Gld.Id);
                 if(Guild.GuildSettings.Features.Starboard)
                 {
@@ -91,11 +83,26 @@ namespace Skuld.Events
                     {
                         while (await reader.ReadAsync())
                         {
-                            Starboard.GuildID = Convert.ToUInt64(reader["guildid"]);
-                            Starboard.MessageID = Convert.ToUInt64(reader["messageid"]);
-                            Starboard.Stars = Convert.ToInt32(reader["stars"]);
-                            Starboard.DateAdded = Convert.ToString(reader["added"]);
-                            Starboard.Locked = Convert.ToBoolean(reader["locked"]);
+                            if (reader["guildid"] != DBNull.Value)
+                                Starboard.GuildID = Convert.ToUInt64(reader["guildid"]);
+                            else
+                                Starboard.GuildID = 0;
+                            if (reader["messageid"] != DBNull.Value)
+                                Starboard.MessageID = Convert.ToUInt64(reader["messageid"]);
+                            else
+                                Starboard.MessageID = 0;
+                            if (reader["originalmessageid"] != DBNull.Value)
+                                Starboard.OriginalMessageID = Convert.ToUInt64(reader["originalmessageid"]);
+                            else
+                                Starboard.OriginalMessageID = 0;
+                            if (reader["stars"] != DBNull.Value)
+                                Starboard.Stars = Convert.ToInt32(reader["stars"]);
+                            else
+                                Starboard.Stars = 0;
+                            if (reader["added"] != DBNull.Value)
+                                Starboard.DateAdded = Convert.ToString(reader["added"]);
+                            else
+                                Starboard.DateAdded = null;
                         }
                     }
                     reader.Close();
@@ -105,26 +112,16 @@ namespace Skuld.Events
                         Starboard.Stars = Starboard.Stars - 1;
                     if (Dldedmsg.Id == Starboard.MessageID)
                     {
-                        var now = Dldedmsg.CreatedAt;
-                        var dt = DateTime.UtcNow.AddDays(-Config.Load().StarboardDateLimit);
-                        if ((now - dt).TotalDays > 0)
+                        string react = StarEmotes.OrderByDescending(x => x.Key).Where(x => x.Key <= Starboard.Stars).FirstOrDefault().Value;
+                        var smsg = await Gld.GetTextChannel(Starboard.ChannelID).GetMessageAsync(Starboard.MessageID) as IUserMessage;
+                        var content = smsg.Content.Split(' ').Skip(2);
+                        string msg = react + " " + Starboard.Stars + " " + string.Join(" ", content);
+                        var embd = smsg.Embeds.FirstOrDefault();
+                        await smsg.ModifyAsync(x =>
                         {
-                            string react = StarEmotes.OrderByDescending(x => x.Key).Where(x => x.Key <= Starboard.Stars).FirstOrDefault().Value;
-                            var smsg = await Gld.GetTextChannel(Starboard.ChannelID).GetMessageAsync(Starboard.MessageID) as IUserMessage;
-                            var content = smsg.Content.Split(' ').Skip(2);
-                            string msg = react + " " + Starboard.Stars + " " + string.Join(" ", content);
-                            var embd = smsg.Embeds.FirstOrDefault();
-                            await smsg.ModifyAsync(x =>
-                            {
-                                x.Content = msg;
-                            });
-                            await SqlTools.InsertAsync(new MySqlCommand($"UPDATE `starboard` SET `Stars` = {Starboard.Stars} WHERE `messageid` = " + Dldedmsg.Id));
-                        }
-                        else
-                        {
-                            if (!String.IsNullOrEmpty(await SqlTools.GetSingleAsync(new MySqlCommand("SELECT `messageid` FROM `starboard` WHERE `messageid` = " + Dldedmsg.Id))))
-                                await SqlTools.InsertAsync(new MySqlCommand("UPDATE `starboard` SET `locked` = 1 WHERE `messageid` = " + Dldedmsg.Id));
-                        }
+                            x.Content = msg;
+                        });
+                        await SqlTools.InsertAsync(new MySqlCommand($"UPDATE `starboard` SET `Stars` = {Starboard.Stars} WHERE `messageid` = " + Dldedmsg.Id));
                     }
                 }
             }
@@ -134,112 +131,121 @@ namespace Skuld.Events
         {
             if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
-                SocketGuild Gld = null;                
-                foreach(var guild in bot.Guilds)
-                {
-                    if(guild.Channels.Where(x=>x.Id == arg2.Id).FirstOrDefault()!=null)
-                    {
-                        Gld = guild;
-                        break;
-                    }
-                }
+                SocketGuild Gld = bot.Guilds.Where(x => x.TextChannels.Where(z => z.Id == arg2.Id).FirstOrDefault() != null).FirstOrDefault();
                 var Guild = await SqlTools.GetGuild(Gld.Id);
-                if(Guild.GuildSettings.Features.Starboard)
+                if (Guild != null && Gld != null)
                 {
-                    var Dldedmsg = await arg1.GetOrDownloadAsync();
-                    int StarboardThreshold = Config.Load().StarboardThreshold;
-                    int StarboardReactions = 0;
-                    var Starboard = new Starboard();
-                    var reader = await SqlTools.GetAsync(new MySqlCommand("SELECT * FROM `starboard` WHERE `MessageID` = " + Dldedmsg.Id));
-                    if (reader.HasRows)
+                    if (Guild.GuildSettings.Features.Starboard)
                     {
-                        while (await reader.ReadAsync())
+                        var Dldedmsg = await arg1.GetOrDownloadAsync();
+                        int StarboardThreshold = Config.Load().StarboardThreshold;
+                        int StarboardReactions = Dldedmsg.Reactions.Where(x => x.Key.Name == "⭐").FirstOrDefault().Value.ReactionCount;
+                        var temp = await SqlTools.GetSingleAsync(new MySqlCommand("SELECT OriginalMessageID FROM starboard WHERE OriginalMessageID = " + Dldedmsg.Id));
+                        var temp2 = await SqlTools.GetSingleAsync(new MySqlCommand("SELECT MessageID FROM starboard WHERE MessageID = " + Dldedmsg.Id));
+                        if (String.IsNullOrEmpty(temp)&&String.IsNullOrEmpty(temp2))
                         {
-                            Starboard.GuildID = Convert.ToUInt64(reader["guildid"]);
-                            Starboard.MessageID = Convert.ToUInt64(reader["messageid"]);
-                            Starboard.Stars = Convert.ToInt32(reader["stars"]);
-                            Starboard.DateAdded = Convert.ToString(reader["added"]);
-                            Starboard.Locked = Convert.ToBoolean(reader["locked"]);
-                        }
-                    }
-                    reader.Close();
-                    await SqlTools.getconn.CloseAsync();
-                    Starboard.ChannelID = Convert.ToUInt64(await SqlTools.GetSingleAsync(new MySqlCommand("SELECT `starboardchannel` FROM `guild` WHERE ID = " + Guild.ID)));
-                    if (arg3.Emote.Name == "⭐")
-                        StarboardReactions = StarboardReactions + 1;
-                    if (StarboardReactions >= StarboardThreshold)
-                    {
-                        var now = Dldedmsg.CreatedAt;
-                        var dt = DateTime.UtcNow.AddDays(-Config.Load().StarboardDateLimit);
-                        if ((now - dt).TotalDays > 0)
-                        {
-                            if (Dldedmsg.Id == Starboard.MessageID)
+                            if (StarboardReactions >= StarboardThreshold)
                             {
-                                string react = StarEmotes.OrderByDescending(x => x.Key).Where(x => x.Key <= Starboard.Stars).FirstOrDefault().Value;
-                                var stars = Convert.ToInt32(await SqlTools.GetSingleAsync(new MySqlCommand("SELECT `Stars` FROM `starboard` WHERE `messageid` = " + Dldedmsg.Id)));
-                                var returnstars = stars + StarboardReactions;
-                                var smsg = await Gld.GetTextChannel(Starboard.ChannelID).GetMessageAsync(Starboard.MessageID) as IUserMessage;
-                                var content = smsg.Content.Split(' ').Skip(2);
-                                string msg = react + " " + returnstars + " " + string.Join(" ", content);
-                                var embd = smsg.Embeds.FirstOrDefault();
-                                await smsg.ModifyAsync(x =>
+                                var now = Dldedmsg.CreatedAt;
+                                var dt = DateTime.UtcNow.AddDays(-Config.Load().StarboardDateLimit);
+                                if ((now - dt).TotalDays > 0)
                                 {
-                                    x.Content = msg;
-                                });
-                                await SqlTools.InsertAsync(new MySqlCommand($"UPDATE `starboard` SET `Stars` = {returnstars} WHERE `messageid` = " + Dldedmsg.Id));
-                            }
-                            else
-                            {
-                                string react = StarEmotes.OrderByDescending(x => x.Key).Where(x => x.Key <= Starboard.Stars).FirstOrDefault().Value;
-                                string message = react + " " + StarboardReactions + " Channel: <#" + Dldedmsg.Channel.Id + "> ID: " + Dldedmsg.Id;
-                                var embed = new EmbedBuilder()
-                                {
-                                    Author = new EmbedAuthorBuilder()
+                                    string react = StarEmotes.OrderByDescending(x => x.Key).Where(x => x.Key <= StarboardReactions).FirstOrDefault().Value;
+                                    string message = react+" " + StarboardReactions + " Channel: <#" + Dldedmsg.Channel.Id + "> ID: " + Dldedmsg.Id;
+                                    var embed = new EmbedBuilder()
                                     {
-                                        Name = Dldedmsg.Author.Username,
-                                        IconUrl = Dldedmsg.Author.GetAvatarUrl()
-                                    },
-                                    Description = Dldedmsg.Content,
-                                    Timestamp = Dldedmsg.CreatedAt
-                                };
-                                var attachment = Dldedmsg.Attachments.FirstOrDefault();
-                                if (IsImageExtension(attachment.Url))
-                                    embed.ImageUrl = attachment.Url;
-                                else
-                                    embed.Description = embed.Description + "\n" + attachment.Url;
-                                var messg = await MessageHandler.SendChannel(Gld.GetTextChannel(Starboard.ChannelID), message, embed);
-                                await SqlTools.InsertAsync(new MySqlCommand($"INSERT INTO `starboard` (`GuildID`,`MessageID`,`Stars`,`Added`,`Locked`) VALUES ({Gld.Id},{messg.Id},{StarboardReactions},\"{DateTime.UtcNow}\",0);"));
+                                        Author = new EmbedAuthorBuilder()
+                                        {
+                                            Name = Dldedmsg.Author.Username,
+                                            IconUrl = Dldedmsg.Author.GetAvatarUrl()
+                                        },
+                                        Description = Dldedmsg.Content,
+                                        Timestamp = Dldedmsg.CreatedAt
+                                    };
+                                    var attachment = Dldedmsg.Attachments.FirstOrDefault();
+                                    if (attachment != null)
+                                    {
+                                        if (IsImageExtension(attachment.Url))
+                                            embed.ImageUrl = attachment.Url;
+                                        else
+                                            embed.Description = embed.Description + "\n" + attachment.Url;
+                                    }
+                                    var messg = await MessageHandler.SendChannel(bot.GetGuild(Guild.ID).GetTextChannel(Guild.StarboardChannel), message, embed.Build());
+                                    await SqlTools.InsertAsync(new MySqlCommand($"INSERT INTO `starboard` (`GuildID`,`MessageID`,`OriginalMessageID`,`Stars`,`Added`) VALUES ({Gld.Id},{messg.Id},{Dldedmsg.Id},{StarboardReactions},\"{DateTime.UtcNow}\");"));
+                                }
                             }
                         }
                         else
                         {
-                            if (!String.IsNullOrEmpty(await SqlTools.GetSingleAsync(new MySqlCommand("SELECT `messageid` FROM `starboard` WHERE `messageid` = " + Dldedmsg.Id))))
-                                await SqlTools.InsertAsync(new MySqlCommand("UPDATE `starboard` SET `locked` = 1 WHERE `messageid` = " + Dldedmsg.Id));
+                            var Starboard = new Starboard();
+                            var reader = await SqlTools.GetAsync(new MySqlCommand("SELECT * FROM `starboard` WHERE `MessageID` = " + temp2));
+                            if (reader.HasRows)
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    if (reader["guildid"] != DBNull.Value)
+                                        Starboard.GuildID = Convert.ToUInt64(reader["guildid"]);
+                                    else
+                                        Starboard.GuildID = 0;
+                                    if (reader["messageid"] != DBNull.Value)
+                                        Starboard.MessageID = Convert.ToUInt64(reader["messageid"]);
+                                    else
+                                        Starboard.MessageID = 0;
+                                    if (reader["originalmessageid"] != DBNull.Value)
+                                        Starboard.OriginalMessageID = Convert.ToUInt64(reader["originalmessageid"]);
+                                    else
+                                        Starboard.OriginalMessageID = 0;
+                                    if (reader["stars"] != DBNull.Value)
+                                        Starboard.Stars = Convert.ToInt32(reader["stars"]);
+                                    else
+                                        Starboard.Stars = 0;
+                                    if (reader["added"] != DBNull.Value)
+                                        Starboard.DateAdded = Convert.ToString(reader["added"]);
+                                    else
+                                        Starboard.DateAdded = null;
+                                }
+                            }
+                            reader.Close();
+                            await SqlTools.getconn.CloseAsync();
+                            Starboard.ChannelID = Guild.StarboardChannel;
+                            string react = StarEmotes.OrderByDescending(x => x.Key).Where(x => x.Key <= Starboard.Stars).FirstOrDefault().Value;
+                            var stars = Starboard.Stars;
+                            var returnstars = stars + 1;
+                            var smsg = await Gld.GetTextChannel(Starboard.ChannelID).GetMessageAsync(Starboard.MessageID) as IUserMessage;
+                            var content = smsg.Content.Split(' ').Skip(2);
+                            string msg = react + " " + returnstars + " " + string.Join(" ", content);
+                            var embd = smsg.Embeds.FirstOrDefault();
+                            await smsg.ModifyAsync(x =>
+                            {
+                                x.Content = msg;
+                            });
+                            await SqlTools.InsertAsync(new MySqlCommand($"UPDATE `starboard` SET `Stars` = {returnstars} WHERE `messageid` = " + temp2));
                         }
-
                     }
-                }
-                if(Guild.GuildSettings.Features.Pinning)
-                {
-                    var Dldedmsg = await arg1.GetOrDownloadAsync();
-                    int PinboardThreshold = Config.Load().PinboardThreshold;
-                    int PinboardReactions = 0;
-                    if (arg3.Emote.Name == "📌")
-                        PinboardReactions = Dldedmsg.Reactions.Where(x => x.Key.Name == "📌").FirstOrDefault().Value.ReactionCount;
-                    if (PinboardReactions >= PinboardThreshold)
+                    if (Guild.GuildSettings.Features.Pinning)
                     {
-                        var now = Dldedmsg.CreatedAt;
-                        var dt = DateTime.UtcNow.AddDays(-Config.Load().PinboardDateLimit);
-                        if ((now - dt).TotalDays > 0)
+                        var Dldedmsg = await arg1.GetOrDownloadAsync();
+                        int PinboardThreshold = Config.Load().PinboardThreshold;
+                        int PinboardReactions = 0;
+                        if (arg3.Emote.Name == "📌")
+                            PinboardReactions = Dldedmsg.Reactions.Where(x => x.Key.Name == "📌").FirstOrDefault().Value.ReactionCount;
+                        if (PinboardReactions >= PinboardThreshold)
                         {
-                            if (!Dldedmsg.IsPinned)
-                                await Dldedmsg.PinAsync();
+                            var now = Dldedmsg.CreatedAt;
+                            var dt = DateTime.UtcNow.AddDays(-Config.Load().PinboardDateLimit);
+                            if ((now - dt).TotalDays > 0)
+                            {
+                                if (!Dldedmsg.IsPinned)
+                                {
+                                    await Dldedmsg.PinAsync();
+                                    Logs.Add(new Models.LogMessage("PinBrd", $"Reached or Over Threshold, pinned a message in: {Dldedmsg.Channel.Name} from: {Gld.Name}", LogSeverity.Info));
+                                }
+                            }
                         }
                     }
                 }
-            }
+            }                
         }
-
 
         private static async Task Shard_Connected()
         {
@@ -272,29 +278,26 @@ namespace Skuld.Events
                 command.Parameters.AddWithValue("@username", arg.Username.Replace("\"","\\").Replace("\'","\\'")+"#"+arg.DiscriminatorValue);
                 command.Parameters.AddWithValue("@userid", arg.Id);
                 await SqlTools.InsertAsync(command);
-
-                var guild = arg.Guild;
-                var Guild = await SqlTools.GetGuild(arg.Guild.Id);
-                string autorole = Convert.ToString(Guild.AutoJoinRole);
+                
+                string autorole = Convert.ToString(await SqlTools.GetSingleAsync(new MySqlCommand("SELECT `autojoinrole` FROM `guild` WHERE `id` = "+arg.Guild.Id)));
 
                 if (!String.IsNullOrEmpty(autorole))
                 {
 
                     ulong joinroleid = Convert.ToUInt64(autorole);
-                    var joinrole = guild.GetRole(joinroleid);
+                    var joinrole = arg.Guild.GetRole(joinroleid);
                     await arg.AddRoleAsync(joinrole);
-                    Logs.Add(new Models.LogMessage("UsrJoin", $"Gave user {arg.Username}, the automatic role as per request of {guild.Name}.", LogSeverity.Info));
-
+                    Logs.Add(new Models.LogMessage("UsrJoin", $"Gave user {arg.Username}, the automatic role as per request of {arg.Guild.Name}.", LogSeverity.Info));
                 }
 
-                string welcomemessage = Guild.JoinMessage;
-                if(!String.IsNullOrEmpty(welcomemessage))
+                string welcomemessage = await SqlTools.GetSingleAsync(new MySqlCommand("SELECT `joinmessage` FROM `guild` WHERE `id` = " + arg.Guild.Id));
+                if (!String.IsNullOrEmpty(welcomemessage))
                 {
 
-                    var channel = guild.GetTextChannel(Guild.UserLeaveChannel);
+                    var channel = arg.Guild.GetTextChannel(Convert.ToUInt64(await SqlTools.GetSingleAsync(new MySqlCommand("SELECT `userjoinchan` FROM `guild` WHERE `id` = " + arg.Guild.Id))));
                     welcomemessage = welcomemessage.Replace("-m", "**"+arg.Mention+"**");
-                    welcomemessage = welcomemessage.Replace("-s", "**" + guild.Name + "**");
-                    welcomemessage = welcomemessage.Replace("-uc", Convert.ToString(guild.MemberCount));
+                    welcomemessage = welcomemessage.Replace("-s", "**" + arg.Guild.Name + "**");
+                    welcomemessage = welcomemessage.Replace("-uc", Convert.ToString(arg.Guild.MemberCount));
                     welcomemessage = welcomemessage.Replace("-u", "**" + arg.Username + "**");
                     await MessageHandler.SendChannel(channel,welcomemessage);
 
@@ -333,28 +336,24 @@ namespace Skuld.Events
             Logs.Add(new Models.LogMessage("LeftGld", $"Left a guild", LogSeverity.Info));
         }
 
-        private static async Task Bot_JoinedGuild(SocketGuild arg)=>
-            await PopulateSpecificGuild(arg);
-        //End Guilds
+        private static async Task Bot_JoinedGuild(SocketGuild arg)
+        {
+            new Thread(() =>
+            {
+                Thread.CurrentThread.IsBackground = true;
+                PopulateSpecificGuild(arg).Wait();
+            }).Start();
+        }
+            
+    //End Guilds
 
-        //Start ModLog Stuff
-        private static async Task Bot_GuildUpdated(SocketGuild arg1, SocketGuild arg2)
+    //Start ModLog Stuff
+    private static async Task Bot_GuildUpdated(SocketGuild arg1, SocketGuild arg2)
         {
             if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
-                SocketGuild guild = null;
-                foreach (var gld in bot.Guilds)
-                {
-                    foreach (var role in gld.Roles)
-                    {
-                        if (role.Id == arg1.Id)
-                        {
-                            guild = gld;
-                            break;
-                        }
-                    }
-                }
-                var Guild = await SqlTools.GetGuild(guild.Id);
+                SocketGuild Gld = bot.Guilds.Where(x => x.TextChannels.Where(z => z.Id == arg2.Id).FirstOrDefault() != null).FirstOrDefault();
+                var Guild = await SqlTools.GetGuild(Gld.Id);
                 if (Guild.GuildSettings.Features.GuildModification)
                 {
                     string desc = $"The server was modified. Modification(s):";
@@ -383,7 +382,7 @@ namespace Skuld.Events
                         Color = new Color(243, 255, 33),
                         Timestamp = DateTime.UtcNow
                     };
-                    await SendModMessage(guild.GetTextChannel(Guild.AuditChannel), "", embed);
+                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed.Build());
                 }
             }
         }
@@ -392,15 +391,7 @@ namespace Skuld.Events
         {
             if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
-                SocketGuild Gld = null;
-                foreach (var guild in bot.Guilds)
-                {
-                    if ((guild.Channels.Where(x => x.Id == arg1.Id).FirstOrDefault() != null&& guild.Channels.Where(x => x.Id == arg1.Id).FirstOrDefault()!=null))
-                    {
-                        Gld = guild;
-                        break;
-                    }
-                }
+                SocketGuild Gld = bot.Guilds.Where(x => x.TextChannels.Where(z => z.Id == arg2.Id).FirstOrDefault() != null).FirstOrDefault();
                 var Guild = await SqlTools.GetGuild(Gld.Id);
                 if (Guild.GuildSettings.Features.GuildChannelModification)
                 {
@@ -420,7 +411,7 @@ namespace Skuld.Events
                         Color = new Color(243, 255, 33),
                         Timestamp = DateTime.UtcNow
                     };
-                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed);
+                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed.Build());
                 }
             }
         }
@@ -429,17 +420,8 @@ namespace Skuld.Events
         {
             if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
-                SocketGuild Gld = null;
+                SocketGuild Gld = bot.Guilds.Where(x => x.TextChannels.Where(z => z.Id == arg.Id).FirstOrDefault() != null).FirstOrDefault();
                 SocketGuildChannel Chan = null;
-                foreach (var guild in bot.Guilds)
-                {
-                    if (guild.Channels.Where(x => x.Id == arg.Id).FirstOrDefault() != null)
-                    {
-                        Gld = guild;
-                        Chan = guild.Channels.Where(x => x.Id == arg.Id).FirstOrDefault();
-                        break;
-                    }
-                }
                 var Guild = await SqlTools.GetGuild(Gld.Id);
                 if (Guild.GuildSettings.Features.GuildChannelModification)
                 {
@@ -450,7 +432,7 @@ namespace Skuld.Events
                         Color = new Color(255, 0, 0),
                         Timestamp = DateTime.UtcNow
                     };
-                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed);
+                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed.Build());
                 }
             }
         }
@@ -459,17 +441,8 @@ namespace Skuld.Events
         {
             if(!String.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
-                SocketGuild Gld = null;
+                SocketGuild Gld = bot.Guilds.Where(x => x.TextChannels.Where(z => z.Id == arg.Id).FirstOrDefault() != null).FirstOrDefault();
                 SocketGuildChannel Chan = null;
-                foreach(var guild in bot.Guilds)
-                {
-                    if(guild.Channels.Where(x=>x.Id == arg.Id).FirstOrDefault() != null)
-                    {
-                        Gld = guild;
-                        Chan = guild.Channels.Where(x => x.Id == arg.Id).FirstOrDefault();
-                        break;
-                    }
-                }
                 var Guild = await SqlTools.GetGuild(Gld.Id);
                 if(Guild.GuildSettings.Features.GuildChannelModification)
                 {
@@ -480,7 +453,7 @@ namespace Skuld.Events
                         Color = new Color(243, 255, 33),
                         Timestamp = arg.CreatedAt
                     };
-                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed);
+                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed.Build());
                 }
             }
         }
@@ -506,7 +479,7 @@ namespace Skuld.Events
                         Timestamp = DateTime.UtcNow,
                         Color = new Color(255, 0, 0)
                     };
-                    await SendModMessage(arg2.GetTextChannel(Guild.AuditChannel), "", embed);
+                    await SendModMessage(arg2.GetTextChannel(Guild.AuditChannel), "", embed.Build());
                 }
             }
         }
@@ -530,7 +503,7 @@ namespace Skuld.Events
                         Timestamp = DateTime.UtcNow,
                         Color = new Color(13, 229, 222)
                     };
-                    await SendModMessage(arg2.GetTextChannel(Guild.AuditChannel), "", embed);
+                    await SendModMessage(arg2.GetTextChannel(Guild.AuditChannel), "", embed.Build());
                 }
             }
         }
@@ -539,19 +512,8 @@ namespace Skuld.Events
         {
             if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
-                SocketGuild guild = null;
-                foreach (var gld in bot.Guilds)
-                {
-                    foreach (var role in gld.Roles)
-                    {
-                        if (role.Id == arg.Id)
-                        {
-                            guild = gld;
-                            break;
-                        }
-                    }
-                }
-                var Guild = await SqlTools.GetGuild(guild.Id);
+                SocketGuild Gld = bot.Guilds.Where(x => x.Roles.Where(z => z.Id == arg.Id).FirstOrDefault() != null).FirstOrDefault();
+                var Guild = await SqlTools.GetGuild(Gld.Id);
                 if (Guild.GuildSettings.Features.GuildRoleModification)
                 {
                     string desc = $"Role `{arg.Name}` was deleted";
@@ -562,7 +524,7 @@ namespace Skuld.Events
                         Color = new Color(255, 0, 0),
                         Timestamp = DateTime.UtcNow
                     };
-                    await SendModMessage(guild.GetTextChannel(Guild.AuditChannel), "", embed);
+                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed.Build());
                 }
             }
         }
@@ -571,19 +533,8 @@ namespace Skuld.Events
         {
             if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
-                SocketGuild guild = null;
-                foreach(var gld in bot.Guilds)
-                {
-                    foreach(var role in gld.Roles)
-                    {
-                        if(role.Id == arg1.Id)
-                        {
-                            guild = gld;
-                            break;
-                        }
-                    }
-                }
-                var Guild = await SqlTools.GetGuild(guild.Id);
+                SocketGuild Gld = bot.Guilds.Where(x => x.TextChannels.Where(z => z.Id == arg1.Id).FirstOrDefault() != null).FirstOrDefault();
+                var Guild = await SqlTools.GetGuild(Gld.Id);
                 if (Guild.GuildSettings.Features.GuildRoleModification)
                 {
                     string desc = $"Role `{arg1.Name}` was modified. Modification(s):";
@@ -606,7 +557,7 @@ namespace Skuld.Events
                         Color = new Color(243, 255, 33),
                         Timestamp = DateTime.UtcNow
                     };
-                    await SendModMessage(guild.GetTextChannel(Guild.AuditChannel), "", embed);
+                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed.Build());
                 }
             }
         }
@@ -615,19 +566,8 @@ namespace Skuld.Events
         {
             if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
-                SocketGuild guild = null;
-                foreach (var gld in bot.Guilds)
-                {
-                    foreach (var role in gld.Roles)
-                    {
-                        if (role.Id == arg.Id)
-                        {
-                            guild = gld;
-                            break;
-                        }
-                    }
-                }
-                var Guild = await SqlTools.GetGuild(guild.Id);
+                SocketGuild Gld = bot.Guilds.Where(x => x.TextChannels.Where(z => z.Id == arg.Id).FirstOrDefault() != null).FirstOrDefault();
+                var Guild = await SqlTools.GetGuild(Gld.Id);
                 if (Guild.GuildSettings.Features.GuildRoleModification)
                 {
                     string desc = $"Role `{arg.Name}` was created";
@@ -638,7 +578,7 @@ namespace Skuld.Events
                         Color = new Color(0, 255, 0),
                         Timestamp = DateTime.UtcNow
                     };
-                    await SendModMessage(guild.GetTextChannel(Guild.AuditChannel), "", embed);
+                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed.Build());
                 }
             }
         }
@@ -655,25 +595,20 @@ namespace Skuld.Events
         }
         public static async Task PopulateSpecificGuild(SocketGuild guild)
         {
-            var Guild = await SqlTools.GetGuild(guild.Id);
-            if (Guild == null)
-            {
-                MySqlCommand gcmd = new MySqlCommand("INSERT IGNORE INTO `guild` (`ID`,`name`,`prefix`) VALUES ");
-                gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Config.Load().Prefix}\" )";
-                await SqlTools.InsertAsync(gcmd);
+            MySqlCommand gcmd = new MySqlCommand("INSERT IGNORE INTO `guild` (`ID`,`name`,`prefix`) VALUES ");
+            gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Config.Load().Prefix}\" )";
+            await SqlTools.InsertAsync(gcmd);
 
-                //Configures Modules
-                gcmd = new MySqlCommand($"INSERT IGNORE INTO `guildcommandmodules` (`ID`,`Accounts`,`Actions`,`Admin`,`Fun`,`Help`,`Information`,`Search`,`Stats`) VALUES ( {guild.Id} , 1, 1, 1, 1, 1, 1, 1, 1 )");
-                await SqlTools.InsertAsync(gcmd);
+            //Configures Modules
+            gcmd = new MySqlCommand($"INSERT IGNORE INTO `guildcommandmodules` (`ID`,`Accounts`,`Actions`,`Admin`,`Fun`,`Help`,`Information`,`Search`,`Stats`) VALUES ( {guild.Id} , 1, 1, 1, 1, 1, 1, 1, 1 )");
+            await SqlTools.InsertAsync(gcmd);
 
-                //Configures Settings
-                gcmd = new MySqlCommand($"INSERT IGNORE INTO `guildfeaturemodules` (`ID`,`Starboard`,`Experience`,`UserJoinLeave`,`UserModification`,`UserBanEvents`,`GuildModification`,`GuildChannelModification`,`GuildRoleModification`) VALUES ( {guild.Id} , 0, 0, 0, 0, 0, 0, 0, 0 )");
-                await SqlTools.InsertAsync(gcmd);
+            //Configures Settings
+            gcmd = new MySqlCommand($"INSERT IGNORE INTO `guildfeaturemodules` (`ID`,`Starboard`,`Experience`,`UserJoinLeave`,`UserModification`,`UserBanEvents`,`GuildModification`,`GuildChannelModification`,`GuildRoleModification`) VALUES ( {guild.Id} , 0, 0, 0, 0, 0, 0, 0, 0 )");
+            await SqlTools.InsertAsync(gcmd);
 
-                Logs.Add(new Models.LogMessage("IsrtGld", $"Inserted {guild.Name}!", LogSeverity.Info));
-                await PopulateEntireGuildUsers(guild);
-            }
-            else { }
+            Logs.Add(new Models.LogMessage("IsrtGld", $"Populated {guild.Name} if it doesn't exist!", LogSeverity.Info));
+            await PopulateEntireGuildUsers(guild);
         }
         public static async Task PopulateEntireGuildUsers(SocketGuild guild)
         {
@@ -702,7 +637,6 @@ namespace Skuld.Events
                 Logs.Add(new Models.LogMessage("IsrtUsr", $"Added {usercount} Users to the database", LogSeverity.Info));
                 await SqlTools.InsertAsync(ucmd);
             }
-            Logs.Add(new Models.LogMessage("IsrtUsr", $"Finished!", LogSeverity.Info));
         }
 
         private static readonly string[] _validExtensions = { "jpg", "bmp", "gif", "png" };

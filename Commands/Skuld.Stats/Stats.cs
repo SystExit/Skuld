@@ -45,21 +45,21 @@ namespace Skuld.Commands
                 Color = RandColor.RandomColor()
             };
             
-            embed.AddInlineField("Version",Assembly.GetEntryAssembly().GetName().Version);
-            embed.AddInlineField("Uptime",string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime)));
-            embed.AddInlineField( "Pong",Bot.bot.GetShardFor(Context.Guild).Latency + "ms");
-            embed.AddInlineField("Guilds", Bot.bot.Guilds.Count().ToString());
-            embed.AddInlineField("Shards", Bot.bot.Shards.Count().ToString());
+            embed.AddField("Version",Assembly.GetEntryAssembly().GetName().Version,true);
+            embed.AddField("Uptime",string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime)),true);
+            embed.AddField( "Pong",Bot.bot.GetShardFor(Context.Guild).Latency + "ms",true);
+            embed.AddField("Guilds", Bot.bot.Guilds.Count().ToString(),true);
+            embed.AddField("Shards", Bot.bot.Shards.Count().ToString(),true);
 
             var currProcess = Process.GetCurrentProcess();
             cpuCounter = new PerformanceCounter("Process", "% Processor Time", currProcess.ProcessName);
             ramCounter = new PerformanceCounter("Memory", "Available MBytes");
 
-            embed.AddInlineField("Commands", Bot.commands.Commands.Count());
-            embed.AddInlineField("CPU Load", GetCurrentCpuUsage());
-            embed.AddInlineField("Memory Used", (currProcess.WorkingSet64 / 1024) / 1024 + "MB");
+            embed.AddField("Commands", Bot.commands.Commands.Count(),true);
+            embed.AddField("CPU Load", GetCurrentCpuUsage(),true);
+            embed.AddField("Memory Used", (currProcess.WorkingSet64 / 1024) / 1024 + "MB",true);
 
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
+            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
         }
         [Command("netfw", RunMode = RunMode.Async), Summary(".Net Info")]
         public async Task Netinfo()=>
@@ -87,11 +87,11 @@ namespace Skuld.Commands
             cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
             ramCounter = new PerformanceCounter("Memory", "Available MBytes");
             
-            embed.AddInlineField("CPU Load", GetCurrentCpuUsage());
-            embed.AddInlineField("Total Free Ram", GetAvailableRAM()); 
-            embed.AddInlineField("Uptime", $"{UpTime.Days} day(s) {UpTime.Hours}:{UpTime.Minutes}:{UpTime.Seconds}");
-            embed.AddInlineField("OS", Environment.OSVersion+" "+RuntimeInformation.OSArchitecture);
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
+            embed.AddField("CPU Load", GetCurrentCpuUsage(),true);
+            embed.AddField("Total Free Ram", GetAvailableRAM(),true); 
+            embed.AddField("Uptime", $"{UpTime.Days} day(s) {UpTime.Hours}:{UpTime.Minutes}:{UpTime.Seconds}",true);
+            embed.AddField("OS", Environment.OSVersion+" "+RuntimeInformation.OSArchitecture,true);
+            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
         }
 
         public string GetCurrentCpuUsage()

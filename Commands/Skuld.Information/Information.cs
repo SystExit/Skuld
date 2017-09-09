@@ -38,27 +38,25 @@ namespace Skuld.Commands
             string afkname = null;
             if(guild.AFKChannelId.HasValue)
                 afkname = (await guild.GetVoiceChannelAsync(guild.AFKChannelId.Value)).Name;
-            _embed.AddInlineField("Users", usercount.ToString());
-            _embed.AddInlineField("Bots", $"{gusersbotonly.Count()}");
-            _embed.AddInlineField("Shard", bot.GetShardIdFor(guild).ToString());
-            _embed.AddInlineField("Verification Level", guild.VerificationLevel.ToString());
-            _embed.AddInlineField("Voice Region ID", guild.VoiceRegionId.ToString());
-            _embed.AddInlineField("Owner", owner.Nickname??owner.Username + "#" + owner.DiscriminatorValue);
-            _embed.AddInlineField("Text Channels", (await guild.GetTextChannelsAsync()).Count());
-            _embed.AddInlineField("Voice Channels", (await guild.GetVoiceChannelsAsync()).Count());
+            _embed.AddField("Users", usercount.ToString(),true);
+            _embed.AddField("Bots", $"{gusersbotonly.Count()}",true);
+            _embed.AddField("Shard", bot.GetShardIdFor(guild).ToString(),true);
+            _embed.AddField("Verification Level", guild.VerificationLevel.ToString(),true);
+            _embed.AddField("Voice Region ID", guild.VoiceRegionId.ToString(),true);
+            _embed.AddField("Owner", owner.Nickname??owner.Username + "#" + owner.DiscriminatorValue,true);
+            _embed.AddField("Text Channels", (await guild.GetTextChannelsAsync()).Count(),true);
+            _embed.AddField("Voice Channels", (await guild.GetVoiceChannelsAsync()).Count(),true);
             int seconds = guild.AFKTimeout;
             string minutes = ((seconds % 3600) / 60).ToString();
-            _embed.AddInlineField("AFK Timeout", minutes + " minutes");
-            _embed.AddInlineField("AFK Channel",afkname??"None Set");
+            _embed.AddField("AFK Timeout", minutes + " minutes",true);
+            _embed.AddField("AFK Channel",afkname??"None Set",true);
             if (String.IsNullOrEmpty(guild.IconUrl))
-            {
-                _embed.AddInlineField("Server Avatar", "Doesn't exist");
-            }
-            _embed.AddInlineField("Default Notifications", guild.DefaultMessageNotifications.ToString());            
-            _embed.AddInlineField("Created", guild.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
-            _embed.AddInlineField("Emojis", guild.Emotes.Count.ToString() + Environment.NewLine + $"Use `{Bot.Prefix}server emojis` to view all of the emojis");
-            _embed.AddInlineField("Roles", guild.Roles.Count() + Environment.NewLine + $"Use `{Bot.Prefix}server roles` to view all of the roles");
-            await MessageHandler.SendChannel((ITextChannel)Context.Channel,"", _embed);
+                _embed.AddField("Server Avatar", "Doesn't exist",true);
+            _embed.AddField("Default Notifications", guild.DefaultMessageNotifications.ToString(),true);
+            _embed.AddField("Created", guild.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
+            _embed.AddField("Emojis", guild.Emotes.Count.ToString() + Environment.NewLine + $"Use `{Bot.Prefix}server emojis` to view all of the emojis");
+            _embed.AddField("Roles", guild.Roles.Count() + Environment.NewLine + $"Use `{Bot.Prefix}server roles` to view all of the roles");
+            await MessageHandler.SendChannel((ITextChannel)Context.Channel,"", _embed.Build());
         }
         [Command("server emojis", RunMode = RunMode.Async), Alias("server emoji")]
         public async Task ServerEmoji()
@@ -292,16 +290,16 @@ namespace Skuld.Commands
             }
             else
                 game = "Nothing";
-            embed.AddInlineField(":id: ID", whois.Id.ToString() ?? "Unknown");
-            embed.AddInlineField(":vertical_traffic_light:  Status", status ?? "Unknown");
-            embed.AddInlineField(":video_game: Currently Playing", game);
-            embed.AddInlineField(":robot: Bot?", whois.IsBot.ToString() ?? "Unknown");
-            embed.AddInlineField(":eyes: Mutual Servers", $"{seencount} servers");
-            embed.AddInlineField(":eyes: Last Seen", "Shard: " + (Bot.bot.GetShardIdFor(Context.Guild).ToString() ?? "Unknown"));
+            embed.AddField(":id: ID", whois.Id.ToString() ?? "Unknown",true);
+            embed.AddField(":vertical_traffic_light:  Status", status ?? "Unknown",true);
+            embed.AddField(":video_game: Currently Playing", game,true);
+            embed.AddField(":robot: Bot?", whois.IsBot.ToString() ?? "Unknown",true);
+            embed.AddField(":eyes: Mutual Servers", $"{seencount} servers",true);
+            embed.AddField(":eyes: Last Seen", "Shard: " + (Bot.bot.GetShardIdFor(Context.Guild).ToString() ?? "Unknown"),true);
             embed.AddField(":shield: Roles", $"Do `{Config.Load().Prefix}roles` to see your roles");
             embed.AddField(":inbox_tray: Server Join", whois.JoinedAt.Value.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
             embed.AddField(":globe_with_meridians: Discord Join", whois.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
+            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
         }
         [Command("roles", RunMode = RunMode.Async), Summary("Gets your current roles")]
         public async Task GetRole() =>

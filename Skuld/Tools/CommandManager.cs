@@ -155,13 +155,16 @@ namespace Skuld.Tools
                     if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
                     {
                         var Guild = await SqlTools.GetGuild(context.Guild.Id);
-
-                        var res = commands.Search(context, arg.Content.Split(' ')[0].Replace(defaultPrefix,"").Replace(customPrefix,"")).Commands.FirstOrDefault();                            
-                        var module = CheckModule(Guild, res.Command.Module);
-                        if (module)
+                        var command = commands.Search(context, arg.Content.Split(' ')[0].Replace(defaultPrefix, "").Replace(customPrefix, "")).Commands;
+                        if (command == null) return;
                         {
-                            await InsertCommand(customPrefix ?? defaultPrefix, arg);
-                            result = await commands.ExecuteAsync(context, argPos, map);
+                            var res = command.FirstOrDefault();
+                            var module = CheckModule(Guild, res.Command.Module);
+                            if (module)
+                            {
+                                await InsertCommand(customPrefix ?? defaultPrefix, arg);
+                                result = await commands.ExecuteAsync(context, argPos, map);
+                            }
                         }
                     }
                     else
@@ -176,7 +179,7 @@ namespace Skuld.Tools
                             {
                                 Logs.Add(new Models.LogMessage("CmdHand", "Error with command, Error is: " + result, LogSeverity.Error));
                                 if (result.Error == CommandError.UnmetPrecondition || result.Error == CommandError.BadArgCount)
-                                    await MessageHandler.SendChannel(context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = Convert.ToString(result.ErrorReason), Color = new Color(255, 0, 0) });
+                                    await MessageHandler.SendChannel(context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = Convert.ToString(result.ErrorReason), Color = new Color(255, 0, 0) }.Build());
                             }
                         }
                     }

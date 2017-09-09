@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Skuld.Tools;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace Skuld.Events
 {
@@ -19,9 +20,9 @@ namespace Skuld.Events
                     {
                         List<string[]> consolelines = new List<string[]>();
                         if (item.DSeverity != null)
-                            consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.DSeverity.ToString() + "]", item.Message });
+                            consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + String.Join("", item.Source.Take(4)) + "]", "[" + item.DSeverity.ToString()[0] + "]", item.Message });
                         if (item.TSeverity != null)
-                            consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.TSeverity.ToString() + "]", item.Message });
+                            consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + String.Join("", item.Source.Take(4)) + "]", "[" + item.TSeverity.ToString()[0] + "]", item.Message });
                         string toconsole = ConsoleUtils.PrettyLines(consolelines, 2);
                         string tolog = null;
                         if (item.Exception != null)
@@ -43,8 +44,10 @@ namespace Skuld.Events
                             Console.ForegroundColor = ConsoleColor.Red;
                         if (item.DSeverity == Discord.LogSeverity.Info || item.TSeverity == NTwitch.LogSeverity.Info)
                             Console.ForegroundColor = ConsoleColor.Green;
-                        if (item.DSeverity == Discord.LogSeverity.Warning ||item.TSeverity == NTwitch.LogSeverity.Warning)
+                        if (item.DSeverity == Discord.LogSeverity.Warning || item.TSeverity == NTwitch.LogSeverity.Warning)
                             Console.ForegroundColor = ConsoleColor.Yellow;
+                        if (item.DSeverity == Discord.LogSeverity.Verbose || item.TSeverity == NTwitch.LogSeverity.Verbose)
+                            Console.ForegroundColor = ConsoleColor.Cyan;
                         Console.Out.WriteLineAsync(toconsole).Wait();
                         Console.ForegroundColor = ConsoleColor.White;
                         await Task.Delay(100);

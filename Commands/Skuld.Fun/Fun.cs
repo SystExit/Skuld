@@ -127,7 +127,7 @@ namespace Skuld.Commands
             if (item["neko"].ToString() != null)
             {
                 var neko = item["neko"];
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { ImageUrl = neko });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { ImageUrl = neko }.Build());
             }
         }
 
@@ -139,7 +139,7 @@ namespace Skuld.Commands
             if (videoext.Any(kitty.ImageURL.Contains))
                 await MessageHandler.SendChannel(Context.Channel, kitty.ImageURL);
             else
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = RandColor.RandomColor(), ImageUrl = kitty.ImageURL });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = RandColor.RandomColor(), ImageUrl = kitty.ImageURL }.Build());
         }
         [Command("doggo", RunMode = RunMode.Async), Summary("doggo")]
         [Alias("dog", "dogs", "doggy")]
@@ -149,13 +149,13 @@ namespace Skuld.Commands
             if (videoext.Any(doggo.ImageURL.Contains))
                 await MessageHandler.SendChannel(Context.Channel, doggo.ImageURL);
             else
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = RandColor.RandomColor(), ImageUrl = doggo.ImageURL });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = RandColor.RandomColor(), ImageUrl = doggo.ImageURL }.Build());
         }
         [Command("llama", RunMode = RunMode.Async), Summary("Llama")]
         public async Task Llama()
         {
             var llama = JsonConvert.DeserializeObject<Animal>(await APIWebReq.ReturnString(new Uri("https://api.systemexit.co.uk/animals/llama/random")));
-            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = RandColor.RandomColor(), ImageUrl = llama.FileUrl });
+            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = RandColor.RandomColor(), ImageUrl = llama.FileUrl }.Build());
         }
         
         [Command("eightball", RunMode = RunMode.Async), Summary("Eightball")]
@@ -208,11 +208,11 @@ namespace Skuld.Commands
                         Color = RandColor.RandomColor(),
                         Title = Pasta.PastaName
                     };
-                    _embed.AddInlineField("Author",Pasta.Username);
-                    _embed.AddInlineField("Created", Pasta.Created);
-                    _embed.AddInlineField("UpVotes", Pasta.Upvotes);
-                    _embed.AddInlineField("DownVotes", Pasta.Downvotes);
-                    await MessageHandler.SendChannel(Context.Channel, "", _embed);
+                    _embed.AddField("Author",Pasta.Username,true);
+                    _embed.AddField("Created", Pasta.Created,true);
+                    _embed.AddField("UpVotes", Pasta.Upvotes,true);
+                    _embed.AddField("DownVotes", Pasta.Downvotes,true);
+                    await MessageHandler.SendChannel(Context.Channel, "", _embed.Build());
                 }
                 if (cmd == "upvote")
                 {
@@ -429,7 +429,7 @@ namespace Skuld.Commands
             else if (int2 > 151 || int2 < 0)
                 await MessageHandler.SendChannel(Context.Channel,$"{int2} over/under limit. (151)");
             else
-                await MessageHandler.SendChannel(Context.Channel,"", new EmbedBuilder() { Color = RandColor.RandomColor(), ImageUrl = $"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png" });
+                await MessageHandler.SendChannel(Context.Channel,"", new EmbedBuilder() { Color = RandColor.RandomColor(), ImageUrl = $"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png" }.Build());
         }
 
         [Command("strawpoll", RunMode = RunMode.Async), Summary("Creates Strawpoll")]
@@ -463,7 +463,7 @@ namespace Skuld.Commands
             for (int z = 0; z < poll.Options.Length; z++)
                 _embed.AddField(poll.Options[z], poll.Votes[z]);
 
-            await MessageHandler.SendChannel(Context.Channel, "", _embed);
+            await MessageHandler.SendChannel(Context.Channel, "", _embed.Build());
         }
 
         [Command("emoji", RunMode = RunMode.Async), Summary("Turns text into bigmoji")]
@@ -562,7 +562,7 @@ namespace Skuld.Commands
             _embed.Author = _author;
             _embed.Footer = _footer;
 
-            await MessageHandler.SendChannel(Context.Channel,string.Empty, _embed);
+            await MessageHandler.SendChannel(Context.Channel,string.Empty, _embed.Build());
         }
 
         [Command("time", RunMode = RunMode.Async), Summary("Gets current time")]
@@ -601,7 +601,7 @@ namespace Skuld.Commands
                 Title = joke,
                 Description = punchline,
                 Color = RandColor.RandomColor()
-            });
+            }.Build());
         }
         [Command("pickup",RunMode = RunMode.Async),Summary("Cringe at these bad user-submitted pick up lines. (Don't actually use these or else you'll get laughed at. :3)"),Alias("pickupline")]
         public async Task PickUp()
@@ -615,7 +615,7 @@ namespace Skuld.Commands
                 Title = part1,
                 Description = part2??"",
                 Color = RandColor.RandomColor()
-            });
+            }.Build());
         }
         [Command("cowsay",RunMode = RunMode.Async),Summary("Make an ascii cow say some things.")]
         public async Task CowSay([Remainder]string message)
@@ -719,13 +719,28 @@ namespace Skuld.Commands
                 ImageUrl = PictureOfTheDay.HDUrl,
                 Timestamp = Convert.ToDateTime(PictureOfTheDay.Date)
             };
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
+            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
         }
         [Command("choose", RunMode = RunMode.Async), Summary("Choose from things")]
         public async Task Choose([Remainder]string choices)
         {
             var choicearr = choices.Split('|');
             await MessageHandler.SendChannel(Context.Channel, $"<:blobthinkcool:350673773113901056> | __{(Context.User as IGuildUser).Nickname??Context.User.Username}__ I choose: **{choicearr[Bot.random.Next(0,choicearr.Length)]}**");
+        }
+        [Command("heal", RunMode = RunMode.Async), Summary("Did you run out of health? Here's the healing station")]
+        public async Task Heal()
+        {
+
+        }
+        [Command("heal", RunMode = RunMode.Async), Summary("Did you run out of health? Here's the healing station")]
+        public async Task Heal(int hp)
+        {
+
+        }
+        [Command("heal", RunMode = RunMode.Async), Summary("Did you run out of health? Here's the healing station")]
+        public async Task Heal(int hp, [Remainder]IGuildUser User)
+        {
+
         }
     }
 }
