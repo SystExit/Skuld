@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.IO;
+using System.Net;
 
 namespace Skuld.APIS
 {
@@ -189,6 +190,24 @@ namespace Skuld.APIS
                     }
                 }
             }
+        }
+        public static async Task<string> ScrapeUrl(Uri url)
+        {
+            string data = null;
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync();
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                Stream RStream = response.GetResponseStream();
+                StreamReader SR = null;
+                SR = new StreamReader(RStream);
+                data = await SR.ReadToEndAsync();
+                request.Abort();
+            }
+            if (!String.IsNullOrEmpty(data))
+                return data;
+            else
+                return null;
         }
     }
 }
