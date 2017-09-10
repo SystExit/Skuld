@@ -18,11 +18,13 @@ namespace Skuld.Events
                 {
                     foreach (Models.LogMessage item in e.NewItems)
                     {
+                        string source = String.Join("",item.Source.Take(1));
+                        source+=String.Join("",item.Source.Reverse().Take(3).Reverse());
                         List<string[]> consolelines = new List<string[]>();
                         if (item.DSeverity != null)
-                            consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + String.Join("", item.Source.Take(4)) + "]", "[" + item.DSeverity.ToString()[0] + "]", item.Message });
+                            consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + source + "]", "[" + item.DSeverity.ToString()[0] + "]", item.Message });
                         if (item.TSeverity != null)
-                            consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + String.Join("", item.Source.Take(4)) + "]", "[" + item.TSeverity.ToString()[0] + "]", item.Message });
+                            consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + source + "]", "[" + item.TSeverity.ToString()[0] + "]", item.Message });
                         string toconsole = ConsoleUtils.PrettyLines(consolelines, 2);
                         string tolog = null;
                         if (item.Exception != null)

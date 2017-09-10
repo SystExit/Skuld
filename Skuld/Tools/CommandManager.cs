@@ -152,6 +152,7 @@ namespace Skuld.Tools
                 if (message.HasStringPrefix(customPrefix, ref argPos) || message.HasStringPrefix(defaultPrefix, ref argPos))
                 {
                     IResult result = null;
+                    CommandInfo Command = null;
                     if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
                     {
                         var Guild = await SqlTools.GetGuild(context.Guild.Id);
@@ -162,8 +163,8 @@ namespace Skuld.Tools
                             var module = CheckModule(Guild, res.Command.Module);
                             if (module)
                             {
-                                await InsertCommand(customPrefix ?? defaultPrefix, arg);
                                 result = await commands.ExecuteAsync(context, argPos, map);
+                                Command = command.FirstOrDefault().Command;
                             }
                         }
                     }
@@ -191,57 +192,32 @@ namespace Skuld.Tools
                 Logs.Add(new Models.LogMessage("CmdHand", "Error with command dispatching", LogSeverity.Error, ex));
             }
         }
-        private static async Task InsertCommand(string prefix, SocketMessage arg)
+        private static async Task InsertCommand(CommandInfo Command, SocketMessage arg)
         {
-            int prefixlength = prefix.Length;
             var user = arg.Author;
-            string[] messagearr = arg.Content.Split(' ');
-            string message = messagearr[0];
-            message = message.ToLower();
-            if (message.Contains(prefix))
-                message = message.Replace(prefix, "");
-            foreach (var module in commands.Modules)
+            MySqlCommand command = new MySqlCommand("SELECT UserUsage FROM commandusage WHERE UserID = @userid AND Command = @command");
+            command.Parameters.AddWithValue("@userid", user.Id);
+            command.Parameters.AddWithValue("@command", Command.Name);
+            var resp = await SqlTools.GetSingleAsync(command);
+            if (!String.IsNullOrEmpty(resp))
             {
-                if (message == module.Name)
-                {
-                    if (!String.IsNullOrEmpty(messagearr[1]))
-                        message = messagearr[1].ToLower();
-                    else
-                        message = messagearr[0].ToLower();
-                    return;
-                }
-                else { }
+                var cmdusg = Convert.ToInt32(resp);
+                cmdusg = cmdusg + 1;
+                command = new MySqlCommand("UPDATE commandusage SET UserUsage = @userusg WHERE UserID = @userid AND Command = @command");
+                command.Parameters.AddWithValue("@userusg", cmdusg);
+                command.Parameters.AddWithValue("@userid", user.Id);
+                command.Parameters.AddWithValue("@command", Command.Name);
+                await SqlTools.InsertAsync(command);
+                return;
             }
-            foreach (var item in commands.Commands)
+            else
             {
-                if (item.Name != message) { }
-                else
-                {
-                    MySqlCommand command = new MySqlCommand("SELECT UserUsage FROM commandusage WHERE UserID = @userid AND Command = @command");
-                    command.Parameters.AddWithValue("@userid", user.Id);
-                    command.Parameters.AddWithValue("@command", message);
-                    var resp = await SqlTools.GetSingleAsync(command);
-                    if (!String.IsNullOrEmpty(resp))
-                    {
-                        var cmdusg = Convert.ToInt32(resp);
-                        cmdusg = cmdusg + 1;
-                        command = new MySqlCommand("UPDATE commandusage SET UserUsage = @userusg WHERE UserID = @userid AND Command = @command");
-                        command.Parameters.AddWithValue("@userusg", cmdusg);
-                        command.Parameters.AddWithValue("@userid", user.Id);
-                        command.Parameters.AddWithValue("@command", message);
-                        await SqlTools.InsertAsync(command);
-                        return;
-                    }
-                    else
-                    {
-                        command = new MySqlCommand("INSERT INTO commandusage (`UserID`, `UserUsage`, `Command`) VALUES (@userid , @userusg , @command)");
-                        command.Parameters.AddWithValue("@userusg", 1);
-                        command.Parameters.AddWithValue("@userid", user.Id);
-                        command.Parameters.AddWithValue("@command", message);
-                        await SqlTools.InsertAsync(command);
-                        return;
-                    }
-                }
+                command = new MySqlCommand("INSERT INTO commandusage (`UserID`, `UserUsage`, `Command`) VALUES (@userid , @userusg , @command)");
+                command.Parameters.AddWithValue("@userusg", 1);
+                command.Parameters.AddWithValue("@userid", user.Id);
+                command.Parameters.AddWithValue("@command", Command.Name);
+                await SqlTools.InsertAsync(command);
+                return;
             }
         }
         private static async Task InsertAI(IUser user)
