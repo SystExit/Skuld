@@ -12,6 +12,8 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using AIMLbot;
+using System.Collections.Generic;
+using Skuld.Models;
 
 namespace Skuld
 {
@@ -31,6 +33,7 @@ namespace Skuld
         public static AIMLbot.Bot ChatService;
         public static User ChatUser;
         public static string PathToUserData;
+        public static List<CountryTimeZones> TimeZones;
         /*END VARS*/
 
         static void Main(string[] args) => CreateBot().GetAwaiter().GetResult();
@@ -81,13 +84,13 @@ namespace Skuld
         {
             try
             {
-                if(Config.Load().TwitchModule)
-                    await APIS.Twitch.TwitchClient.CreateTwitchClient(Config.Load().TwitchToken, Config.Load().TwitchClientID);
+                /*if(Config.Load().TwitchModule)
+                    await APIS.Twitch.TwitchClient.CreateTwitchClient(Config.Load().TwitchToken, Config.Load().TwitchClientID);*/
                 await bot.LoginAsync(TokenType.Bot, token);
                 await bot.StartAsync();
-                foreach (var shard in bot.Shards)
+                /*foreach (var shard in bot.Shards)
                     if(shard.ConnectionState == ConnectionState.Connected)
-                        await PublishStats(shard.ShardId);
+                        await PublishStats(shard.ShardId);*/
                 await Task.Delay(-1);
             }
             catch(Exception ex)

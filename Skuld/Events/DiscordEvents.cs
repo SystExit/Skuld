@@ -108,14 +108,26 @@ namespace Skuld.Events
                     reader.Close();
                     await SqlTools.getconn.CloseAsync();
                     Starboard.ChannelID = Convert.ToUInt64(await SqlTools.GetSingleAsync(new MySqlCommand("SELECT `starboardchannel` FROM `guild` WHERE ID = " + Guild.ID)));
-                    if (arg3.Emote.Name == new Emoji("⭐").Name)
-                        Starboard.Stars = Starboard.Stars - 1;
+                    var stars = (await Gld.GetTextChannel(Starboard.ChannelID).GetMessageAsync(Starboard.MessageID) as IUserMessage).Reactions.FirstOrDefault(x => x.Key.Name == ":star:" && !x.Value.IsMe).Value.ReactionCount + (await Gld.GetTextChannel(Starboard.ChannelID).GetMessageAsync(Starboard.OriginalMessageID) as IUserMessage).Reactions.FirstOrDefault(x => x.Key.Name == ":star:" && !x.Value.IsMe).Value.ReactionCount;
                     if (Dldedmsg.Id == Starboard.MessageID)
                     {
                         string react = StarEmotes.OrderByDescending(x => x.Key).Where(x => x.Key <= Starboard.Stars).FirstOrDefault().Value;
                         var smsg = await Gld.GetTextChannel(Starboard.ChannelID).GetMessageAsync(Starboard.MessageID) as IUserMessage;
                         var content = smsg.Content.Split(' ').Skip(2);
-                        string msg = react + " " + Starboard.Stars + " " + string.Join(" ", content);
+                        string msg = react + " " + stars + " " + string.Join(" ", content);
+                        var embd = smsg.Embeds.FirstOrDefault();
+                        await smsg.ModifyAsync(x =>
+                        {
+                            x.Content = msg;
+                        });
+                        await SqlTools.InsertAsync(new MySqlCommand($"UPDATE `starboard` SET `Stars` = {Starboard.Stars} WHERE `messageid` = " + Dldedmsg.Id));
+                    }
+                    else if (Dldedmsg.Id == Starboard.OriginalMessageID)
+                    {
+                        string react = StarEmotes.OrderByDescending(x => x.Key).Where(x => x.Key <= Starboard.Stars).FirstOrDefault().Value;
+                        var smsg = await Gld.GetTextChannel(Starboard.ChannelID).GetMessageAsync(Starboard.MessageID) as IUserMessage;
+                        var content = smsg.Content.Split(' ').Skip(2);
+                        string msg = react + " " + stars + " " + string.Join(" ", content);
                         var embd = smsg.Embeds.FirstOrDefault();
                         await smsg.ModifyAsync(x =>
                         {
@@ -165,17 +177,17 @@ namespace Skuld.Events
                                     var attachment = Dldedmsg.Attachments.FirstOrDefault();
                                     if (attachment != null)
                                     {
-                                        if (IsImageExtension(attachment.Url))
+                                        if (Tools.Tools.IsImageExtension(attachment.Url))
                                             embed.ImageUrl = attachment.Url;
                                         else
                                             embed.Description = embed.Description + "\n" + attachment.Url;
                                     }
-                                    var messg = await MessageHandler.SendChannel(bot.GetGuild(Guild.ID).GetTextChannel(Guild.StarboardChannel), message, embed.Build());
+                                    var messg = await MessageHandler.SendChannel(bot.GetGuild(Guild.ID).GetTextChannel(Guild.StarboardChannel), message, embed);
                                     await SqlTools.InsertAsync(new MySqlCommand($"INSERT INTO `starboard` (`GuildID`,`MessageID`,`OriginalMessageID`,`Stars`,`Added`) VALUES ({Gld.Id},{messg.Id},{Dldedmsg.Id},{StarboardReactions},\"{DateTime.UtcNow}\");"));
                                 }
                             }
                         }
-                        else
+                        else if (!String.IsNullOrEmpty(temp2))
                         {
                             var Starboard = new Starboard();
                             var reader = await SqlTools.GetAsync(new MySqlCommand("SELECT * FROM `starboard` WHERE `MessageID` = " + temp2));
@@ -382,7 +394,7 @@ namespace Skuld.Events
                         Color = new Color(243, 255, 33),
                         Timestamp = DateTime.UtcNow
                     };
-                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed.Build());
+                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed);
                 }
             }
         }
@@ -411,7 +423,7 @@ namespace Skuld.Events
                         Color = new Color(243, 255, 33),
                         Timestamp = DateTime.UtcNow
                     };
-                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed.Build());
+                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed);
                 }
             }
         }
@@ -432,7 +444,7 @@ namespace Skuld.Events
                         Color = new Color(255, 0, 0),
                         Timestamp = DateTime.UtcNow
                     };
-                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed.Build());
+                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed);
                 }
             }
         }
@@ -453,7 +465,7 @@ namespace Skuld.Events
                         Color = new Color(243, 255, 33),
                         Timestamp = arg.CreatedAt
                     };
-                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed.Build());
+                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed);
                 }
             }
         }
@@ -479,7 +491,7 @@ namespace Skuld.Events
                         Timestamp = DateTime.UtcNow,
                         Color = new Color(255, 0, 0)
                     };
-                    await SendModMessage(arg2.GetTextChannel(Guild.AuditChannel), "", embed.Build());
+                    await SendModMessage(arg2.GetTextChannel(Guild.AuditChannel), "", embed);
                 }
             }
         }
@@ -503,7 +515,7 @@ namespace Skuld.Events
                         Timestamp = DateTime.UtcNow,
                         Color = new Color(13, 229, 222)
                     };
-                    await SendModMessage(arg2.GetTextChannel(Guild.AuditChannel), "", embed.Build());
+                    await SendModMessage(arg2.GetTextChannel(Guild.AuditChannel), "", embed);
                 }
             }
         }
@@ -524,7 +536,7 @@ namespace Skuld.Events
                         Color = new Color(255, 0, 0),
                         Timestamp = DateTime.UtcNow
                     };
-                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed.Build());
+                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed);
                 }
             }
         }
@@ -557,7 +569,7 @@ namespace Skuld.Events
                         Color = new Color(243, 255, 33),
                         Timestamp = DateTime.UtcNow
                     };
-                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed.Build());
+                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed);
                 }
             }
         }
@@ -578,7 +590,7 @@ namespace Skuld.Events
                         Color = new Color(0, 255, 0),
                         Timestamp = DateTime.UtcNow
                     };
-                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed.Build());
+                    await SendModMessage(Gld.GetTextChannel(Guild.AuditChannel), "", embed);
                 }
             }
         }
@@ -637,12 +649,6 @@ namespace Skuld.Events
                 Logs.Add(new Models.LogMessage("IsrtUsr", $"Added {usercount} Users to the database", LogSeverity.Info));
                 await SqlTools.InsertAsync(ucmd);
             }
-        }
-
-        private static readonly string[] _validExtensions = { "jpg", "bmp", "gif", "png" };
-        public static bool IsImageExtension(string ext)
-        {
-            return _validExtensions.Contains(ext);
         }
     }
 }

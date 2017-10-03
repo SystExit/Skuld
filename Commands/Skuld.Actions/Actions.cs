@@ -30,7 +30,7 @@ namespace Skuld.Commands
             if (contuser == guilduser)
                 await Send($"{contuser.Nickname ?? contuser.Username} killed themself", "http://i.giphy.com/l2JeiuwmhZlkrVOkU.gif");
             else
-                await Send($"{contuser.Nickname ?? contuser.Username} killed {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=kill")));
+                await Send($"{contuser.Nickname ?? contuser.Username} killed {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=kill")));
         }
         
         [Command("stab", RunMode = RunMode.Async), Summary("Stabs a user")]
@@ -264,7 +264,7 @@ namespace Skuld.Commands
         //End Users
 
         //Roles
-        [Command("slap", RunMode = RunMode.Async), Summary("Slap everyone in a role")]
+        /*[Command("slap", RunMode = RunMode.Async), Summary("Slap everyone in a role")]
         public async Task Slap([Remainder]IRole role) =>
             await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} slaps everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=slap")));
 
@@ -303,7 +303,7 @@ namespace Skuld.Commands
         [Command("glare", RunMode = RunMode.Async), Summary("Glares at everyone in a role")]
         public async Task Glare([Remainder]IRole role)=>
             await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} glares at everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=glare")));
-
+        */
         private async Task InsertUser(IUser user)
         {
             MySqlCommand command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");");
@@ -311,7 +311,7 @@ namespace Skuld.Commands
             command.Parameters.AddWithValue("@userid",user.Id);
             await SqlTools.InsertAsync(command);
         }
-        private async Task Send(string message, string image) =>
-            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = message, Color = RandColor.RandomColor(), ImageUrl = image }.Build());
+        private async Task Send(string message, string image)=>
+            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = message, Color = Tools.Tools.RandomColor(), ImageUrl = image });
     }
 }

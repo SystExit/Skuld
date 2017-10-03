@@ -108,7 +108,7 @@ namespace Skuld.Commands
                 _embed.AddInlineField("Genre", media.Genre);
                 _embed.AddInlineField("Rating", media.imdbRating);
                 _embed.AddInlineField("Votes", media.imdbVotes);
-                await MessageHandler.SendChannel(Context.Channel,"", _embed.Build());
+                await MessageHandler.SendChannel(Context.Channel,"", _embed);
             }
             else
             {
@@ -130,7 +130,7 @@ namespace Skuld.Commands
                 _embed.AddInlineField("Genre", media.Genre);
                 _embed.AddInlineField("Rating", media.imdbRating);
                 _embed.AddInlineField("Votes", media.imdbVotes);
-                await MessageHandler.SendChannel(Context.Channel,"", _embed.Build());
+                await MessageHandler.SendChannel(Context.Channel,"", _embed);
             }
         }*/
         [Command("twitch", RunMode = RunMode.Async), Summary("Finds a twitch user")]
@@ -142,7 +142,7 @@ namespace Skuld.Commands
             var stream = await chan.GetStreamAsync();
             var _embed = new EmbedBuilder()
             {
-                Color = RandColor.RandomColor()
+                Color = Tools.Tools.RandomColor()
             };
             if (stream != null)
             {
@@ -178,7 +178,7 @@ namespace Skuld.Commands
                 _embed.AddField("Total Views", $"{chan.Views.ToString("N0")}",true);
                 _embed.ThumbnailUrl = chan.VideoBannerUrl;
             }
-            await MessageHandler.SendChannel(Context.Channel, "", _embed.Build());
+            await MessageHandler.SendChannel(Context.Channel, "", _embed);
         }
 
         //Start Search Platforms
@@ -234,9 +234,9 @@ namespace Skuld.Commands
                                 $"**{item3.Title}**\n{item3.Link}\n\n"+
                                 "If I didn't find what you're looking for, use this link:\n" +
                                 $"https://google.com/search?q={query.Replace(" ", "%20")}",
-                            Color = RandColor.RandomColor()
+                            Color = Tools.Tools.RandomColor()
                         };
-                        await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+                        await MessageHandler.SendChannel(Context.Channel, "", embed);
                     }
                     catch
                     {
@@ -248,14 +248,14 @@ namespace Skuld.Commands
                     {
                         Title = "Error with the command",
                         Description = $"I couldn't find anything matching: `{query}`, please try again.",
-                        Color = RandColor.RandomColor()
-                    }.Build());
+                        Color = Tools.Tools.RandomColor()
+                    });
                 }
             }
             catch (Exception ex)
             {
                 Bot.Logs.Add(new Models.LogMessage("GogSrch", "Error with google search", LogSeverity.Error, ex));
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Color = RandColor.RandomColor() }.Build());
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Color = Tools.Tools.RandomColor() });
             }
         }
         private async Task YoutubeS(string query)
@@ -276,14 +276,14 @@ namespace Skuld.Commands
                     Title = $"{HttpUtility.HtmlDecode(item.Title)}",
                     Description = $"{item.Url}\nDuration: {HttpUtility.HtmlDecode(item.Duration)}",
                     ImageUrl = item.Thumbnail,
-                    Color = RandColor.RandomColor()
+                    Color = Tools.Tools.RandomColor()
                 };
-                await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+                await MessageHandler.SendChannel(Context.Channel, "", embed);
             }
             catch (Exception ex)
             {
                 Bot.Logs.Add(new Models.LogMessage("YTBSrch", "Error with Youtube Search", LogSeverity.Error, ex));
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Description = ex.Message, Color = RandColor.RandomColor() }.Build());
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Description = ex.Message, Color = Tools.Tools.RandomColor() });
             }
         }
         private async Task ImgurS(string query)
@@ -314,7 +314,7 @@ namespace Skuld.Commands
             catch (Exception ex)
             {
                 Bot.Logs.Add(new Models.LogMessage("ImgrSch", "Error with Imgur search", LogSeverity.Error, ex));
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Description = ex.Message, Color = RandColor.RandomColor() }.Build());
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Description = ex.Message, Color = Tools.Tools.RandomColor() });
             }
         }
 
@@ -338,7 +338,7 @@ namespace Skuld.Commands
             if(url != "https://lmgtfy.com/")
                 await MessageHandler.SendChannel(Context.Channel, url);
             else
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with command" }, Color = new Color(255, 0, 0), Description = $"Ensure your parameters are correct, example: `{Config.Load().Prefix}lmgtfy g How to use lmgtfy`" }.Build());
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with command" }, Color = new Color(255, 0, 0), Description = $"Ensure your parameters are correct, example: `{Config.Load().Prefix}lmgtfy g How to use lmgtfy`" });
         }
 
         public string urbanphrase = null;
@@ -365,7 +365,7 @@ namespace Skuld.Commands
                 item["thumbs_down"].ToString());
             EmbedBuilder _embed = new EmbedBuilder()
             {
-                Color = RandColor.RandomColor(),
+                Color = Tools.Tools.RandomColor(),
                 Author = new EmbedAuthorBuilder()
                 {
                     Name = word.Word,
@@ -377,7 +377,7 @@ namespace Skuld.Commands
             _embed.AddField("Example", word.Example??"Not Available");
             _embed.AddField("Upvotes", word.UpVotes??"Not Available");
             _embed.AddField("Downvotes", word.DownVotes??"Not Available");
-            await MessageHandler.SendChannel(Context.Channel, "", _embed.Build());
+            await MessageHandler.SendChannel(Context.Channel, "", _embed);
         }
 
         [Command("wikipedia", RunMode = RunMode.Async), Summary("Gets wikipedia information, supports all languages that wikipedia offers")]
@@ -406,10 +406,10 @@ namespace Skuld.Commands
                     Name = page.Name,
                     Url = page.Url
                 },
-                Color = RandColor.RandomColor()
+                Color = Tools.Tools.RandomColor()
             };
             _embed.AddField("Description", page.Description??"Not Available",true);
-            await MessageHandler.SendChannel(Context.Channel, "", _embed.Build());
+            await MessageHandler.SendChannel(Context.Channel, "", _embed);
         }
 
         [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
@@ -431,7 +431,7 @@ namespace Skuld.Commands
             {
                 embed = new EmbedBuilder()
                 {
-                    Color = RandColor.RandomColor(),
+                    Color = Tools.Tools.RandomColor(),
                     Title = "Command Error!",
                     Description = "This pokemon doesn't exist. Please try again.\nIf it is a Generation 7, pokeapi.co hasn't updated for it yet."
                 };
@@ -448,7 +448,7 @@ namespace Skuld.Commands
                     sprite = pokemon.Sprites.Front;
                 embed = new EmbedBuilder();
                 EmbedAuthorBuilder _auth = new EmbedAuthorBuilder();
-                embed.Color = RandColor.RandomColor();
+                embed.Color = Tools.Tools.RandomColor();
                 if (group == "stat" || group == "stats")
                 {
                     foreach (var stat in pokemon.Stats)
@@ -480,10 +480,10 @@ namespace Skuld.Commands
                 }
                 if (group == "default")
                 {
-                    embed.AddField("Height", pokemon.Height,true);
+                    embed.AddField("Height", pokemon.Height+"mm",true);
                     embed.AddField("Weight", pokemon.Weight + "kg",true);
-                    embed.AddField("ID", pokemon.ID,true);
-                    embed.AddField("Base Experience", pokemon.BaseExperience,true);
+                    embed.AddField("ID", pokemon.ID.ToString(),true);
+                    embed.AddField("Base Experience", pokemon.BaseExperience.ToString(),true);
                 }
                 if (group == "move" || group == "moves")
                 {
@@ -514,7 +514,7 @@ namespace Skuld.Commands
                 embed.Author = _auth;
                 embed.ThumbnailUrl = sprite;
             }
-            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+            await MessageHandler.SendChannel(Context.Channel, "", embed);
         }
 
         [Command("gif", RunMode = RunMode.Async), Summary("Gets a gif")]
@@ -523,7 +523,7 @@ namespace Skuld.Commands
             var rnd = Bot.random;
             var embed = new EmbedBuilder()
             {
-                Color = RandColor.RandomColor(),
+                Color = Tools.Tools.RandomColor(),
                 Author = new EmbedAuthorBuilder()
                 {
                     Name = "Giphy",
@@ -541,7 +541,7 @@ namespace Skuld.Commands
                 var gif = new Gif(item["id"].ToString());
                 embed.Url = gif.Url;
                 embed.ImageUrl = gif.Url;
-                await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+                await MessageHandler.SendChannel(Context.Channel, "", embed);
             }
             catch (Exception ex)
             {
@@ -557,8 +557,8 @@ namespace Skuld.Commands
             await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder()
             {
                 ImageUrl = gif,
-                Color = RandColor.RandomColor()
-            }.Build());
+                Color = Tools.Tools.RandomColor()
+            });
         }
 
         [Command("define", RunMode = RunMode.Async), Summary("Defines a word")]
@@ -573,7 +573,7 @@ namespace Skuld.Commands
             Define definedword = new Define(word,item["definition"].ToString(),item["example"].ToString(),item["partofspeech"].ToString(),item["term"].ToString());
             EmbedBuilder _embed = new EmbedBuilder()
             {
-                Color = RandColor.RandomColor(),
+                Color = Tools.Tools.RandomColor(),
                 Author = new EmbedAuthorBuilder()
                 {
                     Name = definedword.Word
@@ -583,7 +583,7 @@ namespace Skuld.Commands
             _embed.AddField("Example",definedword.Example??"Not Available");
             _embed.AddField("Part of speech",definedword.PartOfSpeech??"Not Available",true);
             _embed.AddField("Terms", definedword.Terms??"Not Available",true);
-            await MessageHandler.SendChannel(Context.Channel, "", _embed.Build());
+            await MessageHandler.SendChannel(Context.Channel, "", _embed);
         }
         
         private MangaArr MangaArray;
@@ -665,7 +665,7 @@ namespace Skuld.Commands
         {
             var _embed = new EmbedBuilder()
             {
-                Color = RandColor.RandomColor(),
+                Color = Tools.Tools.RandomColor(),
                 Author = new EmbedAuthorBuilder()
                 {
                     Url = $"https://myanimelist.net/manga/{mango.Id}/",
@@ -681,7 +681,7 @@ namespace Skuld.Commands
             _embed.AddField("End Date", mango.EndDate ?? "Not Available",true);
             _embed.AddField("Score", mango.Score ?? "Not Available",true);
             _embed.AddField("Synopsis", HttpUtility.HtmlDecode(mango.Synopsis.Split('<')[0]) ?? "Not Available",true);
-            await MessageHandler.SendChannel(Context.Channel, "", _embed.Build());
+            await MessageHandler.SendChannel(Context.Channel, "", _embed);
         }
 
         private AnimeArr AnimeArray;
@@ -763,7 +763,7 @@ namespace Skuld.Commands
         {
             var _embed = new EmbedBuilder()
             {
-                Color = RandColor.RandomColor(),
+                Color = Tools.Tools.RandomColor(),
                 Author = new EmbedAuthorBuilder()
                 {
                     Url = $"https://myanimelist.net/anime/{animu.Id}/",
@@ -778,7 +778,7 @@ namespace Skuld.Commands
             _embed.AddField("End Date",animu.EndDate??"Not Available",true);
             _embed.AddField("Score",animu.Score??"Not Available",true);
             _embed.AddField("Synopsis",HttpUtility.HtmlDecode(animu.Synopsis.Split('<')[0])??"Not Available",true);
-            await MessageHandler.SendChannel(Context.Channel, "", _embed.Build());
+            await MessageHandler.SendChannel(Context.Channel, "", _embed);
         }
     }
 }

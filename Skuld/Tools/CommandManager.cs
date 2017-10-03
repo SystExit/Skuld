@@ -7,6 +7,7 @@ using System.Linq;
 using MySql.Data.MySqlClient;
 using System.IO;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Skuld.Tools
 {
@@ -14,10 +15,13 @@ namespace Skuld.Tools
     {
         private static string defaultPrefix = Config.Load().Prefix;
         private static string customPrefix = null;
+        public static Stopwatch CommandStopWatch;
         public static async Task Bot_MessageReceived(SocketMessage arg)
         {
             if (!arg.Author.IsBot)
             {
+                CommandStopWatch = new Stopwatch();
+                CommandStopWatch.Start();
                 var message = arg as SocketUserMessage;
                 if (message == null) return;
                 int argPos = 0;
@@ -179,8 +183,7 @@ namespace Skuld.Tools
                             if (result.Error != CommandError.UnknownCommand)
                             {
                                 Logs.Add(new Models.LogMessage("CmdHand", "Error with command, Error is: " + result, LogSeverity.Error));
-                                if (result.Error == CommandError.UnmetPrecondition || result.Error == CommandError.BadArgCount)
-                                    await MessageHandler.SendChannel(context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = Convert.ToString(result.ErrorReason), Color = new Color(255, 0, 0) }.Build());
+                                await MessageHandler.SendChannel(context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = Convert.ToString(result.ErrorReason), Color = new Color(255, 0, 0) });
                             }
                         }
                     }
@@ -197,7 +200,7 @@ namespace Skuld.Tools
             var user = arg.Author;
             MySqlCommand command = new MySqlCommand("SELECT UserUsage FROM commandusage WHERE UserID = @userid AND Command = @command");
             command.Parameters.AddWithValue("@userid", user.Id);
-            command.Parameters.AddWithValue("@command", Command.Name);
+            command.Parameters.AddWithValue("@command", Command.Name??Command.Module.Name);
             var resp = await SqlTools.GetSingleAsync(command);
             if (!String.IsNullOrEmpty(resp))
             {
@@ -206,7 +209,7 @@ namespace Skuld.Tools
                 command = new MySqlCommand("UPDATE commandusage SET UserUsage = @userusg WHERE UserID = @userid AND Command = @command");
                 command.Parameters.AddWithValue("@userusg", cmdusg);
                 command.Parameters.AddWithValue("@userid", user.Id);
-                command.Parameters.AddWithValue("@command", Command.Name);
+                command.Parameters.AddWithValue("@command", Command.Name ?? Command.Module.Name);
                 await SqlTools.InsertAsync(command);
                 return;
             }
@@ -215,7 +218,7 @@ namespace Skuld.Tools
                 command = new MySqlCommand("INSERT INTO commandusage (`UserID`, `UserUsage`, `Command`) VALUES (@userid , @userusg , @command)");
                 command.Parameters.AddWithValue("@userusg", 1);
                 command.Parameters.AddWithValue("@userid", user.Id);
-                command.Parameters.AddWithValue("@command", Command.Name);
+                command.Parameters.AddWithValue("@command", Command.Name ?? Command.Module.Name);
                 await SqlTools.InsertAsync(command);
                 return;
             }

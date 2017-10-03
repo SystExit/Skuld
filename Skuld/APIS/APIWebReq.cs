@@ -191,23 +191,13 @@ namespace Skuld.APIS
                 }
             }
         }
-        public static async Task<string> ScrapeUrl(Uri url)
+        public static Task<string> DownloadFile(Uri url, string filepath)
         {
-            string data = null;
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-            HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync();
-            if (response.StatusCode == HttpStatusCode.OK)
-            {
-                Stream RStream = response.GetResponseStream();
-                StreamReader SR = null;
-                SR = new StreamReader(RStream);
-                data = await SR.ReadToEndAsync();
-                request.Abort();
-            }
-            if (!String.IsNullOrEmpty(data))
-                return data;
-            else
-                return null;
+            var client = new WebClient();
+            var thing = client.DownloadFileTaskAsync(url, filepath);
+            while (thing.Status != TaskStatus.RanToCompletion)
+            { }         
+            return Task.FromResult(filepath);
         }
     }
 }

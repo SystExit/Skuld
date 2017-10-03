@@ -15,6 +15,9 @@ using CowsaySharp.Library;
 using System.IO;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
+using System.Media;
+using System.Drawing;
+using System.Drawing.Imaging;
 
 namespace Skuld.Commands
 {
@@ -127,7 +130,7 @@ namespace Skuld.Commands
             if (item["neko"].ToString() != null)
             {
                 var neko = item["neko"];
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { ImageUrl = neko }.Build());
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { ImageUrl = neko });
             }
         }
 
@@ -139,7 +142,7 @@ namespace Skuld.Commands
             if (videoext.Any(kitty.ImageURL.Contains))
                 await MessageHandler.SendChannel(Context.Channel, kitty.ImageURL);
             else
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = RandColor.RandomColor(), ImageUrl = kitty.ImageURL }.Build());
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = Tools.Tools.RandomColor(), ImageUrl = kitty.ImageURL });
         }
         [Command("doggo", RunMode = RunMode.Async), Summary("doggo")]
         [Alias("dog", "dogs", "doggy")]
@@ -149,13 +152,13 @@ namespace Skuld.Commands
             if (videoext.Any(doggo.ImageURL.Contains))
                 await MessageHandler.SendChannel(Context.Channel, doggo.ImageURL);
             else
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = RandColor.RandomColor(), ImageUrl = doggo.ImageURL }.Build());
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = Tools.Tools.RandomColor(), ImageUrl = doggo.ImageURL });
         }
         [Command("llama", RunMode = RunMode.Async), Summary("Llama")]
         public async Task Llama()
         {
             var llama = JsonConvert.DeserializeObject<Animal>(await APIWebReq.ReturnString(new Uri("https://api.systemexit.co.uk/animals/llama/random")));
-            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = RandColor.RandomColor(), ImageUrl = llama.FileUrl }.Build());
+            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = Tools.Tools.RandomColor(), ImageUrl = llama.FileUrl });
         }
         
         [Command("eightball", RunMode = RunMode.Async), Summary("Eightball")]
@@ -205,14 +208,14 @@ namespace Skuld.Commands
                 {
                     EmbedBuilder _embed = new EmbedBuilder()
                     {
-                        Color = RandColor.RandomColor(),
+                        Color = Tools.Tools.RandomColor(),
                         Title = Pasta.PastaName
                     };
                     _embed.AddField("Author",Pasta.Username,true);
                     _embed.AddField("Created", Pasta.Created,true);
-                    _embed.AddField("UpVotes", Pasta.Upvotes,true);
-                    _embed.AddField("DownVotes", Pasta.Downvotes,true);
-                    await MessageHandler.SendChannel(Context.Channel, "", _embed.Build());
+                    _embed.AddField("UpVotes", ":arrow_double_up: " + Pasta.Upvotes,true);
+                    _embed.AddField("DownVotes", ":arrow_double_down: " + Pasta.Downvotes,true);
+                    await MessageHandler.SendChannel(Context.Channel, "", _embed);
                 }
                 if (cmd == "upvote")
                 {
@@ -429,7 +432,7 @@ namespace Skuld.Commands
             else if (int2 > 151 || int2 < 0)
                 await MessageHandler.SendChannel(Context.Channel,$"{int2} over/under limit. (151)");
             else
-                await MessageHandler.SendChannel(Context.Channel,"", new EmbedBuilder() { Color = RandColor.RandomColor(), ImageUrl = $"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png" }.Build());
+                await MessageHandler.SendChannel(Context.Channel,"", new EmbedBuilder() { Color = Tools.Tools.RandomColor(), ImageUrl = $"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png" });
         }
 
         [Command("strawpoll", RunMode = RunMode.Async), Summary("Creates Strawpoll")]
@@ -453,7 +456,7 @@ namespace Skuld.Commands
                     Name = poll.Title,
                     Url = poll.Url
                 },
-                Color = RandColor.RandomColor(),
+                Color = Tools.Tools.RandomColor(),
                 Footer = new EmbedFooterBuilder()
                 {
                     Text = "Strawpoll ID: " + poll.ID
@@ -463,7 +466,7 @@ namespace Skuld.Commands
             for (int z = 0; z < poll.Options.Length; z++)
                 _embed.AddField(poll.Options[z], poll.Votes[z]);
 
-            await MessageHandler.SendChannel(Context.Channel, "", _embed.Build());
+            await MessageHandler.SendChannel(Context.Channel, "", _embed);
         }
 
         [Command("emoji", RunMode = RunMode.Async), Summary("Turns text into bigmoji")]
@@ -548,7 +551,7 @@ namespace Skuld.Commands
             EmbedBuilder _embed = new EmbedBuilder();
             EmbedAuthorBuilder _author = new EmbedAuthorBuilder();
             EmbedFooterBuilder _footer = new EmbedFooterBuilder();
-            _embed.Color = RandColor.RandomColor();
+            _embed.Color = Tools.Tools.RandomColor();
             _author.Name = "Randall Patrick Munroe - XKCD";
             _author.Url = "https://xkcd.com/" + comic.num + "/";
             _author.IconUrl = "https://xkcd.com/favicon.ico";
@@ -562,7 +565,7 @@ namespace Skuld.Commands
             _embed.Author = _author;
             _embed.Footer = _footer;
 
-            await MessageHandler.SendChannel(Context.Channel,string.Empty, _embed.Build());
+            await MessageHandler.SendChannel(Context.Channel,string.Empty, _embed);
         }
 
         [Command("time", RunMode = RunMode.Async), Summary("Gets current time")]
@@ -600,8 +603,8 @@ namespace Skuld.Commands
             {
                 Title = joke,
                 Description = punchline,
-                Color = RandColor.RandomColor()
-            }.Build());
+                Color = Tools.Tools.RandomColor()
+            });
         }
         [Command("pickup",RunMode = RunMode.Async),Summary("Cringe at these bad user-submitted pick up lines. (Don't actually use these or else you'll get laughed at. :3)"),Alias("pickupline")]
         public async Task PickUp()
@@ -614,8 +617,8 @@ namespace Skuld.Commands
             {
                 Title = part1,
                 Description = part2??"",
-                Color = RandColor.RandomColor()
-            }.Build());
+                Color = Tools.Tools.RandomColor()
+            });
         }
         [Command("cowsay",RunMode = RunMode.Async),Summary("Make an ascii cow say some things.")]
         public async Task CowSay([Remainder]string message)
@@ -713,13 +716,13 @@ namespace Skuld.Commands
             var PictureOfTheDay = await APIWebReq.NasaAPOD();
             var embed = new EmbedBuilder()
             {
-                Color = RandColor.RandomColor(),
+                Color = Tools.Tools.RandomColor(),
                 Title = PictureOfTheDay.Title,
                 Url = "https://apod.nasa.gov/",
                 ImageUrl = PictureOfTheDay.HDUrl,
                 Timestamp = Convert.ToDateTime(PictureOfTheDay.Date)
             };
-            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+            await MessageHandler.SendChannel(Context.Channel, "", embed);
         }
         [Command("choose", RunMode = RunMode.Async), Summary("Choose from things")]
         public async Task Choose([Remainder]string choices)
@@ -741,6 +744,80 @@ namespace Skuld.Commands
         public async Task Heal(int hp, [Remainder]IGuildUser User)
         {
 
+        }
+        [Command("theworld",RunMode = RunMode.Async),Alias("zawarudo","the world","dio")]
+        public async Task ZaWarudo()
+        {
+            if (Context.Message.Attachments.Count <= 0)
+                await MessageHandler.SendChannel(Context.Channel, "<:blobnotsure:350673785021661186> You haven't uploaded or linked to an image... ");
+            else
+            {
+                var filepath = await APIWebReq.DownloadFile(new Uri(Context.Message.Attachments.FirstOrDefault().Url), Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo", Context.Message.Id.ToString()) + "old.png");
+                Bitmap BMap = null;
+                try
+                {
+                    BMap = (Bitmap)System.Drawing.Image.FromStream(new MemoryStream(File.ReadAllBytes(filepath), true));
+                }
+                catch (OutOfMemoryException ex)
+                {
+                    await MessageHandler.SendChannel(Context.Channel, "The file you have uploaded was not an image, or an error occured.");
+                }
+                finally
+                {
+                    File.Delete(filepath);
+                }
+                var image = InverseImage(BMap);
+                var newfilepath = Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo", Context.Message.Id.ToString()) + ".png";
+                image.Save(newfilepath, System.Drawing.Imaging.ImageFormat.Png);
+                await MessageHandler.SendChannel(Context.Channel, "", null, newfilepath);
+                File.Delete(filepath);
+                File.Delete(newfilepath);
+            }
+        }
+        [Command("theworld", RunMode = RunMode.Async), Alias("zawarudo", "the world", "dio")]
+        public async Task ZaWarudo([Remainder]string link)
+        {
+            var filepath = await APIWebReq.DownloadFile(new Uri(link), Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo", Context.Message.Id.ToString()) + "old.png");
+            Bitmap BMap = null;
+            try
+            {
+                BMap = (Bitmap)System.Drawing.Image.FromStream(new MemoryStream(File.ReadAllBytes(filepath), true));
+            }
+            catch(OutOfMemoryException ex)
+            {
+                await MessageHandler.SendChannel(Context.Channel, "The file you have uploaded was not an image, or an error occured.");
+            }
+            finally
+            {
+                File.Delete(filepath);
+            }
+            var image = InverseImage(BMap);
+            var newfilepath = Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo", Context.Message.Id.ToString()) + ".png";
+            image.Save(newfilepath, System.Drawing.Imaging.ImageFormat.Png);
+            await MessageHandler.SendChannel(Context.Channel, "", null, newfilepath);
+            File.Delete(filepath);
+            File.Delete(newfilepath);
+        }
+        private static System.Drawing.Image InverseImage(Bitmap Image)
+        {
+            try
+            {
+                System.Drawing.Color Colour;
+                for (int x = 0; x < Image.Width; x++)
+                {
+                    for (int y = 0; y < Image.Height; y++)
+                    {
+                        Colour = Image.GetPixel(x, y);
+                        Image.SetPixel(x, y, System.Drawing.Color.FromArgb(255 - Colour.R, 255 - Colour.G, 255 - Colour.B));
+                    }
+                }
+                return Image;
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex);
+                return null;
+            }
         }
     }
 }

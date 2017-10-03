@@ -37,7 +37,7 @@ namespace Skuld.Events
                             tolog = ConsoleUtils.PrettyLines(loglines, 2);
                             toconsole = toconsole + " CHECK LOGS FOR MORE INFO!";
                         }
-                        else { tolog = toconsole; }
+                        else { tolog = ConsoleUtils.PrettyLines(new List<string[]>() { new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.DSeverity.ToString()[0] + "]", item.Message } }, 2); }
                         sw.WriteLineAsync(tolog).Wait();
                         sw.FlushAsync().Wait();
                         if (item.DSeverity == Discord.LogSeverity.Critical || item.TSeverity == NTwitch.LogSeverity.Critical)

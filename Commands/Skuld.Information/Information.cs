@@ -6,10 +6,14 @@ using System.Linq;
 using Skuld.Tools;
 using Discord.WebSocket;
 using System.Globalization;
+using Skuld.APIS;
+using HtmlAgilityPack;
+using System.Net;
+using NodaTime;
 
 namespace Skuld.Commands
 {
-    [Group,Name("Information")]
+    [Group, Name("Information")]
     public class Information : ModuleBase
     {
         private string streamingemote = "<:streaming:313956277132853248>";
@@ -18,6 +22,7 @@ namespace Skuld.Commands
         private string dontdisturbemote = "<:dnd:313956276893646850>";
         private string invisibleemote = "<:invisible:313956277107556352>";
         private string offlineemote = "<:offline:313956277237710868>";
+            
 
         [Command("server", RunMode = RunMode.Async), Summary("Gets information about the server")]
         public async Task GetServer()
@@ -25,7 +30,7 @@ namespace Skuld.Commands
             var bot = Bot.bot;
             var guild = Context.Guild;
             var roles = guild.Roles;
-            EmbedBuilder _embed = new EmbedBuilder() { Color = RandColor.RandomColor() };
+            EmbedBuilder _embed = new EmbedBuilder() { Color = Tools.Tools.RandomColor() };
             if (!String.IsNullOrEmpty(guild.IconUrl))
                 _embed.ThumbnailUrl = guild.IconUrl;
             _embed.Author = new EmbedAuthorBuilder() { Name = guild.Name };
@@ -44,8 +49,8 @@ namespace Skuld.Commands
             _embed.AddField("Verification Level", guild.VerificationLevel.ToString(),true);
             _embed.AddField("Voice Region ID", guild.VoiceRegionId.ToString(),true);
             _embed.AddField("Owner", owner.Nickname??owner.Username + "#" + owner.DiscriminatorValue,true);
-            _embed.AddField("Text Channels", (await guild.GetTextChannelsAsync()).Count(),true);
-            _embed.AddField("Voice Channels", (await guild.GetVoiceChannelsAsync()).Count(),true);
+            _embed.AddField("Text Channels", (await guild.GetTextChannelsAsync()).Count()+" channels",true);
+            _embed.AddField("Voice Channels", (await guild.GetVoiceChannelsAsync()).Count()+ "channels",true);
             int seconds = guild.AFKTimeout;
             string minutes = ((seconds % 3600) / 60).ToString();
             _embed.AddField("AFK Timeout", minutes + " minutes",true);
@@ -56,7 +61,7 @@ namespace Skuld.Commands
             _embed.AddField("Created", guild.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
             _embed.AddField("Emojis", guild.Emotes.Count.ToString() + Environment.NewLine + $"Use `{Bot.Prefix}server emojis` to view all of the emojis");
             _embed.AddField("Roles", guild.Roles.Count() + Environment.NewLine + $"Use `{Bot.Prefix}server roles` to view all of the roles");
-            await MessageHandler.SendChannel((ITextChannel)Context.Channel,"", _embed.Build());
+            await MessageHandler.SendChannel((ITextChannel)Context.Channel,"", _embed);
         }
         [Command("server emojis", RunMode = RunMode.Async), Alias("server emoji")]
         public async Task ServerEmoji()
@@ -275,7 +280,7 @@ namespace Skuld.Commands
 
             EmbedBuilder embed = new EmbedBuilder()
             {
-                Color = RandColor.RandomColor(),
+                Color = Tools.Tools.RandomColor(),
                 Author = new EmbedAuthorBuilder() { IconUrl = whois.GetAvatarUrl(ImageFormat.Auto) ?? "", Name = whois.Username+$"#{whois.DiscriminatorValue} {Nickname??""}"  },
                 ImageUrl = whois.GetAvatarUrl(ImageFormat.Auto) ?? ""
             };
@@ -299,7 +304,7 @@ namespace Skuld.Commands
             embed.AddField(":shield: Roles", $"Do `{Config.Load().Prefix}roles` to see your roles");
             embed.AddField(":inbox_tray: Server Join", whois.JoinedAt.Value.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
             embed.AddField(":globe_with_meridians: Discord Join", whois.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
-            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+            await MessageHandler.SendChannel(Context.Channel, "", embed);
         }
         [Command("roles", RunMode = RunMode.Async), Summary("Gets your current roles")]
         public async Task GetRole() =>
@@ -331,10 +336,62 @@ namespace Skuld.Commands
             await MessageHandler.SendChannel(Context.Channel, $"Your DateTime ({datetime.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")}) in epoch is: {epochdt}");
         }
         [Command("epoch", RunMode = RunMode.Async), Summary("epoch to DateTime format")]
-        public async Task Task(ulong epoch)
+        public async Task Epoch(ulong epoch)
         {
             var epochtodt = new DateTime(1970, 1, 1, 0, 0, 0,DateTimeKind.Utc).AddSeconds(Convert.ToDouble(epoch));
             await MessageHandler.SendChannel(Context.Channel, $"Your epoch ({epoch}) in DateTime is: {epochtodt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")}");
         }
+        [Command("isup", RunMode = RunMode.Async), Summary("Check if a website is online"),Alias("downforeveryone","isitonline")]
+        public async Task IsUp(string Website)
+        {
+            var client = new WebClient();
+            var data = client.DownloadString(new Uri("http://downforeveryoneorjustme.com/" + Website));
+            string response = "";            
+            var doc = new HtmlDocument();
+            doc.LoadHtml(data);
+            var container = doc.GetElementbyId("container");
+            var isup = container.ChildNodes.FindFirst("p");
+            if (isup.InnerHtml.ToLowerInvariant().Contains("not"))
+                response = $"The website: `{Website}` is down or not replying.";
+            else
+                response = $"The website: `{Website}` is working and replying as intended.";
+            await MessageHandler.SendChannel(Context.Channel, response);
+        }
+        [Command("time"), Summary("Converts a time to a set of times")]
+        public async Task ConvertTime(string primarytimezone, string time, [Remainder]string timezones)
+        {
+            try
+            {
+                string[] usertimes = timezones.Split(' ');
+                string response = $"The requested time of: {primarytimezone} - {time} is:```";
+                var PrimaryDateTime = Convert.ToDateTime(time);
+
+                foreach (var usertime in usertimes)
+                {
+                    var ConvertedTime = ConvertDateTimeToDifferentTimeZone(PrimaryDateTime, primarytimezone, usertime);
+                    response += $"\n{usertime} - {ConvertedTime}";
+                }
+
+                await MessageHandler.SendChannel(Context.Channel, response + "```");
+            }
+            catch
+            {
+                
+            }        
+        }        
+
+        //https://stackoverflow.com/questions/39208477/is-this-the-proper-way-to-convert-between-time-zones-in-nodatime
+        public static DateTime ConvertDateTimeToDifferentTimeZone(DateTime fromDateTime, string fromZoneId, string toZoneId)
+        {
+            LocalDateTime fromLocal = LocalDateTime.FromDateTime(fromDateTime);
+            DateTimeZone fromZone = DateTimeZoneProviders.Tzdb[fromZoneId];
+            ZonedDateTime fromZoned = fromLocal.InZoneLeniently(fromZone);
+
+            DateTimeZone toZone = DateTimeZoneProviders.Tzdb[toZoneId];
+            ZonedDateTime toZoned = fromZoned.WithZone(toZone);
+            LocalDateTime toLocal = toZoned.LocalDateTime;
+            return toLocal.ToDateTimeUnspecified();
+        }
+
     }
 }

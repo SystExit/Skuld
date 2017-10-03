@@ -24,7 +24,7 @@ namespace Skuld.Commands
                     Name = "Commands of: " + Context.Client.CurrentUser.Username + "#" + Context.Client.CurrentUser.DiscriminatorValue,
                     IconUrl = Context.Client.CurrentUser.GetAvatarUrl()
                 },
-                Color = RandColor.RandomColor()
+                Color = Tools.Tools.RandomColor()
             };
             foreach (var module in Bot.commands.Modules)
             {
@@ -48,7 +48,7 @@ namespace Skuld.Commands
                 }
             }
             embed.Description = $"The prefix of **{Context.Guild.Name}** is: `{resp ?? Prefix}`";
-            await MessageHandler.SendDMs(Context.Channel, (await Context.User.GetOrCreateDMChannelAsync()), "", embed.Build());
+            await MessageHandler.SendDMs(Context.Channel, (await Context.User.GetOrCreateDMChannelAsync()), "", embed);
         }
         [Command("help", RunMode = RunMode.Async), Summary("Gets specific command information")]
         public async Task _Help(string command)
@@ -66,7 +66,7 @@ namespace Skuld.Commands
                 EmbedBuilder embed = new EmbedBuilder()
                 {
                     Description = $"Here are some commands like **{command}**",
-                    Color = RandColor.RandomColor()
+                    Color = Tools.Tools.RandomColor()
                 };
 
                 foreach (var match in result.Commands)
@@ -81,7 +81,7 @@ namespace Skuld.Commands
                         x.IsInline = false;
                     });
                 }
-                await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+                await MessageHandler.SendChannel(Context.Channel, "", embed);
             }
             else { }
         }

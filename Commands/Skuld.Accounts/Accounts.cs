@@ -46,7 +46,7 @@ namespace Skuld.Commands
                 {
                     var embed = new EmbedBuilder()
                     {
-                        Color = RandColor.RandomColor(),
+                        Color = Tools.Tools.RandomColor(),
                         Author = new EmbedAuthorBuilder()
                         {
                             Name = User.Username,
@@ -64,7 +64,7 @@ namespace Skuld.Commands
                         embed.AddField("Favourite Command", $"`{User.FavCmd}` and it has been used {User.FavCmdUsg} times",true);
                     else
                         embed.AddField("Favourite Command", "No favourite Command",true);
-                    await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+                    await MessageHandler.SendChannel(Context.Channel, "", embed);
                 }
                 else
                 {
@@ -74,7 +74,7 @@ namespace Skuld.Commands
             }
             catch (Exception ex)
             {
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = ex.Message, Color = new Color(255, 0, 0) }.Build());
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = ex.Message, Color = new Color(255, 0, 0) });
                 Console.WriteLine(ex);
             }            
         }
@@ -93,7 +93,7 @@ namespace Skuld.Commands
                     EmbedBuilder embed = new EmbedBuilder()
                     {
                         Author = new EmbedAuthorBuilder() { Name = User.Username, IconUrl = user.GetAvatarUrl() ?? "http://www.emoji.co.uk/files/mozilla-emojis/smileys-people-mozilla/11419-bust-in-silhouette.png" },
-                        Color = RandColor.RandomColor()
+                        Color = Tools.Tools.RandomColor()
                     };
                     embed.AddField("Description", User.Description ?? "No Description",true);
                     embed.AddField(Config.Load().MoneyName, User.Money.Value.ToString("N0") ?? "No Money",true);
@@ -119,14 +119,14 @@ namespace Skuld.Commands
                     else
                         embed.AddField("Petted", "Not petted anyone",true);
                     if (User.HP > 0)
-                        embed.AddField("HP", User.HP,true);
+                        embed.AddField("HP", User.HP + " HP",true);
                     else
                         embed.AddField("HP", "No HP",true);
                     if (User.FavCmd != null && User.FavCmdUsg != null)
                         embed.AddField("Favourite Command", $"`{User.FavCmd}` and it has been used {User.FavCmdUsg} times",true);
                     else
                         embed.AddField("Favourite Command", "No favourite Command",true);
-                    await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+                    await MessageHandler.SendChannel(Context.Channel, "", embed);
                 }
                 else
                 {
@@ -136,7 +136,7 @@ namespace Skuld.Commands
             }
             catch(Exception ex)
             {
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = ex.Message, Color = new Color(255, 0, 0) }.Build());
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = ex.Message, Color = new Color(255, 0, 0) });
                 var appinfo = await Bot.bot.GetApplicationInfoAsync();
                 await appinfo.Owner.SendMessageAsync(ex.ToString());
             }            
@@ -213,7 +213,7 @@ namespace Skuld.Commands
         [Command("daily", RunMode = RunMode.Async), Summary("Daily Money")]
         public async Task GiveDaily([Remainder]IGuildUser usertogive)
         {
-            if (usertogive.IsBot) { await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = "Bot Accounts cannot be given any money", Color = new Color(255,0,0) }.Build()); }
+            if (usertogive.IsBot) { await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = "Bot Accounts cannot be given any money", Color = new Color(255,0,0) }); }
             else
             {
                 DateTime olddate = new DateTime();
@@ -365,11 +365,11 @@ namespace Skuld.Commands
                 await SqlTools.InsertAsync(cmd).ContinueWith(async x=>
                 {
                 if (x.IsCompleted)
-                    await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Success" }, Description = "Synced your username :D", Color = RandColor.RandomColor() }.Build());
+                    await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Success" }, Description = "Synced your username :D", Color = Tools.Tools.RandomColor() });
                 });
             }
             else
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error" }, Description = "Your username is already the same as the one I have on record.", Color = new Color(255, 0, 0) }.Build());
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error" }, Description = "Your username is already the same as the one I have on record.", Color = new Color(255, 0, 0) });
         }
 
         private async Task InsertUser(IUser user)

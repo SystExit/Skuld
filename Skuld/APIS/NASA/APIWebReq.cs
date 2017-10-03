@@ -12,7 +12,6 @@ namespace Skuld.APIS
     {
         public static async Task<APOD> NasaAPOD()
         {
-            //X-RateLimit-Remaining
             HttpWebRequest client = (HttpWebRequest)WebRequest.Create("https://api.nasa.gov/planetary/apod?api_key=" + Config.Load().NASAApiKey);
             HttpWebResponse response = (HttpWebResponse)await client.GetResponseAsync();
             int remainingcalls = 0;
@@ -31,10 +30,8 @@ namespace Skuld.APIS
                 var stringifiedresp = await sr.ReadToEndAsync();
                 return JsonConvert.DeserializeObject<APOD>(stringifiedresp);
             }
-            else
-            {
-                return null;
-            }
+            else            
+                return null;            
         }
     }
 }

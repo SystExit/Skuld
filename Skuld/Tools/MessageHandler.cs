@@ -3,13 +3,12 @@ using System.Threading.Tasks;
 using Discord;
 using System.Timers;
 using System.Diagnostics;
-using System.Linq;
 
 namespace Skuld.Tools
 {
     public partial class MessageHandler
     {
-        public static async Task<IUserMessage> SendChannel(IChannel channel, string message, Embed embed = null)
+        public static async Task<IUserMessage> SendChannel(IChannel channel, string message, Embed embed = null, string filename = null)
         {
             var TextChan = (ITextChannel)channel;
             var MesgChan = (IMessageChannel)channel;
@@ -18,7 +17,12 @@ namespace Skuld.Tools
             try
             {
                 if (embed == null)
-                    Message = await MesgChan.SendMessageAsync(message);
+                {
+                    if(filename == null)
+                        Message = await MesgChan.SendMessageAsync(message);
+                    else
+                        Message = await MesgChan.SendFileAsync(filename, message);
+                }
                 else
                 {
                     var perm = (await TextChan.Guild.GetUserAsync(Bot.bot.CurrentUser.Id)).GetPermissions(TextChan).EmbedLinks;
@@ -42,15 +46,24 @@ namespace Skuld.Tools
             }
         }
         private static IUserMessage dmsg = null;
-        public static async Task SendChannel(IChannel channel, string message, double Timeout, Embed embed = null)
+        public static async Task SendChannel(IChannel channel, string message, double Timeout, EmbedBuilder embed = null, string filename = null)
         {
+            var cmdstopwatch = CommandManager.CommandStopWatch;
+            cmdstopwatch.Stop();
+
+            embed.Footer.Text = "Command took " + cmdstopwatch.ElapsedMilliseconds + "ms";
             var TextChan = (ITextChannel)channel;
             var MesgChan = (IMessageChannel)channel;
             await MesgChan.TriggerTypingAsync();
             try
             {
                 if (embed == null)
-                    dmsg = await MesgChan.SendMessageAsync(message);
+                {
+                    if (filename == null)
+                        dmsg = await MesgChan.SendMessageAsync(message);
+                    else
+                        dmsg = await MesgChan.SendFileAsync(filename, message);
+                }
                 else
                 {
                     var perm = (await TextChan.Guild.GetUserAsync(Bot.bot.CurrentUser.Id)).GetPermissions(TextChan).EmbedLinks;

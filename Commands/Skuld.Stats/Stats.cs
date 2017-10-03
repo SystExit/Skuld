@@ -42,12 +42,12 @@ namespace Skuld.Commands
                 ThumbnailUrl = (await Context.Guild.GetCurrentUserAsync()).GetAvatarUrl(),
                 Timestamp = DateTime.Now,
                 Title = "Stats",
-                Color = RandColor.RandomColor()
+                Color = Tools.Tools.RandomColor()
             };
             
-            embed.AddField("Version",Assembly.GetEntryAssembly().GetName().Version,true);
+            embed.AddField("Version",Assembly.GetEntryAssembly().GetName().Version.ToString(),true);
             embed.AddField("Uptime",string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime)),true);
-            embed.AddField( "Pong",Bot.bot.GetShardFor(Context.Guild).Latency + "ms",true);
+            embed.AddField("Pong",Bot.bot.GetShardFor(Context.Guild).Latency + "ms",true);
             embed.AddField("Guilds", Bot.bot.Guilds.Count().ToString(),true);
             embed.AddField("Shards", Bot.bot.Shards.Count().ToString(),true);
 
@@ -55,11 +55,11 @@ namespace Skuld.Commands
             cpuCounter = new PerformanceCounter("Process", "% Processor Time", currProcess.ProcessName);
             ramCounter = new PerformanceCounter("Memory", "Available MBytes");
 
-            embed.AddField("Commands", Bot.commands.Commands.Count(),true);
+            embed.AddField("Commands", Bot.commands.Commands.Count().ToString(),true);
             embed.AddField("CPU Load", GetCurrentCpuUsage(),true);
             embed.AddField("Memory Used", (currProcess.WorkingSet64 / 1024) / 1024 + "MB",true);
 
-            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+            await MessageHandler.SendChannel(Context.Channel, "", embed);
         }
         [Command("netfw", RunMode = RunMode.Async), Summary(".Net Info")]
         public async Task Netinfo()=>
@@ -76,7 +76,7 @@ namespace Skuld.Commands
                 ThumbnailUrl = (await Context.Guild.GetCurrentUserAsync()).GetAvatarUrl(),
                 Timestamp = DateTime.Now,
                 Title = "System Load",
-                Color = RandColor.RandomColor(),
+                Color = Tools.Tools.RandomColor(),
                 Author = new EmbedAuthorBuilder()
                 {
                     IconUrl = (await Context.Guild.GetCurrentUserAsync()).GetAvatarUrl(),
@@ -91,7 +91,7 @@ namespace Skuld.Commands
             embed.AddField("Total Free Ram", GetAvailableRAM(),true); 
             embed.AddField("Uptime", $"{UpTime.Days} day(s) {UpTime.Hours}:{UpTime.Minutes}:{UpTime.Seconds}",true);
             embed.AddField("OS", Environment.OSVersion+" "+RuntimeInformation.OSArchitecture,true);
-            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+            await MessageHandler.SendChannel(Context.Channel, "", embed);
         }
 
         public string GetCurrentCpuUsage()
