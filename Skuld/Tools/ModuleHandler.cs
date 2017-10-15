@@ -71,15 +71,15 @@ namespace Skuld.Tools
             {
                 Bot.Logs.Add(new Models.LogMessage("ModH-CD", "No modules found, ignoring...", LogSeverity.Warning));
                 Directory.CreateDirectory(CurrentDir);
-                return Task.FromResult(false);
+                return Task.FromResult(result: false);
             }
             else if(Directory.GetFiles(CurrentDir).Length == 0)
             {
-                return Task.FromResult(false);
+                return Task.FromResult(result: false);
             }
             else
             {
-                return Task.FromResult(true);
+                return Task.FromResult(result: true);
             }
         }
 
@@ -151,15 +151,16 @@ namespace Skuld.Tools
         {
             string modulename = mod.Split('\\')[mod.Split('\\').Count() - 1];
             modulename = modulename.Remove(modulename.Length - 4);
-            if (ModuleMap.Where(x=> x.Key == modulename).FirstOrDefault().Value||modulename.ToLower()=="help"||modulename.ToLower()=="owner")
+            if (ModuleMap.FirstOrDefault(x=> x.Key == modulename).Value||modulename.ToLower()=="help"||modulename.ToLower()=="owner")
             {
-                FileVersionInfo fvi = FileVersionInfo.GetVersionInfo(mod);
-                Assembly assemblymod = Assembly.Load(File.ReadAllBytes(mod));
+                var fvi = FileVersionInfo.GetVersionInfo(mod);
+                var assemblymod = Assembly.Load(File.ReadAllBytes(mod));
                 foreach (var module in Bot.commands.Modules)
                 {
                     if (module.Name == assemblymod.GetName().Name) return false;
                 }
-                if (assemblymod.GetName().Version < Assembly.GetExecutingAssembly().GetName().Version) throw new Exceptions.IncorrectVersionException($"{assemblymod.GetName().Name}.lmod will not work with this version of Skuld!");
+                if (assemblymod.GetName().Version < Assembly.GetExecutingAssembly().GetName().Version)
+                    throw new Exceptions.IncorrectVersionException($"{assemblymod.GetName().Name}.lmod will not work with this version of Skuld!");
                 try
                 {
                     await Bot.commands.AddModulesAsync(assemblymod);

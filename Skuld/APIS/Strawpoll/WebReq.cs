@@ -9,13 +9,13 @@ namespace Skuld.APIS
 {
     public partial class APIWebReq
     {
-        public static async Task<RecievePoll> SendPoll(string PollTitle, string[] polloptions)
+        public static async Task<RecievePoll> SendPoll(string title, string[] polloptions)
         {
             try
             {
-                SendPoll sendpoll = new SendPoll(PollTitle, polloptions);
+                var sendpoll = new SendPoll(title, polloptions);
                 var sendpollserialized = JsonConvert.SerializeObject(sendpoll);
-                var post = await APIWebReq.PostString(new Uri("https://strawpoll.me/api/v2/polls"), new StringContent(sendpollserialized, Encoding.UTF8, "application/json"));
+                var post = await PostString(new Uri("https://strawpoll.me/api/v2/polls"), new StringContent(sendpollserialized, Encoding.UTF8, "application/json"));
                 return JsonConvert.DeserializeObject<RecievePoll>(post);
             }
             catch (Exception ex)
@@ -28,7 +28,7 @@ namespace Skuld.APIS
         {
             try
             {
-                var result = await APIWebReq.ReturnString(new Uri("https://strawpoll.me/api/v2/polls/" + pollid));
+                var result = await ReturnString(new Uri("https://strawpoll.me/api/v2/polls/" + pollid));
                 return JsonConvert.DeserializeObject<RecievePoll>(result);
             }
             catch (Exception ex)
@@ -42,7 +42,7 @@ namespace Skuld.APIS
             try
             {
                 int pollid = 0;
-                string[] urlarr = url.Split('/');
+                var urlarr = url.Split('/');
                 for (int x = 0; x < urlarr.Length; x++)
                 {
                     if (x > 0)
@@ -54,7 +54,7 @@ namespace Skuld.APIS
                         }
                     }
                 }
-                var result = await APIWebReq.ReturnString(new Uri("https://strawpoll.me/api/v2/polls/" + pollid));
+                var result = await ReturnString(new Uri("https://strawpoll.me/api/v2/polls/" + pollid));
                 return JsonConvert.DeserializeObject<RecievePoll>(result);
             }
             catch (Exception ex)

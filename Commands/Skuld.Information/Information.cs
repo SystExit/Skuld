@@ -30,12 +30,12 @@ namespace Skuld.Commands
             var bot = Bot.bot;
             var guild = Context.Guild;
             var roles = guild.Roles;
-            EmbedBuilder _embed = new EmbedBuilder() { Color = Tools.Tools.RandomColor() };
+            var embed = new EmbedBuilder() { Color = Tools.Tools.RandomColor() };
             if (!String.IsNullOrEmpty(guild.IconUrl))
-                _embed.ThumbnailUrl = guild.IconUrl;
-            _embed.Author = new EmbedAuthorBuilder() { Name = guild.Name };
-            var users = (await guild.GetUsersAsync());
-            int usercount = users.Where(x => x.IsBot == false).Count();
+                embed.ThumbnailUrl = guild.IconUrl;
+            embed.Author = new EmbedAuthorBuilder() { Name = guild.Name };
+            var users = await guild.GetUsersAsync();
+            int usercount = users.Count(x => x.IsBot == false);
             var gusers = await guild.GetUsersAsync();
             var gusersnobot = gusers.Where(x => x.IsBot == false);
             var gusersbotonly = gusers.Where(x => x.IsBot == true);
@@ -43,25 +43,25 @@ namespace Skuld.Commands
             string afkname = null;
             if(guild.AFKChannelId.HasValue)
                 afkname = (await guild.GetVoiceChannelAsync(guild.AFKChannelId.Value)).Name;
-            _embed.AddField("Users", usercount.ToString(),true);
-            _embed.AddField("Bots", $"{gusersbotonly.Count()}",true);
-            _embed.AddField("Shard", bot.GetShardIdFor(guild).ToString(),true);
-            _embed.AddField("Verification Level", guild.VerificationLevel.ToString(),true);
-            _embed.AddField("Voice Region ID", guild.VoiceRegionId.ToString(),true);
-            _embed.AddField("Owner", owner.Nickname??owner.Username + "#" + owner.DiscriminatorValue,true);
-            _embed.AddField("Text Channels", (await guild.GetTextChannelsAsync()).Count()+" channels",true);
-            _embed.AddField("Voice Channels", (await guild.GetVoiceChannelsAsync()).Count()+ "channels",true);
+            embed.AddField("Users", usercount.ToString(),inline: true);
+            embed.AddField("Bots", $"{gusersbotonly.Count()}", inline: true);
+            embed.AddField("Shard", bot.GetShardIdFor(guild).ToString(), inline: true);
+            embed.AddField("Verification Level", guild.VerificationLevel.ToString(),inline: true);
+            embed.AddField("Voice Region ID", guild.VoiceRegionId, inline: true);
+            embed.AddField("Owner", owner.Nickname??owner.Username + "#" + owner.DiscriminatorValue,inline: true);
+            embed.AddField("Text Channels", (await guild.GetTextChannelsAsync()).Count()+" channels",inline: true);
+            embed.AddField("Voice Channels", (await guild.GetVoiceChannelsAsync()).Count()+ "channels",inline: true);
             int seconds = guild.AFKTimeout;
             string minutes = ((seconds % 3600) / 60).ToString();
-            _embed.AddField("AFK Timeout", minutes + " minutes",true);
-            _embed.AddField("AFK Channel",afkname??"None Set",true);
+            embed.AddField("AFK Timeout", minutes + " minutes",inline: true);
+            embed.AddField("AFK Channel",afkname??"None Set",inline: true);
             if (String.IsNullOrEmpty(guild.IconUrl))
-                _embed.AddField("Server Avatar", "Doesn't exist",true);
-            _embed.AddField("Default Notifications", guild.DefaultMessageNotifications.ToString(),true);
-            _embed.AddField("Created", guild.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
-            _embed.AddField("Emojis", guild.Emotes.Count.ToString() + Environment.NewLine + $"Use `{Bot.Prefix}server emojis` to view all of the emojis");
-            _embed.AddField("Roles", guild.Roles.Count() + Environment.NewLine + $"Use `{Bot.Prefix}server roles` to view all of the roles");
-            await MessageHandler.SendChannel((ITextChannel)Context.Channel,"", _embed);
+                embed.AddField("Server Avatar", "Doesn't exist",inline: true);
+            embed.AddField("Default Notifications", guild.DefaultMessageNotifications.ToString(),inline: true);
+            embed.AddField("Created", guild.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
+            embed.AddField("Emojis", guild.Emotes.Count + Environment.NewLine + $"Use `{Bot.Prefix}server emojis` to view all of the emojis");
+            embed.AddField("Roles", guild.Roles.Count() + Environment.NewLine + $"Use `{Bot.Prefix}server roles` to view all of the roles");
+            await MessageHandler.SendChannel((ITextChannel)Context.Channel,"", embed);
         }
         [Command("server emojis", RunMode = RunMode.Async), Alias("server emoji")]
         public async Task ServerEmoji()
@@ -158,8 +158,8 @@ namespace Skuld.Commands
         {
             var guild = Context.Guild as SocketGuild;
             await guild.DownloadUsersAsync();
-            int bots = guild.Users.Where(x => x.IsBot == true).Count();
-            int humans = guild.Users.Where(x=>x.IsBot == false).Count();
+            int bots = guild.Users.Count(x => x.IsBot == true);
+            int humans = guild.Users.Count(x=>x.IsBot == false);
             int guildusers = guild.Users.Count;
             var oldperc = (decimal)bots / guildusers*100m;
             var total = Math.Round(oldperc, 2);
@@ -224,25 +224,25 @@ namespace Skuld.Commands
             await MessageHandler.SendChannel(Context.Channel, message);
         }
         [Command("createinvite",RunMode = RunMode.Async),Summary("Creates a new invite to the guild")]
-        public async Task NewInvite(ITextChannel channel,int MaxAge,int MaxUses, bool Permanent, bool Unique)
+        public async Task NewInvite(ITextChannel channel,int maxAge,int maxUses, bool permanent, bool unique)
         {
             IInviteMetadata invite;
-            if (MaxAge>0 && MaxUses<0)
-                invite = await channel.CreateInviteAsync(MaxAge, null, Permanent, Unique);
-            else if (MaxAge<0 && MaxUses>0)
-                invite = await channel.CreateInviteAsync(null, MaxUses, Permanent, Unique);
-            else if (MaxAge<0 && MaxUses<0)
-                invite = await channel.CreateInviteAsync(null, null, Permanent, Unique);
+            if (maxAge > 0 && maxUses < 0)
+                invite = await channel.CreateInviteAsync(maxAge, null, permanent, unique);
+            else if (maxAge < 0 && maxUses > 0)
+                invite = await channel.CreateInviteAsync(null, maxUses, permanent, unique);
+            else if (maxAge < 0 && maxUses < 0)
+                invite = await channel.CreateInviteAsync(null, null, permanent, unique);
             else
-                invite = await channel.CreateInviteAsync(MaxAge, MaxUses, Permanent, Unique);
+                invite = await channel.CreateInviteAsync(maxAge, maxUses, permanent, unique);
             await MessageHandler.SendChannel(Context.Channel,
                 "I created the invite with the following settings:\n" +
                 "```cs\n" +
                 $"       Channel : {channel.Name}\n"+
-                $"   Maximum Age : {MaxAge}\n" +
-                $"  Maximum Uses : {MaxUses}\n" +
-                $"     Permanent : {Permanent}\n" +
-                $"        Unique : {Unique}" +
+                $"   Maximum Age : {maxAge}\n" +
+                $"  Maximum Uses : {maxUses}\n" +
+                $"     Permanent : {permanent}\n" +
+                $"        Unique : {unique}" +
                 $"```Here's the link: {invite.Url}");
 
         }
@@ -261,10 +261,10 @@ namespace Skuld.Commands
         [Command("whois", RunMode = RunMode.Async), Summary("Get's information about a user"), Alias("user")]
         public async Task GetProile([Remainder]IGuildUser whois)
         {
-            string Nickname = null;
+            string nickname = null;
             string status = "";
             if (!String.IsNullOrEmpty(whois.Nickname))
-                Nickname = $"({whois.Nickname})";
+                nickname = $"({whois.Nickname})";
             if (whois.Game.HasValue && whois.Game.Value.StreamType != StreamType.NotStreaming)
                 status += streamingemote + " Streaming, ["+whois.Game.Value.Name+"]("+whois.Game.Value.StreamUrl+")";
             if (whois.Status == UserStatus.Online)
@@ -278,10 +278,10 @@ namespace Skuld.Commands
             if (whois.Status == UserStatus.Offline)
                 status += offlineemote + " Offline";
 
-            EmbedBuilder embed = new EmbedBuilder()
+            var embed = new EmbedBuilder()
             {
                 Color = Tools.Tools.RandomColor(),
-                Author = new EmbedAuthorBuilder() { IconUrl = whois.GetAvatarUrl(ImageFormat.Auto) ?? "", Name = whois.Username+$"#{whois.DiscriminatorValue} {Nickname??""}"  },
+                Author = new EmbedAuthorBuilder() { IconUrl = whois.GetAvatarUrl(ImageFormat.Auto) ?? "", Name = whois.Username+$"#{whois.DiscriminatorValue} {nickname ?? ""}"  },
                 ImageUrl = whois.GetAvatarUrl(ImageFormat.Auto) ?? ""
             };
             int seencount = 0;
@@ -295,12 +295,12 @@ namespace Skuld.Commands
             }
             else
                 game = "Nothing";
-            embed.AddField(":id: ID", whois.Id.ToString() ?? "Unknown",true);
-            embed.AddField(":vertical_traffic_light:  Status", status ?? "Unknown",true);
-            embed.AddField(":video_game: Currently Playing", game,true);
-            embed.AddField(":robot: Bot?", whois.IsBot.ToString() ?? "Unknown",true);
-            embed.AddField(":eyes: Mutual Servers", $"{seencount} servers",true);
-            embed.AddField(":eyes: Last Seen", "Shard: " + (Bot.bot.GetShardIdFor(Context.Guild).ToString() ?? "Unknown"),true);
+            embed.AddField(":id: ID", whois.Id.ToString() ?? "Unknown",inline: true);
+            embed.AddField(":vertical_traffic_light:  Status", status ?? "Unknown",inline: true);
+            embed.AddField(":video_game: Currently Playing", game,inline: true);
+            embed.AddField(":robot: Bot?", whois.IsBot.ToString() ?? "Unknown",inline: true);
+            embed.AddField(":eyes: Mutual Servers", $"{seencount} servers",inline: true);
+            embed.AddField(":eyes: Last Seen", "Shard: " + (Bot.bot.GetShardIdFor(Context.Guild).ToString() ?? "Unknown"),inline: true);
             embed.AddField(":shield: Roles", $"Do `{Config.Load().Prefix}roles` to see your roles");
             embed.AddField(":inbox_tray: Server Join", whois.JoinedAt.Value.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
             embed.AddField(":globe_with_meridians: Discord Join", whois.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
@@ -331,7 +331,7 @@ namespace Skuld.Commands
         [Command("epoch", RunMode = RunMode.Async), Summary("Gets a specific DateTime DD/MM/YYYY HH:MM:SS (24 Hour) in POSIX/Unix Epoch time")]
         public async Task Epoch([Remainder]string epoch)
         {
-            DateTime datetime = Convert.ToDateTime(epoch, new CultureInfo("en-GB"));
+            var datetime = Convert.ToDateTime(epoch, new CultureInfo("en-GB"));
             var epochdt = (Int32)(datetime.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
             await MessageHandler.SendChannel(Context.Channel, $"Your DateTime ({datetime.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")}) in epoch is: {epochdt}");
         }
@@ -342,19 +342,19 @@ namespace Skuld.Commands
             await MessageHandler.SendChannel(Context.Channel, $"Your epoch ({epoch}) in DateTime is: {epochtodt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")}");
         }
         [Command("isup", RunMode = RunMode.Async), Summary("Check if a website is online"),Alias("downforeveryone","isitonline")]
-        public async Task IsUp(string Website)
+        public async Task IsUp(string website)
         {
             var client = new WebClient();
-            var data = client.DownloadString(new Uri("http://downforeveryoneorjustme.com/" + Website));
+            var data = client.DownloadString(new Uri("http://downforeveryoneorjustme.com/" + website));
             string response = "";            
             var doc = new HtmlDocument();
             doc.LoadHtml(data);
             var container = doc.GetElementbyId("container");
             var isup = container.ChildNodes.FindFirst("p");
             if (isup.InnerHtml.ToLowerInvariant().Contains("not"))
-                response = $"The website: `{Website}` is down or not replying.";
+                response = $"The website: `{website}` is down or not replying.";
             else
-                response = $"The website: `{Website}` is working and replying as intended.";
+                response = $"The website: `{website}` is working and replying as intended.";
             await MessageHandler.SendChannel(Context.Channel, response);
         }
         [Command("time"), Summary("Converts a time to a set of times")]
@@ -362,14 +362,14 @@ namespace Skuld.Commands
         {
             try
             {
-                string[] usertimes = timezones.Split(' ');
+                var usertimes = timezones.Split(' ');
                 string response = $"The requested time of: {primarytimezone} - {time} is:```";
-                var PrimaryDateTime = Convert.ToDateTime(time);
+                var primaryDateTime = Convert.ToDateTime(time);
 
                 foreach (var usertime in usertimes)
                 {
-                    var ConvertedTime = ConvertDateTimeToDifferentTimeZone(PrimaryDateTime, primarytimezone, usertime);
-                    response += $"\n{usertime} - {ConvertedTime}";
+                    var convertedTime = ConvertDateTimeToDifferentTimeZone(primaryDateTime, primarytimezone, usertime);
+                    response += $"\n{usertime} - {convertedTime}";
                 }
 
                 await MessageHandler.SendChannel(Context.Channel, response + "```");
@@ -383,13 +383,13 @@ namespace Skuld.Commands
         //https://stackoverflow.com/questions/39208477/is-this-the-proper-way-to-convert-between-time-zones-in-nodatime
         public static DateTime ConvertDateTimeToDifferentTimeZone(DateTime fromDateTime, string fromZoneId, string toZoneId)
         {
-            LocalDateTime fromLocal = LocalDateTime.FromDateTime(fromDateTime);
-            DateTimeZone fromZone = DateTimeZoneProviders.Tzdb[fromZoneId];
-            ZonedDateTime fromZoned = fromLocal.InZoneLeniently(fromZone);
+            var fromLocal = LocalDateTime.FromDateTime(fromDateTime);
+            var fromZone = DateTimeZoneProviders.Tzdb[fromZoneId];
+            var fromZoned = fromLocal.InZoneLeniently(fromZone);
 
-            DateTimeZone toZone = DateTimeZoneProviders.Tzdb[toZoneId];
-            ZonedDateTime toZoned = fromZoned.WithZone(toZone);
-            LocalDateTime toLocal = toZoned.LocalDateTime;
+            var toZone = DateTimeZoneProviders.Tzdb[toZoneId];
+            var toZoned = fromZoned.WithZone(toZone);
+            var toLocal = toZoned.LocalDateTime;
             return toLocal.ToDateTimeUnspecified();
         }
 

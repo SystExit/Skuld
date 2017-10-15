@@ -47,7 +47,7 @@ namespace Skuld.Commands
                 if(!String.IsNullOrEmpty(Config.Load().SqlDBHost))
                 {
                     int dhp = Bot.random.Next(0, 100);
-                    MySqlCommand command = new MySqlCommand("select HP from accounts where ID = @userid");
+                    var command = new MySqlCommand("select HP from accounts where ID = @userid");
                     command.Parameters.AddWithValue("@userid", guilduser.Id);
                     var resp = await SqlTools.GetSingleAsync(command);
                     if (String.IsNullOrEmpty(resp))
@@ -153,7 +153,7 @@ namespace Skuld.Commands
             {
                 if(!String.IsNullOrEmpty(Config.Load().SqlDBHost))
                 {
-                    MySqlCommand command = new MySqlCommand("SELECT pets from accounts where id = @userid");
+                    var command = new MySqlCommand("SELECT pets from accounts where id = @userid");
                     command.Parameters.AddWithValue("@userid", Context.User.Id);
 
                     var resp1 = await SqlTools.GetSingleAsync(command);
@@ -214,7 +214,7 @@ namespace Skuld.Commands
             {
                 if(!String.IsNullOrEmpty(Config.Load().SqlDBHost))
                 {
-                    MySqlCommand command = new MySqlCommand("SELECT glares from accounts where id = @userid");
+                    var command = new MySqlCommand("SELECT glares from accounts where id = @userid");
                     command.Parameters.AddWithValue("@userid", contuser.Id);
                     var resp1 = await SqlTools.GetSingleAsync(command);
 
@@ -304,9 +304,10 @@ namespace Skuld.Commands
         public async Task Glare([Remainder]IRole role)=>
             await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} glares at everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=glare")));
         */
+
         private async Task InsertUser(IUser user)
         {
-            MySqlCommand command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");");
+            var command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");");
             command.Parameters.AddWithValue("@username", $"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{user.DiscriminatorValue}");
             command.Parameters.AddWithValue("@userid",user.Id);
             await SqlTools.InsertAsync(command);

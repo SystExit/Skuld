@@ -13,10 +13,10 @@ namespace Skuld.Commands
         [Command("help", RunMode = RunMode.Async), Summary("Gets all commands")]
         public async Task _Help()
         {
-            MySqlCommand cmd = new MySqlCommand("select prefix from guild where id = @guildid");
+            var cmd = new MySqlCommand("select prefix from guild where id = @guildid");
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
             string resp = await SqlTools.GetSingleAsync(cmd);
-            string Prefix = Config.Load().Prefix;
+            string prefix = Config.Load().Prefix;
             var embed = new EmbedBuilder()
             {
                 Author = new EmbedAuthorBuilder()
@@ -47,7 +47,7 @@ namespace Skuld.Commands
                         embed.AddField(module.Name, $"`{description.Remove(description.Length - 3)}`");
                 }
             }
-            embed.Description = $"The prefix of **{Context.Guild.Name}** is: `{resp ?? Prefix}`";
+            embed.Description = $"The prefix of **{Context.Guild.Name}** is: `{resp ?? prefix}`";
             await MessageHandler.SendDMs(Context.Channel, (await Context.User.GetOrCreateDMChannelAsync()), "", embed);
         }
         [Command("help", RunMode = RunMode.Async), Summary("Gets specific command information")]
@@ -63,7 +63,7 @@ namespace Skuld.Commands
                     return;
                 }
 
-                EmbedBuilder embed = new EmbedBuilder()
+                var embed = new EmbedBuilder()
                 {
                     Description = $"Here are some commands like **{command}**",
                     Color = Tools.Tools.RandomColor()

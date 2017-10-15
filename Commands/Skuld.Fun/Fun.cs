@@ -125,7 +125,7 @@ namespace Skuld.Commands
         public async Task Neko()
         {
             var rawresp = await APIS.APIWebReq.ReturnString(new Uri("https://nekos.life/api/neko"));
-            JObject jsonresp = JObject.Parse(rawresp);
+            var jsonresp = JObject.Parse(rawresp);
             dynamic item = jsonresp;
             if (item["neko"].ToString() != null)
             {
@@ -178,7 +178,7 @@ namespace Skuld.Commands
                 {
                     var cmd = new MySqlCommand("SELECT luckfactor FROM accounts where ID = @userid");
                     cmd.Parameters.AddWithValue("@userid", Context.User.Id);
-                    Double currluckfact= Convert.ToDouble(await SqlTools.GetSingleAsync(cmd));
+                    var currluckfact= Convert.ToDouble(await SqlTools.GetSingleAsync(cmd));
                     currluckfact = currluckfact / 1.1;
                     currluckfact = Math.Round(currluckfact, 4);
                     if (currluckfact < 0.1)
@@ -201,21 +201,21 @@ namespace Skuld.Commands
         [Command("pasta", RunMode = RunMode.Async), Summary("Pastas are nice")]
         public async Task Pasta(string cmd, string title)
         {
-            var Pasta = await SqlTools.GetPasta(title);
-            if (Pasta != null)
+            var pastaLocal = await SqlTools.GetPasta(title);
+            if (pastaLocal != null)
             {
                 if (cmd == "who" || cmd == "?")
                 {
-                    EmbedBuilder _embed = new EmbedBuilder()
+                    var embed = new EmbedBuilder()
                     {
                         Color = Tools.Tools.RandomColor(),
-                        Title = Pasta.PastaName
+                        Title = pastaLocal.PastaName
                     };
-                    _embed.AddField("Author",Pasta.Username,true);
-                    _embed.AddField("Created", Pasta.Created,true);
-                    _embed.AddField("UpVotes", ":arrow_double_up: " + Pasta.Upvotes,true);
-                    _embed.AddField("DownVotes", ":arrow_double_down: " + Pasta.Downvotes,true);
-                    await MessageHandler.SendChannel(Context.Channel, "", _embed);
+                    embed.AddField("Author", pastaLocal.Username,inline:true);
+                    embed.AddField("Created", pastaLocal.Created,inline: true);
+                    embed.AddField("UpVotes", ":arrow_double_up: " + pastaLocal.Upvotes,inline: true);
+                    embed.AddField("DownVotes", ":arrow_double_down: " + pastaLocal.Downvotes, inline: true);
+                    await MessageHandler.SendChannel(Context.Channel, "", embed);
                 }
                 if (cmd == "upvote")
                 {
@@ -253,7 +253,7 @@ namespace Skuld.Commands
                 }
                 if (cmd == "delete")
                 {
-                    if(Convert.ToUInt64(Pasta.OwnerID) == Context.User.Id)
+                    if(Convert.ToUInt64(pastaLocal.OwnerID) == Context.User.Id)
                     {
                         var command = new MySqlCommand("DELETE FROM pasta WHERE pastaname = @title");
                         command.Parameters.AddWithValue("@title", title);
@@ -350,7 +350,7 @@ namespace Skuld.Commands
             if (title == "list")
             {
                 string columndata = null;
-                List<string> rows = new List<string>();
+                var rows = new List<string>();
                 var reader = await SqlTools.GetAsync(new MySqlCommand($"SELECT PastaName FROM pasta"));
                 while (await reader.ReadAsync())
                 {
@@ -436,11 +436,11 @@ namespace Skuld.Commands
         }
 
         [Command("strawpoll", RunMode = RunMode.Async), Summary("Creates Strawpoll")]
-        public async Task StrawpollSend(string Title, [Remainder]string Options)
+        public async Task StrawpollSend(string title, [Remainder]string options)
         {
-            string[] options = Options.Split(',');
-            var poll = await APIWebReq.SendPoll(Title, options);            
-            await MessageHandler.SendChannel(Context.Channel,$"Strawpoll **{Title}** has been created, here's the link: {poll.Url}");
+            var optionsLocal = options.Split(',');
+            var poll = await APIWebReq.SendPoll(title, optionsLocal);            
+            await MessageHandler.SendChannel(Context.Channel,$"Strawpoll **{title}** has been created, here's the link: {poll.Url}");
         }
         [Command("strawpoll", RunMode = RunMode.Async), Summary("Gets a strawpoll")]
         public async Task StrawpollGet(int id) =>
@@ -449,7 +449,7 @@ namespace Skuld.Commands
         public async Task StrawpollGet(string url)
         {
             var poll = await APIWebReq.GetPoll(url);
-            EmbedBuilder _embed = new EmbedBuilder()
+            var embed = new EmbedBuilder()
             {
                 Author = new EmbedAuthorBuilder()
                 {
@@ -464,9 +464,9 @@ namespace Skuld.Commands
                 Timestamp = DateTime.UtcNow
             };
             for (int z = 0; z < poll.Options.Length; z++)
-                _embed.AddField(poll.Options[z], poll.Votes[z]);
+                embed.AddField(poll.Options[z], poll.Votes[z]);
 
-            await MessageHandler.SendChannel(Context.Channel, "", _embed);
+            await MessageHandler.SendChannel(Context.Channel, "", embed);
         }
 
         [Command("emoji", RunMode = RunMode.Async), Summary("Turns text into bigmoji")]
@@ -547,41 +547,40 @@ namespace Skuld.Commands
             {
                 dateTime = DateTime.ParseExact($"{comic.day} {comic.month} {comic.year}", "dd MM yyyy", CultureInfo.InvariantCulture);
             }
-
-            EmbedBuilder _embed = new EmbedBuilder();
-            EmbedAuthorBuilder _author = new EmbedAuthorBuilder();
-            EmbedFooterBuilder _footer = new EmbedFooterBuilder();
-            _embed.Color = Tools.Tools.RandomColor();
-            _author.Name = "Randall Patrick Munroe - XKCD";
-            _author.Url = "https://xkcd.com/" + comic.num + "/";
-            _author.IconUrl = "https://xkcd.com/favicon.ico";
-            _footer.Text = "Strip released on";
-            _embed.Timestamp = dateTime;
-
-            _embed.ImageUrl = comic.img;
-            _embed.Title = comic.safe_title;
-            _embed.Description = comic.alt;
-
-            _embed.Author = _author;
-            _embed.Footer = _footer;
-
-            await MessageHandler.SendChannel(Context.Channel,string.Empty, _embed);
+            await MessageHandler.SendChannel(Context.Channel,string.Empty, new EmbedBuilder()
+            {
+                Author = new EmbedAuthorBuilder()
+                {
+                    Name = "Randall Patrick Munroe - XKCD",
+                    Url = "https://xkcd.com/" + comic.num + "/",
+                    IconUrl = "https://xkcd.com/favicon.ico"
+                },
+                Footer = new EmbedFooterBuilder()
+                {
+                    Text = "Strip released on"
+                },
+                Color = Tools.Tools.RandomColor(),
+                Timestamp = dateTime,
+                ImageUrl = comic.img,
+                Title = comic.safe_title,
+                Description = comic.alt
+            }.Build());
         }
 
         [Command("time", RunMode = RunMode.Async), Summary("Gets current time")]
         public async Task Time()
         {
-            DateTimeOffset offset = new DateTimeOffset(DateTime.UtcNow);
+            var offset = new DateTimeOffset(DateTime.UtcNow);
             await MessageHandler.SendChannel(Context.Channel,offset.ToString());
         }
         [Command("time", RunMode = RunMode.Async), Summary("Gets time from utc with offset")]
         public async Task Time(int offset)
         {
-            double ofs = Convert.ToDouble(offset);
-            TimeSpan ts = new TimeSpan();
+            var ofs = Convert.ToDouble(offset);
+            var ts = new TimeSpan();
             var nts = ts.Add(TimeSpan.FromHours(ofs));
-            DateTimeOffset DTOffset = new DateTimeOffset(DateTime.UtcNow);
-            var ndtof = DTOffset.ToOffset(nts);
+            var dtOffset = new DateTimeOffset(DateTime.UtcNow);
+            var ndtof = dtOffset.ToOffset(nts);
             await MessageHandler.SendChannel(Context.Channel,ndtof.ToString());
         }
 
@@ -590,7 +589,7 @@ namespace Skuld.Commands
             await Roast(user);
         [Command("roastme", RunMode = RunMode.Async), Summary("\"Roast\" yourself, these are all taken as jokes, and aren't actually meant to cause harm.")]
         public async Task RoastYourselfCmd() =>
-            await Roast((Context.User as IGuildUser));
+            await Roast(user: (Context.User as IGuildUser));
         public async Task Roast(IGuildUser user) =>
             await MessageHandler.SendChannel(Context.Channel, user.Mention + " " + Roasts[Bot.random.Next(0, Roasts.Length)]);
         [Command("dadjoke", RunMode = RunMode.Async), Summary("Gives you a bad dad joke to facepalm at.")]
@@ -624,61 +623,61 @@ namespace Skuld.Commands
         public async Task CowSay([Remainder]string message)
         {
             string cowdir = Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "cows");
-            string[] cows = Directory.GetFiles(cowdir);
+            var cows = Directory.GetFiles(cowdir);
             string cow = null;
             if (message.StartsWith("-b"))
             { 
-                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("=="));
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", think: false, face: new CowFace("=="));
                 message = message.Remove(0, 3);
             }
             if (message.StartsWith("-d"))
             {
-                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("XX"));
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", think: false, face: new CowFace("XX"));
                 message = message.Remove(0, 3);
             }                    
             if (message.StartsWith("-g"))
             {
-                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("$$"));
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", think: false, face: new CowFace("$$"));
                 message = message.Remove(0, 3);
             }                    
             if (message.StartsWith("-p"))
             {
-                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("@@"));
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", think: false, face: new CowFace("@@"));
                 message = message.Remove(0, 3);
             }                    
             if (message.StartsWith("-s"))
             {
-                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("**"));
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", think: false, face: new CowFace("**"));
                 message = message.Remove(0, 3);
             }
             if (message.StartsWith("--think"))
             {
-                cow = GetCow.ReturnCow(cowdir + "\\default.cow", true, new CowFace("oo"));
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", think: true, face: new CowFace("oo"));
                 message = message.Remove(0, 8);
             }
             if (message.StartsWith("-t"))
             {
-                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("--"));
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", think: false, face: new CowFace("--"));
                 message = message.Remove(0, 3);
             }                    
             if (message.StartsWith("-w"))
             {
-                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("00"));
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", think: false, face: new CowFace("00"));
                 message = message.Remove(0, 3);
             }                    
             if (message.StartsWith("-y"))
             {
-                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace(".."));
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", think: false, face: new CowFace(".."));
                 message = message.Remove(0, 3);
             }                    
             if (message.StartsWith("-T"))
             {
-                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace("oo", message.Split(null)[1]));
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", think: false, face: new CowFace("oo", message.Split(null)[1]));
                 message = message.Remove(0, message.Split(null)[1].Length+4);
             }                    
             if (message.StartsWith("-e"))
             {
-                cow = GetCow.ReturnCow(cowdir + "\\default.cow", false, new CowFace(message.Split(null)[1]));
+                cow = GetCow.ReturnCow(cowdir + "\\default.cow", think: false, face: new CowFace(message.Split(null)[1]));
                 message = message.Remove(0, message.Split(null)[1].Length+4);
             }                    
             if (message.StartsWith("-f"))
@@ -686,7 +685,7 @@ namespace Skuld.Commands
                 string cowfile = message.Split(null)[1] + ".cow";
                 if (cows.Contains(cowdir+"\\"+cowfile))
                 {
-                    cow = GetCow.ReturnCow(cowdir + "\\" +cowfile, false, new CowFace());
+                    cow = GetCow.ReturnCow(cowdir + "\\" +cowfile, think: false, face: new CowFace());
                     message = message.Remove(0, message.Split(null)[1].Length+4);
                 }
                 else
@@ -698,7 +697,7 @@ namespace Skuld.Commands
             if (!String.IsNullOrEmpty(cow))
                 cowsay += cow + "```";
             else
-                cowsay += GetCow.ReturnCow(cowdir+"\\default.cow", false, new CowFace("oo")) + "```";
+                cowsay += GetCow.ReturnCow(cowdir+"\\default.cow", think: false, face: new CowFace("oo")) + "```";
             if (cowsay.Length > 2000)
             {
                 cowsay = cowsay.Remove(0, 3);
@@ -713,14 +712,14 @@ namespace Skuld.Commands
         [Command("apod", RunMode = RunMode.Async), Summary("Gets NASA's \"Astronomy Picture of the Day\"")]
         public async Task APOD()
         {
-            var PictureOfTheDay = await APIWebReq.NasaAPOD();
+            var aPOD = await APIWebReq.NasaAPOD();
             var embed = new EmbedBuilder()
             {
                 Color = Tools.Tools.RandomColor(),
-                Title = PictureOfTheDay.Title,
+                Title = aPOD.Title,
                 Url = "https://apod.nasa.gov/",
-                ImageUrl = PictureOfTheDay.HDUrl,
-                Timestamp = Convert.ToDateTime(PictureOfTheDay.Date)
+                ImageUrl = aPOD.HDUrl,
+                Timestamp = Convert.ToDateTime(aPOD.Date)
             };
             await MessageHandler.SendChannel(Context.Channel, "", embed);
         }
@@ -730,7 +729,7 @@ namespace Skuld.Commands
             var choicearr = choices.Split('|');
             await MessageHandler.SendChannel(Context.Channel, $"<:blobthinkcool:350673773113901056> | __{(Context.User as IGuildUser).Nickname??Context.User.Username}__ I choose: **{choicearr[Bot.random.Next(0,choicearr.Length)]}**");
         }
-        [Command("heal", RunMode = RunMode.Async), Summary("Did you run out of health? Here's the healing station")]
+        /*[Command("heal", RunMode = RunMode.Async), Summary("Did you run out of health? Here's the healing station")]
         public async Task Heal()
         {
 
@@ -744,7 +743,7 @@ namespace Skuld.Commands
         public async Task Heal(int hp, [Remainder]IGuildUser User)
         {
 
-        }
+        }*/
         [Command("theworld",RunMode = RunMode.Async),Alias("zawarudo","the world","dio")]
         public async Task ZaWarudo()
         {
@@ -753,10 +752,10 @@ namespace Skuld.Commands
             else
             {
                 var filepath = await APIWebReq.DownloadFile(new Uri(Context.Message.Attachments.FirstOrDefault().Url), Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo", Context.Message.Id.ToString()) + "old.png");
-                Bitmap BMap = null;
+                Bitmap bMap = null;
                 try
                 {
-                    BMap = (Bitmap)System.Drawing.Image.FromStream(new MemoryStream(File.ReadAllBytes(filepath), true));
+                    bMap = (Bitmap)System.Drawing.Image.FromStream(new MemoryStream(File.ReadAllBytes(filepath), true));
                 }
                 catch (OutOfMemoryException ex)
                 {
@@ -766,7 +765,7 @@ namespace Skuld.Commands
                 {
                     File.Delete(filepath);
                 }
-                var image = InverseImage(BMap);
+                var image = InverseImage(bMap);
                 var newfilepath = Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo", Context.Message.Id.ToString()) + ".png";
                 image.Save(newfilepath, System.Drawing.Imaging.ImageFormat.Png);
                 await MessageHandler.SendChannel(Context.Channel, "", null, newfilepath);
@@ -778,10 +777,10 @@ namespace Skuld.Commands
         public async Task ZaWarudo([Remainder]string link)
         {
             var filepath = await APIWebReq.DownloadFile(new Uri(link), Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo", Context.Message.Id.ToString()) + "old.png");
-            Bitmap BMap = null;
+            Bitmap bMap = null;
             try
             {
-                BMap = (Bitmap)System.Drawing.Image.FromStream(new MemoryStream(File.ReadAllBytes(filepath), true));
+                bMap = (Bitmap)System.Drawing.Image.FromStream(new MemoryStream(File.ReadAllBytes(filepath), true));
             }
             catch(OutOfMemoryException ex)
             {
@@ -791,27 +790,27 @@ namespace Skuld.Commands
             {
                 File.Delete(filepath);
             }
-            var image = InverseImage(BMap);
+            var image = InverseImage(bMap);
             var newfilepath = Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo", Context.Message.Id.ToString()) + ".png";
             image.Save(newfilepath, System.Drawing.Imaging.ImageFormat.Png);
             await MessageHandler.SendChannel(Context.Channel, "", null, newfilepath);
             File.Delete(filepath);
             File.Delete(newfilepath);
         }
-        private static System.Drawing.Image InverseImage(Bitmap Image)
+        private static System.Drawing.Image InverseImage(Bitmap image)
         {
             try
             {
-                System.Drawing.Color Colour;
-                for (int x = 0; x < Image.Width; x++)
+                System.Drawing.Color colour;
+                for (int x = 0; x < image.Width; x++)
                 {
-                    for (int y = 0; y < Image.Height; y++)
+                    for (int y = 0; y < image.Height; y++)
                     {
-                        Colour = Image.GetPixel(x, y);
-                        Image.SetPixel(x, y, System.Drawing.Color.FromArgb(255 - Colour.R, 255 - Colour.G, 255 - Colour.B));
+                        colour = image.GetPixel(x, y);
+                        image.SetPixel(x, y, System.Drawing.Color.FromArgb(255 - colour.R, 255 - colour.G, 255 - colour.B));
                     }
                 }
-                return Image;
+                return image;
             }
             catch(Exception ex)
             {

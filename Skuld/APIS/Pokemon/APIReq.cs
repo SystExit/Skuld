@@ -52,7 +52,7 @@ namespace Skuld.APIS
                 }
                 else
                 {
-                    if(HighestPokeID.HasValue && HighestPokeID.Value > 0)
+                    if(HighestPokeID.HasValue && HighestPokeID > 0)
                     {
                         var random = Bot.random.Next(0, HighestPokeID.Value);
                         if (!Directory.Exists(AppContext.BaseDirectory + "/skuld/storage/pokemon/"))

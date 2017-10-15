@@ -12,7 +12,7 @@ namespace Skuld.Tools
 
         public static async Task InsertAsync(MySqlCommand command)
         {
-            MySqlConnection conn = new MySqlConnection(cs);
+            var conn = new MySqlConnection(cs);
             await conn.OpenAsync();
             if (conn.State == ConnectionState.Open)
             {
@@ -50,7 +50,7 @@ namespace Skuld.Tools
         }
         public static async Task<string> GetSingleAsync(MySqlCommand command)
         {
-            MySqlConnection conn = new MySqlConnection(cs);
+            var conn = new MySqlConnection(cs);
             await conn.OpenAsync();
             if (conn.State == ConnectionState.Open)
             {

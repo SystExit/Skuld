@@ -20,7 +20,7 @@ namespace Skuld.Commands
         [Command("roleids", RunMode = RunMode.Async), Summary("Gets all role ids")]
         public async Task GetRoleIds()
         {
-            List<string[]> lines = new List<string[]>()
+            var lines = new List<string[]>()
             {
                 new string[] { "Role Name", "ID" }
             };
@@ -121,7 +121,10 @@ namespace Skuld.Commands
         [RequireUserPermission(GuildPermission.ManageMessages)]
         public async Task Prune(int amount)
         {
-            if (amount < 0) { await MessageHandler.SendChannel(Context.Channel,$"{Context.User.Mention} Your amount `{amount}` is under 0."); }
+            if (amount < 0)
+            {
+                await MessageHandler.SendChannel(Context.Channel,$"{Context.User.Mention} Your amount `{amount}` is under 0.");
+            }
             else
             {
                 amount++;
@@ -138,7 +141,10 @@ namespace Skuld.Commands
         [RequireUserPermission(GuildPermission.ManageMessages)]
         public async Task Prune(IUser user, int amount)
         {
-            if (amount < 0) { await MessageHandler.SendChannel(Context.Channel,$"{Context.User.Mention} Your amount `{amount}` is under 0."); }
+            if (amount < 0)
+            {
+                await MessageHandler.SendChannel(Context.Channel,$"{Context.User.Mention} Your amount `{amount}` is under 0.");
+            }
             else
             {
                 var messages = await Context.Channel.GetMessagesAsync(100).Flatten();
@@ -217,22 +223,22 @@ namespace Skuld.Commands
         [RequireBotPermission(GuildPermission.BanMembers)]
         [RequireUserPermission(GuildPermission.BanMembers)]
         [Command("hackban", RunMode = RunMode.Async), Summary("Hackbans a userid")]
-        public async Task HackBan(ulong ID)
+        public async Task HackBan(ulong id)
         {
-            await Context.Guild.AddBanAsync(ID);
-            await MessageHandler.SendChannel(Context.Channel, $"Banned ID: {ID}");
+            await Context.Guild.AddBanAsync(id);
+            await MessageHandler.SendChannel(Context.Channel, $"Banned ID: {id}");
         }
         [RequireBotPermission(GuildPermission.BanMembers)]
         [RequireUserPermission(GuildPermission.BanMembers)]
         [Command("hackban", RunMode = RunMode.Async), Summary("Hackbans a set of userids Must be in this format hackban [id1],[id2],[id3]")]
-        public async Task HackBan([Remainder]string IDs)
+        public async Task HackBan([Remainder]string ids)
         {
-            var ids = IDs.Split(',');
-            foreach (var id in ids)
+            var idsLocal = ids.Split(',');
+            foreach (var id in idsLocal)
             {
                 await Context.Guild.AddBanAsync(Convert.ToUInt64(id));
             }
-            await MessageHandler.SendChannel(Context.Channel, $"Banned IDs: {IDs}");
+            await MessageHandler.SendChannel(Context.Channel, $"Banned IDs: {ids}");
         }
         [Command("softban", RunMode = RunMode.Async), Summary("Softbans a user")]
         [RequireBotPermission(GuildPermission.BanMembers)]
@@ -310,7 +316,7 @@ namespace Skuld.Commands
         [Command("autorole", RunMode = RunMode.Async), Summary("Get's guilds current autorole")]
         public async Task AutoRole()
         {
-            IGuild guild = Context.Guild;
+            var guild = Context.Guild;
             var cmd = new MySqlCommand("select autojoinrole from guild where id = @guildid");
             cmd.Parameters.AddWithValue("@guildid", guild.Id);
             var reader = await SqlTools.GetSingleAsync(cmd);
@@ -468,14 +474,17 @@ namespace Skuld.Commands
         [Command("guildfeature", RunMode = RunMode.Async), Summary("Configures guild features")]
         public async Task ConfigureGuildFeatures(string module, int value)
         {
-            if (value > 1) await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
-            if (value < 0) await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
+            if (value > 1)
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
+            if (value < 0)
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
             else
             {
                 module = module.ToLowerInvariant();
-                Dictionary<string, string> settings = new Dictionary<string, string>()
+                var settings = new Dictionary<string, string>()
                 {
                     {"starboard","starboard" },
+                    {"pinning","pinning" },
                     {"levels","experience" },
                     {"userjoin", "userjoinleave" },
                     {"userleave","userjoinleave" },
@@ -488,7 +497,7 @@ namespace Skuld.Commands
                 {
                     if(!String.IsNullOrEmpty(await SqlTools.GetSingleAsync(new MySqlCommand("SELECT `ID` from `guildfeaturemodules` WHERE `ID` = "+Context.Guild.Id))))
                     {
-                        var setting = settings.Where(x => x.Key == module || x.Value == module).FirstOrDefault();
+                        var setting = settings.FirstOrDefault(x => x.Key == module || x.Value == module);
                         await SqlTools.InsertAsync(new MySqlCommand($"UPDATE `guildfeaturemodules` SET `{setting.Value}` = {value} WHERE `ID` = {Context.Guild.Id}"));
                         if (value == 0)
                             await MessageHandler.SendChannel(Context.Channel, $"I disabled the `{module}` feature");
@@ -497,7 +506,7 @@ namespace Skuld.Commands
                     }
                     else
                     {
-                        await SqlTools.InsertAdvancedSettings(false, Context.Guild as Discord.WebSocket.SocketGuild);
+                        await SqlTools.InsertAdvancedSettings(feature: false, Guild: Context.Guild as Discord.WebSocket.SocketGuild);
                     }
                 }
                 else
@@ -515,8 +524,10 @@ namespace Skuld.Commands
         [Command("guildmodule", RunMode = RunMode.Async), Summary("Configures guild modules")]
         public async Task ConfigureGuildModules(string module, int value)
         {
-            if (value > 1) await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
-            if (value < 0) await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
+            if (value > 1)
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
+            if (value < 0)
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
             else
             {
                 module = module.ToLowerInvariant();
@@ -533,7 +544,7 @@ namespace Skuld.Commands
                     }
                     else
                     {
-                        await SqlTools.InsertAdvancedSettings(false, Context.Guild as Discord.WebSocket.SocketGuild);
+                        await SqlTools.InsertAdvancedSettings(feature: false, Guild: Context.Guild as Discord.WebSocket.SocketGuild);
                     }
                 }
                 else
@@ -547,10 +558,10 @@ namespace Skuld.Commands
 
         [RequireUserPermission(GuildPermission.Administrator),RequireUserPermission(GuildPermission.ManageGuild)]
         [Command("configurechannel", RunMode = RunMode.Async), Summary("Some features require channels to be set")]
-        public async Task ConfigureChannel(string module, IChannel Channel)
+        public async Task ConfigureChannel(string module, IChannel channel)
         {
             module = module.ToLowerInvariant();
-            Dictionary<string, string> modules = new Dictionary<string, string>()
+            var modules = new Dictionary<string, string>()
             {
                 {"twitchnotif","twitchnotifchannel" },
                 {"twitch","twitchnotifchannel" },
@@ -569,13 +580,13 @@ namespace Skuld.Commands
             {
                 if (!String.IsNullOrEmpty(await SqlTools.GetSingleAsync(new MySqlCommand("SELECT `ID` from `guildcommandmodules` WHERE `ID` = " + Context.Guild.Id))))
                 {
-                    var setting = modules.Where(x => x.Key == module || x.Value == module).FirstOrDefault();
-                    await SqlTools.InsertAsync(new MySqlCommand($"UPDATE `guild` SET `{setting.Value}` = {Channel.Id} WHERE `ID` = {Context.Guild.Id}"));
-                    await MessageHandler.SendChannel(Context.Channel, $"I set `{Channel.Name}` as the channel for the `{module}` module");
+                    var setting = modules.FirstOrDefault(x => x.Key == module || x.Value == module);
+                    await SqlTools.InsertAsync(new MySqlCommand($"UPDATE `guild` SET `{setting.Value}` = {channel.Id} WHERE `ID` = {Context.Guild.Id}"));
+                    await MessageHandler.SendChannel(Context.Channel, $"I set `{channel.Name}` as the channel for the `{module}` module");
                 }
                 else
                 {
-                    await SqlTools.InsertAdvancedSettings(false, Context.Guild as Discord.WebSocket.SocketGuild);
+                    await SqlTools.InsertAdvancedSettings(feature: false, Guild: Context.Guild as Discord.WebSocket.SocketGuild);
                 }
             }
             else

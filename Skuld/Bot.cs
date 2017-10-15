@@ -84,13 +84,13 @@ namespace Skuld
         {
             try
             {
-                /*if(Config.Load().TwitchModule)
-                    await APIS.Twitch.TwitchClient.CreateTwitchClient(Config.Load().TwitchToken, Config.Load().TwitchClientID);*/
+               if(Config.Load().TwitchModule)
+                    await APIS.Twitch.TwitchClient.CreateTwitchClient(Config.Load().TwitchToken, Config.Load().TwitchClientID);
                 await bot.LoginAsync(TokenType.Bot, token);
                 await bot.StartAsync();
-                /*foreach (var shard in bot.Shards)
+                foreach (var shard in bot.Shards)
                     if(shard.ConnectionState == ConnectionState.Connected)
-                        await PublishStats(shard.ShardId);*/
+                        await PublishStats(shard.ShardId);
                 await Task.Delay(-1);
             }
             catch(Exception ex)
@@ -146,13 +146,13 @@ namespace Skuld
             using (var content = new StringContent($"{{ \"server_count\": {bot.GetShard(shardid).Guilds.Count}, \"shard_id\": {shardid}, \"shard_count\": {bot.Shards.Count}}}", Encoding.UTF8, "application/json"))
             {
                 webclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(Config.Load().DBotsOrgKey);
-                HttpResponseMessage response = await webclient.PostAsync(new Uri($"https://discordbots.org/api/bots/{Bot.bot.CurrentUser.Id}/stats"), content);
+                var response = await webclient.PostAsync(new Uri($"https://discordbots.org/api/bots/{Bot.bot.CurrentUser.Id}/stats"), content);
             }
             using (var webclient = new HttpClient())
             using (var content = new StringContent($"{{ \"server_count\": {bot.GetShard(shardid).Guilds.Count}, \"shard_id\": {shardid}, \"shard_count\": {bot.Shards.Count}}}", Encoding.UTF8, "application/json"))
             {
                 webclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(Config.Load().DiscordPWKey);
-                HttpResponseMessage response = await webclient.PostAsync(new Uri($"https://bots.discord.pw/api/bots/{Bot.bot.CurrentUser.Id}/stats"), content);
+                var response = await webclient.PostAsync(new Uri($"https://bots.discord.pw/api/bots/{Bot.bot.CurrentUser.Id}/stats"), content);
             }
         }
 

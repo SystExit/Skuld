@@ -6,6 +6,8 @@ using Discord;
 using Skuld.Models;
 using Skuld.Tools;
 using MySql.Data.MySqlClient;
+#pragma warning disable GCop126 
+#pragma warning disable GCop646
 
 namespace Skuld.Commands
 {
@@ -23,14 +25,14 @@ namespace Skuld.Commands
             command.Parameters.AddWithValue("@id", user.Id);
             var resp = await SqlTools.GetSingleAsync(command);
             ulong money = 0;
-            if (!String.IsNullOrEmpty(resp))
+            if (ReferenceEquals(resp,null))
                 money = Convert.ToUInt64(resp);
             else
                 await InsertUser(Context.User);
             if(Context.User == user)
                 await MessageHandler.SendChannel(Context.Channel, $"You have: {Config.Load().MoneySymbol + money.ToString("N0")}");
             else
-                await MessageHandler.SendChannel(Context.Channel, $"**{user.Nickname??user.Username}** has: {Config.Load().MoneySymbol + money.ToString("N0")}");
+                await MessageHandler.SendChannel(Context.Channel, message: $"**{user.Nickname??user.Username}** has: {Config.Load().MoneySymbol + money.ToString("N0")}");
         }
 
         [Command("profile", RunMode= RunMode.Async), Summary("Get your profile")]
@@ -41,29 +43,29 @@ namespace Skuld.Commands
         {
             try
             {
-                var User = await SqlTools.GetUser(user.Id);
-                if(User!=null)
+                var userLocal = await SqlTools.GetUser(user.Id);
+                if(userLocal != null)
                 {
                     var embed = new EmbedBuilder()
                     {
                         Color = Tools.Tools.RandomColor(),
                         Author = new EmbedAuthorBuilder()
                         {
-                            Name = User.Username,
+                            Name = user.Username,
                             IconUrl = user.GetAvatarUrl() ?? "http://www.emoji.co.uk/files/mozilla-emojis/smileys-people-mozilla/11419-bust-in-silhouette.png"
                         }
                     };
-                    embed.AddField("Description", User.Description ?? "No Description",true);
-                    embed.AddField(Config.Load().MoneyName, User.Money.Value.ToString("N0") ?? "No Money",true);
-                    embed.AddField("Luck Factor", User.LuckFactor.ToString("P2") ?? "No LuckFactor",true);
-                    if (!String.IsNullOrEmpty(User.Daily))
-                        embed.AddField("Daily", User.Daily,true);
+                    embed.AddField("Description", userLocal.Description ?? "No Description", inline: true);
+                    embed.AddField(Config.Load().MoneyName, userLocal.Money.Value.ToString("N0") ?? "No Money", inline: true);
+                    embed.AddField("Luck Factor", userLocal.LuckFactor.ToString("P2") ?? "No LuckFactor",inline: true);
+                    if (!string.IsNullOrEmpty(userLocal.Daily))
+                        embed.AddField("Daily", userLocal.Daily, inline: true);
                     else
-                        embed.AddField("Daily", "Not used Daily",true);
-                    if (User.FavCmd != null && User.FavCmdUsg != null)
-                        embed.AddField("Favourite Command", $"`{User.FavCmd}` and it has been used {User.FavCmdUsg} times",true);
+                        embed.AddField("Daily", "Not used Daily", inline: true);
+                    if (userLocal.FavCmd != null && userLocal.FavCmdUsg.HasValue)
+                        embed.AddField("Favourite Command", $"`{userLocal.FavCmd}` and it has been used {userLocal.FavCmdUsg} times", inline: true);
                     else
-                        embed.AddField("Favourite Command", "No favourite Command",true);
+                        embed.AddField("Favourite Command", "No favourite Command", inline: true);
                     await MessageHandler.SendChannel(Context.Channel, "", embed);
                 }
                 else
@@ -87,45 +89,45 @@ namespace Skuld.Commands
         {
             try
             {
-                var User = await SqlTools.GetUser(user.Id);
-                if(User!=null)
+                var userLocal = await SqlTools.GetUser(user.Id);
+                if(userLocal != null)
                 {
-                    EmbedBuilder embed = new EmbedBuilder()
+                    var embed = new EmbedBuilder()
                     {
-                        Author = new EmbedAuthorBuilder() { Name = User.Username, IconUrl = user.GetAvatarUrl() ?? "http://www.emoji.co.uk/files/mozilla-emojis/smileys-people-mozilla/11419-bust-in-silhouette.png" },
+                        Author = new EmbedAuthorBuilder() { Name = userLocal.Username, IconUrl = user.GetAvatarUrl() ?? "http://www.emoji.co.uk/files/mozilla-emojis/smileys-people-mozilla/11419-bust-in-silhouette.png" },
                         Color = Tools.Tools.RandomColor()
                     };
-                    embed.AddField("Description", User.Description ?? "No Description",true);
-                    embed.AddField(Config.Load().MoneyName, User.Money.Value.ToString("N0") ?? "No Money",true);
-                    embed.AddField("Luck Factor", User.LuckFactor.ToString("P2") ?? "No LuckFactor",true);
-                    if (!String.IsNullOrEmpty(User.Daily))
-                        embed.AddField("Daily", User.Daily,true);
+                    embed.AddField("Description", userLocal.Description ?? "No Description",inline: true);
+                    embed.AddField(Config.Load().MoneyName, userLocal.Money.Value.ToString("N0") ?? "No Money", inline: true);
+                    embed.AddField("Luck Factor", userLocal.LuckFactor.ToString("P2") ?? "No LuckFactor", inline: true);
+                    if (!String.IsNullOrEmpty(userLocal.Daily))
+                        embed.AddField("Daily", userLocal.Daily, inline: true);
                     else
-                        embed.AddField("Daily", "Not used Daily",true);
-                    if (User.Glares > 0)
-                        embed.AddField("Glares", User.Glares + " times",true);
+                        embed.AddField("Daily", "Not used Daily", inline: true);
+                    if (userLocal.Glares > 0)
+                        embed.AddField("Glares", userLocal.Glares + " times", inline: true);
                     else
-                        embed.AddField("Glares", "Not glared at anyone",true);
-                    if (User.GlaredAt > 0)
-                        embed.AddField("Glared At", User.GlaredAt + " times",true);
+                        embed.AddField("Glares", "Not glared at anyone", inline: true);
+                    if (userLocal.GlaredAt > 0)
+                        embed.AddField("Glared At", userLocal.GlaredAt + " times", inline: true);
                     else
-                        embed.AddField("Glared At", "Not been glared at",true);
-                    if (User.Pets > 0)
-                        embed.AddField("Pets", User.Pets + " times",true);
+                        embed.AddField("Glared At", "Not been glared at", inline: true);
+                    if (userLocal.Pets > 0)
+                        embed.AddField("Pets", userLocal.Pets + " times", inline: true);
                     else
-                        embed.AddField("Pets", "Not been petted",true);
-                    if (User.Petted > 0)
-                        embed.AddField("Petted", User.Petted + " times",true);
+                        embed.AddField("Pets", "Not been petted", inline: true);
+                    if (userLocal.Petted > 0)
+                        embed.AddField("Petted", userLocal.Petted + " times", inline: true);
                     else
-                        embed.AddField("Petted", "Not petted anyone",true);
-                    if (User.HP > 0)
-                        embed.AddField("HP", User.HP + " HP",true);
+                        embed.AddField("Petted", "Not petted anyone", inline: true);
+                    if (userLocal.HP > 0)
+                        embed.AddField("HP", userLocal.HP + " HP", inline: true);
                     else
-                        embed.AddField("HP", "No HP",true);
-                    if (User.FavCmd != null && User.FavCmdUsg != null)
-                        embed.AddField("Favourite Command", $"`{User.FavCmd}` and it has been used {User.FavCmdUsg} times",true);
+                        embed.AddField("HP", "No HP", inline: true);
+                    if (userLocal.FavCmd != null && userLocal.FavCmdUsg.HasValue)
+                        embed.AddField("Favourite Command", $"`{userLocal.FavCmd}` and it has been used {userLocal.FavCmdUsg} times", inline: true);
                     else
-                        embed.AddField("Favourite Command", "No favourite Command",true);
+                        embed.AddField("Favourite Command", "No favourite Command", inline: true);
                     await MessageHandler.SendChannel(Context.Channel, "", embed);
                 }
                 else
@@ -165,20 +167,20 @@ namespace Skuld.Commands
         [Command("daily", RunMode = RunMode.Async), Summary("Daily Money")]
         public async Task Daily()
         {
-            DateTime olddate = new DateTime();
+            var olddate = new DateTime();
             var command = new MySqlCommand("select daily from accounts where ID = @userid");
             command.Parameters.AddWithValue("@userid", Context.User.Id);
             var resp = await SqlTools.GetSingleAsync(command);
             if (!String.IsNullOrEmpty(resp))
             {
                 olddate = Convert.ToDateTime(resp);
-                DateTime newdate = olddate.AddHours(23).AddMinutes(59).AddSeconds(59);
+                var newdate = olddate.AddHours(23).AddMinutes(59).AddSeconds(59);
                 var temp = DateTime.Compare(newdate, DateTime.UtcNow);
                 if (temp == 1)
                 {
-                    DateTime calcdate = olddate;
-                    DateTime extraday = calcdate.AddDays(1);
-                    TimeSpan remain = extraday.Subtract(DateTime.UtcNow);
+                    var calcdate = olddate;
+                    var extraday = calcdate.AddDays(1);
+                    var remain = extraday.Subtract(DateTime.UtcNow);
                     string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
                     await MessageHandler.SendChannel(Context.Channel, $"You must wait `{remaining}`");
                 }
@@ -196,7 +198,7 @@ namespace Skuld.Commands
             var tresp = await SqlTools.GetSingleAsync(command);
             if (!String.IsNullOrEmpty(tresp))
                 oldmoney = Convert.ToUInt64(tresp);
-            ulong newamount = oldmoney + Config.Load().DailyAmount;
+            var newamount = oldmoney + Config.Load().DailyAmount;
 
             command = new MySqlCommand("UPDATE accounts SET money = @money, daily = @daily WHERE ID = @userid");
             command.Parameters.AddWithValue("@userid", Context.User.Id);
@@ -213,23 +215,30 @@ namespace Skuld.Commands
         [Command("daily", RunMode = RunMode.Async), Summary("Daily Money")]
         public async Task GiveDaily([Remainder]IGuildUser usertogive)
         {
-            if (usertogive.IsBot) { await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = "Bot Accounts cannot be given any money", Color = new Color(255,0,0) }); }
+            if (usertogive.IsBot)
+            {
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() {
+                    Author = new EmbedAuthorBuilder() {
+                        Name = "Error with the command" },
+                    Description = "Bot Accounts cannot be given any money", Color = new Color(255,0,0)
+                });
+            }
             else
             {
-                DateTime olddate = new DateTime();
+                var olddate = new DateTime();
                 var command = new MySqlCommand("SELECT `daily` FROM `accounts` WHERE ID = @userid");
                 command.Parameters.AddWithValue("@userid", Context.User.Id);
                 var resp = await SqlTools.GetSingleAsync(command);
                 if (!String.IsNullOrEmpty(resp))
                 {
                     olddate = Convert.ToDateTime(resp);
-                    DateTime newdate = olddate.AddHours(23).AddMinutes(59).AddSeconds(59);
+                    var newdate = olddate.AddHours(23).AddMinutes(59).AddSeconds(59);
                     var temp = DateTime.Compare(newdate, DateTime.UtcNow);
                     if (temp == 1)
                     {
-                        DateTime calcdate = olddate;
-                        DateTime extraday = calcdate.AddDays(1);
-                        TimeSpan remain = extraday.Subtract(DateTime.UtcNow);
+                        var calcdate = olddate;
+                        var extraday = calcdate.AddDays(1);
+                        var remain = extraday.Subtract(DateTime.UtcNow);
                         string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
                         await MessageHandler.SendChannel(Context.Channel, $"You must wait `{remaining}`");
                     }
@@ -241,7 +250,7 @@ namespace Skuld.Commands
                         var tresp = await SqlTools.GetSingleAsync(command);
                         if (!String.IsNullOrEmpty(tresp))
                             oldmoney = Convert.ToUInt64(tresp);
-                        ulong newamount = oldmoney + Config.Load().DailyAmount;
+                        var newamount = oldmoney + Config.Load().DailyAmount;
 
                         command = new MySqlCommand("UPDATE ACCOUNTS SET Daily = @daily WHERE ID = @userid");
                         command.Parameters.AddWithValue("@userid", Context.User.Id);
@@ -276,7 +285,7 @@ namespace Skuld.Commands
             var tresp = await SqlTools.GetSingleAsync(command);
             if (!String.IsNullOrEmpty(tresp))
                 oldmoney = Convert.ToUInt64(tresp);
-            ulong newamount = oldmoney + Config.Load().DailyAmount;
+            var newamount = oldmoney + Config.Load().DailyAmount;
 
             command = new MySqlCommand("UPDATE accounts SET money = @money, daily = @daily WHERE ID = @userid");
             command.Parameters.AddWithValue("@userid", Context.User.Id);
@@ -294,8 +303,14 @@ namespace Skuld.Commands
         [Command("give", RunMode = RunMode.Async), Summary("Give away ur money")]
         public async Task Give(IGuildUser user, ulong amount)
         {
-            if (amount < 0) { await MessageHandler.SendChannel(Context.Channel, "HEY! Stop trying to reduce their money. >:("); }
-            if (amount == 0) { await MessageHandler.SendChannel(Context.Channel,"Why would you want to give zero money to someone? :thinking:"); }
+            if (amount < 0)
+            {
+                await MessageHandler.SendChannel(Context.Channel, "HEY! Stop trying to reduce their money. >:(");
+            }
+            if (amount == 0)
+            {
+                await MessageHandler.SendChannel(Context.Channel,"Why would you want to give zero money to someone? :thinking:");
+            }
             else
             {
                 var sender = Context.User;
@@ -315,7 +330,10 @@ namespace Skuld.Commands
                     oldsendmoney = Convert.ToUInt64(reader2);
                 else
                     await InsertUser(Context.User);
-                if (oldsendmoney < amount) { await MessageHandler.SendChannel(Context.Channel, "ERROR: You are trying to give more than you currently have. Please select an amount under `" + oldsendmoney + "`");  }
+                if (oldsendmoney < amount)
+                {
+                    await MessageHandler.SendChannel(Context.Channel, "ERROR: You are trying to give more than you currently have. Please select an amount under `" + oldsendmoney + "`");
+                }
                 else
                 {
                     var newrecipmoney = oldrecipmoney + amount;
@@ -354,12 +372,12 @@ namespace Skuld.Commands
         [Command("syncname", RunMode = RunMode.Async), Summary("Syncs your username in the database")]
         public async Task SyncName()
         {
-            MySqlCommand command = new MySqlCommand("SELECT username FROM accounts WHERE ID = @userid");
+            var command = new MySqlCommand("SELECT username FROM accounts WHERE ID = @userid");
             command.Parameters.AddWithValue("@userid", Context.User.Id);
             var username = await SqlTools.GetSingleAsync(command);
             if(Context.User.Username+"#"+Context.User.DiscriminatorValue != username)
             {
-                MySqlCommand cmd = new MySqlCommand("UPDATE accounts SET username = @username WHERE ID = @userid");
+                var cmd = new MySqlCommand("UPDATE accounts SET username = @username WHERE ID = @userid");
                 cmd.Parameters.AddWithValue("@username", $"{Context.User.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{Context.User.DiscriminatorValue}");
                 cmd.Parameters.AddWithValue("@userid", Context.User.Id);
                 await SqlTools.InsertAsync(cmd).ContinueWith(async x=>
@@ -374,7 +392,7 @@ namespace Skuld.Commands
 
         private async Task InsertUser(IUser user)
         {
-            MySqlCommand command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");");
+            var command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");");
             command.Parameters.AddWithValue("@username", $"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{user.DiscriminatorValue}");
             command.Parameters.AddWithValue("@userid", user.Id);
             await SqlTools.InsertAsync(command);

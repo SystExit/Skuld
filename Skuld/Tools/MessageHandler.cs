@@ -10,34 +10,34 @@ namespace Skuld.Tools
     {
         public static async Task<IUserMessage> SendChannel(IChannel channel, string message, Embed embed = null, string filename = null)
         {
-            var TextChan = (ITextChannel)channel;
-            var MesgChan = (IMessageChannel)channel;
-            IUserMessage Message;
-            await MesgChan.TriggerTypingAsync();
+            var textChan = (ITextChannel)channel;
+            var mesgChan = (IMessageChannel)channel;
+            IUserMessage msg;
+            await mesgChan.TriggerTypingAsync();
             try
             {
                 if (embed == null)
                 {
                     if(filename == null)
-                        Message = await MesgChan.SendMessageAsync(message);
+                        msg = await mesgChan.SendMessageAsync(message);
                     else
-                        Message = await MesgChan.SendFileAsync(filename, message);
+                        msg = await mesgChan.SendFileAsync(filename, message);
                 }
                 else
                 {
-                    var perm = (await TextChan.Guild.GetUserAsync(Bot.bot.CurrentUser.Id)).GetPermissions(TextChan).EmbedLinks;
+                    var perm = (await textChan.Guild.GetUserAsync(Bot.bot.CurrentUser.Id)).GetPermissions(textChan).EmbedLinks;
                     if (!perm)
                     {
                         if (message != null)
-                            Message = await MesgChan.SendMessageAsync(message + "\n" + ConvertEmbedToText(embed));
+                            msg = await mesgChan.SendMessageAsync(message + "\n" + ConvertEmbedToText(embed));
                         else
-                            Message = await MesgChan.SendMessageAsync(ConvertEmbedToText(embed));             
+                            msg = await mesgChan.SendMessageAsync(ConvertEmbedToText(embed));             
                     }
                     else
-                        Message = await MesgChan.SendMessageAsync(message, false, embed);                    
+                        msg = await mesgChan.SendMessageAsync(message, isTTS: false, embed: embed);                    
                 }
                 Bot.Logs.Add(new Models.LogMessage("MsgDisp", $"Dispactched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
-                return Message;
+                return msg;
             }
             catch (Exception ex)
             {
@@ -46,43 +46,43 @@ namespace Skuld.Tools
             }
         }
         private static IUserMessage dmsg = null;
-        public static async Task SendChannel(IChannel channel, string message, double Timeout, EmbedBuilder embed = null, string filename = null)
+        public static async Task SendChannel(IChannel channel, string message, double timeout, EmbedBuilder embed = null, string filename = null)
         {
             var cmdstopwatch = CommandManager.CommandStopWatch;
             cmdstopwatch.Stop();
 
             embed.Footer.Text = "Command took " + cmdstopwatch.ElapsedMilliseconds + "ms";
-            var TextChan = (ITextChannel)channel;
-            var MesgChan = (IMessageChannel)channel;
-            await MesgChan.TriggerTypingAsync();
+            var textChan = (ITextChannel)channel;
+            var mesgChan = (IMessageChannel)channel;
+            await mesgChan.TriggerTypingAsync();
             try
             {
                 if (embed == null)
                 {
                     if (filename == null)
-                        dmsg = await MesgChan.SendMessageAsync(message);
+                        dmsg = await mesgChan.SendMessageAsync(message);
                     else
-                        dmsg = await MesgChan.SendFileAsync(filename, message);
+                        dmsg = await mesgChan.SendFileAsync(filename, message);
                 }
                 else
                 {
-                    var perm = (await TextChan.Guild.GetUserAsync(Bot.bot.CurrentUser.Id)).GetPermissions(TextChan).EmbedLinks;
+                    var perm = (await textChan.Guild.GetUserAsync(Bot.bot.CurrentUser.Id)).GetPermissions(textChan).EmbedLinks;
                     if (!perm)
                     {
                         if (message != null)
-                            dmsg = await MesgChan.SendMessageAsync(message + "\n" + ConvertEmbedToText(embed));
+                            dmsg = await mesgChan.SendMessageAsync(message + "\n" + ConvertEmbedToText(embed));
                         else
-                            dmsg = await MesgChan.SendMessageAsync(ConvertEmbedToText(embed));
+                            dmsg = await mesgChan.SendMessageAsync(ConvertEmbedToText(embed));
                     }
                     else if (perm)
-                        dmsg = await MesgChan.SendMessageAsync(message, false, embed);
+                        dmsg = await mesgChan.SendMessageAsync(message, isTTS: false, embed: embed);
                 }
                 Bot.Logs.Add(new Models.LogMessage("MsgDisp", $"Dispactched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
-                Stopwatch timer = new Stopwatch();
+                var timer = new Stopwatch();
                 timer.Start();
                 while (timer.IsRunning)
                 {
-                    if (timer.ElapsedMilliseconds == Timeout * 1000)
+                    if (timer.ElapsedMilliseconds == timeout * 1000)
                     {
                         await dmsg.DeleteAsync();
                         timer.Stop();
@@ -96,11 +96,11 @@ namespace Skuld.Tools
             }
         }
 
-        private static void Timer_Elapsed(object sender, ElapsedEventArgs e)
+        private static async void Timer_Elapsed(object sender, ElapsedEventArgs e)
         {
             if(dmsg != null)
             {
-                dmsg.DeleteAsync().Wait();
+                await dmsg.DeleteAsync();
                 dmsg = null;
             }            
         }
@@ -113,7 +113,7 @@ namespace Skuld.Tools
                 if (embed == null)
                     dmsg = await user.SendMessageAsync(message);
                 else
-                    dmsg = await user.SendMessageAsync(message, false, embed);
+                    dmsg = await user.SendMessageAsync(message, isTTS: false, embed: embed);
                 await SendChannel(channel, $":ok_hand: <@{user.Recipient.Id}> Check your DMs.");
                 return dmsg;
             }

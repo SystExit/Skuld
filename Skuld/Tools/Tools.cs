@@ -16,10 +16,10 @@ namespace Skuld.Tools
         }
         public static Color RandomColor()
         {
-            var rand = Bot.random;
-            Byte[] b = new byte[3];
-            rand.NextBytes(b);
-            return new Color(b[0], b[1], b[2]);
+            var rand = random;
+            var bytes = new byte[3];
+            rand.NextBytes(bytes);
+            return new Color(bytes[0], bytes[1], bytes[2]);
         }
     }
 }

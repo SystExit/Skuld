@@ -33,7 +33,7 @@ namespace Skuld.Tools
                     {
                         await Events.DiscordEvents.PopulateSpecificGuild(context.Guild);
                     }
-                    MySqlCommand command = new MySqlCommand("SELECT prefix FROM guild WHERE ID = @guildid");
+                    var command = new MySqlCommand("SELECT prefix FROM guild WHERE ID = @guildid");
                     command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
                     customPrefix = await SqlTools.GetSingleAsync(command);
                     if (message.Content.ToLower() == $"{bot.CurrentUser.Username.ToLower()}.resetprefix")
@@ -64,17 +64,17 @@ namespace Skuld.Tools
             }            
         }
 
-        public static async Task HandleAI(ICommandContext Context, string chatmessage)
+        public static async Task HandleAI(ICommandContext context, string chatmessage)
         {
             try
             {
-                if (chatmessage.Contains($"{Context.Client.CurrentUser.Id}"))
+                if (chatmessage.Contains($"{context.Client.CurrentUser.Id}"))
                 {
                     var messagearr = chatmessage.Split(' ');
                     chatmessage = String.Join(" ", messagearr.Skip(1).ToArray());
                 }
                 bool triggeredphrase = false;
-                KeyValuePair<string,string> trigger = new KeyValuePair<string, string>("","");
+                var trigger = new KeyValuePair<string, string>("","");
                 foreach(var phrase in Config.Load().TriggerPhrases)
                 {
                     if(chatmessage.ToLowerInvariant().Contains(phrase.Key))
@@ -87,27 +87,27 @@ namespace Skuld.Tools
                 if(!triggeredphrase)
                 {
                     if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
-                        await InsertAI(Context.User);
-                    if (!File.Exists(PathToUserData + "\\" + Context.User.Id + ".dat"))
-                        ChatUser.Predicates.DictionaryAsXML.Save(PathToUserData + "\\" + Context.User.Id + ".dat");
-                    ChatUser = new AIMLbot.User(Convert.ToString(Context.User.Id), ChatService);
-                    ChatUser.Predicates.loadSettings(PathToUserData + "\\" + Context.User.Id + ".dat");
-                    var r = new AIMLbot.Request(chatmessage, ChatUser, ChatService);
-                    var userresp = ChatService.Chat(r);
+                        await InsertAI(context.User);
+                    if (!File.Exists(PathToUserData + "\\" + context.User.Id + ".dat"))
+                        ChatUser.Predicates.DictionaryAsXML.Save(PathToUserData + "\\" + context.User.Id + ".dat");
+                    ChatUser = new AIMLbot.User(Convert.ToString(context.User.Id), ChatService);
+                    ChatUser.Predicates.loadSettings(PathToUserData + "\\" + context.User.Id + ".dat");
+                    var res = new AIMLbot.Request(chatmessage, ChatUser, ChatService);
+                    var userresp = ChatService.Chat(res);
                     var responce = userresp.Output;
                     ChatService.writeToLog(ChatService.LastLogMessage);
-                    ChatUser.Predicates.DictionaryAsXML.Save(PathToUserData + "\\" + Context.User.Id + ".dat");
-                    await MessageHandler.SendChannel(Context.Channel, $"{Context.User.Mention}, {responce}");
+                    ChatUser.Predicates.DictionaryAsXML.Save(PathToUserData + "\\" + context.User.Id + ".dat");
+                    await MessageHandler.SendChannel(context.Channel, $"{context.User.Mention}, {responce}");
                 }
                 else
                 {
-                    await MessageHandler.SendChannel(Context.Channel, $"{Context.User.Mention}, {trigger.Value}");
+                    await MessageHandler.SendChannel(context.Channel, $"{context.User.Mention}, {trigger.Value}");
                 }
             }
             catch(Exception ex)
             {
                 Logs.Add(new Models.LogMessage("ChatSrvc", "Error has occured.", LogSeverity.Error, ex));
-                await MessageHandler.SendChannel(Context.Channel, $"{Context.User.Mention}, I'm sorry but an error has occured. Try again.");
+                await MessageHandler.SendChannel(context.Channel, $"{context.User.Mention}, I'm sorry but an error has occured. Try again.");
             }
         }
 
@@ -156,19 +156,19 @@ namespace Skuld.Tools
                 if (message.HasStringPrefix(customPrefix, ref argPos) || message.HasStringPrefix(defaultPrefix, ref argPos))
                 {
                     IResult result = null;
-                    CommandInfo Command = null;
+                    CommandInfo cmd = null;
                     if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
                     {
-                        var Guild = await SqlTools.GetGuild(context.Guild.Id);
+                        var guild = await SqlTools.GetGuild(context.Guild.Id);
                         var command = commands.Search(context, arg.Content.Split(' ')[0].Replace(defaultPrefix, "").Replace(customPrefix, "")).Commands;
                         if (command == null) return;
                         {
                             var res = command.FirstOrDefault();
-                            var module = CheckModule(Guild, res.Command.Module);
+                            var module = CheckModule(guild, res.Command.Module);
                             if (module)
                             {
                                 result = await commands.ExecuteAsync(context, argPos, map);
-                                Command = command.FirstOrDefault().Command;
+                                cmd = command.FirstOrDefault().Command;
                             }
                         }
                     }
@@ -195,37 +195,37 @@ namespace Skuld.Tools
                 Logs.Add(new Models.LogMessage("CmdHand", "Error with command dispatching", LogSeverity.Error, ex));
             }
         }
-        private static async Task InsertCommand(CommandInfo Command, SocketMessage arg)
+        private static async Task InsertCommand(CommandInfo command, SocketMessage arg)
         {
             var user = arg.Author;
-            MySqlCommand command = new MySqlCommand("SELECT UserUsage FROM commandusage WHERE UserID = @userid AND Command = @command");
-            command.Parameters.AddWithValue("@userid", user.Id);
-            command.Parameters.AddWithValue("@command", Command.Name??Command.Module.Name);
-            var resp = await SqlTools.GetSingleAsync(command);
+            var cmd = new MySqlCommand("SELECT UserUsage FROM commandusage WHERE UserID = @userid AND Command = @command");
+            cmd.Parameters.AddWithValue("@userid", user.Id);
+            cmd.Parameters.AddWithValue("@command", command.Name?? command.Module.Name);
+            var resp = await SqlTools.GetSingleAsync(cmd);
             if (!String.IsNullOrEmpty(resp))
             {
                 var cmdusg = Convert.ToInt32(resp);
                 cmdusg = cmdusg + 1;
-                command = new MySqlCommand("UPDATE commandusage SET UserUsage = @userusg WHERE UserID = @userid AND Command = @command");
-                command.Parameters.AddWithValue("@userusg", cmdusg);
-                command.Parameters.AddWithValue("@userid", user.Id);
-                command.Parameters.AddWithValue("@command", Command.Name ?? Command.Module.Name);
-                await SqlTools.InsertAsync(command);
+                cmd = new MySqlCommand("UPDATE commandusage SET UserUsage = @userusg WHERE UserID = @userid AND Command = @command");
+                cmd.Parameters.AddWithValue("@userusg", cmdusg);
+                cmd.Parameters.AddWithValue("@userid", user.Id);
+                cmd.Parameters.AddWithValue("@command", command.Name ?? command.Module.Name);
+                await SqlTools.InsertAsync(cmd);
                 return;
             }
             else
             {
-                command = new MySqlCommand("INSERT INTO commandusage (`UserID`, `UserUsage`, `Command`) VALUES (@userid , @userusg , @command)");
-                command.Parameters.AddWithValue("@userusg", 1);
-                command.Parameters.AddWithValue("@userid", user.Id);
-                command.Parameters.AddWithValue("@command", Command.Name ?? Command.Module.Name);
-                await SqlTools.InsertAsync(command);
+                cmd = new MySqlCommand("INSERT INTO commandusage (`UserID`, `UserUsage`, `Command`) VALUES (@userid , @userusg , @command)");
+                cmd.Parameters.AddWithValue("@userusg", 1);
+                cmd.Parameters.AddWithValue("@userid", user.Id);
+                cmd.Parameters.AddWithValue("@command", command.Name ?? command.Module.Name);
+                await SqlTools.InsertAsync(cmd);
                 return;
             }
         }
         private static async Task InsertAI(IUser user)
         {
-            MySqlCommand command = new MySqlCommand("SELECT * FROM commandusage WHERE UserID = @userid AND Command = @command");
+            var command = new MySqlCommand("SELECT * FROM commandusage WHERE UserID = @userid AND Command = @command");
             command.Parameters.AddWithValue("@userid", user.Id);
             command.Parameters.AddWithValue("@command", "chat");
             var respsql = await SqlTools.GetAsync(command);
@@ -255,24 +255,24 @@ namespace Skuld.Tools
             }
         }
 
-        private static bool CheckModule (Models.SkuldGuild Guild, ModuleInfo module)
+        private static bool CheckModule (Models.SkuldGuild guild, ModuleInfo module)
         {
             if (module.Name == "Accounts")
-                return Guild.GuildSettings.Modules.AccountsEnabled;
+                return guild.GuildSettings.Modules.AccountsEnabled;
             else if (module.Name == "Actions")
-                return Guild.GuildSettings.Modules.ActionsEnabled;
+                return guild.GuildSettings.Modules.ActionsEnabled;
             else if (module.Name == "Admin")
-                return Guild.GuildSettings.Modules.AdminEnabled;
+                return guild.GuildSettings.Modules.AdminEnabled;
             else if (module.Name == "Fun")
-                return Guild.GuildSettings.Modules.FunEnabled;
+                return guild.GuildSettings.Modules.FunEnabled;
             else if (module.Name == "Help")
-                return Guild.GuildSettings.Modules.HelpEnabled;
+                return guild.GuildSettings.Modules.HelpEnabled;
             else if (module.Name == "Information")
-                return Guild.GuildSettings.Modules.InformationEnabled;
+                return guild.GuildSettings.Modules.InformationEnabled;
             else if (module.Name == "Search")
-                return Guild.GuildSettings.Modules.SearchEnabled;
+                return guild.GuildSettings.Modules.SearchEnabled;
             else if (module.Name == "Stats")
-                return Guild.GuildSettings.Modules.StatsEnabled;
+                return guild.GuildSettings.Modules.StatsEnabled;
             else
                 return true;
         }

@@ -20,7 +20,7 @@ namespace Skuld.Events
                     {
                         string source = String.Join("",item.Source.Take(1));
                         source+=String.Join("",item.Source.Reverse().Take(3).Reverse());
-                        List<string[]> consolelines = new List<string[]>();
+                        var consolelines = new List<string[]>();
                         if (item.DSeverity != null)
                             consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + source + "]", "[" + item.DSeverity.ToString()[0] + "]", item.Message });
                         if (item.TSeverity != null)
@@ -29,11 +29,11 @@ namespace Skuld.Events
                         string tolog = null;
                         if (item.Exception != null)
                         {
-                            List<string[]> loglines = new List<string[]>();
+                            var loglines = new List<string[]>();
                             if(item.DSeverity!=null)
-                                loglines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.DSeverity.ToString() + "]", item.Message + Environment.NewLine + item.Exception });
+                                loglines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.DSeverity + "]", item.Message + Environment.NewLine + item.Exception });
                             if (item.TSeverity != null)
-                                loglines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.TSeverity.ToString() + "]", item.Message + Environment.NewLine + item.Exception });
+                                loglines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.TSeverity + "]", item.Message + Environment.NewLine + item.Exception });
                             tolog = ConsoleUtils.PrettyLines(loglines, 2);
                             toconsole = toconsole + " CHECK LOGS FOR MORE INFO!";
                         }
