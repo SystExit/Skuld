@@ -21,27 +21,24 @@ namespace Skuld.Commands
         [Command("roleids", RunMode = RunMode.Async), Summary("Gets all role ids")]
         public async Task GetRoleIds()
         {
-            Console.WriteLine("hi");
-            var lines = new List<string[]>()
-            {
-                new string[] { "Role Name", "ID" }
-            };
+            string lines = null;
             var guild = Context.Guild;
             var roles = guild.Roles;
             foreach (var item in roles)
             {
-                lines.Add(new string[] { "\"" + item.Name + "\"", Convert.ToString(item.Id) });
+                lines = lines + $"{Convert.ToString(item.Id)} - \"{item.Name}\""+Environment.NewLine;
             }
-            var padded = ConsoleUtils.PrettyLines(lines, 3);
-            Console.WriteLine(padded);
-            if(padded.Length>2000)
+            if(lines.Length>2000)
             {
-                var paddedlines = padded.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
-                var pages = new string[] { paddedlines.Take(paddedlines.Length / 2).ToString(), paddedlines.Skip(paddedlines.Length / 2).Take(paddedlines.Length / 2).ToString() };
-                await PagedReplyAsync(pages);
+                var paddedlines = lines.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+                var pad1 = paddedlines.Take(paddedlines.Length / 2);
+                var pad2 = paddedlines.Skip(paddedlines.Length / 2).Take(paddedlines.Length / 2);
+
+                var pages = new string[] { "```cs\n"+string.Join("\n",pad1)+"```", "```cs\n"+string.Join("\n", pad2)+"```" };
+                await PagedReplyAsync(pages, fromSourceUser: true);
             }
             else
-                await MessageHandler.SendChannel(Context.Channel, "```cs\n" + padded + "```");
+                await MessageHandler.SendChannel(Context.Channel, "```cs\n"+lines+"```");
         }
 
         [Command("mute", RunMode = RunMode.Async), Summary("Mutes a user")]

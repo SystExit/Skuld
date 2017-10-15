@@ -12,8 +12,10 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using AIMLbot;
-using System.Collections.Generic;
-using Skuld.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Discord.Addons.Interactive;
+using System.Linq;
+using MyAnimeListSharp.Auth;
 
 namespace Skuld
 {
@@ -23,17 +25,17 @@ namespace Skuld
         public static ObservableCollection<Models.LogMessage> Logs = new ObservableCollection<Models.LogMessage>();
         public static DiscordShardedClient bot;
         public static CommandService commands;
+        public static InteractiveService InteractiveCommands;
         public static IServiceProvider map;
         public static string logfile;
         public static StreamWriter sw;
         public static Random random = new Random();
         public static string Prefix = null;
         public static TwitchRestClient NTwitchClient;
-        public static FileSystemWatcher fsw;
         public static AIMLbot.Bot ChatService;
         public static User ChatUser;
         public static string PathToUserData;
-        public static List<CountryTimeZones> TimeZones;
+        public static ICredentialContext MalClient;
         /*END VARS*/
 
         static void Main(string[] args) => CreateBot().GetAwaiter().GetResult();
@@ -42,34 +44,9 @@ namespace Skuld
         {
             try
             {
-                EnsureConfigExists();
-                fsw = new FileSystemWatcher(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "modules")){EnableRaisingEvents = true};
-                sw = new StreamWriter(logfile, false, Encoding.UTF8);
-                Prefix = Config.Load().Prefix;
-                fsw.Deleted += Events.SkuldEvents.Fsw_Deleted;
-                Logs.CollectionChanged += Events.SkuldEvents.Logs_CollectionChanged;
+                EnsureConfigExists();                 
+                await InstallServices();
                 Logs.Add(new Models.LogMessage("FrameWk", $"Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
-                bot = new DiscordShardedClient(new DiscordSocketConfig()
-                {
-                    MessageCacheSize = 1000,
-                    LargeThreshold = 250,
-                    AlwaysDownloadUsers = true,
-                    DefaultRetryMode = RetryMode.RetryTimeouts,
-                    LogLevel = LogSeverity.Verbose,
-                    TotalShards = Config.Load().Shards
-                });
-                bot.Log += Events.SkuldEvents.Bot_Log;
-                Events.DiscordEvents.RegisterEvents();
-                commands = new CommandService(new CommandServiceConfig()
-                {
-                    CaseSensitiveCommands = false,
-                    DefaultRunMode = RunMode.Async,
-                    LogLevel = LogSeverity.Verbose
-                });
-                if(Config.Load().ChatServiceEnabled)
-                    InstallChatService();
-                await ModuleHandler.LoadAll();
-                await ModuleHandler.CountModulesCommands();
                 await StartBot(Config.Load().Token);
                 await Task.Delay(-1);
             }
@@ -79,7 +56,7 @@ namespace Skuld
                 Console.ReadLine();
             }
         }
-
+        
         public static async Task StartBot(string token)
         {
             try
@@ -88,9 +65,9 @@ namespace Skuld
                     await APIS.Twitch.TwitchClient.CreateTwitchClient(Config.Load().TwitchToken, Config.Load().TwitchClientID);
                 await bot.LoginAsync(TokenType.Bot, token);
                 await bot.StartAsync();
-                foreach (var shard in bot.Shards)
+                /*foreach (var shard in bot.Shards)
                     if(shard.ConnectionState == ConnectionState.Connected)
-                        await PublishStats(shard.ShardId);
+                        await PublishStats(shard.ShardId);*/
                 await Task.Delay(-1);
             }
             catch(Exception ex)
@@ -138,7 +115,51 @@ namespace Skuld
             {
                 Logs.Add(new Models.LogMessage("ChtSrvc", "Error loading Chat Service", LogSeverity.Error,ex));
             }
-        }        
+        }
+
+        public static async Task InstallServices()
+        {
+            sw = new StreamWriter(logfile, false, Encoding.UTF8);
+            Prefix = Config.Load().Prefix;
+            Logs.CollectionChanged += Events.SkuldEvents.Logs_CollectionChanged;
+
+            bot = new DiscordShardedClient(new DiscordSocketConfig()
+            {
+                MessageCacheSize = 1000,
+                LargeThreshold = 250,
+                AlwaysDownloadUsers = true,
+                DefaultRetryMode = RetryMode.RetryTimeouts,
+                LogLevel = LogSeverity.Verbose,
+                TotalShards = Config.Load().Shards
+            });
+
+            bot.Log += Events.SkuldEvents.Bot_Log;
+            Events.DiscordEvents.RegisterEvents();
+
+            commands = new CommandService(new CommandServiceConfig()
+            {
+                CaseSensitiveCommands = false,
+                DefaultRunMode = RunMode.Async,
+                LogLevel = LogSeverity.Verbose,
+                ThrowOnError = true
+            });
+
+            InteractiveCommands = new InteractiveService(bot,TimeSpan.FromSeconds(60));
+
+            if (Config.Load().ChatServiceEnabled)
+                InstallChatService();
+
+            await commands.AddModulesAsync(Assembly.GetEntryAssembly());
+
+            Logs.Add(new Models.LogMessage("CmdSrvc", $"Loaded {commands.Commands.Count()} Commands from {commands.Modules.Count()} Modules", LogSeverity.Info));
+
+            map = new ServiceCollection()
+                .AddSingleton(bot)
+                .AddSingleton(commands)
+                .AddSingleton(InteractiveCommands)
+                .BuildServiceProvider();
+
+        }
 
         public static async Task PublishStats(int shardid)
         {

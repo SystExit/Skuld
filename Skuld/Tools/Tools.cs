@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq;
 using Discord;
 
 namespace Skuld.Tools
@@ -20,6 +16,13 @@ namespace Skuld.Tools
             var bytes = new byte[3];
             rand.NextBytes(bytes);
             return new Color(bytes[0], bytes[1], bytes[2]);
+        }
+        public static string CheckIfStringIsNull(string strng)
+        {
+            if (string.IsNullOrEmpty(strng) || string.IsNullOrWhiteSpace(strng))
+                return "Not Available";
+            else
+                return strng;
         }
     }
 }

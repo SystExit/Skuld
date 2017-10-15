@@ -67,14 +67,7 @@ namespace Skuld.Events
             return Task.CompletedTask;
         }
         //End logging
-
-        //Start FSW
-        public async static void Fsw_Deleted(object sender, FileSystemEventArgs e)
-        {
-            await ModuleHandler.UnloadSpecificModule(e.Name);
-        }
-        //End FSW
-
+        
         //Start Twitch
         public static Task NTwitchClient_Log(NTwitch.LogMessage arg)
         {
