@@ -10,11 +10,6 @@ using System.Linq;
 using Skuld.Models.API;
 using Skuld.APIS;
 using Skuld.Tools;
-using PokeSharp.Models;
-using PokeSharp.Deserializer;
-using Skuld.Models.API.MAL;
-using System.Timers;
-using System.Text;
 using Google.Apis.Customsearch.v1;
 using YoutubeSearch;
 using System.Collections.Generic;
@@ -470,6 +465,85 @@ namespace Skuld.Commands
             await MessageHandler.SendChannel(Context.Channel, "", embed);
         }
         
+        [Command("reddit", RunMode = RunMode.Async), Summary("Gets a subreddit")]
+        public async Task SubReddit(string subreddit, int amount = 10)
+        {
+            var subReddit = await APIReddit.GetSubReddit(subreddit, amount);
+            var paginatedMessage = new PaginatedMessage()
+            {
+                Title = "https://reddit.com/r/" + subreddit,
+                Color = Tools.Tools.RandomColor(),
+                Options = new PaginatedAppearanceOptions()
+                {
+                    DisplayInformationIcon = false,
+                    JumpDisplayOptions = JumpDisplayOptions.WithManageMessages
+                }
+            };
 
+            var pages = new List<string>();
+            var pageText = new List<string>();
+
+            foreach (var post in subReddit.Data.Posts)
+            {
+                string txt = $"[{post.Data.Title}](https://reddit.com{post.Data.Permalink})\n";
+                pageText.Add(txt);
+                if(Context.Channel.IsNsfw&&post.Data.Over18)
+                    pageText.Add("[NSFW] "+txt);
+            }
+
+            if(pageText.Count>10)
+            {
+                string tempstring = null;
+                int cycle = 0;
+                for (int counter = 1; counter <= 10; counter++)
+                {
+                    if (pageText.ElementAtOrDefault((cycle + counter)-1) == null)
+                    {
+                        pages.Add(tempstring);
+                        tempstring = null;
+                        break;
+                    }
+                    if (counter % 10 == 0)
+                    {
+                        tempstring = tempstring + (cycle+counter) + ". " + pageText.ElementAtOrDefault((cycle + counter)-1);
+                        pages.Add(tempstring);
+                        tempstring = null;
+                        cycle= cycle+10;
+                        counter = 0;
+                    }
+                    else
+                        tempstring = tempstring + (cycle+counter) + ". " + pageText.ElementAtOrDefault((cycle + counter)-1) + "\n";
+                }
+            }
+            else
+            {
+                string tmpstring = null;
+                int cntr = 1;
+                foreach(var post in pageText)
+                {
+                    if (cntr != pageText.Count)
+                        tmpstring = tmpstring + $"{cntr++}. {post}\n";
+                    else
+                        tmpstring = tmpstring + $"{cntr++}. {post}";
+                }
+                pages.Add(tmpstring);
+            }
+            
+            paginatedMessage.Pages = pages;
+
+            if (pages.Count > 1)
+                await PagedReplyAsync(paginatedMessage);
+            else
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder()
+                {
+                    Title = paginatedMessage.Title,
+                    Color = Tools.Tools.RandomColor(),
+                    Description = pages.FirstOrDefault(),
+                    Footer = new EmbedFooterBuilder()
+                    {
+                        Text = "Page 1/1"
+                    }
+                }.Build());
+        }
     }
 }

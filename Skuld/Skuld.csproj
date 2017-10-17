@@ -58,6 +58,7 @@
     <StartupObject>Skuld.Bot</StartupObject>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="APIS\APIReddit.cs" />
     <Compile Include="APIS\APIWebReq.cs" />
     <Compile Include="APIS\Doggo\WebReq.cs" />
     <Compile Include="APIS\Kitty\WebReq.cs" />
@@ -198,6 +199,7 @@
     <Compile Include="Models\API\MAL\Manga.cs" />
     <Compile Include="Models\API\MAL\MangaArr.cs" />
     <Compile Include="Models\API\Pokemon.cs" />
+    <Compile Include="Models\API\Reddit.cs" />
     <Compile Include="Models\API\Strawpoll\RecievePoll.cs" />
     <Compile Include="Models\API\Strawpoll\SendPoll.cs" />
     <Compile Include="Models\API\Urban.cs" />
