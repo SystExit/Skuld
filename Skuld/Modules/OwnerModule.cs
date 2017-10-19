@@ -243,13 +243,17 @@ namespace Skuld.Commands
         [Command("eval", RunMode = RunMode.Async), Summary("no")]
         public async Task EvalStuff([Remainder]string code)
         {
-            if (code.ToLowerInvariant().Contains("token")||code.ToLowerInvariant().Contains("config"))
-                await MessageHandler.SendChannel(Context.Channel, "Nope.");
-            else
+            try
             {
-                var embed = new EmbedBuilder();
-                try
+
+                if (!code.StartsWith("```cs")&&!code.EndsWith("```")) throw new Exception("Codeblock using \"CS\" is required");
+                code = code.Replace("`", "");
+                code = code.Remove(0, 2);
+                if (code.ToLowerInvariant().Contains("token") || code.ToLowerInvariant().Contains("config"))
+                    await MessageHandler.SendChannel(Context.Channel, "Nope.");
+                else
                 {
+                    var embed = new EmbedBuilder();
                     var globals = new Globals().Context = Context as ShardedCommandContext;
                     var soptions = ScriptOptions
                         .Default
@@ -271,18 +275,19 @@ namespace Skuld.Commands
                         await MessageHandler.SendChannel(Context.Channel, "Result is empty or null");
                     }
                 }
-                catch (Exception ex)
+            }
+            catch (Exception ex)
+            {
+                var embed = new EmbedBuilder();
+                embed.Author = new EmbedAuthorBuilder()
                 {
-                    embed.Author = new EmbedAuthorBuilder()
-                    {
-                        Name = "ERROR WITH EVAL"
-                    };
-                    embed.Color = new Color(255, 0, 0);
-                    embed.Description = $"{ex.Message}";
-                    Bot.Logs.Add(new Models.LogMessage("EvalCMD", "Error with eval command " + ex.Message, LogSeverity.Error, ex));
-                    await MessageHandler.SendChannel(Context.Channel, "", embed);
-                }
-            }            
+                    Name = "ERROR WITH EVAL"
+                };
+                embed.Color = new Color(255, 0, 0);
+                embed.Description = $"{ex.Message}";
+                Bot.Logs.Add(new Models.LogMessage("EvalCMD", "Error with eval command " + ex.Message, LogSeverity.Error, ex));
+                await MessageHandler.SendChannel(Context.Channel, "", embed);
+            }
         }
         [Command("pubstats", RunMode = RunMode.Async), Summary("no")]
         public async Task PubStats()
