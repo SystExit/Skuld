@@ -151,35 +151,40 @@ namespace Skuld.Commands
             }
         }
 
-        [Command("kick", RunMode = RunMode.Async), Summary("Kicks a user")]
+        [Command("kick", RunMode = RunMode.Async), Summary("Kicks a user"),Alias("dab","dabon")]
         [RequireBotPermission(GuildPermission.KickMembers)]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task Kick(IGuildUser user)
+        public async Task Kick(IGuildUser user, [Remainder]string reason = null)
         {
             var guild = Context.Guild;
             try
             {
                 var dmchan = await user.GetOrCreateDMChannelAsync();
-                await dmchan.SendMessageAsync($"You have been kicked from **{Context.Guild}**");
+                if (reason!=null)
+                    await dmchan.SendMessageAsync($"You have been kicked from **{Context.Guild}** by: {Context.User} with reason:```\n{reason}```");
+                else
+                    await dmchan.SendMessageAsync($"You have been kicked from **{Context.Guild}** by: {Context.User}");
             }
             catch { }
-            await user.KickAsync("Responsible Moderator: "+Context.User.Username+"#"+Context.User.DiscriminatorValue);
-            await MessageHandler.SendChannel(Context.Channel, $"Successfully kicked: `{user.Username}#{user.Discriminator}`");
-        }
-        [Command("kick", RunMode = RunMode.Async), Summary("Kicks a user")]
-        [RequireBotPermission(GuildPermission.BanMembers)]
-        [RequireUserPermission(GuildPermission.BanMembers)]
-        public async Task Kick(IGuildUser user, [Remainder]string reason)
-        {
-            var guild = Context.Guild;
-            try
+            if(reason!=null)
             {
-                var dmchan = await user.GetOrCreateDMChannelAsync();
-                await dmchan.SendMessageAsync($"You have been kicked from **{Context.Guild}** with reason:```\n{reason}```");
+                await user.KickAsync(Context.User.Username+"#"+Context.User.DiscriminatorValue+": "+reason).ContinueWith(async x=>
+                {
+                    if (x.IsCompleted)
+                    {
+                        await MessageHandler.SendChannel(Context.Channel, $"Successfully kicked: `{user}`\tResponsible Moderator: {Context.User}\nReason: " + reason);
+                    }
+                });
+                
             }
-            catch { }
-            await user.KickAsync("Responsible Moderator: " + Context.User.Username + "#" + Context.User.DiscriminatorValue+" : "+reason);
-            await MessageHandler.SendChannel(Context.Channel, $"Successfully kicked: `{user.Username}#{user.Discriminator}`\nReason given: {reason}");
+            else
+            {
+                await user.KickAsync(Context.User.Username+"#"+Context.User.DiscriminatorValue+": No reason given").ContinueWith(async x=>
+                {
+                    if(x.IsCompleted)
+                        await MessageHandler.SendChannel(Context.Channel, $"Successfully kicked: `{user}`\tResponsible Moderator: {Context.User}");
+                });
+            }            
         }
 
         [Command("ban", RunMode = RunMode.Async), Summary("Bans a user")]

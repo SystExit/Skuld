@@ -199,5 +199,23 @@ namespace Skuld.APIS
             { }         
             return Task.FromResult(filepath);
         }
+        public static async Task<string> ScrapeUrl(Uri url)
+        {
+            var request = (HttpWebRequest)WebRequest.Create(url);
+            request.AllowAutoRedirect = true;
+            var response = (HttpWebResponse)await request.GetResponseAsync();
+            string data = null;
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                var rStream = response.GetResponseStream();
+                var stream = new StreamReader(rStream);
+                data = await stream.ReadToEndAsync();
+                request.Abort();
+            }
+            if (!String.IsNullOrEmpty(data))
+                return data;
+            else
+                return null;
+        }
     }
 }

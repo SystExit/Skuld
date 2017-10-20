@@ -344,17 +344,18 @@ namespace Skuld.Commands
         [Command("isup", RunMode = RunMode.Async), Summary("Check if a website is online"),Alias("downforeveryone","isitonline")]
         public async Task IsUp(string website)
         {
-            var client = new WebClient();
-            var data = client.DownloadString(new Uri("http://downforeveryoneorjustme.com/" + website));
-            string response = "";            
+
+            var data = await APIWebReq.ScrapeUrl(new Uri("http://downforeveryoneorjustme.com/" + website));        
             var doc = new HtmlDocument();
             doc.LoadHtml(data);
+            string response = null;
             var container = doc.GetElementbyId("container");
             var isup = container.ChildNodes.FindFirst("p");
             if (isup.InnerHtml.ToLowerInvariant().Contains("not"))
                 response = $"The website: `{website}` is down or not replying.";
             else
                 response = $"The website: `{website}` is working and replying as intended.";
+            response = response + "\n\n`Source:` <http://downforeveryoneorjustme.com/"+website+">";
             await MessageHandler.SendChannel(Context.Channel, response);
         }
         [Command("time"), Summary("Converts a time to a set of times")]
