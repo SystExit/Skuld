@@ -6,7 +6,6 @@ using Skuld.APIS;
 using Skuld.Models.API;
 using Skuld.Tools;
 using Discord;
-using Skuld.Models;
 using System.Globalization;
 using System.Linq;
 using Newtonsoft.Json.Linq;
@@ -15,9 +14,7 @@ using CowsaySharp.Library;
 using System.IO;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
-using System.Media;
 using System.Drawing;
-using System.Drawing.Imaging;
 using Discord.Addons.Interactive;
 
 namespace Skuld.Commands
@@ -566,6 +563,36 @@ namespace Skuld.Commands
                 Title = comic.safe_title,
                 Description = comic.alt
             }.Build());
+        }
+        [Command("cah", RunMode = RunMode.Async), Summary("Gets a random Cynaide & Happiness Comic"), Alias("cyanide&happiness","c&h")]
+        public async Task CAH()
+        {
+            try
+            {
+                var doc = await APIWebReq.ScrapeUrl(new Uri("http://explosm.net/comics/random"));
+                var author = doc.DocumentNode.Descendants("div").Where(x => x.Attributes.Contains("class") && x.Attributes["class"].Value.Contains("small-2 medium-2 large-2 columns")).FirstOrDefault();
+                var authorblock = doc.DocumentNode.Descendants("div").Where(z => z.Attributes.Contains("class") && z.Attributes["class"].Value.Contains("small-8 medium-9 large-8 columns")).FirstOrDefault();
+                var authorblocksection = author.Descendants().Skip(1).FirstOrDefault();
+                var authorurl = "http://explosm.net" + authorblocksection.Attributes["href"].Value;
+                var authoravatar = "http:" + authorblocksection.ChildNodes.FirstOrDefault().Attributes["src"].Value;
+                var image = "http:" + doc.GetElementbyId("main-comic").Attributes["src"].Value;
+                var embed = new EmbedBuilder
+                {
+                    Author = new EmbedAuthorBuilder
+                    {
+                        Name = "Strip done "+ authorblock.InnerText.Split('\n')[2],
+                        Url = authorurl,
+                        IconUrl = authoravatar
+                    },
+                    ImageUrl = image,
+                    Color = Tools.Tools.RandomColor()
+                }.Build();
+                await MessageHandler.SendChannel(Context.Channel, doc.GetElementbyId("permalink").GetAttributeValue("value", ""), embed);
+            }
+            catch(Exception ex)
+            {
+                Bot.Logs.Add(new Models.LogMessage("CAH-Cmd", "Error parsing website", LogSeverity.Error, ex));
+            }
         }
 
         [Command("time", RunMode = RunMode.Async), Summary("Gets current time")]

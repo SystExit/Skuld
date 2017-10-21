@@ -8,7 +8,6 @@ using Discord.WebSocket;
 using System.Globalization;
 using Skuld.APIS;
 using HtmlAgilityPack;
-using System.Net;
 using NodaTime;
 
 namespace Skuld.Commands
@@ -345,18 +344,23 @@ namespace Skuld.Commands
         public async Task IsUp(string website)
         {
 
-            var data = await APIWebReq.ScrapeUrl(new Uri("http://downforeveryoneorjustme.com/" + website));        
-            var doc = new HtmlDocument();
-            doc.LoadHtml(data);
+            var doc = await APIWebReq.ScrapeUrl(new Uri("http://downforeveryoneorjustme.com/" + website));        
             string response = null;
-            var container = doc.GetElementbyId("container");
-            var isup = container.ChildNodes.FindFirst("p");
-            if (isup.InnerHtml.ToLowerInvariant().Contains("not"))
-                response = $"The website: `{website}` is down or not replying.";
-            else
-                response = $"The website: `{website}` is working and replying as intended.";
-            response = response + "\n\n`Source:` <http://downforeveryoneorjustme.com/"+website+">";
-            await MessageHandler.SendChannel(Context.Channel, response);
+            try
+            {
+                var container = doc.GetElementbyId("container");
+                var isup = container.ChildNodes.FindFirst("p");
+                if (isup.InnerHtml.ToLowerInvariant().Contains("not"))
+                    response = $"The website: `{website}` is down or not replying.";
+                else
+                    response = $"The website: `{website}` is working and replying as intended.";
+                response = response + "\n\n`Source:` <http://downforeveryoneorjustme.com/" + website + ">";
+                await MessageHandler.SendChannel(Context.Channel, response);
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
         }
         [Command("time"), Summary("Converts a time to a set of times")]
         public async Task ConvertTime(string primarytimezone, string time, [Remainder]string timezones)

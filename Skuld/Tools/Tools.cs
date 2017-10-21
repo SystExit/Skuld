@@ -1,5 +1,8 @@
 ﻿using System.Linq;
 using Discord;
+using System.IO;
+using System.Text;
+
 
 namespace Skuld.Tools
 {
@@ -23,6 +26,10 @@ namespace Skuld.Tools
                 return "Not Available";
             else
                 return strng;
+        }
+        public static MemoryStream GenerateStreamFromString(string value)
+        {
+            return new MemoryStream(Encoding.UTF8.GetBytes(value ?? ""));
         }
     }
 }

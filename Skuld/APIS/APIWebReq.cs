@@ -4,6 +4,8 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.IO;
 using System.Net;
+using HtmlAgilityPack;
+using System.Text;
 
 namespace Skuld.APIS
 {
@@ -199,21 +201,20 @@ namespace Skuld.APIS
             { }         
             return Task.FromResult(filepath);
         }
-        public static async Task<string> ScrapeUrl(Uri url)
+        public static async Task<HtmlDocument> ScrapeUrl(Uri url)
         {
             var request = (HttpWebRequest)WebRequest.Create(url);
             request.AllowAutoRedirect = true;
             var response = (HttpWebResponse)await request.GetResponseAsync();
             string data = null;
+            var doc = new HtmlDocument();
             if (response.StatusCode == HttpStatusCode.OK)
             {
-                var rStream = response.GetResponseStream();
-                var stream = new StreamReader(rStream);
-                data = await stream.ReadToEndAsync();
+                doc.Load(response.GetResponseStream(), Encoding.UTF8);
                 request.Abort();
             }
-            if (!String.IsNullOrEmpty(data))
-                return data;
+            if (doc!=null)
+                return doc;
             else
                 return null;
         }
