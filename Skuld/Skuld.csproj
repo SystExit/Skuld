@@ -209,6 +209,7 @@
     <Compile Include="Models\Guild.cs" />
     <Compile Include="Models\Issues.cs" />
     <Compile Include="Models\LogMessage.cs" />
+    <Compile Include="Models\SqlError.cs" />
     <Compile Include="Modules\AccountsModule.cs" />
     <Compile Include="Modules\ActionsModule.cs" />
     <Compile Include="Modules\AdminModules.cs" />

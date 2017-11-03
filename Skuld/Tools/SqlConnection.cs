@@ -10,7 +10,7 @@ namespace Skuld.Tools
     {
         private static string cs = $@"server={Config.Load().SqlDBHost};user={Config.Load().SqlUser};password={Config.Load().SqlPass};database={Config.Load().SqlDB};charset=utf8mb4";
 
-        public static async Task InsertAsync(MySqlCommand command)
+        public static async Task<bool> InsertAsync(MySqlCommand command)
         {
             var conn = new MySqlConnection(cs);
             await conn.OpenAsync();
@@ -21,12 +21,16 @@ namespace Skuld.Tools
                 {
                     await command.ExecuteNonQueryAsync();
                     await conn.CloseAsync();
+                    return true;
                 }
                 catch (Exception ex)
                 {
                     Logs.Add(new Models.LogMessage("SQL-Ins", "Error with SQL Command", Discord.LogSeverity.Error, ex));
+                    return false;
                 }
             }
+            else
+                return false;
         }
 
         public static MySqlConnection getconn = new MySqlConnection(cs);

@@ -19,15 +19,13 @@ namespace Skuld.Commands
         PerformanceCounter RamCounter;
 
         [Command("ping", RunMode = RunMode.Async), Summary("Print Ping")]
-        public async Task Ping()
-        {
+        public async Task Ping() =>
             await MessageHandler.SendChannel(Context.Channel, "PONG: " + Bot.bot.GetShardFor(Context.Guild).Latency + "ms");
-        }
+
         [Command("uptime", RunMode = RunMode.Async), Summary("Current Uptime")]
-        public async Task Uptime()
-        {
+        public async Task Uptime()=>
             await MessageHandler.SendChannel(Context.Channel, $"Uptime: {string.Format("{0:dd} Days {0:hh} Hours {0:mm} Minutes {0:ss} Seconds", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}");
-        }
+
         [Command("", RunMode = RunMode.Async), Summary("All stats")]
         public async Task StatsAll()
         {
@@ -65,16 +63,15 @@ namespace Skuld.Commands
             embed.AddField("Memory Used", (currProcess.WorkingSet64 / 1024) / 1024 + "MB",inline:true);
             await MessageHandler.SendChannel(Context.Channel, "", embed);
         }
+
         [Command("netfw", RunMode = RunMode.Async), Summary(".Net Info")]
-        public async Task Netinfo()
-        {
+        public async Task Netinfo() =>
             await MessageHandler.SendChannel(Context.Channel, $"{RuntimeInformation.FrameworkDescription} {RuntimeInformation.OSArchitecture}");
-        }
+
         [Command("discord", RunMode = RunMode.Async), Summary("Discord Info")]
-        public async Task Discnet()
-        {
+        public async Task Discnet() => 
             await MessageHandler.SendChannel(Context.Channel, $"Discord.Net Library Version: {DiscordConfig.Version}");
-        }
+
         [Command("system", RunMode = RunMode.Async), Summary("System load")]
         public async Task System()
         {
@@ -119,6 +116,7 @@ namespace Skuld.Commands
             var gbtotal = kbtotal / (1024 * 1024);
             return string.Format("{0:0.00} GB / {1} GB\n{2} MB / {3} MB", (value / 1024), Math.Round(gbtotal,2), value, Math.Truncate(mbtotal));
         }
+
         public TimeSpan UpTime
         {
             get

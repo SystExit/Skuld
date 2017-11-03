@@ -72,7 +72,7 @@ namespace Skuld.Events
             if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
                 var gldLocal = bot.Guilds.FirstOrDefault(x => x.TextChannels.Where(z => z.Id == arg2.Id) != null);
-                var guild = await SqlTools.GetGuild(gldLocal.Id);
+                var guild = await SqlTools.GetGuildAsync(gldLocal.Id);
                 if(guild.GuildSettings.Features.Starboard)
                 {
                     var dldedmsg = await arg1.GetOrDownloadAsync();
@@ -144,7 +144,7 @@ namespace Skuld.Events
             if (!string.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
                 var gld = bot.Guilds.FirstOrDefault(x => x.TextChannels.FirstOrDefault(z => z.Id == arg2.Id) != null);
-                var guild = await SqlTools.GetGuild(gld.Id);
+                var guild = await SqlTools.GetGuildAsync(gld.Id);
                 if (guild != null && gld != null)
                 {
                     if (guild.GuildSettings.Features.Starboard)
@@ -321,7 +321,7 @@ namespace Skuld.Events
             Logs.Add(new Models.LogMessage("UsrLeft", $"User {arg.Username} just left {arg.Guild.Name}", LogSeverity.Info));
             if (!string.IsNullOrEmpty(SqlHost))
             {
-                var guild = await SqlTools.GetGuild(arg.Guild.Id);
+                var guild = await SqlTools.GetGuildAsync(arg.Guild.Id);
                 string leavemessage = guild.LeaveMessage;
                 if(!String.IsNullOrEmpty(guild.LeaveMessage))
                 {
@@ -365,7 +365,7 @@ namespace Skuld.Events
             if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
                 var gld = bot.Guilds.FirstOrDefault(x => x.TextChannels.FirstOrDefault(z => z.Id == arg2.Id) != null);
-                var guild = await SqlTools.GetGuild(gld.Id);
+                var guild = await SqlTools.GetGuildAsync(gld.Id);
                 if (guild.GuildSettings.Features.GuildModification)
                 {
                     string desc = $"The server was modified. Modification(s):";
@@ -404,7 +404,7 @@ namespace Skuld.Events
             if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
                 var gld = bot.Guilds.FirstOrDefault(x => x.TextChannels.FirstOrDefault(z => z.Id == arg2.Id) != null);
-                var guild = await SqlTools.GetGuild(gld.Id);
+                var guild = await SqlTools.GetGuildAsync(gld.Id);
                 if (guild.GuildSettings.Features.GuildChannelModification)
                 {
                     var chan1 = gld.GetChannel(arg1.Id);
@@ -434,7 +434,7 @@ namespace Skuld.Events
             {
                 var gld = bot.Guilds.FirstOrDefault(x => x.TextChannels.FirstOrDefault(z => z.Id == arg.Id) != null);
                 SocketGuildChannel chan = null;
-                var guild = await SqlTools.GetGuild(gld.Id);
+                var guild = await SqlTools.GetGuildAsync(gld.Id);
                 if (guild.GuildSettings.Features.GuildChannelModification)
                 {
                     var embed = new EmbedBuilder()
@@ -455,7 +455,7 @@ namespace Skuld.Events
             {
                 var gld = bot.Guilds.FirstOrDefault(x => x.TextChannels.FirstOrDefault(z => z.Id == arg.Id) != null);
                 SocketGuildChannel chan = null;
-                var guild = await SqlTools.GetGuild(gld.Id);
+                var guild = await SqlTools.GetGuildAsync(gld.Id);
                 if(guild.GuildSettings.Features.GuildChannelModification)
                 {
                     var embed = new EmbedBuilder()
@@ -474,7 +474,7 @@ namespace Skuld.Events
         {
             if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
-                var guild = await SqlTools.GetGuild(arg2.Id);
+                var guild = await SqlTools.GetGuildAsync(arg2.Id);
                 if (guild.GuildSettings.Features.UserBanEvents)
                 {
                     var bans = await arg2.GetBansAsync();
@@ -500,7 +500,7 @@ namespace Skuld.Events
         {
             if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
-                var guild = await SqlTools.GetGuild(arg2.Id);
+                var guild = await SqlTools.GetGuildAsync(arg2.Id);
                 if (guild.GuildSettings.Features.UserBanEvents)
                 {
                     var embed = new EmbedBuilder()
@@ -525,7 +525,7 @@ namespace Skuld.Events
             if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
                 var gld = bot.Guilds.FirstOrDefault(x => x.Roles.FirstOrDefault(z => z.Id == arg.Id) != null);
-                var guild = await SqlTools.GetGuild(gld.Id);
+                var guild = await SqlTools.GetGuildAsync(gld.Id);
                 if (guild.GuildSettings.Features.GuildRoleModification)
                 {
                     string desc = $"Role `{arg.Name}` was deleted";
@@ -546,7 +546,7 @@ namespace Skuld.Events
             if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
                 var gld = bot.Guilds.FirstOrDefault(x => x.TextChannels.FirstOrDefault(z => z.Id == arg1.Id) != null);
-                var guild = await SqlTools.GetGuild(gld.Id);
+                var guild = await SqlTools.GetGuildAsync(gld.Id);
                 if (guild.GuildSettings.Features.GuildRoleModification)
                 {
                     string desc = $"Role `{arg1.Name}` was modified. Modification(s):";
@@ -579,7 +579,7 @@ namespace Skuld.Events
             if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
             {
                 var gld = bot.Guilds.FirstOrDefault(x => x.TextChannels.FirstOrDefault(z => z.Id == arg.Id) != null);
-                var guild = await SqlTools.GetGuild(gld.Id);
+                var guild = await SqlTools.GetGuildAsync(gld.Id);
                 if (guild.GuildSettings.Features.GuildRoleModification)
                 {
                     string desc = $"Role `{arg.Name}` was created";

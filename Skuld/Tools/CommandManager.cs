@@ -159,7 +159,7 @@ namespace Skuld.Tools
                     CommandInfo cmd = null;
                     if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
                     {
-                        var guild = await SqlTools.GetGuild(context.Guild.Id);
+                        var guild = await SqlTools.GetGuildAsync(context.Guild.Id);
                         var command = commands.Search(context, arg.Content.Split(' ')[0].Replace(defaultPrefix, "").Replace(customPrefix, "")).Commands;
                         if (command == null) return;
                         {

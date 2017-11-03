@@ -2,7 +2,7 @@
   "Items": [
     {
       "Analyzer": "AsyncAwaitMethodAnalyzer",
-      "OccurrenceCount": 1451,
+      "OccurrenceCount": 1494,
       "Exceptions": null,
       "SentToServer": true,
       "InstallationName": "KANNA"
@@ -107,7 +107,7 @@
     },
     {
       "Analyzer": "UseUsingsOnIDisposableAnalyzer",
-      "OccurrenceCount": 459,
+      "OccurrenceCount": 1120,
       "Exceptions": null,
       "SentToServer": true,
       "InstallationName": "KANNA"

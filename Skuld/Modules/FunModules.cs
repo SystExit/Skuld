@@ -747,7 +747,11 @@ namespace Skuld.Commands
                 Title = aPOD.Title,
                 Url = "https://apod.nasa.gov/",
                 ImageUrl = aPOD.HDUrl,
-                Timestamp = Convert.ToDateTime(aPOD.Date)
+                Timestamp = Convert.ToDateTime(aPOD.Date),
+                Author = new EmbedAuthorBuilder()
+                {
+                    Name = aPOD.CopyRight
+                }
             };
             await MessageHandler.SendChannel(Context.Channel, "", embed);
         }

@@ -21,18 +21,12 @@ namespace Skuld.Commands
         [Command("money",RunMode = RunMode.Async), Summary("Gets a users amount of money")]
         public async Task GetMoney(IGuildUser user)
         {
-            var command = new MySqlCommand("select money from accounts where ID = @id");
-            command.Parameters.AddWithValue("@id", user.Id);
-            var resp = await SqlTools.GetSingleAsync(command);
-            ulong money = 0;
-            if (ReferenceEquals(resp,null))
-                money = Convert.ToUInt64(resp);
-            else
-                await InsertUser(Context.User);
+            var usr = await SqlTools.GetUserAsync(user.Id);
+
             if(Context.User == user)
-                await MessageHandler.SendChannel(Context.Channel, $"You have: {Config.Load().MoneySymbol + money.ToString("N0")}");
+                await MessageHandler.SendChannel(Context.Channel, $"You have: {Config.Load().MoneySymbol + usr.Money.Value.ToString("N0")}");
             else
-                await MessageHandler.SendChannel(Context.Channel, message: $"**{user.Nickname??user.Username}** has: {Config.Load().MoneySymbol + money.ToString("N0")}");
+                await MessageHandler.SendChannel(Context.Channel, message: $"**{user.Nickname??user.Username}** has: {Config.Load().MoneySymbol + usr.Money.Value.ToString("N0")}");
         }
 
         [Command("profile", RunMode= RunMode.Async), Summary("Get your profile")]
@@ -43,7 +37,7 @@ namespace Skuld.Commands
         {
             try
             {
-                var userLocal = await SqlTools.GetUser(user.Id);
+                var userLocal = await SqlTools.GetUserAsync(user.Id);
                 if(userLocal != null)
                 {
                     var embed = new EmbedBuilder()
@@ -89,7 +83,7 @@ namespace Skuld.Commands
         {
             try
             {
-                var userLocal = await SqlTools.GetUser(user.Id);
+                var userLocal = await SqlTools.GetUserAsync(user.Id);
                 if(userLocal != null)
                 {
                     var embed = new EmbedBuilder()
@@ -156,31 +150,26 @@ namespace Skuld.Commands
                     await MessageHandler.SendChannel(Context.Channel,$"Successfully set your description to **{description}**");
             });
         }
-        [Command("description", RunMode = RunMode.Async), Summary("Gets description")]
-        public async Task GetDescription()
+        [Command("description", RunMode = RunMode.Async), Summary("Cleans description")]
+        public async Task SetDescription()
         {
-            var command = new MySqlCommand("SELECT Description FROM accounts WHERE ID = @userid");
+            var command = new MySqlCommand("UPDATE `accounts` SET Description = NULL WHERE ID = @userid");
             command.Parameters.AddWithValue("@userid", Context.User.Id);
-            await MessageHandler.SendChannel(Context.Channel, $"Successfully set your description to **{await SqlTools.GetSingleAsync(command)}**");
+            await SqlTools.GetSingleAsync(command);
+            await MessageHandler.SendChannel(Context.Channel, $"I cleared your description.");
         }
 
         [Command("daily", RunMode = RunMode.Async), Summary("Daily Money")]
         public async Task Daily()
         {
-            var olddate = new DateTime();
-            var command = new MySqlCommand("select daily from accounts where ID = @userid");
-            command.Parameters.AddWithValue("@userid", Context.User.Id);
-            var resp = await SqlTools.GetSingleAsync(command);
-            if (!String.IsNullOrEmpty(resp))
+            var suser = await SqlTools.GetUserAsync(Context.User.Id);
+            if (!String.IsNullOrEmpty(suser.Daily))
             {
-                olddate = Convert.ToDateTime(resp);
+                var olddate = Convert.ToDateTime(suser.Daily);
                 var newdate = olddate.AddHours(23).AddMinutes(59).AddSeconds(59);
-                var temp = DateTime.Compare(newdate, DateTime.UtcNow);
-                if (temp == 1)
+                if (DateTime.Compare(newdate, DateTime.UtcNow) == 1)
                 {
-                    var calcdate = olddate;
-                    var extraday = calcdate.AddDays(1);
-                    var remain = extraday.Subtract(DateTime.UtcNow);
+                    var remain = olddate.AddDays(1).Subtract(DateTime.UtcNow);
                     string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
                     await MessageHandler.SendChannel(Context.Channel, $"You must wait `{remaining}`");
                 }
@@ -188,34 +177,26 @@ namespace Skuld.Commands
                     await NewDaily(Context.User);
             }
             else
-                await NewDaily(Context.User);
+                await NewDaily(Context.User);            
         }
         private async Task NewDaily(IUser user)
         {
-            ulong oldmoney = 0;
-            var command = new MySqlCommand("SELECT `money` FROM `accounts` WHERE ID = @userid");
-            command.Parameters.AddWithValue("@userid", Context.User.Id);
-            var tresp = await SqlTools.GetSingleAsync(command);
-            if (!String.IsNullOrEmpty(tresp))
-                oldmoney = Convert.ToUInt64(tresp);
-            var newamount = oldmoney + Config.Load().DailyAmount;
+            var suser = await SqlTools.GetUserAsync(user.Id);
 
-            command = new MySqlCommand("UPDATE accounts SET money = @money, daily = @daily WHERE ID = @userid");
-            command.Parameters.AddWithValue("@userid", Context.User.Id);
-            command.Parameters.AddWithValue("@money", newamount);
-            command.Parameters.AddWithValue("@daily", DateTime.UtcNow);
-            await SqlTools.InsertAsync(command).ContinueWith(async x =>
+            if(suser!=null)
             {
-                if (x.IsCompleted)
-                {
-                    await MessageHandler.SendChannel(Context.Channel, $"You now have: {Config.Load().MoneySymbol + newamount.ToString("N0")}");
-                }
-            });
+                await SqlTools.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "money", Convert.ToString(suser.Money + Config.Load().DailyAmount));
+                await SqlTools.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "daily", Convert.ToString(DateTime.UtcNow));
+            }
+            else
+            {
+                await InsertUser(user);
+            }
         }
         [Command("daily", RunMode = RunMode.Async), Summary("Daily Money")]
-        public async Task GiveDaily([Remainder]IGuildUser usertogive)
+        public async Task GiveDaily([Remainder]IGuildUser user)
         {
-            if (usertogive.IsBot)
+            if (user.IsBot)
             {
                 await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() {
                     Author = new EmbedAuthorBuilder() {
@@ -225,79 +206,25 @@ namespace Skuld.Commands
             }
             else
             {
-                var olddate = new DateTime();
-                var command = new MySqlCommand("SELECT `daily` FROM `accounts` WHERE ID = @userid");
-                command.Parameters.AddWithValue("@userid", Context.User.Id);
-                var resp = await SqlTools.GetSingleAsync(command);
-                if (!String.IsNullOrEmpty(resp))
+                var suser = await SqlTools.GetUserAsync(user.Id);
+                if (suser != null && !user.IsBot)
                 {
-                    olddate = Convert.ToDateTime(resp);
-                    var newdate = olddate.AddHours(23).AddMinutes(59).AddSeconds(59);
-                    var temp = DateTime.Compare(newdate, DateTime.UtcNow);
-                    if (temp == 1)
-                    {
-                        var calcdate = olddate;
-                        var extraday = calcdate.AddDays(1);
-                        var remain = extraday.Subtract(DateTime.UtcNow);
-                        string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
-                        await MessageHandler.SendChannel(Context.Channel, $"You must wait `{remaining}`");
-                    }
-                    else
-                    {
-                        ulong oldmoney = 0;
-                        command = new MySqlCommand("SELECT `money` FROM `accounts` WHERE ID = @userid");
-                        command.Parameters.AddWithValue("@userid", usertogive.Id);
-                        var tresp = await SqlTools.GetSingleAsync(command);
-                        if (!String.IsNullOrEmpty(tresp))
-                            oldmoney = Convert.ToUInt64(tresp);
-                        var newamount = oldmoney + Config.Load().DailyAmount;
-
-                        command = new MySqlCommand("UPDATE ACCOUNTS SET Daily = @daily WHERE ID = @userid");
-                        command.Parameters.AddWithValue("@userid", Context.User.Id);
-                        command.Parameters.AddWithValue("@daily", DateTime.UtcNow);
-                        await SqlTools.InsertAsync(command).ContinueWith(async x =>
-                        {
-                            if (x.IsCompleted)
-                            {
-                                command = new MySqlCommand("UPDATE ACCOUNTS SET money = @money WHERE ID = @userid");
-                                command.Parameters.AddWithValue("@userid", usertogive.Id);
-                                command.Parameters.AddWithValue("@money", newamount);
-                                await SqlTools.InsertAsync(command).ContinueWith(async z =>
-                                {
-                                    if (z.IsCompleted)
-                                    {
-                                        await MessageHandler.SendChannel(Context.Channel, $"You just gave {usertogive.Mention} {Config.Load().MoneySymbol + Config.Load().DailyAmount}");
-                                    }
-                                });
-                            }
-                        });
-                    }
+                    await SqlTools.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "money", Convert.ToString(suser.Money + Config.Load().DailyAmount));
+                    await SqlTools.ModifyUserAsync((Context.User as Discord.WebSocket.SocketUser), "daily", Convert.ToString(DateTime.UtcNow));
+                    await MessageHandler.SendChannel(Context.Channel, $"Yo, you just gave {user.Nickname ?? user.Username} {Config.Load().MoneySymbol}{Config.Load().DailyAmount}! They now have {Config.Load().MoneySymbol}{suser.Money + Config.Load().DailyAmount}");
                 }
-                else
-                    await NewDailyGive(usertogive);
             }
         }
         private async Task NewDailyGive(IGuildUser user)
         {
-            ulong oldmoney = 0;
-            var command = new MySqlCommand("SELECT `money` FROM `accounts` WHERE ID = @userid");
-            command.Parameters.AddWithValue("@userid", Context.User.Id);
-            var tresp = await SqlTools.GetSingleAsync(command);
-            if (!String.IsNullOrEmpty(tresp))
-                oldmoney = Convert.ToUInt64(tresp);
-            var newamount = oldmoney + Config.Load().DailyAmount;
-
-            command = new MySqlCommand("UPDATE accounts SET money = @money, daily = @daily WHERE ID = @userid");
-            command.Parameters.AddWithValue("@userid", Context.User.Id);
-            command.Parameters.AddWithValue("@money", newamount);
-            command.Parameters.AddWithValue("@daily", DateTime.UtcNow);
-            await SqlTools.InsertAsync(command).ContinueWith(async x =>
+            await InsertUser(user);
+            var suser = await SqlTools.GetUserAsync(user.Id);
+            if (suser != null && !user.IsBot)
             {
-                if (x.IsCompleted)
-                {
-                    await MessageHandler.SendChannel(Context.Channel, $"You just gave {user.Mention} {Config.Load().MoneySymbol + Config.Load().DailyAmount}");
-                }
-            });
+                await SqlTools.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "money", Convert.ToString(suser.Money + Config.Load().DailyAmount));
+                await SqlTools.ModifyUserAsync((Context.User as Discord.WebSocket.SocketUser), "daily", Convert.ToString(DateTime.UtcNow));
+                await MessageHandler.SendChannel(Context.Channel, $"Yo, you just gave {user.Nickname ?? user.Username} {Config.Load().MoneySymbol}{Config.Load().DailyAmount}! They now have {Config.Load().MoneySymbol}{suser.Money + Config.Load().DailyAmount}");
+            }
         }
 
         [Command("give", RunMode = RunMode.Async), Summary("Give away ur money")]
@@ -313,59 +240,26 @@ namespace Skuld.Commands
             }
             else
             {
-                var sender = Context.User;
-                ulong oldrecipmoney = 0;
-                ulong oldsendmoney = 0;
-                var command = new MySqlCommand("SELECT money FROM accounts WHERE ID = @userid");
-                command.Parameters.AddWithValue("@userid", user.Id);
-                var reader = await SqlTools.GetSingleAsync(command);
-                if (!String.IsNullOrEmpty(reader))
-                    oldrecipmoney = Convert.ToUInt64(reader);
-                else
-                    await InsertUser(Context.User);
-                command = new MySqlCommand("SELECT money FROM accounts WHERE ID = @userid");
-                command.Parameters.AddWithValue("@userid", sender.Id);
-                var reader2 = await SqlTools.GetSingleAsync(command);
-                if (!String.IsNullOrEmpty(reader2))
-                    oldsendmoney = Convert.ToUInt64(reader2);
-                else
-                    await InsertUser(Context.User);
-                if (oldsendmoney < amount)
+                var oldusergive = await SqlTools.GetUserAsync(user.Id);
+                if (oldusergive != null&&!user.IsBot)
                 {
-                    await MessageHandler.SendChannel(Context.Channel, "ERROR: You are trying to give more than you currently have. Please select an amount under `" + oldsendmoney + "`");
-                }
-                else
-                {
-                    var newrecipmoney = oldrecipmoney + amount;
-                    var newsendmoney = oldsendmoney - amount;
-
-                    command = new MySqlCommand("UPDATE accounts SET money = @money WHERE ID = @userid");
-                    command.Parameters.AddWithValue("@userid", user.Id);
-                    command.Parameters.AddWithValue("@money", newrecipmoney);
-                    await SqlTools.InsertAsync(command).ContinueWith(async x =>
+                    var oldusersend = await SqlTools.GetUserAsync(Context.User.Id);
+                    var res1 = await SqlTools.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "money", Convert.ToString(oldusergive.Money + amount));
+                    var res2 = await SqlTools.ModifyUserAsync((Context.User as Discord.WebSocket.SocketUser), "money", Convert.ToString(oldusersend.Money - amount));
+                    if (res1.Successful && res2.Successful)
+                        await MessageHandler.SendChannel(Context.Channel, $"Successfully gave **{user.Username}** {Config.Load().MoneySymbol + amount}");
+                    else
                     {
-                        command = new MySqlCommand("UPDATE accounts SET money = @money WHERE ID = @userid");
-                        command.Parameters.AddWithValue("@userid", sender.Id);
-                        command.Parameters.AddWithValue("@money", newsendmoney);
-                        await SqlTools.InsertAsync(command);
-                        ulong temprecp = 0, tempsend = 0;
-                        command = new MySqlCommand("SELECT money FROM accounts WHERE ID = @userid");
-                        command.Parameters.AddWithValue("@userid", user.Id);
-                        var reader3 = await SqlTools.GetSingleAsync(command);
-                        if (!String.IsNullOrEmpty(reader3))
-                            temprecp = Convert.ToUInt64(reader);
-                        else
-                            await InsertUser(Context.User);
-                        command = new MySqlCommand("SELECT money FROM accounts WHERE ID = @userid");
-                        command.Parameters.AddWithValue("@userid", sender.Id);
-                        var reader4 = await SqlTools.GetSingleAsync(command);
-                        if (!String.IsNullOrEmpty(reader4))
-                            tempsend = Convert.ToUInt64(reader);
-                        else
-                            await InsertUser(Context.User);
-                        if (x.IsCompleted)
-                            await MessageHandler.SendChannel(Context.Channel,$"Successfully gave **{user.Username}** {Config.Load().MoneySymbol + amount}");
-                    });
+                        string message = $"Res1 error: {res1.Error ?? "None"}\nRes2 error: {res2.Error ?? "None"}";
+                        await MessageHandler.SendChannel(Context.Channel, $"Oops, something bad happened. :(\n```\n{message}```");
+                    }
+                }
+                else if(user.IsBot)
+                    await MessageHandler.SendChannel(Context.Channel, $"Hey, uhhh... Robots aren't supported. :(");
+                else
+                {
+                    await InsertUser(user);
+                    await Give(user, amount);
                 }
             }
         }
@@ -392,10 +286,14 @@ namespace Skuld.Commands
 
         private async Task InsertUser(IUser user)
         {
-            var command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");");
-            command.Parameters.AddWithValue("@username", $"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{user.DiscriminatorValue}");
-            command.Parameters.AddWithValue("@userid", user.Id);
-            await SqlTools.InsertAsync(command);
+            var result = await SqlTools.InsertUserAsync((user as Discord.WebSocket.SocketUser));
+            if (result.Successful)
+                return;
+            else
+            {
+                Bot.Logs.Add(new Models.LogMessage("AccountModule", result.Error, LogSeverity.Error));
+                await MessageHandler.SendChannel(Context.Channel, $"I'm sorry there was an issue; `{result.Error}`");
+            }
         }
     }
 }

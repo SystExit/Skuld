@@ -128,6 +128,7 @@ namespace Skuld.Commands
                 await MessageHandler.SendChannel(Context.Channel,"", _embed);
             }
         }*/
+
         [Command("twitch", RunMode = RunMode.Async), Summary("Finds a twitch user")]
         public async Task TwitchSearch([Remainder]string twitchStreamer)
         {
@@ -337,12 +338,15 @@ namespace Skuld.Commands
         }
 
         public string urbanphrase = null;
+
         [Command("urban", RunMode = RunMode.Async), Summary("Gets a thing from urban dictionary")]
         public async Task Urban([Remainder]string phrase) =>
             await Geturban(new Uri($"http://api.urbandictionary.com/v0/define?term={phrase}"));
+
         [Command("urban", RunMode = RunMode.Async), Summary("Gets a random thing from urban dictionary")]
         public async Task Urban() => 
             await Geturban(new Uri("http://api.urbandictionary.com/v0/random"));
+
         private async Task Geturban(Uri url)
         {
             var rnd = Bot.random;
@@ -379,6 +383,7 @@ namespace Skuld.Commands
         [Alias("wiki")]
         public async Task Wiki(string langcode, [Remainder]string query) => 
             await GetWiki(langcode, query);
+
         [Command("wikipedia", RunMode = RunMode.Async), Summary("Gets wikipedia information, supports all languages that wikipedia offers")]
         [Alias("wiki")]
         public async Task Wiki([Remainder]string query) => 
@@ -485,7 +490,7 @@ namespace Skuld.Commands
 
             foreach (var post in subReddit.Data.Posts)
             {
-                string txt = $"[{post.Data.Title}](https://reddit.com{post.Data.Permalink})\n";
+                string txt = $"[{post.Data.Title}](https://reddit.com{post.Data.Permalink})\n";                
                 pageText.Add(txt);
                 if(Context.Channel.IsNsfw&&post.Data.Over18)
                     pageText.Add("[NSFW] "+txt);
