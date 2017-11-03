@@ -24,27 +24,27 @@ namespace Skuld.Commands
     {
         
         static string[] eightball = {
-            "It is certain",
-            "It is decidedly so",
-            "Without a doubt",
-            "Yes, definitely",
-            "You may rely on it",
-            "As I see it, yes",
-            "Most likely",
-            "Outlook good",
-            "Yes",
-            "Signs point to yes",
-            "Reply hazy, try again",
-            "Ask again later",
-            "Better not tell you now",
-            "Cannot predict now",
-            "Concentrate and ask again",
-            "Don't count on it",
-            "My reply is no",
-            "My sources say no",
-            "Outlook not so good",
-            "Very doubtful"
-        };
+			"SKULD_FUN_8BALL_YES1",
+			"SKULD_FUN_8BALL_YES2",
+			"SKULD_FUN_8BALL_YES3",
+			"SKULD_FUN_8BALL_YES4",
+			"SKULD_FUN_8BALL_YES5",
+			"SKULD_FUN_8BALL_YES6",
+			"SKULD_FUN_8BALL_YES7",
+			"SKULD_FUN_8BALL_YES8",
+			"SKULD_FUN_8BALL_YES9",
+			"SKULD_FUN_8BALL_YES10",
+			"SKULD_FUN_8BALL_MAYBE1",
+			"SKULD_FUN_8BALL_MAYBE2",
+			"SKULD_FUN_8BALL_MAYBE3",
+			"SKULD_FUN_8BALL_MAYBE4",
+			"SKULD_FUN_8BALL_MAYBE5",
+			"SKULD_FUN_8BALL_NO1",
+			"SKULD_FUN_8BALL_NO2",
+			"SKULD_FUN_8BALL_NO3",
+			"SKULD_FUN_8BALL_NO4",
+			"SKULD_FUN_8BALL_NO5"
+		};
         string[] videoext = new string[] {
             ".webm",
             ".mkv",
@@ -161,7 +161,10 @@ namespace Skuld.Commands
         
         [Command("eightball", RunMode = RunMode.Async), Summary("Eightball")]
         [Alias("8ball")]
-        public async Task Eightball([Remainder] string whatisyourquestion) { await MessageHandler.SendChannel(Context.Channel, $"{Context.User.Mention} :8ball: says: {eightball[Bot.random.Next(0, eightball.Length)]}"); }
+        public async Task Eightball([Remainder] string whatisyourquestion)
+		{
+			await MessageHandler.SendChannel(Context.Channel, $"{/*Context.User.Nickname??*/Context.User.Username} :8ball: says: {eightball[Bot.random.Next(0, eightball.Length)]}");
+		}
         [Command("eightball", RunMode = RunMode.Async), Summary("Eightball")]
         [Alias("8ball")]
         public async Task Eightball() { await MessageHandler.SendChannel(Context.Channel, $"{Context.User.Mention} :8ball: says: {eightball[Bot.random.Next(0, eightball.Length)]}"); }
@@ -846,7 +849,7 @@ namespace Skuld.Commands
             }
             catch(Exception ex)
             {
-                Console.WriteLine(ex);
+				Bot.Logs.Add(new Models.LogMessage("InvImg", "Error inverting image", LogSeverity.Error, ex));
                 return null;
             }
         }

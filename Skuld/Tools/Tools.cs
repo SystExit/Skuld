@@ -20,13 +20,6 @@ namespace Skuld.Tools
             rand.NextBytes(bytes);
             return new Color(bytes[0], bytes[1], bytes[2]);
         }
-        public static string CheckIfStringIsNull(string strng)
-        {
-            if (string.IsNullOrEmpty(strng) || string.IsNullOrWhiteSpace(strng))
-                return "Not Available";
-            else
-                return strng;
-        }
         public static MemoryStream GenerateStreamFromString(string value)
         {
             return new MemoryStream(Encoding.UTF8.GetBytes(value ?? ""));

@@ -56,7 +56,7 @@ namespace Skuld.Commands
                         embed.AddField("Daily", userLocal.Daily, inline: true);
                     else
                         embed.AddField("Daily", "Not used Daily", inline: true);
-                    if (userLocal.FavCmd != null && userLocal.FavCmdUsg.HasValue)
+                    if (userLocal.FavCmd != null && userLocal.FavCmdUsg!=0)
                         embed.AddField("Favourite Command", $"`{userLocal.FavCmd}` and it has been used {userLocal.FavCmdUsg} times", inline: true);
                     else
                         embed.AddField("Favourite Command", "No favourite Command", inline: true);
@@ -118,7 +118,7 @@ namespace Skuld.Commands
                         embed.AddField("HP", userLocal.HP + " HP", inline: true);
                     else
                         embed.AddField("HP", "No HP", inline: true);
-                    if (userLocal.FavCmd != null && userLocal.FavCmdUsg.HasValue)
+                    if (userLocal.FavCmd != null && userLocal.FavCmdUsg!=0)
                         embed.AddField("Favourite Command", $"`{userLocal.FavCmd}` and it has been used {userLocal.FavCmdUsg} times", inline: true);
                     else
                         embed.AddField("Favourite Command", "No favourite Command", inline: true);

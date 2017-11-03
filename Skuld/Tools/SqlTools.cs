@@ -23,12 +23,15 @@ namespace Skuld.Tools
                 else { user.Username = null; }
 
                 if (reader["money"] != DBNull.Value){ user.Money = Convert.ToUInt64(reader["money"]); }
-                else { user.Money = 0; }
+                else { user.Money = null; }
 
-                if (reader["description"] != DBNull.Value){ user.Description = Convert.ToString(reader["description"]); }
-                else { user.Description = null; }
+				if (reader["description"] != DBNull.Value) { user.Description = Convert.ToString(reader["description"]); }
+				else { user.Description = null; }
 
-                if (reader["daily"] != DBNull.Value) { user.Daily = Convert.ToString(reader["daily"]); }
+				if (reader["language"] != DBNull.Value) { user.Language = Convert.ToString(reader["language"]); }
+				else { user.Language = null; }
+
+				if (reader["daily"] != DBNull.Value) { user.Daily = Convert.ToString(reader["daily"]); }
                 else { user.Daily = null; }
 
                 if (reader["luckfactor"] != DBNull.Value){ user.LuckFactor = Convert.ToDouble(reader["luckfactor"]); }
@@ -91,7 +94,9 @@ namespace Skuld.Tools
                     else { guild.AutoJoinRole = 0; }
                     if (reader["prefix"] != DBNull.Value) { guild.Prefix = Convert.ToString(reader["prefix"]); }
                     else { guild.Prefix = null; }
-                    if (reader["joinableroles"] != DBNull.Value) { guild.JoinableRoles = Convert.ToString(reader["joinableroles"]).Split(','); }
+					if (reader["language"] != DBNull.Value) { guild.Language = Convert.ToString(reader["language"]); }
+					else { guild.Language = null; }
+					if (reader["joinableroles"] != DBNull.Value) { guild.JoinableRoles = Convert.ToString(reader["joinableroles"]).Split(','); }
                     else { guild.JoinableRoles = null; }
                     if (reader["twitchnotifchannel"] != DBNull.Value) { guild.TwitchNotifChannel = Convert.ToUInt64(reader["twitchnotifchannel"]); }
                     else { guild.TwitchNotifChannel = 0; }

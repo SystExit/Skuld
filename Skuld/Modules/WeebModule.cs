@@ -2,14 +2,9 @@
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
-using Newtonsoft.Json;
-using System.Xml;
-using System.Xml.Linq;
-using Newtonsoft.Json.Linq;
 using System.Linq;
 using Skuld.APIS;
 using Skuld.Tools;
-using System.Text;
 using System.Collections.Generic;
 using System.Web;
 using Discord.Addons.Interactive;
@@ -24,13 +19,7 @@ namespace Skuld.Modules
         [Command("manga", RunMode = RunMode.Async), Summary("Gets a manga from MyAnimeList.Net")]
         public async Task MangaGet([Remainder]string mangatitle)
         {
-            mangatitle = mangatitle.Replace(" ", "+");
-            var byteArray = new UTF8Encoding().GetBytes($"{Config.Load().MALUName}:{Config.Load().MALPassword}");
-            var stringifiedxml = await APIWebReq.ReturnString(new Uri($"https://myanimelist.net/api/manga/search.xml?q={mangatitle}"), byteArray);
-            var xml = new XmlDocument();
-            xml.LoadXml(stringifiedxml);
-            XObject xNode = XDocument.Parse(xml.FirstChild.NextSibling.OuterXml);
-            MangaArray = JsonConvert.DeserializeObject<MangaArr>(JObject.Parse(JsonConvert.SerializeXNode(xNode))["manga"].ToString());
+			MangaArray = await MALAPI.GetMangasAsync(mangatitle);
             int manganode = MangaArray.Entry.Count;
             if (manganode > 1)
             {
@@ -76,12 +65,13 @@ namespace Skuld.Modules
                 await GetMangaAtZeroNonSearch();
             }
         }
-        private async Task GetMangaAtZeroNonSearch()
-        {
+
+        private async Task GetMangaAtZeroNonSearch() =>
             await SendManga(MangaArray.Entry.First());
-        }
+
         private async Task GetMangaAtPosition(int position, IMessageChannel channel) =>
             await SendManga(MangaArray.Entry.ElementAt(position - 1), channel);
+
         public async Task SendManga(Manga mango, IMessageChannel channel = null)
         {
             var embed = new EmbedBuilder()
@@ -94,34 +84,33 @@ namespace Skuld.Modules
                 },
                 ThumbnailUrl = mango.Image
             };
-            embed.AddField("English Title", Tools.Tools.CheckIfStringIsNull(mango.EnglishTitle), inline: true);
-            embed.AddField("Synonyms", Tools.Tools.CheckIfStringIsNull(mango.Synonyms), inline: true);
-            embed.AddField("Chapters", Tools.Tools.CheckIfStringIsNull(mango.Chapters), inline: true);
-            embed.AddField("Volumes", Tools.Tools.CheckIfStringIsNull(mango.Volumes), inline: true);
-            embed.AddField("Start Date", Tools.Tools.CheckIfStringIsNull(mango.StartDate), inline: true);
-            embed.AddField("End Date", Tools.Tools.CheckIfStringIsNull(mango.EndDate), inline: true);
-            embed.AddField("Score", Tools.Tools.CheckIfStringIsNull(mango.Score), inline: true);
-            embed.AddField("Synopsis", Tools.Tools.CheckIfStringIsNull(HttpUtility.HtmlDecode(mango.Synopsis.Split('<')[0])), inline: true);
-            await MessageHandler.SendChannel(channel ?? Context.Channel, "", embed);
+
+			var userlocale = Locale.GetLocale((await SqlTools.GetUserAsync(Context.User.Id)).Language);
+			embed.AddField(userlocale.GetString("SKULD_SEARCH_WEEB_ENGTITLE"), mango.EnglishTitle??userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
+			embed.AddField("SKULD_SEARCH_WEEB_SYNON", mango.Synonyms?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
+			embed.AddField("SKULD_SEARCH_WEEB_CHPS", mango.Chapters?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
+			embed.AddField("SKULD_SEARCH_WEEB_VOLS", mango.Volumes?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
+			embed.AddField("SKULD_SEARCH_WEEB_SDATE", mango.StartDate?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
+			embed.AddField("SKULD_SEARCH_WEEB_EDATE", mango.EndDate?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
+			embed.AddField("SKULD_SEARCH_WEEB_SCORE", mango.Score?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
+			embed.AddField("SKULD_SEARCH_WEEB_SYNOP", HttpUtility.HtmlDecode(mango.Synopsis.Split('<')[0])?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
+			await MessageHandler.SendChannel(channel ?? Context.Channel, "", embed);
         }
 
         private AnimeArr AnimeArray;
         [Command("anime", RunMode = RunMode.Async), Summary("Gets an anime from MyAnimeList.Net")]
         public async Task Animuget([Remainder]string animetitle)
         {
-            IMessage msg = null;
-            var msgs = new List<IMessage>();
-            animetitle = animetitle.Replace(" ", "+");
-            var byteArray = new UTF8Encoding().GetBytes($"{Config.Load().MALUName}:{Config.Load().MALPassword}");
-            var stringifiedxml = await APIWebReq.ReturnString(new Uri($"https://myanimelist.net/api/anime/search.xml?q={animetitle}"), byteArray);
-            var xml = new XmlDocument();
-            xml.LoadXml(stringifiedxml);
-            XObject xNode = XDocument.Parse(xml.FirstChild.NextSibling.OuterXml);
-            AnimeArray = JsonConvert.DeserializeObject<AnimeArr>(JObject.Parse(JsonConvert.SerializeXNode(xNode))["anime"].ToString());
-            int animenode = AnimeArray.Entry.Count;
-            if (animenode > 1)
-            {
-                string entrymessage = "__Make your selection__ Make your selection within 10 seconds\n";
+			var skuser = await SqlTools.GetUserAsync(Context.User.Id);
+			var pages = new List<string>();
+			AnimeArray = await MALAPI.GetAnimesAsync(animetitle);
+            int animenodes = AnimeArray.Entry.Count;
+			if (animenodes == 0)
+				await ReplyAsync(Locale.GetLocale(skuser.Language).GetString("SKULD_SEARCH_WEEB_EMPTY"));
+            if (animenodes > 1)
+			{
+				IMessage msg = null;
+				string entrymessage = "Make your selection within 20 seconds\n";
                 int count = 0;
                 var entries = new List<string>();
                 foreach (var item in AnimeArray.Entry)
@@ -131,11 +120,24 @@ namespace Skuld.Modules
                 }
                 if (entries.Count >= 20)
                 {
-                    entrymessage += String.Join(Environment.NewLine, entries.Take(entries.Count / 2).ToArray());
-                    msgs.Add(await MessageHandler.SendChannel(Context.Channel, entrymessage));
-                    entrymessage = "";
-                    entrymessage += String.Join(Environment.NewLine, entries.Skip(entries.Count / 2).ToArray());
-                    msgs.Add(await MessageHandler.SendChannel(Context.Channel, entrymessage));
+					string tempstring = "";
+					for (int x = 0; x < entries.Count; x++)
+					{
+						if (entries.LastOrDefault() == entries[x])
+							tempstring += entries[x];
+						else
+							tempstring += entries[x]+"\n\n";
+						if (x % 10 == 0)
+							pages.Add(tempstring);
+						else if (x == entries.Count())
+							pages.Add(tempstring);
+					}
+					var pagedMessage = new PaginatedMessage(){
+						Title = entrymessage,
+						Color = Tools.Tools.RandomColor(),
+						Pages = pages
+					};
+					msg = await PagedReplyAsync(pager: pagedMessage, fromSourceUser: true);
                 }
                 else
                 {
@@ -150,9 +152,6 @@ namespace Skuld.Modules
                     await Context.Message.DeleteAsync();
                     await response.DeleteAsync();
                 }
-                if (msgs.Count > 0)
-                    foreach (var m in msgs)
-                        await m.DeleteAsync();
                 if (msg != null)
                     await msg.DeleteAsync();
             }
@@ -161,10 +160,8 @@ namespace Skuld.Modules
                 await GetAnimeAtZeroNonSearch();
             }
         }
-        public async Task GetAnimeAtZeroNonSearch()
-        {
+        public async Task GetAnimeAtZeroNonSearch() =>
             await SendAnime(AnimeArray.Entry.First());
-        }
         private async Task GetAnimeAtPosition(int position, IMessageChannel channel) =>
             await SendAnime(AnimeArray.Entry[position - 1], channel);
         private async Task SendAnime(Anime animu, IMessageChannel channel = null)
@@ -179,13 +176,14 @@ namespace Skuld.Modules
                 },
                 ThumbnailUrl = animu.Image
             };
-            embed.AddField("English Title", Tools.Tools.CheckIfStringIsNull(animu.EnglishTitle), inline: true);
-            embed.AddField("Synonyms", Tools.Tools.CheckIfStringIsNull(animu.Synonyms), inline: true);
-            embed.AddField("Episodes", Tools.Tools.CheckIfStringIsNull(animu.Episodes), inline: true);
-            embed.AddField("Start Date", Tools.Tools.CheckIfStringIsNull(animu.StartDate), inline: true);
-            embed.AddField("End Date", Tools.Tools.CheckIfStringIsNull(animu.EndDate), inline: true);
-            embed.AddField("Score", Tools.Tools.CheckIfStringIsNull(animu.Score), inline: true);
-            embed.AddField("Synopsis", Tools.Tools.CheckIfStringIsNull(HttpUtility.HtmlDecode(animu.Synopsis.Split('<')[0])), inline: true);
+			var userlocale = Locale.GetLocale((await SqlTools.GetUserAsync(Context.User.Id)).Language);
+            embed.AddField(userlocale.GetString("SKULD_SEARCH_WEEB_ENGTITLE"), animu.EnglishTitle?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
+            embed.AddField("SKULD_SEARCH_WEEB_SYNON", animu.Synonyms?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
+            embed.AddField("SKULD_SEARCH_WEEB_EPS", animu.Episodes?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
+            embed.AddField("SKULD_SEARCH_WEEB_SDATE", animu.StartDate?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
+            embed.AddField("SKULD_SEARCH_WEEB_EDATE", animu.EndDate?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
+            embed.AddField("SKULD_SEARCH_WEEB_SCORE", animu.Score?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
+            embed.AddField("SKULD_SEARCH_WEEB_SYNOP", HttpUtility.HtmlDecode(animu.Synopsis.Split('<')[0])?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
 
             await MessageHandler.SendChannel(channel ?? Context.Channel, "", embed);
         }

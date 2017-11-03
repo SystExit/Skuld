@@ -15,7 +15,7 @@ using AIMLbot;
 using Microsoft.Extensions.DependencyInjection;
 using Discord.Addons.Interactive;
 using System.Linq;
-using MyAnimeListSharp.Auth;
+using System.Resources;
 
 namespace Skuld
 {
@@ -35,8 +35,8 @@ namespace Skuld
         public static AIMLbot.Bot ChatService;
         public static User ChatUser;
         public static string PathToUserData;
-        public static ICredentialContext MalClient;
-        /*END VARS*/
+		public static ResourceManager resourceManager;
+		/*END VARS*/
 
         static void Main(string[] args) => CreateBot().GetAwaiter().GetResult();
 
@@ -44,10 +44,11 @@ namespace Skuld
         {
             try
             {
-                EnsureConfigExists();                 
-                await InstallServices();
-                Logs.Add(new Models.LogMessage("FrameWk", $"Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
-                await StartBot(Config.Load().Token);
+                EnsureConfigExists();
+				await InstallServices();
+				Locale.InitialiseLocales();
+				Logs.Add(new Models.LogMessage("FrameWk", $"Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
+				//await StartBot(Config.Load().Token);
                 await Task.Delay(-1);
             }
             catch (Exception ex)

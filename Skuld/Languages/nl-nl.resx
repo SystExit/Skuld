@@ -117,68 +117,8 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="SKULD_FUN_8BALL_MAYBE1" xml:space="preserve">
-    <value>Reply hazy, try again</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_MAYBE2" xml:space="preserve">
-    <value>Ask again later</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_MAYBE3" xml:space="preserve">
-    <value>Better not tell you now</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_MAYBE4" xml:space="preserve">
-    <value>Cannot predict now</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_MAYBE5" xml:space="preserve">
-    <value>Concentrate and ask again</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_NO1" xml:space="preserve">
-    <value>Don't count on it</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_NO2" xml:space="preserve">
-    <value>My reply is no</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_NO3" xml:space="preserve">
-    <value>My sources say no</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_NO4" xml:space="preserve">
-    <value>Outlook not so good</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_NO5" xml:space="preserve">
-    <value>Very doubtful</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_YES1" xml:space="preserve">
-    <value>It is certain</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_YES10" xml:space="preserve">
-    <value>Signs point to yes</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_YES2" xml:space="preserve">
-    <value>It is decidedly so</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_YES3" xml:space="preserve">
-    <value>Without a doubt</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_YES4" xml:space="preserve">
-    <value>Yes, definitely</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_YES5" xml:space="preserve">
-    <value>You may rely on it</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_YES6" xml:space="preserve">
-    <value>As I see it, yes</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_YES7" xml:space="preserve">
-    <value>Most likely</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_YES8" xml:space="preserve">
-    <value>Outlook good</value>
-  </data>
-  <data name="SKULD_FUN_8BALL_YES9" xml:space="preserve">
-    <value>Yes</value>
-  </data>
   <data name="SKULD_GENERIC_ERROR" xml:space="preserve">
-    <value>Error with the Command</value>
-    <comment>If nothing set, use this</comment>
+    <value>fout met de opdracht</value>
+    <comment>Generic Error</comment>
   </data>
 </root>
