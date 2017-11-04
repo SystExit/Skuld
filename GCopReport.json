@@ -2,7 +2,7 @@
   "Items": [
     {
       "Analyzer": "AsyncAwaitMethodAnalyzer",
-      "OccurrenceCount": 1494,
+      "OccurrenceCount": 2190,
       "Exceptions": null,
       "SentToServer": true,
       "InstallationName": "KANNA"
@@ -65,7 +65,7 @@
     },
     {
       "Analyzer": "LongMethodAnalyzer",
-      "OccurrenceCount": 8,
+      "OccurrenceCount": 11,
       "Exceptions": null,
       "SentToServer": true,
       "InstallationName": "KANNA"
@@ -93,7 +93,7 @@
     },
     {
       "Analyzer": "OrderByWhereLinqAnalyzer",
-      "OccurrenceCount": 1,
+      "OccurrenceCount": 2,
       "Exceptions": null,
       "SentToServer": true,
       "InstallationName": "KANNA"
@@ -107,7 +107,7 @@
     },
     {
       "Analyzer": "UseUsingsOnIDisposableAnalyzer",
-      "OccurrenceCount": 1120,
+      "OccurrenceCount": 1341,
       "Exceptions": null,
       "SentToServer": true,
       "InstallationName": "KANNA"

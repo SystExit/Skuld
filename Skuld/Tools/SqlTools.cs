@@ -29,7 +29,7 @@ namespace Skuld.Tools
 				else { user.Description = null; }
 
 				if (reader["language"] != DBNull.Value) { user.Language = Convert.ToString(reader["language"]); }
-				else { user.Language = null; }
+				else { user.Language = Locale.defaultLocale; }
 
 				if (reader["daily"] != DBNull.Value) { user.Daily = Convert.ToString(reader["daily"]); }
                 else { user.Daily = null; }

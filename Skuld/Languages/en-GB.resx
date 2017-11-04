@@ -177,8 +177,41 @@
   <data name="SKULD_FUN_8BALL_YES9" xml:space="preserve">
     <value>Yes</value>
   </data>
+  <data name="SKULD_GENERIC_EMPTY" xml:space="preserve">
+    <value>Non Available</value>
+  </data>
   <data name="SKULD_GENERIC_ERROR" xml:space="preserve">
     <value>Error with the Command</value>
     <comment>If nothing set, use this</comment>
+  </data>
+  <data name="SKULD_SEARCH_WEEB_CHPS" xml:space="preserve">
+    <value>Chapters</value>
+  </data>
+  <data name="SKULD_SEARCH_WEEB_EDATE" xml:space="preserve">
+    <value>End Date</value>
+  </data>
+  <data name="SKULD_SEARCH_WEEB_ENGTITLE" xml:space="preserve">
+    <value>English Title</value>
+  </data>
+  <data name="SKULD_SEARCH_WEEB_EPS" xml:space="preserve">
+    <value>Episodes</value>
+  </data>
+  <data name="SKULD_SEARCH_WEEB_MKSLCTN" xml:space="preserve">
+    <value>Make your selection within</value>
+  </data>
+  <data name="SKULD_SEARCH_WEEB_SCORE" xml:space="preserve">
+    <value>Score</value>
+  </data>
+  <data name="SKULD_SEARCH_WEEB_SDATE" xml:space="preserve">
+    <value>Start Date</value>
+  </data>
+  <data name="SKULD_SEARCH_WEEB_SYNON" xml:space="preserve">
+    <value>Synonyms</value>
+  </data>
+  <data name="SKULD_SEARCH_WEEB_SYNOP" xml:space="preserve">
+    <value>Synopsis</value>
+  </data>
+  <data name="SKULD_SEARCH_WEEB_VOLS" xml:space="preserve">
+    <value>Volumes</value>
   </data>
 </root>

@@ -351,7 +351,6 @@ namespace Skuld.Commands
         {
             var rnd = Bot.random;
             var rawresp = await APIWebReq.ReturnString(url);
-            //Converts to JSon
             var jsonresp = JObject.Parse(rawresp);
             var lists = (JArray)jsonresp["list"];
             dynamic item = lists[rnd.Next(0, lists.Count)];

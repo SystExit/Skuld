@@ -573,8 +573,8 @@ namespace Skuld.Commands
             try
             {
                 var doc = await APIWebReq.ScrapeUrl(new Uri("http://explosm.net/comics/random"));
-                var author = doc.DocumentNode.Descendants("div").Where(x => x.Attributes.Contains("class") && x.Attributes["class"].Value.Contains("small-2 medium-2 large-2 columns")).FirstOrDefault();
-                var authorblock = doc.DocumentNode.Descendants("div").Where(z => z.Attributes.Contains("class") && z.Attributes["class"].Value.Contains("small-8 medium-9 large-8 columns")).FirstOrDefault();
+                var author = doc.DocumentNode.Descendants("div").FirstOrDefault(x => x.Attributes.Contains("class") && x.Attributes["class"].Value.Contains("small-2 medium-2 large-2 columns"));
+                var authorblock = doc.DocumentNode.Descendants("div").FirstOrDefault(z => z.Attributes.Contains("class") && z.Attributes["class"].Value.Contains("small-8 medium-9 large-8 columns"));
                 var authorblocksection = author.Descendants().Skip(1).FirstOrDefault();
                 var authorurl = "http://explosm.net" + authorblocksection.Attributes["href"].Value;
                 var authoravatar = "http:" + authorblocksection.ChildNodes.FirstOrDefault().Attributes["src"].Value;

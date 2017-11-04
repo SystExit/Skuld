@@ -35,7 +35,6 @@ namespace Skuld
         public static AIMLbot.Bot ChatService;
         public static User ChatUser;
         public static string PathToUserData;
-		public static ResourceManager resourceManager;
 		/*END VARS*/
 
         static void Main(string[] args) => CreateBot().GetAwaiter().GetResult();
@@ -48,7 +47,7 @@ namespace Skuld
 				await InstallServices();
 				Locale.InitialiseLocales();
 				Logs.Add(new Models.LogMessage("FrameWk", $"Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
-				//await StartBot(Config.Load().Token);
+				await StartBot(Config.Load().Token);
                 await Task.Delay(-1);
             }
             catch (Exception ex)
