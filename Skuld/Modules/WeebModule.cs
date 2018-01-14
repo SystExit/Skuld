@@ -52,11 +52,13 @@ namespace Skuld.Modules
                         {
                             if (x - 1 % 10 == 0)
                             {
-                                pages.Add(tempstring); tempstring = "";
+                                pages.Add(tempstring);
+                                tempstring = "";
                             }
                             else if (x == entries.Count())
                             {
-                                pages.Add(tempstring); tempstring = "";
+                                pages.Add(tempstring);
+                                tempstring = "";
                             }
                         }
                     }
@@ -133,9 +135,11 @@ namespace Skuld.Modules
                         else
                             tempstring += clonedarr[x - 1] + "\n\n";
                         if (x % 10 == 0)
-                        { pages.Add(tempstring); tempstring = ""; }
+                        { pages.Add(tempstring);
+                            tempstring = ""; }
                         else if (x == entries.Count())
-                        { pages.Add(tempstring); tempstring = ""; }
+                        { pages.Add(tempstring);
+                            tempstring = ""; }
                     }
 
                     var pagedMessage = new PaginatedMessage()
@@ -224,7 +228,7 @@ namespace Skuld.Modules
         {
             await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder()
             {
-                ImageUrl = await APIWebReq.ReturnString(new Uri("http://lucoa.systemexit.co.uk/gifs/reactions/")),
+                ImageUrl = await APIWebReq.ReturnString(new Uri("http://gaia.systemexit.co.uk/gifs/reactions/")),
                 Color = Tools.Tools.RandomColor()
             }.Build());
         }

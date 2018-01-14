@@ -18,9 +18,9 @@ namespace Skuld.Commands
             var contuser = Context.User as IGuildUser;
             var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
             if (guilduser == contuser)
-                await Send($"B-Baka.... {botguild.Nickname ?? botguild.Username} slapped {contuser.Nickname??contuser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=slap")));
+                await Send($"B-Baka.... {botguild.Nickname ?? botguild.Username} slapped {contuser.Nickname??contuser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=slap")));
             else
-                await Send($"{contuser.Nickname??contuser.Username} slapped {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=slap")));
+                await Send($"{contuser.Nickname??contuser.Username} slapped {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=slap")));
         }
         
         [Command("kill", RunMode = RunMode.Async), Summary("Kills a user")]
@@ -30,7 +30,7 @@ namespace Skuld.Commands
             if (contuser == guilduser)
                 await Send($"{contuser.Nickname ?? contuser.Username} killed themself", "http://i.giphy.com/l2JeiuwmhZlkrVOkU.gif");
             else
-                await Send($"{contuser.Nickname ?? contuser.Username} killed {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=kill")));
+                await Send($"{contuser.Nickname ?? contuser.Username} killed {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=kill")));
         }
         
         [Command("stab", RunMode = RunMode.Async), Summary("Stabs a user")]
@@ -39,9 +39,9 @@ namespace Skuld.Commands
             var contuser = Context.User as IGuildUser;
             var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
             if (contuser == guilduser)
-                await Send($"URUSAI!! {botguild.Nickname??botguild.Username} stabbed {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=stab")));
+                await Send($"URUSAI!! {botguild.Nickname??botguild.Username} stabbed {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=stab")));
             else if (guilduser.IsBot)
-                await Send($"{contuser.Nickname ?? contuser.Username} stabbed {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=stab")));
+                await Send($"{contuser.Nickname ?? contuser.Username} stabbed {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=stab")));
             else
             {
                 if(!String.IsNullOrEmpty(Bot.Configuration.SqlDBHost))
@@ -62,20 +62,20 @@ namespace Skuld.Commands
                             command.Parameters.AddWithValue("@hp", hp);
                             command.Parameters.AddWithValue("@userid", guilduser.Id);
                             await SqlTools.InsertAsync(command);
-                            await Send($"{contuser.Nickname ?? contuser.Username} just stabbed {guilduser.Nickname ?? guilduser.Username} for {dhp} HP, they now have {hp} HP left", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=stab")));
+                            await Send($"{contuser.Nickname ?? contuser.Username} just stabbed {guilduser.Nickname ?? guilduser.Username} for {dhp} HP, they now have {hp} HP left", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=stab")));
                         }
                         else
                         {
                             command = new MySqlCommand("UPDATE accounts SET hp = 0 where ID = @userid");
                             command.Parameters.AddWithValue("@userid", guilduser.Id);
                             await SqlTools.InsertAsync(command);
-                            await Send($"{contuser.Nickname ?? contuser.Username} just stabbed {guilduser.Nickname ?? guilduser.Username} for {dhp} HP, they have no HP left", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=stab")));
+                            await Send($"{contuser.Nickname ?? contuser.Username} just stabbed {guilduser.Nickname ?? guilduser.Username} for {dhp} HP, they have no HP left", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=stab")));
                         }
                     }
                 }
                 else
                 {
-                    await Send($"{contuser.Nickname ?? contuser.Username} just stabbed {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=stab")));
+                    await Send($"{contuser.Nickname ?? contuser.Username} just stabbed {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=stab")));
                 }
             }
         }
@@ -86,9 +86,9 @@ namespace Skuld.Commands
             var contuser = Context.User as IGuildUser;
             var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
             if (guilduser == contuser)
-                await Send($"{botguild.Nickname ?? botguild.Username} hugs {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=hug")));
+                await Send($"{botguild.Nickname ?? botguild.Username} hugs {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=hug")));
             else
-                await Send($"{contuser.Nickname ?? contuser.Username} just hugged {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=hug")));
+                await Send($"{contuser.Nickname ?? contuser.Username} just hugged {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=hug")));
         }
         
         [Command("punch", RunMode = RunMode.Async), Summary("Punch a user")]
@@ -97,14 +97,14 @@ namespace Skuld.Commands
             var contuser = Context.User as IGuildUser;
             var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
             if (guilduser == contuser)
-                await Send($"URUSAI!! {botguild.Nickname ?? botguild.Username} just punched {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=punch")));
+                await Send($"URUSAI!! {botguild.Nickname ?? botguild.Username} just punched {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=punch")));
             else
-                await Send($"{contuser.Nickname ?? contuser.Username} just punched {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=punch")));
+                await Send($"{contuser.Nickname ?? contuser.Username} just punched {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=punch")));
         }
 
         [Command("shrug", RunMode = RunMode.Async), Summary("Shrugs")]
         public async Task Shrug() => 
-            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} shrugs.", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=shrug")));
+            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} shrugs.", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=shrug")));
                 
         [Command("adore", RunMode = RunMode.Async), Summary("Adore a user")]
         public async Task Adore([Remainder]IGuildUser guilduser)
@@ -112,10 +112,9 @@ namespace Skuld.Commands
             var contuser = Context.User as IGuildUser;
             var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
             if (guilduser == contuser)
-                await Send($"I-it's not like I like you or anything... {botguild.Nickname ?? botguild.Username} adores {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=adore")));
+                await Send($"I-it's not like I like you or anything... {botguild.Nickname ?? botguild.Username} adores {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=adore")));
             else
-                await Send($"{contuser.Nickname ?? contuser.Username} adores {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=adore")));
-
+                await Send($"{contuser.Nickname ?? contuser.Username} adores {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=adore")));
         }
 
         [Command("kiss", RunMode = RunMode.Async), Summary("Kiss a user")]
@@ -124,9 +123,9 @@ namespace Skuld.Commands
             var contuser = Context.User as IGuildUser;
             var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
             if (guilduser == contuser)
-                await Send($"I-it's not like I like you or anything... {botguild.Nickname ?? botguild.Username} just kissed {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=kiss")));
+                await Send($"I-it's not like I like you or anything... {botguild.Nickname ?? botguild.Username} just kissed {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=kiss")));
             else
-                await Send($"{contuser.Nickname ?? contuser.Username} just kissed {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=kiss")));
+                await Send($"{contuser.Nickname ?? contuser.Username} just kissed {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=kiss")));
         }
 
         [Command("grope", RunMode = RunMode.Async), Summary("Grope a user")]
@@ -135,9 +134,9 @@ namespace Skuld.Commands
             var contuser = Context.User as IGuildUser;
             var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
             if (guilduser == contuser)
-                await Send($"{botguild.Nickname??botguild.Username} just groped {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=grope")));
+                await Send($"{botguild.Nickname??botguild.Username} just groped {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=grope")));
             else
-                await Send($"{contuser.Nickname?? contuser.Username} just groped {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=grope")));
+                await Send($"{contuser.Nickname?? contuser.Username} just groped {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=grope")));
         }
 
         [Command("pet", RunMode = RunMode.Async), Summary("Pets a user")]
@@ -146,9 +145,9 @@ namespace Skuld.Commands
             var contuser = Context.User as IGuildUser;
             var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
             if (contuser == guilduser)
-                await Send($"{botguild.Nickname??botguild.Username} just petted {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=pet")));
+                await Send($"{botguild.Nickname??botguild.Username} just petted {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=pet")));
             else if (guilduser.IsBot)
-                await Send($"{contuser.Nickname?? contuser.Username} just petted {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=pet")));
+                await Send($"{contuser.Nickname?? contuser.Username} just petted {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=pet")));
             else
             {
                 if(!String.IsNullOrEmpty(Bot.Configuration.SqlDBHost))
@@ -190,13 +189,13 @@ namespace Skuld.Commands
                             command.Parameters.AddWithValue("@userid", guilduser.Id);
 
                             await SqlTools.InsertAsync(command);
-                            await Send($"{contuser.Nickname ?? contuser.Username} just petted {guilduser.Nickname ?? guilduser.Username}, they've been petted {newpetted} time(s)!", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=pet")));
+                            await Send($"{contuser.Nickname ?? contuser.Username} just petted {guilduser.Nickname ?? guilduser.Username}, they've been petted {newpetted} time(s)!", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=pet")));
                         }
                     }
                 }
                 else
                 {
-                    await Send($"{contuser.Nickname ?? contuser.Username} just petted {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=pet")));
+                    await Send($"{contuser.Nickname ?? contuser.Username} just petted {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=pet")));
                 }
             }                
         }
@@ -207,9 +206,9 @@ namespace Skuld.Commands
             var contuser = Context.User as IGuildUser;
             var botguild = await Context.Guild.GetUserAsync(Bot.bot.CurrentUser.Id) as IGuildUser;
             if (contuser == guilduser)
-                await Send($"{botguild.Nickname??botguild.Username} glares at {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=glare")));
+                await Send($"{botguild.Nickname??botguild.Username} glares at {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=glare")));
             else if(guilduser.IsBot)
-                await Send($"{contuser.Nickname?? contuser.Username} glares at {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=glare")));
+                await Send($"{contuser.Nickname?? contuser.Username} glares at {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=glare")));
             else
             {
                 if(!String.IsNullOrEmpty(Bot.Configuration.SqlDBHost))
@@ -250,15 +249,14 @@ namespace Skuld.Commands
                             command.Parameters.AddWithValue("@userid", guilduser.Id);
                             await SqlTools.InsertAsync(command);
 
-                            await Send($"{contuser.Nickname ?? contuser.Username} glares at {guilduser.Nickname ?? guilduser.Username}, they've been glared at {newglaredat} time(s)!", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=glare")));
+                            await Send($"{contuser.Nickname ?? contuser.Username} glares at {guilduser.Nickname ?? guilduser.Username}, they've been glared at {newglaredat} time(s)!", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=glare")));
                         }
                     }
                 }
                 else
                 {
-                    await Send($"{contuser.Nickname ?? contuser.Username} glares at {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=glare")));
+                    await Send($"{contuser.Nickname ?? contuser.Username} glares at {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=glare")));
                 }
-
             }
         }
         //End Users
@@ -266,43 +264,43 @@ namespace Skuld.Commands
         //Roles
         /*[Command("slap", RunMode = RunMode.Async), Summary("Slap everyone in a role")]
         public async Task Slap([Remainder]IRole role) =>
-            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} slaps everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=slap")));
+            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} slaps everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=slap")));
 
         [Command("kill", RunMode = RunMode.Async), Summary("Kill everyone in a role")]
         public async Task Kill([Remainder]IRole role) =>
-            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} kills everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=kill")));
+            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} kills everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=kill")));
 
         [Command("stab", RunMode = RunMode.Async), Summary("Stabs everyone in a role")]
         public async Task Stab([Remainder]IRole role) =>
-            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} stabs everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=stab")));
+            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} stabs everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=stab")));
 
         [Command("hug", RunMode = RunMode.Async), Summary("hugs everyone in a role")]
         public async Task Hug([Remainder]IRole role) =>
-            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} hugs everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=hug")));
+            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} hugs everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=hug")));
 
         [Command("punch", RunMode = RunMode.Async), Summary("Punch everyone in a role")]
         public async Task Punch([Remainder]IRole role) =>
-            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} punches everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=punch")));
+            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} punches everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=punch")));
 
         [Command("adore", RunMode = RunMode.Async), Summary("Adore everyone in a role")]
         public async Task Adore([Remainder]IRole role) =>
-            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} adores everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=adore")));
+            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} adores everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=adore")));
 
         [Command("kiss", RunMode = RunMode.Async), Summary("Kiss everyone in a role")]
         public async Task Kiss([Remainder]IRole role) =>
-            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} kisses everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=kiss")));
+            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} kisses everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=kiss")));
 
         [Command("grope", RunMode = RunMode.Async), Summary("Grope everyone in a role")]
         public async Task Grope([Remainder]IRole role) =>
-            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} gropes everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=grope")));
+            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} gropes everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=grope")));
 
         [Command("pet", RunMode = RunMode.Async), Summary("Pets everyone in a role")]
         public async Task Pet([Remainder]IRole role)=>
-            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} pets everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=pet")));
+            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} pets everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=pet")));
 
         [Command("glare", RunMode = RunMode.Async), Summary("Glares at everyone in a role")]
         public async Task Glare([Remainder]IRole role)=>
-            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} glares at everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=glare")));
+            await Send($"{(Context.User as IGuildUser).Nickname ?? Context.User.Username} glares at everyone in {role.Name}", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=glare")));
         */
 
         private async Task InsertUser(IUser user)

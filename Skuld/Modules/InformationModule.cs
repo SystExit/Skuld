@@ -15,12 +15,12 @@ namespace Skuld.Commands
     [Group, Name("Information")]
     public class Information : ModuleBase
     {
-        private string streamingemote = "<:streaming:313956277132853248>";
-        private string onlineemote = "<:online:313956277808005120>";
-        private string idleemote = "<:away:313956277220802560>";
-        private string dontdisturbemote = "<:dnd:313956276893646850>";
-        private string invisibleemote = "<:invisible:313956277107556352>";
-        private string offlineemote = "<:offline:313956277237710868>";
+        //string streamingemote = "<:streaming:313956277132853248>";
+        string onlineemote = "<:online:313956277808005120>";
+        string idleemote = "<:away:313956277220802560>";
+        string dontdisturbemote = "<:dnd:313956276893646850>";
+        string invisibleemote = "<:invisible:313956277107556352>";
+        string offlineemote = "<:offline:313956277237710868>";
             
 
         [Command("server", RunMode = RunMode.Async), Summary("Gets information about the server")]

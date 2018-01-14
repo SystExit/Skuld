@@ -28,7 +28,6 @@ namespace Skuld.Commands
             };
             foreach (var module in Bot.commands.Modules)
             {
-
                 if (module.Name == "Help") { }
                 else
                 {

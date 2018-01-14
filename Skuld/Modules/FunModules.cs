@@ -21,8 +21,7 @@ namespace Skuld.Commands
 {
     [Group,Name("Fun")]
     public class Fun : InteractiveBase
-    {
-        
+    {        
         static string[] eightball = {
 			"SKULD_FUN_8BALL_YES1",
 			"SKULD_FUN_8BALL_YES2",
@@ -368,7 +367,6 @@ namespace Skuld.Commands
                     StatsdClient.DogStatsd.Increment("commands.errors.unm-precon");
                     await MessageHandler.SendChannel(Context.Channel, "I'm sorry, but you don't own the Pasta");
                 }
-
             }
         }
         [Command("pasta", RunMode = RunMode.Async), Summary("Pastas are nice")]
@@ -823,25 +821,9 @@ namespace Skuld.Commands
                 if (!Directory.Exists(Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo")))
                     Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo"));
                 var filepath = await APIWebReq.DownloadFile(new Uri(Context.Message.Attachments.FirstOrDefault().Url), Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo", Context.Message.Id.ToString()) + "old.png");
-                Bitmap bMap = null;
-                try
-                {
-                    bMap = (Bitmap)System.Drawing.Image.FromStream(new MemoryStream(File.ReadAllBytes(filepath), true));
-                }
-                catch (OutOfMemoryException ex)
-                {
-                    await MessageHandler.SendChannel(Context.Channel, "The file you have uploaded was not an image, or an error occured.");
-                }
-                finally
-                {
-                    File.Delete(filepath);
-                }
-                var image = InverseImage(bMap);
-                var newfilepath = Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo", Context.Message.Id.ToString()) + ".png";
-                image.Save(newfilepath, System.Drawing.Imaging.ImageFormat.Png);
+                var newfilepath = await DoStuffWithImage(filepath);
                 await MessageHandler.SendChannel(Context.Channel, "", null, newfilepath);
-                File.Delete(filepath);
-                File.Delete(newfilepath);
+                CleanupImage(filepath, newfilepath);
             }
         }
         [Command("theworld", RunMode = RunMode.Async), Alias("invert", "zawarudo", "the world", "dio")]
@@ -850,12 +832,18 @@ namespace Skuld.Commands
             if (!Directory.Exists(Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo")))
                 Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo"));
             var filepath = await APIWebReq.DownloadFile(new Uri(link), Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo", Context.Message.Id.ToString()) + "old.png");
+            var newfilepath = await DoStuffWithImage(filepath);
+            await MessageHandler.SendChannel(Context.Channel, "", null, newfilepath);
+            CleanupImage(filepath, newfilepath);
+        }
+        private async Task<string> DoStuffWithImage(string filepath)
+        {
             Bitmap bMap = null;
             try
             {
                 bMap = (Bitmap)System.Drawing.Image.FromStream(new MemoryStream(File.ReadAllBytes(filepath), true));
             }
-            catch(OutOfMemoryException ex)
+            catch (OutOfMemoryException ex)
             {
                 await MessageHandler.SendChannel(Context.Channel, "The file you have uploaded was not an image, or an error occured.");
             }
@@ -866,7 +854,10 @@ namespace Skuld.Commands
             var image = InverseImage(bMap);
             var newfilepath = Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo", Context.Message.Id.ToString()) + ".png";
             image.Save(newfilepath, System.Drawing.Imaging.ImageFormat.Png);
-            await MessageHandler.SendChannel(Context.Channel, "", null, newfilepath);
+            return newfilepath;
+        }
+        void CleanupImage(string filepath, string newfilepath)
+        {
             File.Delete(filepath);
             File.Delete(newfilepath);
         }
