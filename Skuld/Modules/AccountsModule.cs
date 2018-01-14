@@ -24,9 +24,9 @@ namespace Skuld.Commands
             var usr = await SqlTools.GetUserAsync(user.Id);
 
             if(Context.User == user)
-                await MessageHandler.SendChannel(Context.Channel, $"You have: {Config.Load().MoneySymbol + usr.Money.Value.ToString("N0")}");
+                await MessageHandler.SendChannel(Context.Channel, $"You have: {Bot.Configuration.MoneySymbol + usr.Money.Value.ToString("N0")}");
             else
-                await MessageHandler.SendChannel(Context.Channel, message: $"**{user.Nickname??user.Username}** has: {Config.Load().MoneySymbol + usr.Money.Value.ToString("N0")}");
+                await MessageHandler.SendChannel(Context.Channel, message: $"**{user.Nickname??user.Username}** has: {Bot.Configuration.MoneySymbol + usr.Money.Value.ToString("N0")}");
         }
 
         [Command("profile", RunMode= RunMode.Async), Summary("Get your profile")]
@@ -50,7 +50,7 @@ namespace Skuld.Commands
                         }
                     };
                     embed.AddField("Description", userLocal.Description ?? "No Description", inline: true);
-                    embed.AddField(Config.Load().MoneyName, userLocal.Money.Value.ToString("N0") ?? "No Money", inline: true);
+                    embed.AddField(Bot.Configuration.MoneyName, userLocal.Money.Value.ToString("N0") ?? "No Money", inline: true);
                     embed.AddField("Luck Factor", userLocal.LuckFactor.ToString("P2") ?? "No LuckFactor",inline: true);
                     if (!string.IsNullOrEmpty(userLocal.Daily))
                         embed.AddField("Daily", userLocal.Daily, inline: true);
@@ -60,18 +60,18 @@ namespace Skuld.Commands
                         embed.AddField("Favourite Command", $"`{userLocal.FavCmd}` and it has been used {userLocal.FavCmdUsg} times", inline: true);
                     else
                         embed.AddField("Favourite Command", "No favourite Command", inline: true);
-                    await MessageHandler.SendChannel(Context.Channel, "", embed);
+                    await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
                 }
                 else
                 {
                     await MessageHandler.SendChannel(Context.Channel, "Error!! Fixing...", 5);
+                    StatsdClient.DogStatsd.Increment("commands.errors.generic");
                     await InsertUser(user);
                 }                
             }
             catch (Exception ex)
             {
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = ex.Message, Color = new Color(255, 0, 0) });
-                Console.WriteLine(ex);
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = ex.Message, Color = new Color(255, 0, 0) }.Build());
             }            
         }
 
@@ -92,7 +92,7 @@ namespace Skuld.Commands
                         Color = Tools.Tools.RandomColor()
                     };
                     embed.AddField("Description", userLocal.Description ?? "No Description",inline: true);
-                    embed.AddField(Config.Load().MoneyName, userLocal.Money.Value.ToString("N0") ?? "No Money", inline: true);
+                    embed.AddField(Bot.Configuration.MoneyName, userLocal.Money.Value.ToString("N0") ?? "No Money", inline: true);
                     embed.AddField("Luck Factor", userLocal.LuckFactor.ToString("P2") ?? "No LuckFactor", inline: true);
                     if (!String.IsNullOrEmpty(userLocal.Daily))
                         embed.AddField("Daily", userLocal.Daily, inline: true);
@@ -122,17 +122,18 @@ namespace Skuld.Commands
                         embed.AddField("Favourite Command", $"`{userLocal.FavCmd}` and it has been used {userLocal.FavCmdUsg} times", inline: true);
                     else
                         embed.AddField("Favourite Command", "No favourite Command", inline: true);
-                    await MessageHandler.SendChannel(Context.Channel, "", embed);
+                    await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
                 }
                 else
                 {
                     await MessageHandler.SendChannel(Context.Channel, "Error!! Fixing...", 5);
+                    StatsdClient.DogStatsd.Increment("commands.errors.generic");
                     await InsertUser(user);
                 }
             }
             catch(Exception ex)
             {
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = ex.Message, Color = new Color(255, 0, 0) });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = ex.Message, Color = new Color(255, 0, 0) }.Build());
                 var appinfo = await Bot.bot.GetApplicationInfoAsync();
                 await appinfo.Owner.SendMessageAsync(ex.ToString());
             }            
@@ -185,8 +186,9 @@ namespace Skuld.Commands
 
             if(suser!=null)
             {
-                await SqlTools.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "money", Convert.ToString(suser.Money + Config.Load().DailyAmount));
+                await SqlTools.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "money", Convert.ToString(suser.Money + Bot.Configuration.DailyAmount));
                 await SqlTools.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "daily", Convert.ToString(DateTime.UtcNow));
+                await MessageHandler.SendChannel(Context.Channel, $"You got your daily of: `{Bot.Configuration.MoneySymbol+Bot.Configuration.DailyAmount}`, you now have: {Bot.Configuration.MoneySymbol}{(suser.Money + Bot.Configuration.DailyAmount)}");
             }
             else
             {
@@ -202,16 +204,17 @@ namespace Skuld.Commands
                     Author = new EmbedAuthorBuilder() {
                         Name = "Error with the command" },
                     Description = "Bot Accounts cannot be given any money", Color = new Color(255,0,0)
-                });
+                }.Build());
+                StatsdClient.DogStatsd.Increment("commands.errors.generic");
             }
             else
             {
                 var suser = await SqlTools.GetUserAsync(user.Id);
                 if (suser != null && !user.IsBot)
                 {
-                    await SqlTools.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "money", Convert.ToString(suser.Money + Config.Load().DailyAmount));
+                    await SqlTools.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "money", Convert.ToString(suser.Money + Bot.Configuration.DailyAmount));
                     await SqlTools.ModifyUserAsync((Context.User as Discord.WebSocket.SocketUser), "daily", Convert.ToString(DateTime.UtcNow));
-                    await MessageHandler.SendChannel(Context.Channel, $"Yo, you just gave {user.Nickname ?? user.Username} {Config.Load().MoneySymbol}{Config.Load().DailyAmount}! They now have {Config.Load().MoneySymbol}{suser.Money + Config.Load().DailyAmount}");
+                    await MessageHandler.SendChannel(Context.Channel, $"Yo, you just gave {user.Nickname ?? user.Username} {Bot.Configuration.MoneySymbol}{Bot.Configuration.DailyAmount}! They now have {Bot.Configuration.MoneySymbol}{suser.Money + Bot.Configuration.DailyAmount}");
                 }
             }
         }
@@ -221,9 +224,9 @@ namespace Skuld.Commands
             var suser = await SqlTools.GetUserAsync(user.Id);
             if (suser != null && !user.IsBot)
             {
-                await SqlTools.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "money", Convert.ToString(suser.Money + Config.Load().DailyAmount));
+                await SqlTools.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "money", Convert.ToString(suser.Money + Bot.Configuration.DailyAmount));
                 await SqlTools.ModifyUserAsync((Context.User as Discord.WebSocket.SocketUser), "daily", Convert.ToString(DateTime.UtcNow));
-                await MessageHandler.SendChannel(Context.Channel, $"Yo, you just gave {user.Nickname ?? user.Username} {Config.Load().MoneySymbol}{Config.Load().DailyAmount}! They now have {Config.Load().MoneySymbol}{suser.Money + Config.Load().DailyAmount}");
+                await MessageHandler.SendChannel(Context.Channel, $"Yo, you just gave {user.Nickname ?? user.Username} {Bot.Configuration.MoneySymbol}{Bot.Configuration.DailyAmount}! They now have {Bot.Configuration.MoneySymbol}{suser.Money + Bot.Configuration.DailyAmount}");
             }
         }
 
@@ -247,11 +250,13 @@ namespace Skuld.Commands
                     var res1 = await SqlTools.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "money", Convert.ToString(oldusergive.Money + amount));
                     var res2 = await SqlTools.ModifyUserAsync((Context.User as Discord.WebSocket.SocketUser), "money", Convert.ToString(oldusersend.Money - amount));
                     if (res1.Successful && res2.Successful)
-                        await MessageHandler.SendChannel(Context.Channel, $"Successfully gave **{user.Username}** {Config.Load().MoneySymbol + amount}");
+                        await MessageHandler.SendChannel(Context.Channel, $"Successfully gave **{user.Username}** {Bot.Configuration.MoneySymbol + amount}");
                     else
                     {
                         string message = $"Res1 error: {res1.Error ?? "None"}\nRes2 error: {res2.Error ?? "None"}";
+                        Bot.Logs.Add(new Models.LogMessage("DailyGive", $"{res1.Error}\t{res2.Error}", LogSeverity.Error));
                         await MessageHandler.SendChannel(Context.Channel, $"Oops, something bad happened. :(\n```\n{message}```");
+                        StatsdClient.DogStatsd.Increment("commands.errors.generic");
                     }
                 }
                 else if(user.IsBot)
@@ -269,19 +274,19 @@ namespace Skuld.Commands
             var command = new MySqlCommand("SELECT username FROM accounts WHERE ID = @userid");
             command.Parameters.AddWithValue("@userid", Context.User.Id);
             var username = await SqlTools.GetSingleAsync(command);
-            if(Context.User.Username+"#"+Context.User.DiscriminatorValue != username)
+            if(Context.User.Username != username)
             {
                 var cmd = new MySqlCommand("UPDATE accounts SET username = @username WHERE ID = @userid");
-                cmd.Parameters.AddWithValue("@username", $"{Context.User.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{Context.User.DiscriminatorValue}");
+                cmd.Parameters.AddWithValue("@username", $"{Context.User.Username.Replace("\"", "\\").Replace("\'", "\\'")}");
                 cmd.Parameters.AddWithValue("@userid", Context.User.Id);
                 await SqlTools.InsertAsync(cmd).ContinueWith(async x=>
                 {
                 if (x.IsCompleted)
-                    await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Success" }, Description = "Synced your username :D", Color = Tools.Tools.RandomColor() });
+                    await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Success" }, Description = "Synced your username :D", Color = Tools.Tools.RandomColor() }.Build());
                 });
             }
             else
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error" }, Description = "Your username is already the same as the one I have on record.", Color = new Color(255, 0, 0) });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error" }, Description = "Your username is already the same as the one I have on record.", Color = new Color(255, 0, 0) }.Build());
         }
 
         private async Task InsertUser(IUser user)
@@ -293,6 +298,7 @@ namespace Skuld.Commands
             {
                 Bot.Logs.Add(new Models.LogMessage("AccountModule", result.Error, LogSeverity.Error));
                 await MessageHandler.SendChannel(Context.Channel, $"I'm sorry there was an issue; `{result.Error}`");
+                StatsdClient.DogStatsd.Increment("commands.errors.generic");
             }
         }
     }

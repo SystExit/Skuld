@@ -8,26 +8,28 @@ using MySql.Data.MySqlClient;
 using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
+using StatsdClient;
 
 namespace Skuld.Tools
 {
     public class CommandManager : Bot
     {
-        private static string defaultPrefix = Config.Load().Prefix;
-        private static string customPrefix = null;
-        public static Stopwatch CommandStopWatch;
+        private static string defaultPrefix = Bot.Configuration.Prefix;
+        private static string customPrefix;
+        public static System.Diagnostics.Stopwatch CommandStopWatch;
         public static async Task Bot_MessageReceived(SocketMessage arg)
         {
             if (!arg.Author.IsBot)
             {
-                CommandStopWatch = new Stopwatch();
+                DogStatsd.Increment("messages.recieved");
+                CommandStopWatch = new System.Diagnostics.Stopwatch();
                 CommandStopWatch.Start();
                 var message = arg as SocketUserMessage;
                 if (message == null) return;
                 int argPos = 0;
                 var chan = message.Channel as SocketGuildChannel;
                 var context = new ShardedCommandContext(bot, message);
-                if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
+                if (!String.IsNullOrEmpty(Bot.Configuration.SqlDBHost))
                 {
                     if (String.IsNullOrEmpty(await SqlTools.GetSingleAsync(new MySqlCommand("SELECT `ID` FROM `guild` WHERE `ID` = " + context.Guild.Id))))
                     {
@@ -52,112 +54,31 @@ namespace Skuld.Tools
                                 string newprefix = await SqlTools.GetSingleAsync(command);
                                 if (newprefix == defaultPrefix)
                                     await MessageHandler.SendChannel(message.Channel as SocketTextChannel, $"Successfully reset the prefix, it is now `{newprefix}`");
+                                DogStatsd.Increment("commands.processed");
                             });
                         }
                         else
+                        {
+                            StatsdClient.DogStatsd.Increment("commands.errors.unm-precon");
                             await MessageHandler.SendChannel(message.Channel, "I'm sorry, you don't have permissions to reset the prefix, you need `MANAGE_SERVER` or `ADMINISTRATOR`");
+                        }
                     }
                 }
-                if (String.IsNullOrEmpty(customPrefix) || String.IsNullOrEmpty(Config.Load().SqlDBHost))
+                if (String.IsNullOrEmpty(customPrefix) || String.IsNullOrEmpty(Bot.Configuration.SqlDBHost))
                     customPrefix = defaultPrefix;
                 await DispatchCommand(message, context, argPos, arg);
             }            
-        }
-
-        public static async Task HandleAI(ICommandContext context, string chatmessage)
-        {
-            try
-            {
-                if (chatmessage.Contains($"{context.Client.CurrentUser.Id}"))
-                {
-                    var messagearr = chatmessage.Split(' ');
-                    chatmessage = String.Join(" ", messagearr.Skip(1).ToArray());
-                }
-                bool triggeredphrase = false;
-                var trigger = new KeyValuePair<string, string>("","");
-                foreach(var phrase in Config.Load().TriggerPhrases)
-                {
-                    if(chatmessage.ToLowerInvariant().Contains(phrase.Key))
-                    {
-                        triggeredphrase = true;
-                        trigger = phrase;
-                        break;
-                    }
-                }
-                if(!triggeredphrase)
-                {
-                    if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
-                        await InsertAI(context.User);
-                    if (!File.Exists(PathToUserData + "\\" + context.User.Id + ".dat"))
-                        ChatUser.Predicates.DictionaryAsXML.Save(PathToUserData + "\\" + context.User.Id + ".dat");
-                    ChatUser = new AIMLbot.User(Convert.ToString(context.User.Id), ChatService);
-                    ChatUser.Predicates.loadSettings(PathToUserData + "\\" + context.User.Id + ".dat");
-                    var res = new AIMLbot.Request(chatmessage, ChatUser, ChatService);
-                    var userresp = ChatService.Chat(res);
-                    var responce = userresp.Output;
-                    ChatService.writeToLog(ChatService.LastLogMessage);
-                    ChatUser.Predicates.DictionaryAsXML.Save(PathToUserData + "\\" + context.User.Id + ".dat");
-                    await MessageHandler.SendChannel(context.Channel, $"{context.User.Mention}, {responce}");
-                }
-                else
-                {
-                    await MessageHandler.SendChannel(context.Channel, $"{context.User.Mention}, {trigger.Value}");
-                }
-            }
-            catch(Exception ex)
-            {
-                Logs.Add(new Models.LogMessage("ChatSrvc", "Error has occured.", LogSeverity.Error, ex));
-                await MessageHandler.SendChannel(context.Channel, $"{context.User.Mention}, I'm sorry but an error has occured. Try again.");
-            }
-        }
+        }        
 
         private static async Task DispatchCommand(SocketUserMessage message, ShardedCommandContext context, int argPos, SocketMessage arg)
         {
             try
             {
-                if(!String.IsNullOrEmpty(Config.Load().SqlDBHost))
-                {
-                    var airesp = await SqlTools.GetSingleAsync(new MySqlCommand("SELECT `AI` FROM `guildcommandmodules` WHERE `ID` = " + context.Guild.Id));
-                    if (!String.IsNullOrEmpty(airesp))
-                    {
-                        if (Convert.ToBoolean(airesp))
-                        {
-                            if (message.HasMentionPrefix(bot.CurrentUser, ref argPos))
-                            {
-                                try
-                                {
-                                    if (Config.Load().ChatServiceEnabled)
-                                        await HandleAI(context, context.Message.Content);
-                                    else
-                                        await MessageHandler.SendChannel(context.Channel, "The chat/ai service is currently disabled. Sorry for the inconvenience.");
-                                }
-                                catch (Exception ex)
-                                {
-                                    Logs.Add(new Models.LogMessage("CmdHand", "Error Handling AI Stuff", LogSeverity.Error, ex));
-                                }
-                            }
-                        }
-                    }
-                }
-                else if(Config.Load().ChatServiceEnabled)
-                {
-                    if (message.HasMentionPrefix(bot.CurrentUser, ref argPos))
-                    {
-                        try
-                        {
-                            await HandleAI(context, context.Message.Content);
-                        }
-                        catch (Exception ex)
-                        {
-                            Logs.Add(new Models.LogMessage("CmdHand", "Error Handling AI Stuff", LogSeverity.Error, ex));
-                        }
-                    }
-                }
                 if (message.HasStringPrefix(customPrefix, ref argPos) || message.HasStringPrefix(defaultPrefix, ref argPos))
                 {
                     IResult result = null;
                     CommandInfo cmd = null;
-                    if (!String.IsNullOrEmpty(Config.Load().SqlDBHost))
+                    if (!String.IsNullOrEmpty(Bot.Configuration.SqlDBHost))
                     {
                         var guild = await SqlTools.GetGuildAsync(context.Guild.Id);
                         var command = commands.Search(context, arg.Content.Split(' ')[0].Replace(defaultPrefix, "").Replace(customPrefix, "")).Commands;
@@ -183,9 +104,28 @@ namespace Skuld.Tools
                             if (result.Error != CommandError.UnknownCommand)
                             {
                                 Logs.Add(new Models.LogMessage("CmdHand", "Error with command, Error is: " + result, LogSeverity.Error));
-                                await MessageHandler.SendChannel(context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = Convert.ToString(result.ErrorReason), Color = new Color(255, 0, 0) });
+                                await MessageHandler.SendChannel(context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with the command" }, Description = Convert.ToString(result.ErrorReason), Color = new Color(255, 0, 0) }.Build());
                             }
+                            DogStatsd.Increment("commands.errors");
+                            if(result.Error == CommandError.MultipleMatches)
+                                DogStatsd.Increment("commands.errors.mul-matches");
+                            if (result.Error == CommandError.UnmetPrecondition)
+                                DogStatsd.Increment("commands.errors.unm-precon");
+                            if (result.Error == CommandError.Unsuccessful)
+                                DogStatsd.Increment("commands.errors.generic");
+                            if (result.Error == CommandError.MultipleMatches)
+                                DogStatsd.Increment("commands.errors.multiple");
+                            if (result.Error == CommandError.BadArgCount)
+                                DogStatsd.Increment("commands.errors.incorr-args");
+                            if (result.Error == CommandError.ParseFailed)
+                                DogStatsd.Increment("commands.errors.parse-fail");
+                            if (result.Error == CommandError.Exception)
+                                DogStatsd.Increment("commands.errors.exception");
+                            if (result.Error == CommandError.UnknownCommand)
+                                DogStatsd.Increment("commands.errors.unk-cmd");
                         }
+                        else
+                            DogStatsd.Increment("commands.processed");
                     }
                 }
                 else { }
@@ -257,24 +197,27 @@ namespace Skuld.Tools
 
         private static bool CheckModule (Models.SkuldGuild guild, ModuleInfo module)
         {
-            if (module.Name == "Accounts")
-                return guild.GuildSettings.Modules.AccountsEnabled;
-            else if (module.Name == "Actions")
-                return guild.GuildSettings.Modules.ActionsEnabled;
-            else if (module.Name == "Admin")
-                return guild.GuildSettings.Modules.AdminEnabled;
-            else if (module.Name == "Fun")
-                return guild.GuildSettings.Modules.FunEnabled;
-            else if (module.Name == "Help")
-                return guild.GuildSettings.Modules.HelpEnabled;
-            else if (module.Name == "Information")
-                return guild.GuildSettings.Modules.InformationEnabled;
-            else if (module.Name == "Search")
-                return guild.GuildSettings.Modules.SearchEnabled;
-            else if (module.Name == "Stats")
-                return guild.GuildSettings.Modules.StatsEnabled;
-            else
-                return true;
+            switch (module.Name)
+            {
+                case "Accounts":
+                    return guild.GuildSettings.Modules.AccountsEnabled;
+                case "Actions":
+                    return guild.GuildSettings.Modules.ActionsEnabled;
+                case "Admin":
+                    return guild.GuildSettings.Modules.AdminEnabled;
+                case "Fun":
+                    return guild.GuildSettings.Modules.FunEnabled;
+                case "Help":
+                    return guild.GuildSettings.Modules.HelpEnabled;
+                case "Information":
+                    return guild.GuildSettings.Modules.InformationEnabled;
+                case "Search":
+                    return guild.GuildSettings.Modules.SearchEnabled;
+                case "Stats":
+                    return guild.GuildSettings.Modules.StatsEnabled;
+                default:
+                    return true;
+            }
         }
     }
 }

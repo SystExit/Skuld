@@ -12,7 +12,7 @@ namespace Skuld.APIS
     {
         public static async Task<APOD> NasaAPOD()
         {
-            var client = (HttpWebRequest)WebRequest.Create("https://api.nasa.gov/planetary/apod?api_key=" + Config.Load().NASAApiKey);
+            var client = (HttpWebRequest)WebRequest.Create("https://api.nasa.gov/planetary/apod?api_key=" + Bot.Configuration.NASAApiKey);
             var response = (HttpWebResponse)await client.GetResponseAsync();
             int remainingcalls = 0;
             for(int x=0;x<response.Headers.Count;x++)

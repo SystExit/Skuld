@@ -16,7 +16,7 @@ namespace Skuld.Commands
             var cmd = new MySqlCommand("select prefix from guild where id = @guildid");
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
             string resp = await SqlTools.GetSingleAsync(cmd);
-            string prefix = Config.Load().Prefix;
+            string prefix = Bot.Configuration.Prefix;
             var embed = new EmbedBuilder()
             {
                 Author = new EmbedAuthorBuilder()
@@ -48,7 +48,7 @@ namespace Skuld.Commands
                 }
             }
             embed.Description = $"The prefix of **{Context.Guild.Name}** is: `{resp ?? prefix}`";
-            await MessageHandler.SendDMs(Context.Channel, (await Context.User.GetOrCreateDMChannelAsync()), "", embed);
+            await MessageHandler.SendDMs(Context.Channel, (await Context.User.GetOrCreateDMChannelAsync()), "", embed.Build());
         }
         [Command("help", RunMode = RunMode.Async), Summary("Gets specific command information")]
         public async Task _Help(string command)
@@ -81,7 +81,7 @@ namespace Skuld.Commands
                         x.IsInline = false;
                     });
                 }
-                await MessageHandler.SendChannel(Context.Channel, "", embed);
+                await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
             }
             else { }
         }

@@ -24,6 +24,8 @@ namespace Skuld.Modules
             var pages = new List<string>();
             MangaArray = await MALAPI.GetMangasAsync(mangatitle);
             int manganode = MangaArray.Entry.Count;
+            if (manganode <= 0)
+                await ReplyAsync(Locale.GetLocale(skuser.Language).GetString("SKULD_SEARCH_NO_RESULTS").Replace("{{result}}", mangatitle));
             if (manganode > 1)
             {
                 IMessage msg = null;
@@ -57,7 +59,6 @@ namespace Skuld.Modules
                                 pages.Add(tempstring); tempstring = "";
                             }
                         }
-                        Console.WriteLine(tempstring);
                     }
 
                     var pagedMessage = new PaginatedMessage()
@@ -104,77 +105,67 @@ namespace Skuld.Modules
         [Command("anime", RunMode = RunMode.Async), Summary("Gets an anime from MyAnimeList.Net")]
         public async Task Animuget([Remainder]string animetitle)
         {
-			var skuser = await SqlTools.GetUserAsync(Context.User.Id);
-			var pages = new List<string>();
-			AnimeArray = await MALAPI.GetAnimesAsync(animetitle);
+            var skuser = await SqlTools.GetUserAsync(Context.User.Id);
+            var pages = new List<string>();
+            AnimeArray = await MALAPI.GetAnimesAsync(animetitle);
             int animenodes = AnimeArray.Entry.Count;
-            try
+            if (animenodes == 0 || AnimeArray == null)
+                await ReplyAsync(Locale.GetLocale(skuser.Language).GetString("SKULD_SEARCH_NO_RESULTS").Replace("{{result}}", animetitle));
+            if (animenodes > 1)
             {
-                if (animenodes == 0)
-                    await ReplyAsync(Locale.GetLocale(skuser.Language).GetString("SKULD_SEARCH_WEEB_EMPTY"));
-                if (animenodes > 1)
+                IMessage msg = null;
+                string entrymessage = Locale.GetLocale(skuser.Language).GetString("SKULD_SEARCH_WEEB_MKSLCTN") + " " + timeout + "s\n";
+                int count = 0;
+                var entries = new List<string>();
+                foreach (var item in AnimeArray.Entry)
                 {
-                    IMessage msg = null;
-                    string entrymessage = Locale.GetLocale(skuser.Language).GetString("SKULD_SEARCH_WEEB_MKSLCTN") +" "+timeout+"s\n";
-                    int count = 0;
-                    var entries = new List<string>();
-                    foreach (var item in AnimeArray.Entry)
+                    count++;
+                    entries.Add($"**{count}. {item.Title}**");
+                }
+                if (entries.Count >= 10)
+                {
+                    string tempstring = "";
+                    var clonedarr = entries;
+                    for (int x = 1; x <= entries.Count; x++)
                     {
-                        count++;
-                        entries.Add($"**{count}. {item.Title}**");
+                        if (entries.LastOrDefault() == entries[x - 1])
+                            tempstring += clonedarr[x - 1];
+                        else
+                            tempstring += clonedarr[x - 1] + "\n\n";
+                        if (x % 10 == 0)
+                        { pages.Add(tempstring); tempstring = ""; }
+                        else if (x == entries.Count())
+                        { pages.Add(tempstring); tempstring = ""; }
                     }
-                    if (entries.Count >= 10)
-                    {
-                        string tempstring = "";
-                        var clonedarr = entries;
-                        for (int x = 1; x <= entries.Count; x++)
-                        {
-                            if (entries.LastOrDefault() == entries[x-1])
-                                tempstring += clonedarr[x-1];
-                            else
-                                tempstring += clonedarr[x-1] + "\n\n";
-                            if (x % 10 == 0)
-                            { pages.Add(tempstring); tempstring = ""; }
-                            else if (x == entries.Count())
-                            { pages.Add(tempstring); tempstring = ""; }
-                            Console.WriteLine(tempstring);
-                        }
 
-                        var pagedMessage = new PaginatedMessage()
-                        {
-                            Title = entrymessage,
-                            Color = Tools.Tools.RandomColor(),
-                            Pages = pages
-                        };
-                        msg = await PagedReplyAsync(pager: pagedMessage, fromSourceUser: true);
-                    }
-                    else
+                    var pagedMessage = new PaginatedMessage()
                     {
-                        entrymessage += String.Join(Environment.NewLine, entries.ToArray());
-                        msg = await MessageHandler.SendChannel(Context.Channel, entrymessage);
-                    }
-                    var response = await NextMessageAsync(fromSourceUser: true, inSourceChannel: true, timeout: TimeSpan.FromSeconds(timeout));
-                    await GetAnimeAtPosition(Convert.ToInt32(response.Content), response.Channel);
-
-                    if (Context.Guild.CurrentUser.GuildPermissions.ManageMessages)
-                    {
-                        await Context.Message.DeleteAsync();
-                        await response.DeleteAsync();
-                    }
-                    if (msg != null)
-                        await msg.DeleteAsync();
+                        Title = entrymessage,
+                        Color = Tools.Tools.RandomColor(),
+                        Pages = pages
+                    };
+                    msg = await PagedReplyAsync(pager: pagedMessage, fromSourceUser: true);
                 }
                 else
                 {
-                    await GetAnimeAtZeroNonSearch();
+                    entrymessage += String.Join(Environment.NewLine, entries.ToArray());
+                    msg = await MessageHandler.SendChannel(Context.Channel, entrymessage);
                 }
+                var response = await NextMessageAsync(fromSourceUser: true, inSourceChannel: true, timeout: TimeSpan.FromSeconds(timeout));
+                await GetAnimeAtPosition(Convert.ToInt32(response.Content), response.Channel);
 
+                if (Context.Guild.CurrentUser.GuildPermissions.ManageMessages)
+                {
+                    await Context.Message.DeleteAsync();
+                    await response.DeleteAsync();
+                }
+                if (msg != null)
+                    await msg.DeleteAsync();
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine(ex);
+                await GetAnimeAtZeroNonSearch();
             }
-
         }
         public async Task GetAnimeAtZeroNonSearch() =>
             await SendAnime(AnimeArray.Entry.First());
@@ -235,7 +226,7 @@ namespace Skuld.Modules
             {
                 ImageUrl = await APIWebReq.ReturnString(new Uri("http://lucoa.systemexit.co.uk/gifs/reactions/")),
                 Color = Tools.Tools.RandomColor()
-            });
+            }.Build());
         }
     }
 }

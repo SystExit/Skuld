@@ -4,9 +4,8 @@ using System.Threading.Tasks;
 using Discord.Commands;
 using Discord;
 
-namespace Skuld.Models
+namespace Skuld.Tools
 {
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
     public class RequireRolePrecondition : PreconditionAttribute
     {
         private AccessLevel Level;
@@ -16,11 +15,10 @@ namespace Skuld.Models
             Level = level;
         }
 
-        public override Task<PreconditionResult> CheckPermissions(ICommandContext context, CommandInfo command, IServiceProvider map)
+        public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
-            var access = GetPermission(context);            // Get the acccesslevel for this context
-
-            if (access >= Level)                            // If the user's access level is greater than the required level, return success.
+            var access = GetPermission(context);
+            if (access >= Level)
                 return Task.FromResult(PreconditionResult.FromSuccess());
             else
                 return Task.FromResult(PreconditionResult.FromError("Insufficient permissions."));
@@ -28,19 +26,16 @@ namespace Skuld.Models
 
         public AccessLevel GetPermission(ICommandContext c)
         {
-            if (c.User.IsBot)                                    // Prevent other bots from executing commands.
+            if (c.User.IsBot)
                 return AccessLevel.Blocked;
-
-            if (Tools.Config.Load().Owners.Contains(c.User.Id) || (Bot.bot.GetApplicationInfoAsync().Result).Owner.Id == c.User.Id) // Give configured owners special access.
+            if (Bot.Configuration.Owners.Contains(c.User.Id) || (Bot.bot.GetApplicationInfoAsync().Result).Owner.Id == c.User.Id)
                 return AccessLevel.BotOwner;
-
-            var user = c.User as IGuildUser;                // Check if the context is in a guild.
+            IGuildUser user = (IGuildUser)c.User;
             if (user != null)
             {
-                if (c.Guild.OwnerId == user.Id)                  // Check if the user is the guild owner.
+                if (c.Guild.OwnerId == user.Id)
                     return AccessLevel.ServerOwner;
-
-                if (user.GuildPermissions.Administrator || user.GuildPermissions.ManageGuild)         // Check if the user has the administrator permission or Manage Guild role.
+                if (user.GuildPermissions.Administrator || user.GuildPermissions.ManageGuild)
                     return AccessLevel.ServerAdmin;
                 if (user.GuildPermissions.ManageMessages && user.GuildPermissions.BanMembers && user.GuildPermissions.KickMembers && user.GuildPermissions.ManageRoles)
                     return AccessLevel.ServerMod;

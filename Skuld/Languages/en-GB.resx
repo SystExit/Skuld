@@ -184,6 +184,9 @@
     <value>Error with the Command</value>
     <comment>If nothing set, use this</comment>
   </data>
+  <data name="SKULD_SEARCH_NO_RESULTS" xml:space="preserve">
+    <value>Oops, I couldn't find anything for: **{{result}}**</value>
+  </data>
   <data name="SKULD_SEARCH_WEEB_CHPS" xml:space="preserve">
     <value>Chapters</value>
   </data>

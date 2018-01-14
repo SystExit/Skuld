@@ -22,7 +22,7 @@ using Discord.Addons.Interactive;
 namespace Skuld.Commands
 {
     [Group, Name("Search")]
-    public partial class Search : InteractiveBase
+    public class Search : InteractiveBase
     {
         /*Commented out due to potentiality of coming back to it.
         [Command("tvshow"), Summary("Gets tv show from imdb")]
@@ -174,7 +174,7 @@ namespace Skuld.Commands
                 embed.AddField("Total Views", $"{chan.Views.ToString("N0")}",inline: true);
                 embed.ThumbnailUrl = chan.VideoBannerUrl;
             }
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
+            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
         }
 
         //Start Search Platforms
@@ -200,9 +200,9 @@ namespace Skuld.Commands
         {
             try
             {
-                var css = new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer() { ApiKey = Config.Load().GoogleAPI, ApplicationName = "Skuld" });
+                var css = new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer() { ApiKey = Bot.Configuration.GoogleAPI, ApplicationName = "Skuld" });
                 var listRequest = css.Cse.List(query);
-                listRequest.Cx = Config.Load().GoogleCx;
+                listRequest.Cx = Bot.Configuration.GoogleCx;
                 listRequest.Safe = CseResource.ListRequest.SafeEnum.High;
                 var search = await listRequest.ExecuteAsync();
                 var items = search.Items;
@@ -224,15 +224,15 @@ namespace Skuld.Commands
                             },
                             Description = "I found this:\n" +
                                 $"**{item.Title}**\n" +
-                                $"{item.Link}\n\n" +
+                                $"<{item.Link}>\n\n" +
                                 "__**Also Relevant**__\n"+
-                                $"**{item2.Title}**\n{item2.Link}\n\n"+
-                                $"**{item3.Title}**\n{item3.Link}\n\n"+
+                                $"**{item2.Title}**\n<{item2.Link}>\n\n"+
+                                $"**{item3.Title}**\n<{item3.Link}>\n\n"+
                                 "If I didn't find what you're looking for, use this link:\n" +
                                 $"https://google.com/search?q={query.Replace(" ", "%20")}",
                             Color = Tools.Tools.RandomColor()
                         };
-                        await MessageHandler.SendChannel(Context.Channel, "", embed);
+                        await MessageHandler.SendChannel(Context.Channel, $"<{item.Link}>", embed.Build());
                     }
                     catch
                     {
@@ -245,13 +245,15 @@ namespace Skuld.Commands
                         Title = "Error with the command",
                         Description = $"I couldn't find anything matching: `{query}`, please try again.",
                         Color = Tools.Tools.RandomColor()
-                    });
+                    }.Build());
+                    StatsdClient.DogStatsd.Increment("commands.errors.generic");
                 }
             }
             catch (Exception ex)
             {
                 Bot.Logs.Add(new Models.LogMessage("GogSrch", "Error with google search", LogSeverity.Error, ex));
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Color = Tools.Tools.RandomColor() });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Color = Tools.Tools.RandomColor() }.Build());
+                StatsdClient.DogStatsd.Increment("commands.errors.exception");
             }
         }
         private async Task YoutubeS(string query)
@@ -274,35 +276,29 @@ namespace Skuld.Commands
                     ImageUrl = item.Thumbnail,
                     Color = Tools.Tools.RandomColor()
                 };
-                await MessageHandler.SendChannel(Context.Channel, "", embed);
+
+                await MessageHandler.SendChannel(Context.Channel, $"<:youtube:314349922885566475> | {item.Url}\nDuration: {HttpUtility.HtmlDecode(item.Duration)}");
             }
             catch (Exception ex)
             {
                 Bot.Logs.Add(new Models.LogMessage("YTBSrch", "Error with Youtube Search", LogSeverity.Error, ex));
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Description = ex.Message, Color = Tools.Tools.RandomColor() });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Description = ex.Message, Color = Tools.Tools.RandomColor() }.Build());
+                StatsdClient.DogStatsd.Increment("commands.errors.exception");
             }
         }
         private async Task ImgurS(string query)
         {
             try
             {
-                var client = new ImgurClient(Config.Load().ImgurClientID, Config.Load().ImgurClientSecret);
+                var client = new ImgurClient(Bot.Configuration.ImgurClientID, Bot.Configuration.ImgurClientSecret);
                 var endpoint = new GalleryEndpoint(client);
                 var images = await endpoint.SearchGalleryAsync(query);
                 var albm = images.ElementAtOrDefault(Bot.random.Next(0,images.Count()));
                 var album = (IGalleryAlbum)albm;
-                if (album != null)
+                if (album != null && album.Nsfw != true)
                 {
-                    if (album.Nsfw != true)
-                    {
-                        string message = "I found this:\n" + album.Link;
-                        await MessageHandler.SendChannel(Context.Channel, message);
-                    }
-                    if (album.Nsfw == true && Context.Channel.Name.ToLowerInvariant().StartsWith("nsfw") == true)
-                    {
-                        string message = "I found this:\n" + album.Link;
-                        await MessageHandler.SendChannel(Context.Channel, message);
-                    }
+                    string message = "I found this:\n" + album.Link;
+                    await MessageHandler.SendChannel(Context.Channel, message);
                 }
                 else
                     await MessageHandler.SendChannel(Context.Channel, "I found nothing sorry. :/");
@@ -310,7 +306,8 @@ namespace Skuld.Commands
             catch (Exception ex)
             {
                 Bot.Logs.Add(new Models.LogMessage("ImgrSch", "Error with Imgur search", LogSeverity.Error, ex));
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Description = ex.Message, Color = Tools.Tools.RandomColor() });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with the command", Description = ex.Message, Color = Tools.Tools.RandomColor() }.Build() );
+                StatsdClient.DogStatsd.Increment("commands.errors.exception");
             }
         }
 
@@ -331,13 +328,15 @@ namespace Skuld.Commands
                 url = url + "?k=b&q=" + query.Replace(" ", "%20");
             if(engine == "d"||engine == "duckduckgo")
                 url = url + "?s=d&q=" + query.Replace(" ", "%20");
-            if(url != "https://lmgtfy.com/")
+            if (url != "https://lmgtfy.com/")
                 await MessageHandler.SendChannel(Context.Channel, url);
             else
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with command" }, Color = new Color(255, 0, 0), Description = $"Ensure your parameters are correct, example: `{Config.Load().Prefix}lmgtfy g How to use lmgtfy`" });
+            { await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Author = new EmbedAuthorBuilder() { Name = "Error with command" }, Color = new Color(255, 0, 0), Description = $"Ensure your parameters are correct, example: `{Bot.Configuration.Prefix}lmgtfy g How to use lmgtfy`" }.Build());
+                StatsdClient.DogStatsd.Increment("commands.errors.generic");
+            }
         }
 
-        public string urbanphrase = null;
+        public string urbanphrase;
 
         [Command("urban", RunMode = RunMode.Async), Summary("Gets a thing from urban dictionary")]
         public async Task Urban([Remainder]string phrase) =>
@@ -375,16 +374,14 @@ namespace Skuld.Commands
             embed.AddField("Example", word.Example??"Not Available");
             embed.AddField("Upvotes", word.UpVotes??"Not Available");
             embed.AddField("Downvotes", word.DownVotes??"Not Available");
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
+            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
         }
 
-        [Command("wikipedia", RunMode = RunMode.Async), Summary("Gets wikipedia information, supports all languages that wikipedia offers")]
-        [Alias("wiki")]
+        [Command("wikipedia", RunMode = RunMode.Async), Summary("Gets wikipedia information, supports all languages that wikipedia offers"), Alias("wiki")]
         public async Task Wiki(string langcode, [Remainder]string query) => 
             await GetWiki(langcode, query);
 
-        [Command("wikipedia", RunMode = RunMode.Async), Summary("Gets wikipedia information, supports all languages that wikipedia offers")]
-        [Alias("wiki")]
+        [Command("wikipedia", RunMode = RunMode.Async), Summary("Gets wikipedia information, supports all languages that wikipedia offers"), Alias("wiki")]
         public async Task Wiki([Remainder]string query) => 
             await GetWiki("en", query);
         public async Task GetWiki(string langcode, string query)
@@ -408,7 +405,7 @@ namespace Skuld.Commands
                 Color = Tools.Tools.RandomColor()
             };
             embed.AddField("Description", page.Description??"Not Available",inline: true);
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
+            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
         }
 
         [Command("gif", RunMode = RunMode.Async), Summary("Gets a gif")]
@@ -435,19 +432,20 @@ namespace Skuld.Commands
                 var gif = new Gif(item["id"].ToString());
                 embed.Url = gif.Url;
                 embed.ImageUrl = gif.Url;
-                await MessageHandler.SendChannel(Context.Channel, "", embed);
+                await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
             }
             catch (Exception ex)
             {
                 if (ex is ArgumentOutOfRangeException)
                     await MessageHandler.SendChannel(Context.Channel, Context.User.Mention + " No results found for: `" + query + "`");
+                StatsdClient.DogStatsd.Increment("commands.errors.generic");
             }
         }
 
         [Command("define", RunMode = RunMode.Async), Summary("Defines a word")]
         public async Task Define([Remainder]string word)
         {
-            var stringifiedxml = await APIWebReq.ReturnString(new Uri($"http://www.stands4.com/services/v2/defs.php?uid={Config.Load().STANDSUid}&tokenid={Config.Load().STANDSToken}&word={word}"));
+            var stringifiedxml = await APIWebReq.ReturnString(new Uri($"http://www.stands4.com/services/v2/defs.php?uid={Bot.Configuration.STANDSUid}&tokenid={Bot.Configuration.STANDSToken}&word={word}"));
             var xml = new XmlDocument();
             xml.LoadXml(stringifiedxml);
             XObject xNode = XDocument.Parse(xml.InnerXml);
@@ -466,7 +464,7 @@ namespace Skuld.Commands
             embed.AddField("Example",definedword.Example??"Not Available");
             embed.AddField("Part of speech",definedword.PartOfSpeech??"Not Available",inline: true);
             embed.AddField("Terms", definedword.Terms??"Not Available",inline: true);
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
+            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
         }
         
         [Command("reddit", RunMode = RunMode.Async), Summary("Gets a subreddit")]
@@ -489,10 +487,11 @@ namespace Skuld.Commands
 
             foreach (var post in subReddit.Data.Posts)
             {
-                string txt = $"[{post.Data.Title}](https://reddit.com{post.Data.Permalink})\n";                
-                pageText.Add(txt);
-                if(Context.Channel.IsNsfw&&post.Data.Over18)
-                    pageText.Add("[NSFW] "+txt);
+                string txt = $"[{post.Data.Title}](https://reddit.com{post.Data.Permalink})\n";
+                if (post.Data.Over18)
+                { }
+                else
+                { pageText.Add(txt); }
             }
 
             if(pageText.Count>10)

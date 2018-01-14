@@ -132,7 +132,7 @@ namespace Skuld.Commands
                     x.Value = "Connected?";
                 }
             });
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
+            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
         }
         [Command("shard", RunMode = RunMode.Async), Summary("Gets the shard the guild is on")]
         public async Task ShardGet() => await MessageHandler.SendChannel(Context.Channel, $"{Context.User.Mention} the server: `{Context.Guild.Name}` is on `{Bot.bot.GetShardIdFor(Context.Guild)}`");        
@@ -158,7 +158,7 @@ namespace Skuld.Commands
         [Command("sql", RunMode = RunMode.Async), Summary("Sql stuff")]
         public async Task SQL([Remainder]string query)
         {
-            if(!String.IsNullOrEmpty(Config.Load().SqlDBHost))
+            if(!String.IsNullOrEmpty(Bot.Configuration.SqlDBHost))
             {
                 string message = "Result:```cs\n";
                 var reader = await SqlTools.GetAsync(new MySqlCommand(query));
@@ -185,7 +185,7 @@ namespace Skuld.Commands
         [Command("moneyadd", RunMode = RunMode.Async), Summary("Gives money to people")]
         public async Task GiveMoney(IGuildUser user, int amount)
         {
-            if(!String.IsNullOrEmpty(Config.Load().SqlDBHost))
+            if(!String.IsNullOrEmpty(Bot.Configuration.SqlDBHost))
             {
                 var command = new MySqlCommand("select money from accounts where ID = @userid");
                 command.Parameters.AddWithValue("@userid", user.Id);
@@ -201,12 +201,12 @@ namespace Skuld.Commands
                     command = new MySqlCommand("select money from accounts where ID = @userid");
                     command.Parameters.AddWithValue("@userid", user.Id);
                     int newnewmoney = Convert.ToInt32(await SqlTools.GetSingleAsync(command));
-                    await MessageHandler.SendChannel(Context.Channel, $"User {user.Username} now has: {Config.Load().MoneySymbol + newnewmoney}");
+                    await MessageHandler.SendChannel(Context.Channel, $"User {user.Username} now has: {Bot.Configuration.MoneySymbol + newnewmoney}");
                 }
                 else
                 {
                     command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid, @username, \"I have no description\");");
-                    command.Parameters.AddWithValue("@username", $"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{user.DiscriminatorValue}");
+                    command.Parameters.AddWithValue("@username", $"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}");
                     command.Parameters.AddWithValue("@userid", user.Id);
                     await SqlTools.InsertAsync(command);
                     await GiveMoney(user, amount);
@@ -246,7 +246,7 @@ namespace Skuld.Commands
             try
             {
 
-                if (!code.StartsWith("```cs")&&!code.EndsWith("```")) throw new Exception("Codeblock using \"CS\" is required");
+                if (!code.StartsWith("```cs", StringComparison.Ordinal)&&!code.EndsWith("```", StringComparison.Ordinal)) throw new Exception("Codeblock using \"CS\" is required");
                 code = code.Replace("`", "");
                 code = code.Remove(0, 2);
                 if (code.ToLowerInvariant().Contains("token") || code.ToLowerInvariant().Contains("config"))
@@ -269,7 +269,7 @@ namespace Skuld.Commands
                     embed.Color = Tools.Tools.RandomColor();
                     embed.Description = $"{result}";
                     if (result != null)
-                        await MessageHandler.SendChannel(Context.Channel, "", embed);
+                        await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
                     else
                     {
                         await MessageHandler.SendChannel(Context.Channel, "Result is empty or null");
@@ -278,15 +278,17 @@ namespace Skuld.Commands
             }
             catch (Exception ex)
             {
-                var embed = new EmbedBuilder();
-                embed.Author = new EmbedAuthorBuilder()
+                var embed = new EmbedBuilder
                 {
-                    Name = "ERROR WITH EVAL"
+                    Author = new EmbedAuthorBuilder()
+                    {
+                        Name = "ERROR WITH EVAL"
+                    },
+                    Color = new Color(255, 0, 0),
+                    Description = $"{ex.Message}"
                 };
-                embed.Color = new Color(255, 0, 0);
-                embed.Description = $"{ex.Message}";
                 Bot.Logs.Add(new Models.LogMessage("EvalCMD", "Error with eval command " + ex.Message, LogSeverity.Error, ex));
-                await MessageHandler.SendChannel(Context.Channel, "", embed);
+                await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
             }
         }
         [Command("pubstats", RunMode = RunMode.Async), Summary("no")]
@@ -342,7 +344,7 @@ namespace Skuld.Commands
             foreach(var guild in  Bot.bot.Guilds)
             {
                 var gcmd = new MySqlCommand("INSERT IGNORE INTO `guild` (`ID`,`name`,`prefix`) VALUES ");
-                gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Config.Load().Prefix}\" )";
+                gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Bot.Configuration.Prefix}\" )";
                 await SqlTools.InsertAsync(gcmd);
 
                 //Configures Modules

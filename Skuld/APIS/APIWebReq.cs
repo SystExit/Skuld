@@ -206,7 +206,6 @@ namespace Skuld.APIS
             var request = (HttpWebRequest)WebRequest.Create(url);
             request.AllowAutoRedirect = true;
             var response = (HttpWebResponse)await request.GetResponseAsync();
-            string data = null;
             var doc = new HtmlDocument();
             if (response.StatusCode == HttpStatusCode.OK)
             {

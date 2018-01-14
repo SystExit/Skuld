@@ -8,7 +8,7 @@ namespace Skuld.Tools
 {
     public partial class SqlTools : Bot
     {
-        private static string cs = $@"server={Config.Load().SqlDBHost};user={Config.Load().SqlUser};password={Config.Load().SqlPass};database={Config.Load().SqlDB};charset=utf8mb4";
+        private static string cs = $@"server={Bot.Configuration.SqlDBHost};user={Bot.Configuration.SqlUser};password={Bot.Configuration.SqlPass};database={Bot.Configuration.SqlDB};charset=utf8mb4";
 
         public static async Task<bool> InsertAsync(MySqlCommand command)
         {
@@ -21,6 +21,8 @@ namespace Skuld.Tools
                 {
                     await command.ExecuteNonQueryAsync();
                     await conn.CloseAsync();
+                    StatsdClient.DogStatsd.Increment("mysql.queries");
+                    StatsdClient.DogStatsd.Increment("mysql.insert");
                     return true;
                 }
                 catch (Exception ex)
@@ -43,7 +45,12 @@ namespace Skuld.Tools
                 command.Connection = getconn;
                 try
                 {
-                    return await command.ExecuteReaderAsync();
+                    StatsdClient.DogStatsd.Increment("mysql.queries");
+                    var reader = await command.ExecuteReaderAsync();
+                    int rows = 0;
+                    rows = reader.Depth+1;
+                    StatsdClient.DogStatsd.Set("mysql.rows-ret", rows);
+                    return reader;
                 }
                 catch (Exception ex)
                 {
@@ -63,6 +70,8 @@ namespace Skuld.Tools
                 {
                     var result = Convert.ToString(await command.ExecuteScalarAsync());
                     await conn.CloseAsync();
+                    StatsdClient.DogStatsd.Increment("mysql.queries");
+                    StatsdClient.DogStatsd.Set("mysql.rows-ret",1);
                     return result;
                 }
                 catch (Exception ex)

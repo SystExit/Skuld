@@ -31,11 +31,29 @@ namespace Skuld.Commands
             if(lines.Length>2000)
             {
                 var paddedlines = lines.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
-                var pad1 = paddedlines.Take(paddedlines.Length / 2);
-                var pad2 = paddedlines.Skip(paddedlines.Length / 2).Take(paddedlines.Length / 2);
-
-                var pages = new string[] { "```cs\n"+string.Join("\n",pad1)+"```", "```cs\n"+string.Join("\n", pad2)+"```" };
-                await PagedReplyAsync(pages, fromSourceUser: true);
+                var pagesold = new List<string>();
+                int prev = 0;
+                for (int x = 1; x <= lines.Length; x++)
+                {
+                    if (lines.Length % x == 0&&x>9)
+                    {
+                        pagesold.Add("```cs\n" + string.Join(",\n", paddedlines.Skip(prev).Take(x)) + "```");
+                        prev = x;
+                    }
+                    if (x == lines.Length)
+                    {
+                        pagesold.Add("```cs\n" + string.Join(",\n", paddedlines.Skip(prev).Take(x)) + "```");
+                    }
+                }
+                var pages = new List<string>();
+                foreach(var page in pagesold)
+                {
+                    if (page != "```cs\n```")
+                    {
+                        pages.Add(page);
+                    }
+                }
+                await PagedReplyAsync(pages, fromSourceUser: true);                
             }
             else
                 await MessageHandler.SendChannel(Context.Channel, "```cs\n"+lines+"```");
@@ -89,6 +107,7 @@ namespace Skuld.Commands
             if (String.IsNullOrEmpty(roleid))
             {
                 await MessageHandler.SendChannel(Context.Channel, "Role doesn't exist, so I cannot unmute");
+                StatsdClient.DogStatsd.Increment("commands.errors.generic");
             }
             else
             {
@@ -116,12 +135,14 @@ namespace Skuld.Commands
             if (amount < 0)
             {
                 await MessageHandler.SendChannel(Context.Channel,$"{Context.User.Mention} Your amount `{amount}` is under 0.");
+                StatsdClient.DogStatsd.Increment("commands.errors.unm-precon");
             }
             else
             {
                 amount++;
                 var messages = await Context.Channel.GetMessagesAsync(amount).Flatten();
-                await Context.Channel.DeleteMessagesAsync(messages).ContinueWith(async x =>
+                ITextChannel chan = (ITextChannel)Context.Channel;
+                await chan.DeleteMessagesAsync(messages).ContinueWith(async x =>
                 {
                     if (x.IsCompleted)
                         await MessageHandler.SendChannel(Context.Channel, ":ok_hand: Done!", 5000);
@@ -136,14 +157,15 @@ namespace Skuld.Commands
             if (amount < 0)
             {
                 await MessageHandler.SendChannel(Context.Channel,$"{Context.User.Mention} Your amount `{amount}` is under 0.");
+                StatsdClient.DogStatsd.Increment("commands.errors.unm-precon");
             }
             else
             {
                 var messages = await Context.Channel.GetMessagesAsync(100).Flatten();
                 var usermessages = messages.Where(x => x.Author.Id == user.Id);
                 usermessages = usermessages.Take(amount);
-
-                await Context.Channel.DeleteMessagesAsync(usermessages).ContinueWith(async x =>
+                ITextChannel chan = (ITextChannel)Context.Channel;
+                await chan.DeleteMessagesAsync(usermessages).ContinueWith(async x =>
                 {
                     if(x.IsCompleted)
                         await MessageHandler.SendChannel(Context.Channel, ":ok_hand: Done!",5000);
@@ -190,32 +212,28 @@ namespace Skuld.Commands
         [Command("ban", RunMode = RunMode.Async), Summary("Bans a user")]
         [RequireBotPermission(GuildPermission.BanMembers)]
         [RequireUserPermission(GuildPermission.BanMembers)]
-        public async Task Ban(IUser user)
+        public async Task Ban(IUser user, [Remainder]string reason = null)
         {
             var guild = Context.Guild;
             try
             {
                 var dmchan = await user.GetOrCreateDMChannelAsync();
-                await dmchan.SendMessageAsync($"You have been banned from **{Context.Guild}**");
+                if (reason != null)
+                    await dmchan.SendMessageAsync($"You have been banned from **{Context.Guild}** by: {Context.User} with reason:```\n{reason}```");
+                else
+                    await dmchan.SendMessageAsync($"You have been banned from **{Context.Guild}** by: {Context.User}");
             }
             catch { }
-            await guild.AddBanAsync(user, 7);
-            await MessageHandler.SendChannel(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}`");
-        }
-        [Command("ban", RunMode = RunMode.Async), Summary("Bans a user")]
-        [RequireBotPermission(GuildPermission.BanMembers)]
-        [RequireUserPermission(GuildPermission.BanMembers)]
-        public async Task Ban(IUser user, [Remainder]string reason)
-        {
-            var guild = Context.Guild;
-            try
+            if (reason == null)
             {
-                var dmchan = await user.GetOrCreateDMChannelAsync();
-                await dmchan.SendMessageAsync($"You have been banned from **{Context.Guild}** with reason:```\n{reason}```");
+                await guild.AddBanAsync(user, 7);
+                await MessageHandler.SendChannel(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}`");
             }
-            catch { }
-            await guild.AddBanAsync(user, 7, reason);
-            await MessageHandler.SendChannel(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}`\nReason given: {reason}");
+            else
+            {
+                await guild.AddBanAsync(user, 7, reason);
+                await MessageHandler.SendChannel(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}`\nReason given: {reason}");
+            }
         }
         [RequireBotPermission(GuildPermission.BanMembers)]
         [RequireUserPermission(GuildPermission.BanMembers)]
@@ -356,7 +374,7 @@ namespace Skuld.Commands
             string oldprefix = await SqlTools.GetSingleAsync(cmd);
 
             cmd = new MySqlCommand("UPDATE guild SET prefix = @prefix WHERE ID = @guildid");
-            cmd.Parameters.AddWithValue("@prefix", Config.Load().Prefix);
+            cmd.Parameters.AddWithValue("@prefix", Bot.Configuration.Prefix);
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
 
             await SqlTools.InsertAsync(cmd).ContinueWith(async x =>
@@ -472,9 +490,9 @@ namespace Skuld.Commands
         public async Task ConfigureGuildFeatures(string module, int value)
         {
             if (value > 1)
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build());
             if (value < 0)
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build());
             else
             {
                 module = module.ToLowerInvariant();
@@ -512,7 +530,7 @@ namespace Skuld.Commands
                     foreach (var mod in settings)
                         modulelist += mod.Key + " ("+mod.Value+")"+ ", ";
                     modulelist = modulelist.Remove(modulelist.Length - 2);
-                    await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules (raw name in brackets). \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) });
+                    await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules (raw name in brackets). \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build());
                 }                    
             }
         }
@@ -522,9 +540,9 @@ namespace Skuld.Commands
         public async Task ConfigureGuildModules(string module, int value)
         {
             if (value > 1)
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build());
             if (value < 0)
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build());
             else
             {
                 module = module.ToLowerInvariant();
@@ -548,7 +566,7 @@ namespace Skuld.Commands
                 {
                     string modulelist = string.Join(", ",modules);
                     modulelist = modulelist.Remove(modulelist.Length - 2);
-                    await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) });
+                    await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build());
                 }
             }
         }
@@ -590,7 +608,7 @@ namespace Skuld.Commands
             {
                 string modulelist = string.Join(", ", modules);
                 modulelist = modulelist.Remove(modulelist.Length - 2);
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build());
             }
         }
     }

@@ -70,12 +70,12 @@ namespace Skuld.Tools
                     if (!perm)
                     {
                         if (message != null)
-                            dmsg = await mesgChan.SendMessageAsync(message + "\n" + ConvertEmbedToText(embed));
+                            dmsg = await mesgChan.SendMessageAsync(message + "\n" + ConvertEmbedToText(embed.Build()));
                         else
-                            dmsg = await mesgChan.SendMessageAsync(ConvertEmbedToText(embed));
+                            dmsg = await mesgChan.SendMessageAsync(ConvertEmbedToText(embed.Build()));
                     }
                     else if (perm)
-                        dmsg = await mesgChan.SendMessageAsync(message, isTTS: false, embed: embed);
+                        dmsg = await mesgChan.SendMessageAsync(message, isTTS: false, embed: embed.Build());
                 }
                 Bot.Logs.Add(new Models.LogMessage("MsgDisp", $"Dispactched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
                 var timer = new Stopwatch();

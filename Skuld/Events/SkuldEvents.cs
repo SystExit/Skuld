@@ -74,11 +74,6 @@ namespace Skuld.Events
             Logs.Add(new Models.LogMessage(arg.Source, arg.Message, arg.Level, arg.Exception));
             return Task.CompletedTask;
         }
-        //End Twitch        
-        //AimlBot
-        public static void ChatService_WrittenToLog()
-        {
-            Logs.Add(new Models.LogMessage("ChtSrvc", ChatService.LastLogMessage, Discord.LogSeverity.Info));
-        }
+        //End Twitch
     }
 }

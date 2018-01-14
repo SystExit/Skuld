@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Skuld.Models;
 using MySql.Data.MySqlClient;
 using Discord.WebSocket;
+using StatsdClient;
 
 namespace Skuld.Tools
 {
@@ -216,7 +217,7 @@ namespace Skuld.Tools
             if(!user.IsBot)
             {
                 var command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");");
-                command.Parameters.AddWithValue("@username", $"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{user.DiscriminatorValue}");
+                command.Parameters.AddWithValue("@username", $"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}");
                 command.Parameters.AddWithValue("@userid", user.Id);
                 return new SqlError(await InsertAsync(command));
             }

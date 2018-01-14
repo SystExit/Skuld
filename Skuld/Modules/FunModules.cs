@@ -45,7 +45,7 @@ namespace Skuld.Commands
 			"SKULD_FUN_8BALL_NO4",
 			"SKULD_FUN_8BALL_NO5"
 		};
-        string[] videoext = new string[] {
+        string[] videoext = {
             ".webm",
             ".mkv",
             ".flv",
@@ -61,7 +61,7 @@ namespace Skuld.Commands
             ".mpg",
             ".mpeg"
         };
-        string[] Roasts = new string[] {
+        string[] Roasts = {
             "You suck.",
             "Keep rolling your eyes. Maybe one day you'll find a brain back there.",
             "I'm no proctologist, but I know an asshole when I see one.",
@@ -72,7 +72,7 @@ namespace Skuld.Commands
             "100,000 sperm, you were the fastest?",
             "Are you made of Gallium, Yitrium, Boron, Oxygen and Iodine? Because damn you are GA Y B O I.",
             "You're the reason the gene pool needs a lifeguard." };
-        string[,] DadJokes = new string[,] { 
+        string[,] DadJokes = { 
             {"What do you call a pile of cats?", "A \"meow\"ntain." },
             { "Why did the picture go to jail?", "Because it was framed." },
             { "You're 'Merican when you go into the bathroom and you're 'Merican when you come out. But do you know what you are while you're in there?","You're a \"peeing\"" },
@@ -101,7 +101,7 @@ namespace Skuld.Commands
             {"I bought some shoes from a drug dealer","I don't know what he laced them with, but I was tripping all day." },
             {"Where does Fonzie like to go to eat?","Chick-fil-AAAAYYYY!" }
         };
-        string[,] PickUpLines = new string[,] { 
+        string[,] PickUpLines = { 
             {"Is your dad a terrorist?", "Because you're the bomb." },
             {"Did you sit on a pile of sugar?","Because that is a sweet ass you got there." },
             {"Did you fall from heaven?","Because you look like you're in pain." },
@@ -128,7 +128,20 @@ namespace Skuld.Commands
             if (item["neko"].ToString() != null)
             {
                 var neko = item["neko"];
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { ImageUrl = neko });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { ImageUrl = neko }.Build());
+            }
+        }
+        [RequireNsfw]
+        [Command("lewdneko", RunMode = RunMode.Async), Summary("Lewd Neko Grill")]
+        public async Task LewdNeko()
+        {
+            var rawresp = await APIS.APIWebReq.ReturnString(new Uri("https://nekos.life/api/lewd/neko"));
+            var jsonresp = JObject.Parse(rawresp);
+            dynamic item = jsonresp;
+            if (item["neko"].ToString() != null)
+            {
+                var neko = item["neko"];
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { ImageUrl = neko }.Build());
             }
         }
 
@@ -140,7 +153,7 @@ namespace Skuld.Commands
             if (videoext.Any(kitty.ImageURL.Contains))
                 await MessageHandler.SendChannel(Context.Channel, kitty.ImageURL);
             else
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = Tools.Tools.RandomColor(), ImageUrl = kitty.ImageURL });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = Tools.Tools.RandomColor(), ImageUrl = kitty.ImageURL }.Build());
         }
         [Command("doggo", RunMode = RunMode.Async), Summary("doggo")]
         [Alias("dog", "dogs", "doggy")]
@@ -150,19 +163,27 @@ namespace Skuld.Commands
             if (videoext.Any(doggo.ImageURL.Contains))
                 await MessageHandler.SendChannel(Context.Channel, doggo.ImageURL);
             else
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = Tools.Tools.RandomColor(), ImageUrl = doggo.ImageURL });
+                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = Tools.Tools.RandomColor(), ImageUrl = doggo.ImageURL }.Build());
         }
         [Command("llama", RunMode = RunMode.Async), Summary("Llama")]
         public async Task Llama()
         {
-            var llama = JsonConvert.DeserializeObject<Animal>(await APIWebReq.ReturnString(new Uri("https://api.systemexit.co.uk/animals/llama/random")));
-            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = Tools.Tools.RandomColor(), ImageUrl = llama.FileUrl });
+            var llama = JsonConvert.DeserializeObject<Animal>(await APIWebReq.ReturnString(new Uri("https://api.systemexit.co.uk/animals/api.php/llama/random")));
+            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = Tools.Tools.RandomColor(), ImageUrl = llama.FileUrl }.Build());
         }
-        
+        [Command("seal", RunMode = RunMode.Async), Summary("Seal")]
+        public async Task Seal()
+        {
+            var seal = JsonConvert.DeserializeObject<Animal>(await APIWebReq.ReturnString(new Uri("https://api.systemexit.co.uk/animals/api.php/seal/random")));
+            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Color = Tools.Tools.RandomColor(), ImageUrl = seal.FileUrl }.Build());
+        }
+
         [Command("eightball", RunMode = RunMode.Async), Summary("Eightball")]
         [Alias("8ball")]
+#pragma warning disable RECS0154 // Parameter is never used
         public async Task Eightball([Remainder] string whatisyourquestion)
-		{
+#pragma warning restore RECS0154 // Parameter is never used
+        {
 			await MessageHandler.SendChannel(Context.Channel, $"{/*Context.User.Nickname??*/Context.User.Username} :8ball: says: {eightball[Bot.random.Next(0, eightball.Length)]}");
 		}
         [Command("eightball", RunMode = RunMode.Async), Summary("Eightball")]
@@ -196,6 +217,7 @@ namespace Skuld.Commands
             catch (FormatException)
             {
                 await Context.Channel.SendMessageAsync($"{Context.User.Mention} this command only accepts numbers, try again");
+                StatsdClient.DogStatsd.Increment("commands.errors.exception");
             }
         }
 
@@ -212,11 +234,11 @@ namespace Skuld.Commands
                         Color = Tools.Tools.RandomColor(),
                         Title = pastaLocal.PastaName
                     };
-                    embed.AddField("Author", pastaLocal.Username,inline:true);
-                    embed.AddField("Created", pastaLocal.Created,inline: true);
-                    embed.AddField("UpVotes", ":arrow_double_up: " + pastaLocal.Upvotes,inline: true);
+                    embed.AddField("Author", pastaLocal.Username, inline: true);
+                    embed.AddField("Created", pastaLocal.Created, inline: true);
+                    embed.AddField("UpVotes", ":arrow_double_up: " + pastaLocal.Upvotes, inline: true);
                     embed.AddField("DownVotes", ":arrow_double_down: " + pastaLocal.Downvotes, inline: true);
-                    await MessageHandler.SendChannel(Context.Channel, "", embed);
+                    await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
                 }
                 if (cmd == "upvote")
                 {
@@ -254,7 +276,7 @@ namespace Skuld.Commands
                 }
                 if (cmd == "delete")
                 {
-                    if(Convert.ToUInt64(pastaLocal.OwnerID) == Context.User.Id)
+                    if (Convert.ToUInt64(pastaLocal.OwnerID) == Context.User.Id)
                     {
                         var command = new MySqlCommand("DELETE FROM pasta WHERE pastaname = @title");
                         command.Parameters.AddWithValue("@title", title);
@@ -268,6 +290,7 @@ namespace Skuld.Commands
             }
             else
             {
+                StatsdClient.DogStatsd.Increment("commands.errors.generic");
                 await MessageHandler.SendChannel(Context.Channel, $"Pasta `{title}` doesn't exist. :/ Sorry.");
             }
         }
@@ -279,6 +302,7 @@ namespace Skuld.Commands
                 if (title == "list" || title == "help")
                 {
                     await MessageHandler.SendChannel(Context.Channel, "Nope");
+                    StatsdClient.DogStatsd.Increment("commands.errors.generic");
                 }
                 else
                 {
@@ -288,6 +312,7 @@ namespace Skuld.Commands
                     if (!string.IsNullOrEmpty(pastaname))
                     {
                         await MessageHandler.SendChannel(Context.Channel, $"Pasta already exists with name: **{title}**");
+                        StatsdClient.DogStatsd.Increment("commands.errors.generic");
                     }
                     else
                     {
@@ -340,6 +365,7 @@ namespace Skuld.Commands
                 }
                 else
                 {
+                    StatsdClient.DogStatsd.Increment("commands.errors.unm-precon");
                     await MessageHandler.SendChannel(Context.Channel, "I'm sorry, but you don't own the Pasta");
                 }
 
@@ -396,7 +422,10 @@ namespace Skuld.Commands
                 if (!String.IsNullOrEmpty(response))
                     await MessageHandler.SendChannel(Context.Channel, response);
                 else
+                {
+                    StatsdClient.DogStatsd.Increment("commands.errors.generic");
                     await MessageHandler.SendChannel(Context.Channel, $"Whoops, `{title}` doesn't exist");
+                }
             }
         }
         /*[Command("pasta", RunMode = RunMode.Async), Summary("Pastas are nice")]
@@ -433,7 +462,7 @@ namespace Skuld.Commands
             else if (int2 > 151 || int2 < 0)
                 await MessageHandler.SendChannel(Context.Channel,$"{int2} over/under limit. (151)");
             else
-                await MessageHandler.SendChannel(Context.Channel,"", new EmbedBuilder() { Color = Tools.Tools.RandomColor(), ImageUrl = $"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png" });
+                await MessageHandler.SendChannel(Context.Channel,"", new EmbedBuilder() { Color = Tools.Tools.RandomColor(), ImageUrl = $"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png" }.Build());
         }
 
         [Command("strawpoll", RunMode = RunMode.Async), Summary("Creates Strawpoll")]
@@ -467,7 +496,7 @@ namespace Skuld.Commands
             for (int z = 0; z < poll.Options.Length; z++)
                 embed.AddField(poll.Options[z], poll.Votes[z]);
 
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
+            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
         }
 
         [Command("emoji", RunMode = RunMode.Async), Summary("Turns text into bigmoji")]
@@ -634,7 +663,7 @@ namespace Skuld.Commands
                 Title = joke,
                 Description = punchline,
                 Color = Tools.Tools.RandomColor()
-            });
+            }.Build());
         }
         [Command("pickup",RunMode = RunMode.Async),Summary("Cringe at these bad user-submitted pick up lines. (Don't actually use these or else you'll get laughed at. :3)"),Alias("pickupline")]
         public async Task PickUp()
@@ -648,9 +677,9 @@ namespace Skuld.Commands
                 Title = part1,
                 Description = part2??"",
                 Color = Tools.Tools.RandomColor()
-            });
+            }.Build());
         }
-        [Command("cowsay",RunMode = RunMode.Async),Summary("Make an ascii cow say some things.")]
+        /*[Command("cowsay",RunMode = RunMode.Async),Summary("Make an ascii cow say some things.")]
         public async Task CowSay([Remainder]string message)
         {
             string cowdir = Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "cows");
@@ -738,7 +767,7 @@ namespace Skuld.Commands
             }
             else
                 await MessageHandler.SendChannel(Context.Channel, cowsay);
-        }        
+        }   */     
 
         [Command("apod", RunMode = RunMode.Async), Summary("Gets NASA's \"Astronomy Picture of the Day\"")]
         public async Task APOD()
@@ -756,13 +785,18 @@ namespace Skuld.Commands
                     Name = aPOD.CopyRight
                 }
             };
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
+            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
         }
         [Command("choose", RunMode = RunMode.Async), Summary("Choose from things")]
         public async Task Choose([Remainder]string choices)
         {
             var choicearr = choices.Split('|');
-            await MessageHandler.SendChannel(Context.Channel, $"<:blobthinkcool:350673773113901056> | __{(Context.User as IGuildUser).Nickname??Context.User.Username}__ I choose: **{choicearr[Bot.random.Next(0,choicearr.Length)]}**");
+            var choice = choicearr[Bot.random.Next(0, choicearr.Length)];
+            if (Char.IsWhiteSpace(choice[0]))
+                choice = choice.Remove(choice[0],1);
+            else if (Char.IsWhiteSpace(choice[choice.Length - 1]))
+                choice = choice.Remove(choice.Length - 1);
+            await MessageHandler.SendChannel(Context.Channel, $"<:blobthinkcool:350673773113901056> | __{(Context.User as IGuildUser).Nickname??Context.User.Username}__ I choose: **{choice}**");
         }
         /*[Command("heal", RunMode = RunMode.Async), Summary("Did you run out of health? Here's the healing station")]
         public async Task Heal()
@@ -779,13 +813,15 @@ namespace Skuld.Commands
         {
 
         }*/
-        [Command("theworld",RunMode = RunMode.Async),Alias("zawarudo","the world","dio")]
+        [Command("theworld",RunMode = RunMode.Async),Alias("invert", "zawarudo","the world","dio")]
         public async Task ZaWarudo()
         {
             if (Context.Message.Attachments.Count <= 0)
                 await MessageHandler.SendChannel(Context.Channel, "<:blobnotsure:350673785021661186> You haven't uploaded or linked to an image... ");
             else
             {
+                if (!Directory.Exists(Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo")))
+                    Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo"));
                 var filepath = await APIWebReq.DownloadFile(new Uri(Context.Message.Attachments.FirstOrDefault().Url), Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo", Context.Message.Id.ToString()) + "old.png");
                 Bitmap bMap = null;
                 try
@@ -808,9 +844,11 @@ namespace Skuld.Commands
                 File.Delete(newfilepath);
             }
         }
-        [Command("theworld", RunMode = RunMode.Async), Alias("zawarudo", "the world", "dio")]
+        [Command("theworld", RunMode = RunMode.Async), Alias("invert", "zawarudo", "the world", "dio")]
         public async Task ZaWarudo([Remainder]string link)
         {
+            if (!Directory.Exists(Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo")))
+                Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo"));
             var filepath = await APIWebReq.DownloadFile(new Uri(link), Path.Combine(AppContext.BaseDirectory, "skuld", "storage", "zawarudo", Context.Message.Id.ToString()) + "old.png");
             Bitmap bMap = null;
             try

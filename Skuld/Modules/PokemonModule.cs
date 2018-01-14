@@ -34,6 +34,7 @@ namespace Skuld.Modules
                     Title = "Command Error!",
                     Description = "This pokemon doesn't exist. Please try again.\nIf it is a Generation 7, pokeapi.co hasn't updated for it yet."
                 };
+                StatsdClient.DogStatsd.Increment("commands.errors.generic");
             }
             else
             {
@@ -113,7 +114,7 @@ namespace Skuld.Modules
                 embed.Author = auth;
                 embed.ThumbnailUrl = sprite;
             }
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
+            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
         }
     }
 }

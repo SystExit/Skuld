@@ -8,16 +8,12 @@ using System.Diagnostics;
 using Skuld.Tools;
 using System.Reflection;
 using System.Threading;
-using Microsoft.VisualBasic.Devices;
 
 namespace Skuld.Commands
 {
     [Group("Stats"),Name("Stats")]
     public class Stats : ModuleBase
     {
-        PerformanceCounter CpuCounter;
-        PerformanceCounter RamCounter;
-
         [Command("ping", RunMode = RunMode.Async), Summary("Print Ping")]
         public async Task Ping() =>
             await MessageHandler.SendChannel(Context.Channel, "PONG: " + Bot.bot.GetShardFor(Context.Guild).Latency + "ms");
@@ -55,13 +51,9 @@ namespace Skuld.Commands
             embed.AddField("Shards", Bot.bot.Shards.Count().ToString(),inline:true);
 
             var currProcess = Process.GetCurrentProcess();
-            CpuCounter = new PerformanceCounter("Process", "% Processor Time", currProcess.ProcessName);
-            RamCounter = new PerformanceCounter("Memory", "Available MBytes");
-
             embed.AddField("Commands", Bot.commands.Commands.Count().ToString(),inline:true);
-            embed.AddField("CPU Load", GetCurrentCpuUsage(),inline:true);
             embed.AddField("Memory Used", (currProcess.WorkingSet64 / 1024) / 1024 + "MB",inline:true);
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
+            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
         }
 
         [Command("netfw", RunMode = RunMode.Async), Summary(".Net Info")]
@@ -71,62 +63,5 @@ namespace Skuld.Commands
         [Command("discord", RunMode = RunMode.Async), Summary("Discord Info")]
         public async Task Discnet() => 
             await MessageHandler.SendChannel(Context.Channel, $"Discord.Net Library Version: {DiscordConfig.Version}");
-
-        [Command("system", RunMode = RunMode.Async), Summary("System load")]
-        public async Task System()
-        {
-            var currentuser = await Context.Guild.GetCurrentUserAsync();
-            var embed = new EmbedBuilder
-            {
-                Footer = new EmbedFooterBuilder { Text = "Generated" },
-                ThumbnailUrl = currentuser.GetAvatarUrl(),
-                Timestamp = DateTime.Now,
-                Title = "System Load",
-                Color = Tools.Tools.RandomColor(),
-                Author = new EmbedAuthorBuilder
-                {
-                    IconUrl = currentuser.GetAvatarUrl(),
-                    Name = currentuser.Username
-                }
-            };
-
-            CpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-            RamCounter = new PerformanceCounter("Memory", "Available MBytes");
-            
-            embed.AddField("CPU Load", GetCurrentCpuUsage(),inline:true);
-            embed.AddField("Total Free Ram", GetAvailableRAM(),inline:true); 
-            embed.AddField("Uptime", $"{UpTime.Days} day(s) {UpTime.Hours}:{UpTime.Minutes}:{UpTime.Seconds}",inline:true);
-            embed.AddField("OS", Environment.OSVersion+" "+RuntimeInformation.OSArchitecture,inline:true);
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
-        }
-
-        public string GetCurrentCpuUsage()
-        {
-            CpuCounter.NextValue();
-            Thread.Sleep(500);
-            return string.Format("{0:0.00}%", CpuCounter.NextValue());
-        }
-
-        public string GetAvailableRAM()
-        {
-            var value = RamCounter.NextValue();
-            var totalinbytes = new ComputerInfo().TotalPhysicalMemory;
-            double kbtotal = totalinbytes / 1024;
-            var mbtotal = kbtotal / 1024;
-            var gbtotal = kbtotal / (1024 * 1024);
-            return string.Format("{0:0.00} GB / {1} GB\n{2} MB / {3} MB", (value / 1024), Math.Round(gbtotal,2), value, Math.Truncate(mbtotal));
-        }
-
-        public TimeSpan UpTime
-        {
-            get
-            {
-                using (var uptime = new PerformanceCounter("System", "System Up Time"))
-                {
-                    uptime.NextValue();
-                    return TimeSpan.FromSeconds(uptime.NextValue());
-                }
-            }
-        }
     }
 }

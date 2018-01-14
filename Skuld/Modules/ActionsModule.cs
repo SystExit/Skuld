@@ -44,7 +44,7 @@ namespace Skuld.Commands
                 await Send($"{contuser.Nickname ?? contuser.Username} stabbed {guilduser.Nickname ?? guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=stab")));
             else
             {
-                if(!String.IsNullOrEmpty(Config.Load().SqlDBHost))
+                if(!String.IsNullOrEmpty(Bot.Configuration.SqlDBHost))
                 {
                     int dhp = Bot.random.Next(0, 100);
                     var command = new MySqlCommand("select HP from accounts where ID = @userid");
@@ -151,7 +151,7 @@ namespace Skuld.Commands
                 await Send($"{contuser.Nickname?? contuser.Username} just petted {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=pet")));
             else
             {
-                if(!String.IsNullOrEmpty(Config.Load().SqlDBHost))
+                if(!String.IsNullOrEmpty(Bot.Configuration.SqlDBHost))
                 {
                     var command = new MySqlCommand("SELECT pets from accounts where id = @userid");
                     command.Parameters.AddWithValue("@userid", Context.User.Id);
@@ -212,7 +212,7 @@ namespace Skuld.Commands
                 await Send($"{contuser.Nickname?? contuser.Username} glares at {guilduser.Nickname??guilduser.Username}", await APIWebReq.ReturnString(new Uri("https://lucoa.systemexit.co.uk/gifs/actions/?f=glare")));
             else
             {
-                if(!String.IsNullOrEmpty(Config.Load().SqlDBHost))
+                if(!String.IsNullOrEmpty(Bot.Configuration.SqlDBHost))
                 {
                     var command = new MySqlCommand("SELECT glares from accounts where id = @userid");
                     command.Parameters.AddWithValue("@userid", contuser.Id);
@@ -308,11 +308,11 @@ namespace Skuld.Commands
         private async Task InsertUser(IUser user)
         {
             var command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");");
-            command.Parameters.AddWithValue("@username", $"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}#{user.DiscriminatorValue}");
+            command.Parameters.AddWithValue("@username", $"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}");
             command.Parameters.AddWithValue("@userid",user.Id);
             await SqlTools.InsertAsync(command);
         }
         private async Task Send(string message, string image)=>
-            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = message, Color = Tools.Tools.RandomColor(), ImageUrl = image });
+            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder() { Description = message, Color = Tools.Tools.RandomColor(), ImageUrl = image }.Build());
     }
 }

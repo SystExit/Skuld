@@ -60,7 +60,7 @@ namespace Skuld.Commands
             embed.AddField("Created", guild.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
             embed.AddField("Emojis", guild.Emotes.Count + Environment.NewLine + $"Use `{Bot.Prefix}server emojis` to view all of the emojis");
             embed.AddField("Roles", guild.Roles.Count() + Environment.NewLine + $"Use `{Bot.Prefix}server roles` to view all of the roles");
-            await MessageHandler.SendChannel((ITextChannel)Context.Channel,"", embed);
+            await MessageHandler.SendChannel((ITextChannel)Context.Channel,"", embed.Build());
         }
         [Command("server emojis", RunMode = RunMode.Async), Alias("server emoji")]
         public async Task ServerEmoji()
@@ -145,7 +145,7 @@ namespace Skuld.Commands
             var user = await Context.User.GetOrCreateDMChannelAsync();
             await MessageHandler.SendDMs((ITextChannel)Context.Channel, user, $"Join the support server at: http://discord.gg/JYzvjah");
         }
-        [Command("botinvite", RunMode = RunMode.Async), Summary("OAuth2 Invite")]
+        [Command("invite", RunMode = RunMode.Async), Summary("OAuth2 Invite")]
         public async Task BotInvite()
         {
             var bot = await Skuld.Bot.bot.GetApplicationInfoAsync();
@@ -185,8 +185,8 @@ namespace Skuld.Commands
                 {
                     if (user.GuildPermissions.Administrator)
                     {
-                        if (user.Game.HasValue &&user.Game.Value.StreamType != StreamType.NotStreaming)
-                            adminstatus += streamingemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        //if (user.Game.HasValue &&user.Game.Value.StreamType != StreamType.NotStreaming)
+                        //    adminstatus += streamingemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
                         if (user.Status == UserStatus.Online)
                             adminstatus += onlineemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
                         if (user.Status == UserStatus.AFK || user.Status == UserStatus.Idle)
@@ -200,8 +200,8 @@ namespace Skuld.Commands
                     }
                     else if (user.GuildPermissions.KickMembers && user.GuildPermissions.ManageMessages)
                     {
-                        if(user.Game.HasValue && user.Game.Value.StreamType != StreamType.NotStreaming)
-                            modstatus += streamingemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        //if(user.Game.HasValue && user.Game.Value.StreamType != StreamType.NotStreaming)
+                        //    modstatus += streamingemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
                         if (user.Status == UserStatus.Online)
                             modstatus += onlineemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
                         if (user.Status == UserStatus.AFK || user.Status == UserStatus.Idle)
@@ -264,8 +264,8 @@ namespace Skuld.Commands
             string status = "";
             if (!String.IsNullOrEmpty(whois.Nickname))
                 nickname = $"({whois.Nickname})";
-            if (whois.Game.HasValue && whois.Game.Value.StreamType != StreamType.NotStreaming)
-                status += streamingemote + " Streaming, ["+whois.Game.Value.Name+"]("+whois.Game.Value.StreamUrl+")";
+            //if (!String.IsNullOrEmpty(whois.Activity.Name) && whois. != UserStatus..NotStreaming)
+            //    status += streamingemote + " Streaming, ["+whois.Game.Value.Name+"]("+whois.Game.Value.StreamUrl+")";
             if (whois.Status == UserStatus.Online)
                 status += onlineemote + " Online";
             if (whois.Status == UserStatus.AFK || whois.Status == UserStatus.Idle)
@@ -288,9 +288,9 @@ namespace Skuld.Commands
                 if (item.GetUser(whois.Id) != null)
                     seencount++;
             string game = null;
-            if (whois.Game.HasValue)
+            if (!String.IsNullOrEmpty(whois.Activity.Name))
             {
-                game = whois.Game.Value.Name;
+                game = whois.Activity.Name;
             }
             else
                 game = "Nothing";
@@ -300,10 +300,10 @@ namespace Skuld.Commands
             embed.AddField(":robot: Bot?", whois.IsBot.ToString() ?? "Unknown",inline: true);
             embed.AddField(":eyes: Mutual Servers", $"{seencount} servers",inline: true);
             embed.AddField(":eyes: Last Seen", "Shard: " + (Bot.bot.GetShardIdFor(Context.Guild).ToString() ?? "Unknown"),inline: true);
-            embed.AddField(":shield: Roles", $"Do `{Config.Load().Prefix}roles` to see your roles");
+            embed.AddField(":shield: Roles", $"Do `{Bot.Configuration.Prefix}roles` to see your roles");
             embed.AddField(":inbox_tray: Server Join", whois.JoinedAt.Value.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
             embed.AddField(":globe_with_meridians: Discord Join", whois.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
-            await MessageHandler.SendChannel(Context.Channel, "", embed);
+            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
         }
         [Command("roles", RunMode = RunMode.Async), Summary("Gets your current roles")]
         public async Task GetRole() =>
@@ -346,21 +346,14 @@ namespace Skuld.Commands
 
             var doc = await APIWebReq.ScrapeUrl(new Uri("http://downforeveryoneorjustme.com/" + website));        
             string response = null;
-            try
-            {
-                var container = doc.GetElementbyId("container");
-                var isup = container.ChildNodes.FindFirst("p");
-                if (isup.InnerHtml.ToLowerInvariant().Contains("not"))
-                    response = $"The website: `{website}` is down or not replying.";
-                else
-                    response = $"The website: `{website}` is working and replying as intended.";
-                response = response + "\n\n`Source:` <http://downforeveryoneorjustme.com/" + website + ">";
-                await MessageHandler.SendChannel(Context.Channel, response);
-            }
-            catch(Exception ex)
-            {
-                Console.WriteLine(ex);
-            }
+            var container = doc.GetElementbyId("container");
+            var isup = container.ChildNodes.FindFirst("p");
+            if (isup.InnerHtml.ToLowerInvariant().Contains("not"))
+                response = $"The website: `{website}` is down or not replying.";
+            else
+                response = $"The website: `{website}` is working and replying as intended.";
+            response = response + "\n\n`Source:` <http://downforeveryoneorjustme.com/" + website + ">";
+            await MessageHandler.SendChannel(Context.Channel, response);
         }
         [Command("time"), Summary("Converts a time to a set of times")]
         public async Task ConvertTime(string primarytimezone, string time, [Remainder]string timezones)
@@ -379,9 +372,9 @@ namespace Skuld.Commands
 
                 await MessageHandler.SendChannel(Context.Channel, response + "```");
             }
-            catch
+            catch (Exception ex)
             {
-                
+                await MessageHandler.SendChannel(Context.Channel, Skuld.Languages.en_GB.ResourceManager.GetString("SKULD_GENERIC_ERROR") + "\n" + ex.Message);
             }        
         }        
 
