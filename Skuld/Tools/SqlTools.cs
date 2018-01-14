@@ -221,7 +221,7 @@ namespace Skuld.Tools
                 command.Parameters.AddWithValue("@userid", user.Id);
                 return new SqlError(await InsertAsync(command));
             }
-            else {return new SqlError(false,"Robots are not supported.");}
+            else { return new SqlError(false,"Robots are not supported."); }
         }
         public static async Task<SqlError> ModifyUserAsync(SocketUser user, string column, string value)
         {

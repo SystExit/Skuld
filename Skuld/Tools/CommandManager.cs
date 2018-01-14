@@ -102,7 +102,6 @@ namespace Skuld.Tools
                     else
                     {
                         result = await commands.ExecuteAsync(context, argPos, map);
-
                     }
                     if(result!=null)
                     {
