@@ -11,7 +11,10 @@ using NTwitch.Rest;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
-using AIMLbot;
+using Microsoft.Extensions.DependencyInjection;
+using Discord.Addons.Interactive;
+using System.Linq;
+using StatsdClient;
 
 namespace Skuld
 {
@@ -21,53 +24,31 @@ namespace Skuld
         public static ObservableCollection<Models.LogMessage> Logs = new ObservableCollection<Models.LogMessage>();
         public static DiscordShardedClient bot;
         public static CommandService commands;
+        public static InteractiveService InteractiveCommands;
         public static IServiceProvider map;
         public static string logfile;
         public static StreamWriter sw;
         public static Random random = new Random();
-        public static string Prefix = null;
+        public static string Prefix;
         public static TwitchRestClient NTwitchClient;
-        public static FileSystemWatcher fsw;
-        public static AIMLbot.Bot ChatService;
-        public static User ChatUser;
         public static string PathToUserData;
+        public static Config Configuration;
         /*END VARS*/
 
-        static void Main(string[] args) => CreateBot().GetAwaiter().GetResult();
+        static void Main() => CreateBot().GetAwaiter().GetResult();
 
         public static async Task CreateBot()
         {
             try
             {
                 EnsureConfigExists();
-                fsw = new FileSystemWatcher(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "modules")){EnableRaisingEvents = true};
-                sw = new StreamWriter(logfile, false, Encoding.UTF8);
-                Prefix = Config.Load().Prefix;
-                fsw.Deleted += Events.SkuldEvents.Fsw_Deleted;
-                Logs.CollectionChanged += Events.SkuldEvents.Logs_CollectionChanged;
-                Logs.Add(new Models.LogMessage("FrameWk", $"Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
-                bot = new DiscordShardedClient(new DiscordSocketConfig()
-                {
-                    MessageCacheSize = 1000,
-                    LargeThreshold = 250,
-                    AlwaysDownloadUsers = true,
-                    DefaultRetryMode = RetryMode.RetryTimeouts,
-                    LogLevel = LogSeverity.Verbose,
-                    TotalShards = Config.Load().Shards
-                });
-                bot.Log += Events.SkuldEvents.Bot_Log;
-                Events.DiscordEvents.RegisterEvents();
-                commands = new CommandService(new CommandServiceConfig()
-                {
-                    CaseSensitiveCommands = false,
-                    DefaultRunMode = RunMode.Async,
-                    LogLevel = LogSeverity.Verbose
-                });
-                if(Config.Load().ChatServiceEnabled)
-                    InstallChatService();
-                await ModuleHandler.LoadAll();
-                await ModuleHandler.CountModulesCommands();
-                await StartBot(Config.Load().Token);
+                Configuration = Config.Load();
+                ConfigureStatsCollector();
+                await InstallServices().ConfigureAwait(false);
+                Locale.InitialiseLocales();
+				Logs.Add(new Models.LogMessage("FrameWk", $"Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
+                DogStatsd.Event("FrameWork", $"Configured and Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", alertType: "info", hostname: "Skuld");
+                await StartBot(Configuration.Token).ConfigureAwait(false);
                 await Task.Delay(-1);
             }
             catch (Exception ex)
@@ -76,24 +57,28 @@ namespace Skuld
                 Console.ReadLine();
             }
         }
-
+        
         public static async Task StartBot(string token)
         {
             try
             {
-                if(Config.Load().TwitchModule)
-                    await APIS.Twitch.TwitchClient.CreateTwitchClient(Config.Load().TwitchToken, Config.Load().TwitchClientID);
+                if (Configuration.TwitchModule)
+                    await APIS.Twitch.TwitchClient.CreateTwitchClient(Configuration.TwitchToken, Configuration.TwitchClientID);
                 await bot.LoginAsync(TokenType.Bot, token);
                 await bot.StartAsync();
+                Parallel.Invoke(() => SendDataToDataDog());
                 foreach (var shard in bot.Shards)
-                    if(shard.ConnectionState == ConnectionState.Connected)
-                        await PublishStats(shard.ShardId);
-                await Task.Delay(-1);
+                {
+                    if (shard.ConnectionState == ConnectionState.Connected)
+                    { await PublishStats(shard.ShardId).ConfigureAwait(false); }
+                }
+                await Task.Delay(-1).ConfigureAwait(false);
             }
             catch(Exception ex)
             {
                 Logs.Add(new Models.LogMessage("Strt-Bot", "ERROR WITH THE BOT", LogSeverity.Error, ex));
-                await StopBot("Init-Bt");
+                DogStatsd.Event("FrameWork", $"Bot Crashed on start: {ex}", alertType: "error", hostname: "Skuld");
+                await StopBot("Init-Bt").ConfigureAwait(false);
             }
         }
 
@@ -102,54 +87,67 @@ namespace Skuld
             Events.DiscordEvents.UnRegisterEvents();
             await bot.SetStatusAsync(UserStatus.Offline);
             Logs.Add(new Models.LogMessage(source, "Skuld is shutting down", LogSeverity.Info));
-            await sw.WriteLineAsync("-------------------------------------------");
+            DogStatsd.Event("FrameWork", $"Bot Stopped", alertType: "info", hostname: "Skuld");
+            await sw.WriteLineAsync("-------------------------------------------").ConfigureAwait(false);
             sw.Close();
-            await Console.Out.WriteLineAsync("Bot shutdown");
+            await Console.Out.WriteLineAsync("Bot shutdown").ConfigureAwait(false);
             Console.ReadLine();
             Environment.Exit(0);            
         }
-
-        public static void InstallChatService()
+        
+        public static async Task InstallServices()
         {
-            try
+            sw = new StreamWriter(logfile, true, Encoding.UTF8);
+            Prefix = Configuration.Prefix;
+            Logs.CollectionChanged += Events.SkuldEvents.Logs_CollectionChanged;
+
+            bot = new DiscordShardedClient(new DiscordSocketConfig
             {
-                string path = Path.Combine(AppContext.BaseDirectory, "config", "Settings.xml");
-                if (File.Exists(path))
-                {
-                    ChatService = new AIMLbot.Bot()
-                    {
-                        AdminEmail = Config.Load().ChatServiceAdminEmail,
-                        TrustAIML = true,
-                        isAcceptingUserInput = false                        
-                    };
-                    ChatService.WrittenToLog += Events.SkuldEvents.ChatService_WrittenToLog;
-                    ChatService.loadSettings(path);
-                    ChatService.loadAIMLFromFiles();
-                    ChatService.isAcceptingUserInput = true;
-                    PathToUserData = Path.Combine(AppContext.BaseDirectory, "aimlusers");
-                    Logs.Add(new Models.LogMessage("ChtSrvc","Loaded: Chat Service",LogSeverity.Info));
-                }
-                else { }
-            }
-            catch(Exception ex)
+                MessageCacheSize = 1000,
+                LargeThreshold = 250,
+                AlwaysDownloadUsers = true,
+                DefaultRetryMode = RetryMode.RetryTimeouts,
+                LogLevel = LogSeverity.Verbose,
+                TotalShards = Configuration.Shards
+            });
+
+            bot.Log += Events.SkuldEvents.Bot_Log;
+            Events.DiscordEvents.RegisterEvents();
+
+            commands = new CommandService(new CommandServiceConfig
             {
-                Logs.Add(new Models.LogMessage("ChtSrvc", "Error loading Chat Service", LogSeverity.Error,ex));
-            }
-        }        
+                CaseSensitiveCommands = false,
+                DefaultRunMode = RunMode.Async,
+                LogLevel = LogSeverity.Verbose,
+                ThrowOnError = true
+            });
+
+            InteractiveCommands = new InteractiveService(bot,TimeSpan.FromSeconds(60));
+            
+            await commands.AddModulesAsync(Assembly.GetEntryAssembly());
+
+            Logs.Add(new Models.LogMessage("CmdSrvc", $"Loaded {commands.Commands.Count()} Commands from {commands.Modules.Count()} Modules", LogSeverity.Info));
+
+            map = new ServiceCollection()
+                .AddSingleton(bot)
+                .AddSingleton(commands)
+                .AddSingleton(InteractiveCommands)
+                .BuildServiceProvider();
+        }
 
         public static async Task PublishStats(int shardid)
         {
             using (var webclient = new HttpClient())
             using (var content = new StringContent($"{{ \"server_count\": {bot.GetShard(shardid).Guilds.Count}, \"shard_id\": {shardid}, \"shard_count\": {bot.Shards.Count}}}", Encoding.UTF8, "application/json"))
             {
-                webclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(Config.Load().DBotsOrgKey);
-                HttpResponseMessage response = await webclient.PostAsync(new Uri($"https://discordbots.org/api/bots/{Bot.bot.CurrentUser.Id}/stats"), content);
+                webclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(Configuration.DBotsOrgKey);
+                await webclient.PostAsync(new Uri($"https://discordbots.org/api/bots/{Bot.bot.CurrentUser.Id}/stats"), content);
             }
             using (var webclient = new HttpClient())
             using (var content = new StringContent($"{{ \"server_count\": {bot.GetShard(shardid).Guilds.Count}, \"shard_id\": {shardid}, \"shard_count\": {bot.Shards.Count}}}", Encoding.UTF8, "application/json"))
             {
-                webclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(Config.Load().DiscordPWKey);
-                HttpResponseMessage response = await webclient.PostAsync(new Uri($"https://bots.discord.pw/api/bots/{Bot.bot.CurrentUser.Id}/stats"), content);
+                webclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(Configuration.DiscordPWKey);
+                await webclient.PostAsync(new Uri($"https://bots.discord.pw/api/bots/{Bot.bot.CurrentUser.Id}/stats"), content);
             }
         }
 
@@ -158,11 +156,9 @@ namespace Skuld
             try
             {
                 if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "storage")))
-                    Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "storage"));
-                if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "modules")))
-                    Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "modules"));
+                { Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "storage")); }
                 if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "logs")))
-                    Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "logs"));
+                { Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "logs")); }
 
                 string loc = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "storage", "configuration.json");
                 logfile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "logs") + "/" + String.Format("{0:MM-dd-yy}", DateTime.Now.Date) + ".log";
@@ -171,17 +167,46 @@ namespace Skuld
                 {
                     var config = new Config();
                     config.Save();
-                    Console.WriteLine("The configuration file has been created at '" + AppDomain.CurrentDomain.BaseDirectory + "\\skuld\\storage\\configuration.json'");
+                    Console.WriteLine("The Configuration file has been created at '" + AppDomain.CurrentDomain.BaseDirectory + "/skuld/storage/configuration.json'");
                     Console.ReadLine();
                     Environment.Exit(0);
                 }
                 if (!File.Exists(logfile))
-                    File.Create(logfile);
+                { File.Create(logfile); }
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex);
                 Console.ReadLine();
+            }
+        }
+
+        public static void ConfigureStatsCollector()
+        {
+            var dogstatsconfig = new StatsdConfig
+            {
+                StatsdTruncateIfTooLong = true,
+                StatsdServerName = Configuration.DataDogHost,
+                StatsdPort = 8125,
+                Prefix = "skuld"
+            };
+            StatsdClient.DogStatsd.Configure(dogstatsconfig);
+        }
+
+        public static Task SendDataToDataDog()
+        {
+            while (true)
+            {
+                int users = 0;
+                foreach (var guild in bot.Guilds)
+                { users += guild.Users.Count; }
+                DogStatsd.Counter("shards.count", bot.Shards.Count);
+                DogStatsd.Counter("shards.connected", bot.Shards.Count(x => x.ConnectionState == ConnectionState.Connected));
+                DogStatsd.Counter("shards.disconnected", bot.Shards.Count(x => x.ConnectionState == ConnectionState.Disconnected));
+                DogStatsd.Counter("commands.count", commands.Commands.Count());
+                DogStatsd.Counter("guilds.total", bot.Guilds.Count);
+                DogStatsd.Counter("users.total", users);
+                System.Threading.Thread.Sleep(TimeSpan.FromSeconds(5));
             }
         }
     }

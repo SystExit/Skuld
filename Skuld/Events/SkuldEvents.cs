@@ -10,7 +10,7 @@ namespace Skuld.Events
     public class SkuldEvents : Bot
     {
         //Start logging
-        public async static void Logs_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        public static void Logs_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
             {
@@ -18,44 +18,46 @@ namespace Skuld.Events
                 {
                     foreach (Models.LogMessage item in e.NewItems)
                     {
-                        List<string[]> consolelines = new List<string[]>();
+                        string source = String.Join("",item.Source.Take(1));
+                        source+=String.Join("",item.Source.Reverse().Take(3).Reverse());
+                        var consolelines = new List<string[]>();
                         if (item.DSeverity != null)
-                            consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + String.Join("", item.Source.Take(4)) + "]", "[" + item.DSeverity.ToString()[0] + "]", item.Message });
+                        { consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + source + "]", "[" + item.DSeverity.ToString()[0] + "]", item.Message }); }
                         if (item.TSeverity != null)
-                            consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + String.Join("", item.Source.Take(4)) + "]", "[" + item.TSeverity.ToString()[0] + "]", item.Message });
+                        { consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + source + "]", "[" + item.TSeverity.ToString()[0] + "]", item.Message }); }
                         string toconsole = ConsoleUtils.PrettyLines(consolelines, 2);
                         string tolog = null;
                         if (item.Exception != null)
                         {
-                            List<string[]> loglines = new List<string[]>();
-                            if(item.DSeverity!=null)
-                                loglines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.DSeverity.ToString() + "]", item.Message + Environment.NewLine + item.Exception });
+                            var loglines = new List<string[]>();
+                            if (item.DSeverity != null)
+                            { loglines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.DSeverity + "]", item.Message + Environment.NewLine + item.Exception }); }
                             if (item.TSeverity != null)
-                                loglines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.TSeverity.ToString() + "]", item.Message + Environment.NewLine + item.Exception });
+                            { loglines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.TSeverity + "]", item.Message + Environment.NewLine + item.Exception }); }
                             tolog = ConsoleUtils.PrettyLines(loglines, 2);
                             toconsole = toconsole + " CHECK LOGS FOR MORE INFO!";
                         }
-                        else { tolog = toconsole; }
+                        else { tolog = ConsoleUtils.PrettyLines(new List<string[]> { new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", item.TimeStamp), "[" + item.Source + "]", "[" + item.DSeverity.ToString()[0] + "]", item.Message } }, 2); }
                         sw.WriteLineAsync(tolog).Wait();
                         sw.FlushAsync().Wait();
                         if (item.DSeverity == Discord.LogSeverity.Critical || item.TSeverity == NTwitch.LogSeverity.Critical)
-                            Console.ForegroundColor = ConsoleColor.DarkRed;
+                        { Console.ForegroundColor = ConsoleColor.DarkRed; }
                         if (item.DSeverity == Discord.LogSeverity.Error || item.TSeverity == NTwitch.LogSeverity.Error)
-                            Console.ForegroundColor = ConsoleColor.Red;
+                        { Console.ForegroundColor = ConsoleColor.Red; }
                         if (item.DSeverity == Discord.LogSeverity.Info || item.TSeverity == NTwitch.LogSeverity.Info)
-                            Console.ForegroundColor = ConsoleColor.Green;
+                        { Console.ForegroundColor = ConsoleColor.Green; }
                         if (item.DSeverity == Discord.LogSeverity.Warning || item.TSeverity == NTwitch.LogSeverity.Warning)
-                            Console.ForegroundColor = ConsoleColor.Yellow;
+                        { Console.ForegroundColor = ConsoleColor.Yellow; }
                         if (item.DSeverity == Discord.LogSeverity.Verbose || item.TSeverity == NTwitch.LogSeverity.Verbose)
-                            Console.ForegroundColor = ConsoleColor.Cyan;
+                        { Console.ForegroundColor = ConsoleColor.Cyan; }
                         Console.Out.WriteLineAsync(toconsole).Wait();
                         Console.ForegroundColor = ConsoleColor.White;
-                        await Task.Delay(100);
+                        Task.Delay(100).ConfigureAwait(false);
                     }
                 }
                 catch
                 {
-
+                    /* Can be ignored */
                 }
             }
         }
@@ -65,25 +67,13 @@ namespace Skuld.Events
             return Task.CompletedTask;
         }
         //End logging
-
-        //Start FSW
-        public async static void Fsw_Deleted(object sender, FileSystemEventArgs e)
-        {
-            await ModuleHandler.UnloadSpecificModule(e.Name);
-        }
-        //End FSW
-
+        
         //Start Twitch
         public static Task NTwitchClient_Log(NTwitch.LogMessage arg)
         {
             Logs.Add(new Models.LogMessage(arg.Source, arg.Message, arg.Level, arg.Exception));
             return Task.CompletedTask;
         }
-        //End Twitch        
-        //AimlBot
-        public static void ChatService_WrittenToLog()
-        {
-            Logs.Add(new Models.LogMessage("ChtSrvc", ChatService.LastLogMessage, Discord.LogSeverity.Info));
-        }
+        //End Twitch
     }
 }

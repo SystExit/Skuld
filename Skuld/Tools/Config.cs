@@ -45,6 +45,7 @@ namespace Skuld.Tools
         public string ImgurClientID { get; set; }
         public string ImgurClientSecret { get; set; }
         public string NASAApiKey { get; set; }
+        public string DataDogHost { get; set; }
         //End Region
 
         //Bot Listing Tokens
@@ -54,8 +55,6 @@ namespace Skuld.Tools
 
         //Module Management
         public bool TwitchModule { get; set; }
-        public bool ChatServiceEnabled { get; set; }
-        public string ChatServiceAdminEmail { get; set; }
         public bool AccountsModuleEnabled { get; set; }
         public bool ActionsModuleEnabled { get; set; }
         public bool AdminModuleEnabled { get; set; }
@@ -63,7 +62,6 @@ namespace Skuld.Tools
         public bool InformationModuleEnabled { get; set; }
         public bool SearchModuleEnabled { get; set; }
         public bool StatsModuleEnabled { get; set; }
-        public Dictionary<string, string> TriggerPhrases { get; set; }
         //End Region        
 
         public Config()
@@ -99,11 +97,10 @@ namespace Skuld.Tools
             TwitchToken = "";
             TwitchClientID = "";
             NASAApiKey = "";
+            DataDogHost = "127.0.0.1";
 
             //Modules
             TwitchModule = false;
-            ChatServiceEnabled = true;
-            ChatServiceAdminEmail = "";
             AccountsModuleEnabled = true;
             ActionsModuleEnabled = true;
             AdminModuleEnabled = true;
@@ -111,7 +108,6 @@ namespace Skuld.Tools
             InformationModuleEnabled = true;
             SearchModuleEnabled = true;
             StatsModuleEnabled = true;
-            TriggerPhrases = new Dictionary<string, string>();
         }
 
         public void Save(string dir = "skuld/storage/configuration.json") { File.WriteAllText(Path.Combine(appdir, dir), JsonConvert.SerializeObject(this, Formatting.Indented)); }

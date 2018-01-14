@@ -3,7 +3,7 @@ using Discord;
 
 namespace Skuld.Tools
 {
-    public partial class MessageHandler
+    public class EmbedToText
     {
         public static string ConvertEmbedToText(Embed embed)
         {

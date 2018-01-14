@@ -8,6 +8,7 @@
         public string LeaveMessage { get; set; }
         public ulong AutoJoinRole { get; set; }
         public string Prefix { get; set; }
+		public string Language { get; set; }
         public string[] JoinableRoles { get; set; }
         public ulong TwitchNotifChannel { get; set; }
         public ulong TwitterLogChannel { get; set; }

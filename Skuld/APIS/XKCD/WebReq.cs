@@ -12,7 +12,7 @@ namespace Skuld.APIS
         public static async Task<int?> GetXKCDLastPage()
         {
             var rawresp = await APIWebReq.ReturnString(new Uri("https://xkcd.com/info.0.json"));
-            JObject jsonresp = JObject.Parse(rawresp);
+            var jsonresp = JObject.Parse(rawresp);
             dynamic item = jsonresp;
             if (item["num"].ToString() != null)
             {

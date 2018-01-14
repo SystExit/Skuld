@@ -3,6 +3,9 @@ using System.Threading.Tasks;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.IO;
+using System.Net;
+using HtmlAgilityPack;
+using System.Text;
 
 namespace Skuld.APIS
 {
@@ -189,6 +192,29 @@ namespace Skuld.APIS
                     }
                 }
             }
+        }
+        public static Task<string> DownloadFile(Uri url, string filepath)
+        {
+            var client = new WebClient();
+            var thing = client.DownloadFileTaskAsync(url, filepath);
+            while (thing.Status != TaskStatus.RanToCompletion) { }         
+            return Task.FromResult(filepath);
+        }
+        public static async Task<HtmlDocument> ScrapeUrl(Uri url)
+        {
+            var request = (HttpWebRequest)WebRequest.Create(url);
+            request.AllowAutoRedirect = true;
+            var response = (HttpWebResponse)await request.GetResponseAsync();
+            var doc = new HtmlDocument();
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                doc.Load(response.GetResponseStream(), Encoding.UTF8);
+                request.Abort();
+            }
+            if (doc != null)
+            { return doc; }
+            else
+            { return null; }
         }
     }
 }
