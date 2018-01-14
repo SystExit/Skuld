@@ -16,5 +16,5 @@ namespace Skuld.Exceptions
         {
 
         }
-    }
+    }    
 }

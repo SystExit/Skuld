@@ -6,8 +6,11 @@ namespace Skuld.Models
 {
     public class CustomCommand
     {
-        public ulong GuildID;
-        public string Command;
-        public string Content;
+        public ulong GuildID { get => guildid; }
+        public string Command { get => command; }
+        public string Content { get => content; }
+        ulong guildid;
+        string command;
+        string content;
     }
 }

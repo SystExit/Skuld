@@ -44,11 +44,11 @@ namespace Skuld
                 EnsureConfigExists();
                 Configuration = Config.Load();
                 ConfigureStatsCollector();
-                await InstallServices();
+                await InstallServices().ConfigureAwait(false);
                 Locale.InitialiseLocales();
 				Logs.Add(new Models.LogMessage("FrameWk", $"Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
                 DogStatsd.Event("FrameWork", $"Configured and Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", alertType: "info", hostname: "Skuld");
-                await StartBot(Configuration.Token);
+                await StartBot(Configuration.Token).ConfigureAwait(false);
                 await Task.Delay(-1);
             }
             catch (Exception ex)
@@ -68,15 +68,17 @@ namespace Skuld
                 await bot.StartAsync();
                 Parallel.Invoke(() => SendDataToDataDog());
                 foreach (var shard in bot.Shards)
-                    if(shard.ConnectionState == ConnectionState.Connected)
-                        await PublishStats(shard.ShardId);
-                await Task.Delay(-1);
+                {
+                    if (shard.ConnectionState == ConnectionState.Connected)
+                    { await PublishStats(shard.ShardId).ConfigureAwait(false); }
+                }
+                await Task.Delay(-1).ConfigureAwait(false);
             }
             catch(Exception ex)
             {
                 Logs.Add(new Models.LogMessage("Strt-Bot", "ERROR WITH THE BOT", LogSeverity.Error, ex));
                 DogStatsd.Event("FrameWork", $"Bot Crashed on start: {ex}", alertType: "error", hostname: "Skuld");
-                await StopBot("Init-Bt");
+                await StopBot("Init-Bt").ConfigureAwait(false);
             }
         }
 
@@ -86,9 +88,9 @@ namespace Skuld
             await bot.SetStatusAsync(UserStatus.Offline);
             Logs.Add(new Models.LogMessage(source, "Skuld is shutting down", LogSeverity.Info));
             DogStatsd.Event("FrameWork", $"Bot Stopped", alertType: "info", hostname: "Skuld");
-            await sw.WriteLineAsync("-------------------------------------------");
+            await sw.WriteLineAsync("-------------------------------------------").ConfigureAwait(false);
             sw.Close();
-            await Console.Out.WriteLineAsync("Bot shutdown");
+            await Console.Out.WriteLineAsync("Bot shutdown").ConfigureAwait(false);
             Console.ReadLine();
             Environment.Exit(0);            
         }
@@ -99,7 +101,7 @@ namespace Skuld
             Prefix = Configuration.Prefix;
             Logs.CollectionChanged += Events.SkuldEvents.Logs_CollectionChanged;
 
-            bot = new DiscordShardedClient(new DiscordSocketConfig()
+            bot = new DiscordShardedClient(new DiscordSocketConfig
             {
                 MessageCacheSize = 1000,
                 LargeThreshold = 250,
@@ -112,7 +114,7 @@ namespace Skuld
             bot.Log += Events.SkuldEvents.Bot_Log;
             Events.DiscordEvents.RegisterEvents();
 
-            commands = new CommandService(new CommandServiceConfig()
+            commands = new CommandService(new CommandServiceConfig
             {
                 CaseSensitiveCommands = false,
                 DefaultRunMode = RunMode.Async,
@@ -131,7 +133,6 @@ namespace Skuld
                 .AddSingleton(commands)
                 .AddSingleton(InteractiveCommands)
                 .BuildServiceProvider();
-
         }
 
         public static async Task PublishStats(int shardid)
@@ -140,13 +141,13 @@ namespace Skuld
             using (var content = new StringContent($"{{ \"server_count\": {bot.GetShard(shardid).Guilds.Count}, \"shard_id\": {shardid}, \"shard_count\": {bot.Shards.Count}}}", Encoding.UTF8, "application/json"))
             {
                 webclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(Configuration.DBotsOrgKey);
-                var response = await webclient.PostAsync(new Uri($"https://discordbots.org/api/bots/{Bot.bot.CurrentUser.Id}/stats"), content);
+                await webclient.PostAsync(new Uri($"https://discordbots.org/api/bots/{Bot.bot.CurrentUser.Id}/stats"), content);
             }
             using (var webclient = new HttpClient())
             using (var content = new StringContent($"{{ \"server_count\": {bot.GetShard(shardid).Guilds.Count}, \"shard_id\": {shardid}, \"shard_count\": {bot.Shards.Count}}}", Encoding.UTF8, "application/json"))
             {
                 webclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(Configuration.DiscordPWKey);
-                var response = await webclient.PostAsync(new Uri($"https://bots.discord.pw/api/bots/{Bot.bot.CurrentUser.Id}/stats"), content);
+                await webclient.PostAsync(new Uri($"https://bots.discord.pw/api/bots/{Bot.bot.CurrentUser.Id}/stats"), content);
             }
         }
 
@@ -155,9 +156,9 @@ namespace Skuld
             try
             {
                 if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "storage")))
-                    Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "storage"));
+                { Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "storage")); }
                 if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "logs")))
-                    Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "logs"));
+                { Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "logs")); }
 
                 string loc = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "storage", "configuration.json");
                 logfile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "logs") + "/" + String.Format("{0:MM-dd-yy}", DateTime.Now.Date) + ".log";
@@ -171,7 +172,7 @@ namespace Skuld
                     Environment.Exit(0);
                 }
                 if (!File.Exists(logfile))
-                    File.Create(logfile);
+                { File.Create(logfile); }
             }
             catch (Exception ex)
             {
@@ -198,7 +199,7 @@ namespace Skuld
             {
                 int users = 0;
                 foreach (var guild in bot.Guilds)
-                    users += guild.Users.Count;
+                { users += guild.Users.Count; }
                 DogStatsd.Counter("shards.count", bot.Shards.Count);
                 DogStatsd.Counter("shards.connected", bot.Shards.Count(x => x.ConnectionState == ConnectionState.Connected));
                 DogStatsd.Counter("shards.disconnected", bot.Shards.Count(x => x.ConnectionState == ConnectionState.Disconnected));

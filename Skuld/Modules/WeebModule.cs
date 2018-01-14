@@ -25,7 +25,9 @@ namespace Skuld.Modules
             MangaArray = await MALAPI.GetMangasAsync(mangatitle);
             int manganode = MangaArray.Entry.Count;
             if (manganode <= 0)
+            {
                 await ReplyAsync(Locale.GetLocale(skuser.Language).GetString("SKULD_SEARCH_NO_RESULTS").Replace("{{result}}", mangatitle));
+            }
             if (manganode > 1)
             {
                 IMessage msg = null;
@@ -45,12 +47,12 @@ namespace Skuld.Modules
                     for (int x = 0; x < entries.Count; x++)
                     {
                         if (entries.LastOrDefault() == entries[x])
-                            tempstring += clonedarr[x];
+                        { tempstring += clonedarr[x]; }
                         else
-                            tempstring += clonedarr[x] + "\n\n";
+                        { tempstring += clonedarr[x] + "\n\n"; }
                         if (x > 1)
                         {
-                            if (x - 1 % 10 == 0)
+                            if ((x - 1) % 10 == 0)
                             {
                                 pages.Add(tempstring);
                                 tempstring = "";
@@ -77,7 +79,7 @@ namespace Skuld.Modules
                     msg = await MessageHandler.SendChannel(Context.Channel, entrymessage);
                 }
                 var response = await NextMessageAsync(fromSourceUser: true, inSourceChannel: true, timeout:TimeSpan.FromSeconds(timeout));
-                await GetMangaAtPosition(Convert.ToInt32(response.Content), response.Channel);
+                await GetMangaAtPosition(Convert.ToInt32(response.Content), response.Channel).ConfigureAwait(false);
 
                 if (Context.Guild.CurrentUser.GuildPermissions.ManageMessages)
                 {
@@ -85,10 +87,12 @@ namespace Skuld.Modules
                     await response.DeleteAsync();
                 }
                 if (msgs.Count > 0)
+                {
                     foreach (var m in msgs)
-                        await m.DeleteAsync();
+                    { await m.DeleteAsync(); }
+                }
                 if (msg != null)
-                    await msg.DeleteAsync();
+                { await msg.DeleteAsync(); }
             }
             else
             {
@@ -131,10 +135,10 @@ namespace Skuld.Modules
                     for (int x = 1; x <= entries.Count; x++)
                     {
                         if (entries.LastOrDefault() == entries[x - 1])
-                            tempstring += clonedarr[x - 1];
+                        { tempstring += clonedarr[x - 1]; }
                         else
-                            tempstring += clonedarr[x - 1] + "\n\n";
-                        if (x % 10 == 0)
+                        { tempstring += clonedarr[x - 1] + "\n\n"; }
+                        if ((x - 1) % 10 == 0)
                         { pages.Add(tempstring);
                             tempstring = ""; }
                         else if (x == entries.Count())
@@ -156,7 +160,7 @@ namespace Skuld.Modules
                     msg = await MessageHandler.SendChannel(Context.Channel, entrymessage);
                 }
                 var response = await NextMessageAsync(fromSourceUser: true, inSourceChannel: true, timeout: TimeSpan.FromSeconds(timeout));
-                await GetAnimeAtPosition(Convert.ToInt32(response.Content), response.Channel);
+                await GetAnimeAtPosition(Convert.ToInt32(response.Content), response.Channel).ConfigureAwait(false);
 
                 if (Context.Guild.CurrentUser.GuildPermissions.ManageMessages)
                 {
@@ -168,13 +172,13 @@ namespace Skuld.Modules
             }
             else
             {
-                await GetAnimeAtZeroNonSearch();
+                await GetAnimeAtZeroNonSearch().ConfigureAwait(false);
             }
         }
         public async Task GetAnimeAtZeroNonSearch() =>
-            await SendAnime(AnimeArray.Entry.First());
+            await SendAnime(AnimeArray.Entry.First()).ConfigureAwait(false);
         private async Task GetAnimeAtPosition(int position, IMessageChannel channel) =>
-            await SendAnime(AnimeArray.Entry[position - 1], channel);
+            await SendAnime(AnimeArray.Entry[position - 1], channel).ConfigureAwait(false);
         private async Task SendAnime(Anime animu, IMessageChannel channel = null) =>
             await MessageHandler.SendChannel(channel ?? Context.Channel, "", BuildMALEmbed(animu, Locale.GetLocale((await SqlTools.GetUserAsync(Context.User.Id)).Language)));
 
@@ -183,7 +187,7 @@ namespace Skuld.Modules
             var embed = new EmbedBuilder
             {
                 Color = Tools.Tools.RandomColor(),
-                Author = new EmbedAuthorBuilder()
+                Author = new EmbedAuthorBuilder
                 {
                     Url = $"https://myanimelist.net/anime/{animu.Id}/",
                     Name = animu.Title
@@ -202,10 +206,10 @@ namespace Skuld.Modules
 
         private static Embed BuildMALEmbed(Manga mango, System.Resources.ResourceManager userlocale)
         {
-            var embed = new EmbedBuilder()
+            var embed = new EmbedBuilder
             {
                 Color = Tools.Tools.RandomColor(),
-                Author = new EmbedAuthorBuilder()
+                Author = new EmbedAuthorBuilder
                 {
                     Url = $"https://myanimelist.net/manga/{mango.Id}/",
                     Name = mango.Title
@@ -226,7 +230,7 @@ namespace Skuld.Modules
         [Command("weebgif", RunMode = RunMode.Async), Summary("Gets a weeb gif")]
         public async Task WeebGif()
         {
-            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder()
+            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder
             {
                 ImageUrl = await APIWebReq.ReturnString(new Uri("http://gaia.systemexit.co.uk/gifs/reactions/")),
                 Color = Tools.Tools.RandomColor()

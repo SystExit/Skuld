@@ -23,15 +23,15 @@ namespace Skuld.APIS
                     break;
                 }
             }
-            if(remainingcalls>0)
+            if (remainingcalls > 0)
             {
                 var streamresp = response.GetResponseStream();
                 var sr = new StreamReader(streamresp);
-                var stringifiedresp = await sr.ReadToEndAsync();
+                var stringifiedresp = await sr.ReadToEndAsync().ConfigureAwait(false);
                 return JsonConvert.DeserializeObject<APOD>(stringifiedresp);
             }
-            else            
-                return null;            
+            else
+            { return null; }
         }
     }
 }

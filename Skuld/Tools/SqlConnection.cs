@@ -6,7 +6,7 @@ using System.Data.Common;
 
 namespace Skuld.Tools
 {
-    public partial class SqlTools : Bot
+    public class SqlConnection : Bot
     {
         private static string cs = $@"server={Bot.Configuration.SqlDBHost};user={Bot.Configuration.SqlUser};password={Bot.Configuration.SqlPass};database={Bot.Configuration.SqlDB};charset=utf8mb4";
 
@@ -32,10 +32,12 @@ namespace Skuld.Tools
                 }
             }
             else
+            {
                 return false;
+            }
         }
 
-        public static MySqlConnection getconn = new MySqlConnection(cs);
+        public readonly static MySqlConnection getconn = new MySqlConnection(cs);
         public static async Task<DbDataReader> GetAsync(MySqlCommand command)
         {
             await getconn.CloseAsync();

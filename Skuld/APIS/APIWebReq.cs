@@ -197,8 +197,7 @@ namespace Skuld.APIS
         {
             var client = new WebClient();
             var thing = client.DownloadFileTaskAsync(url, filepath);
-            while (thing.Status != TaskStatus.RanToCompletion)
-            { }         
+            while (thing.Status != TaskStatus.RanToCompletion) { }         
             return Task.FromResult(filepath);
         }
         public static async Task<HtmlDocument> ScrapeUrl(Uri url)
@@ -212,10 +211,10 @@ namespace Skuld.APIS
                 doc.Load(response.GetResponseStream(), Encoding.UTF8);
                 request.Abort();
             }
-            if (doc!=null)
-                return doc;
+            if (doc != null)
+            { return doc; }
             else
-                return null;
+            { return null; }
         }
     }
 }

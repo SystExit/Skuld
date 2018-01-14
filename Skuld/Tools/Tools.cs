@@ -3,7 +3,6 @@ using Discord;
 using System.IO;
 using System.Text;
 
-
 namespace Skuld.Tools
 {
     public class Tools : Bot

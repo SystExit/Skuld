@@ -15,11 +15,11 @@ namespace Skuld.Commands
         {
             var cmd = new MySqlCommand("select prefix from guild where id = @guildid");
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-            string resp = await SqlTools.GetSingleAsync(cmd);
+            string resp = await SqlConnection.GetSingleAsync(cmd);
             string prefix = Bot.Configuration.Prefix;
-            var embed = new EmbedBuilder()
+            var embed = new EmbedBuilder
             {
-                Author = new EmbedAuthorBuilder()
+                Author = new EmbedAuthorBuilder
                 {
                     Name = "Commands of: " + Context.Client.CurrentUser.Username + "#" + Context.Client.CurrentUser.DiscriminatorValue,
                     IconUrl = Context.Client.CurrentUser.GetAvatarUrl()
@@ -28,22 +28,21 @@ namespace Skuld.Commands
             };
             foreach (var module in Bot.commands.Modules)
             {
-                if (module.Name == "Help") { }
-                else
+                if (module.Name != "Help")
                 {
                     string desc = "";
                     foreach (var command in module.Commands)
                     {
                         var result = await command.CheckPreconditionsAsync(Context);
                         if (result.IsSuccess)
-                            desc += $"{command.Aliases.First()}, ";
+                        { desc += $"{command.Aliases.First()}, "; }
                         else { continue; }
                     }
                     string description = "";
                     foreach (var str in desc.Split(' ').Distinct())
-                        description += str + " ";
+                    { description += str + " "; }
                     if (!string.IsNullOrWhiteSpace(description))
-                        embed.AddField(module.Name, $"`{description.Remove(description.Length - 3)}`");
+                    { embed.AddField(module.Name, $"`{description.Remove(description.Length - 3)}`"); }
                 }
             }
             embed.Description = $"The prefix of **{Context.Guild.Name}** is: `{resp ?? prefix}`";
@@ -82,7 +81,6 @@ namespace Skuld.Commands
                 }
                 await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
             }
-            else { }
         }
     }
 }

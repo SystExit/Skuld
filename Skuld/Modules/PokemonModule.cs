@@ -13,22 +13,22 @@ namespace Skuld.Modules
     {
         [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
         public async Task Getpokemon(string pokemon, string group) =>
-            await SendPokemon(await WebReq.GetPocketMonster(pokemon.ToLowerInvariant()), group);
+            await SendPokemon(await WebReq.GetPocketMonster(pokemon.ToLowerInvariant()), group).ConfigureAwait(false);
         [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
         public async Task Getpokemon(string pokemon) =>
-            await SendPokemon(await WebReq.GetPocketMonster(pokemon.ToLowerInvariant()), "default");
+            await SendPokemon(await WebReq.GetPocketMonster(pokemon.ToLowerInvariant()), "default").ConfigureAwait(false);
         [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
         public async Task Getpokemon(int pokemonid, string group) =>
-            await SendPokemon(await WebReq.GetPocketMonster(pokemonid), group);
+            await SendPokemon(await WebReq.GetPocketMonster(pokemonid), group).ConfigureAwait(false);
         [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
         public async Task Getpokemon(int pokemonid) =>
-            await SendPokemon(await WebReq.GetPocketMonster(pokemonid), "default");
+            await SendPokemon(await WebReq.GetPocketMonster(pokemonid), "default").ConfigureAwait(false);
         public async Task SendPokemon(PocketMonster pokemon, string group)
         {
             EmbedBuilder embed;
             if (pokemon == null)
             {
-                embed = new EmbedBuilder()
+                embed = new EmbedBuilder
                 {
                     Color = Tools.Tools.RandomColor(),
                     Title = "Command Error!",
@@ -43,9 +43,9 @@ namespace Skuld.Modules
                 string sprite = null;
                 //if it equals 8 out of a random integer between 1 and 8192 then give shiny
                 if (rnd.Next(1, 8193) == 8)
-                    sprite = pokemon.Sprites.FrontShiny;
+                { sprite = pokemon.Sprites.FrontShiny; }
                 else
-                    sprite = pokemon.Sprites.Front;
+                { sprite = pokemon.Sprites.Front; }
                 embed = new EmbedBuilder();
                 var auth = new EmbedAuthorBuilder();
                 embed.Color = Tools.Tools.RandomColor();
@@ -70,7 +70,9 @@ namespace Skuld.Modules
                         foreach (var hitem in pokemon.HeldItems)
                         {
                             foreach (var game in hitem.VersionDetails)
+                            {
                                 embed.AddField("Item", hitem.Item.Name + "\n**Game**\n" + game.Version.Name + "\n**Rarity**\n" + game.Rarity, inline: true);
+                            }
                         }
                     }
                     else
@@ -105,7 +107,7 @@ namespace Skuld.Modules
                     {
                         games += game.Version.Name + "\n";
                         if (game == pokemon.GameIndices.Last())
-                            games += game.Version.Name;
+                        { games += game.Version.Name; }
                     }
                     embed.AddField("Game", games, inline: true);
                 }

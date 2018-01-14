@@ -29,10 +29,10 @@ namespace Skuld.Commands
             var bot = Bot.bot;
             var guild = Context.Guild;
             var roles = guild.Roles;
-            var embed = new EmbedBuilder() { Color = Tools.Tools.RandomColor() };
+            var embed = new EmbedBuilder { Color = Tools.Tools.RandomColor() };
             if (!String.IsNullOrEmpty(guild.IconUrl))
-                embed.ThumbnailUrl = guild.IconUrl;
-            embed.Author = new EmbedAuthorBuilder() { Name = guild.Name };
+            { embed.ThumbnailUrl = guild.IconUrl; }
+            embed.Author = new EmbedAuthorBuilder { Name = guild.Name };
             var users = await guild.GetUsersAsync();
             int usercount = users.Count(x => x.IsBot == false);
             var gusers = await guild.GetUsersAsync();
@@ -40,8 +40,8 @@ namespace Skuld.Commands
             var gusersbotonly = gusers.Where(x => x.IsBot == true);
             var owner = await guild.GetOwnerAsync();
             string afkname = null;
-            if(guild.AFKChannelId.HasValue)
-                afkname = (await guild.GetVoiceChannelAsync(guild.AFKChannelId.Value)).Name;
+            if (guild.AFKChannelId.HasValue)
+            { afkname = (await guild.GetVoiceChannelAsync(guild.AFKChannelId.Value)).Name; }
             embed.AddField("Users", usercount.ToString(),inline: true);
             embed.AddField("Bots", $"{gusersbotonly.Count()}", inline: true);
             embed.AddField("Shard", bot.GetShardIdFor(guild).ToString(), inline: true);
@@ -55,7 +55,7 @@ namespace Skuld.Commands
             embed.AddField("AFK Timeout", minutes + " minutes",inline: true);
             embed.AddField("AFK Channel",afkname??"None Set",inline: true);
             if (String.IsNullOrEmpty(guild.IconUrl))
-                embed.AddField("Server Avatar", "Doesn't exist",inline: true);
+            { embed.AddField("Server Avatar", "Doesn't exist", inline: true); }
             embed.AddField("Default Notifications", guild.DefaultMessageNotifications.ToString(),inline: true);
             embed.AddField("Created", guild.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
             embed.AddField("Emojis", guild.Emotes.Count + Environment.NewLine + $"Use `{Bot.Prefix}server emojis` to view all of the emojis");
@@ -70,13 +70,13 @@ namespace Skuld.Commands
             var num = 0;
             message += $"Emojis of __**{guild.Name}**__" + Environment.NewLine;
             if (guild.Emotes.Count == 0)
-                message += "Server contains no emotes";
+            { message += "Server contains no emotes"; }
             else
             {
                 foreach (var emoji in guild.Emotes)
                 {
                     if (emoji.Id == guild.Emotes.Last().Id)
-                        message += $"{emoji.Name} <:{emoji.Name}:{emoji.Id}>";
+                    { message += $"{emoji.Name} <:{emoji.Name}:{emoji.Id}>"; }
                     else
                     {
                         if (num % 5 != 0)
@@ -99,16 +99,16 @@ namespace Skuld.Commands
             {
                 string thing = item.Name.TrimStart('@');
                 if (item == guild.Roles.Last())
-                    serverroles += thing;
+                { serverroles += thing; }
                 else
-                    serverroles += thing + ", ";
+                { serverroles += thing + ", "; }
             }
             string message = null;
             message += $"Roles of __**{guild.Name}**__" + Environment.NewLine;
             if (roles.Count == 0)
-                message += "Server contains no roles";
+            { message += "Server contains no roles"; }
             else
-                message += "`" + serverroles + "`";
+            { message += "`" + serverroles + "`"; }
             await MessageHandler.SendChannel(Context.Channel,message);
         }
 
@@ -120,24 +120,19 @@ namespace Skuld.Commands
 
         [Command("id", RunMode = RunMode.Async), Summary("Gets the users ID only")]
         public async Task InstigatorgetID()
-        {
-            await MessageHandler.SendChannel(Context.Channel, $"Your ID is: `{Context.User.Id}`");
-        }
+            => await MessageHandler.SendChannel(Context.Channel, $"Your ID is: `{Context.User.Id}`");
+        
         [Command("id guild", RunMode = RunMode.Async), Summary("Get ID of Guild")]
         public async Task GuildID()
-        {
-            await MessageHandler.SendChannel(Context.Channel, $"The ID of **{Context.Guild.Name}** is `{Context.Guild.Id}`");
-        }
+        => await MessageHandler.SendChannel(Context.Channel, $"The ID of **{Context.Guild.Name}** is `{Context.Guild.Id}`");
+        
         [Command("id", RunMode = RunMode.Async), Summary("Gets the users ID only")]
         public async Task GetID(IGuildUser user)
-        {
-            await MessageHandler.SendChannel(Context.Channel, $"The ID of **{user.Username + "#" + user.DiscriminatorValue}** is: `{user.Id}`");
-        }
+        => await MessageHandler.SendChannel(Context.Channel, $"The ID of **{user.Username + "#" + user.DiscriminatorValue}** is: `{user.Id}`");
+        
         [Command("id", RunMode = RunMode.Async), Summary("Get id of channel")]
         public async Task ChanID(IChannel channel)
-        {
-            await MessageHandler.SendChannel(Context.Channel, $"The ID of **{channel.Name}** is `{channel.Id}`");
-        }
+        => await MessageHandler.SendChannel(Context.Channel, $"The ID of **{channel.Name}** is `{channel.Id}`");        
 
         [Command("serverinvite", RunMode = RunMode.Async), Summary("Gives discord invite")]
         public async Task DevDisc()
@@ -188,38 +183,38 @@ namespace Skuld.Commands
                         //if (user.Game.HasValue &&user.Game.Value.StreamType != StreamType.NotStreaming)
                         //    adminstatus += streamingemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
                         if (user.Status == UserStatus.Online)
-                            adminstatus += onlineemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        { adminstatus += onlineemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n"; }
                         if (user.Status == UserStatus.AFK || user.Status == UserStatus.Idle)
-                            adminstatus += idleemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        { adminstatus += idleemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n"; }
                         if (user.Status == UserStatus.DoNotDisturb)
-                            adminstatus += dontdisturbemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        { adminstatus += dontdisturbemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n"; }
                         if (user.Status == UserStatus.Invisible)
-                            adminstatus += invisibleemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        { adminstatus += invisibleemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n"; }
                         if (user.Status == UserStatus.Offline)
-                            adminstatus += offlineemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        { adminstatus += offlineemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n"; }
                     }
                     else if (user.GuildPermissions.KickMembers && user.GuildPermissions.ManageMessages)
                     {
                         //if(user.Game.HasValue && user.Game.Value.StreamType != StreamType.NotStreaming)
                         //    modstatus += streamingemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
                         if (user.Status == UserStatus.Online)
-                            modstatus += onlineemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        { modstatus += onlineemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n"; }
                         if (user.Status == UserStatus.AFK || user.Status == UserStatus.Idle)
-                            modstatus += idleemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        { modstatus += idleemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n"; }
                         if (user.Status == UserStatus.DoNotDisturb)
-                            modstatus += dontdisturbemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        { modstatus += dontdisturbemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n"; }
                         if (user.Status == UserStatus.Invisible)
-                            modstatus += invisibleemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        { modstatus += invisibleemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n"; }
                         if (user.Status == UserStatus.Offline)
-                            modstatus += offlineemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n";
+                        { modstatus += offlineemote + " " + user.Username + "#" + user.DiscriminatorValue + "\n"; }
                     }
                 }
             }
             string message = "";
             if (modstatus != "__Moderators__\n")
-                message = modstatus + "\n" + adminstatus;
+            { message = modstatus + "\n" + adminstatus; }
             else
-                message = adminstatus;
+            { message = adminstatus; }
             await MessageHandler.SendChannel(Context.Channel, message);
         }
         [Command("createinvite",RunMode = RunMode.Async),Summary("Creates a new invite to the guild")]
@@ -227,13 +222,13 @@ namespace Skuld.Commands
         {
             IInviteMetadata invite;
             if (maxAge > 0 && maxUses < 0)
-                invite = await channel.CreateInviteAsync(maxAge, null, permanent, unique);
+            { invite = await channel.CreateInviteAsync(maxAge, null, permanent, unique); }
             else if (maxAge < 0 && maxUses > 0)
-                invite = await channel.CreateInviteAsync(null, maxUses, permanent, unique);
+            { invite = await channel.CreateInviteAsync(null, maxUses, permanent, unique); }
             else if (maxAge < 0 && maxUses < 0)
-                invite = await channel.CreateInviteAsync(null, null, permanent, unique);
+            { invite = await channel.CreateInviteAsync(null, null, permanent, unique); }
             else
-                invite = await channel.CreateInviteAsync(maxAge, maxUses, permanent, unique);
+            { invite = await channel.CreateInviteAsync(maxAge, maxUses, permanent, unique); }
             await MessageHandler.SendChannel(Context.Channel,
                 "I created the invite with the following settings:\n" +
                 "```cs\n" +
@@ -243,57 +238,58 @@ namespace Skuld.Commands
                 $"     Permanent : {permanent}\n" +
                 $"        Unique : {unique}" +
                 $"```Here's the link: {invite.Url}");
-
         }
         [Command("nick",RunMode =RunMode.Async),Summary("Gets the user behind the nickname")]
         public async Task Nickname([Remainder]IGuildUser user)
         {
             if (!String.IsNullOrEmpty(user.Nickname))
-                await MessageHandler.SendChannel(Context.Channel, $"The user **{user.Username}#{user.DiscriminatorValue}** has a nickname of: {user.Nickname}");
+            { await MessageHandler.SendChannel(Context.Channel, $"The user **{user.Username}#{user.DiscriminatorValue}** has a nickname of: {user.Nickname}"); }
             else
-                await MessageHandler.SendChannel(Context.Channel, "This user doesn't have a nickname set.");
+            { await MessageHandler.SendChannel(Context.Channel, "This user doesn't have a nickname set."); }
         }
 
         [Command("me", RunMode = RunMode.Async)]
-        public async Task Whois() =>
-    await GetProile(Context.User as IGuildUser);
+        public async Task Whois() 
+            => await GetProile(Context.User as IGuildUser).ConfigureAwait(false);
         [Command("whois", RunMode = RunMode.Async), Summary("Get's information about a user"), Alias("user")]
         public async Task GetProile([Remainder]IGuildUser whois)
         {
             string nickname = null;
             string status = "";
             if (!String.IsNullOrEmpty(whois.Nickname))
-                nickname = $"({whois.Nickname})";
+            { nickname = $"({whois.Nickname})"; }
             //if (!String.IsNullOrEmpty(whois.Activity.Name) && whois. != UserStatus..NotStreaming)
             //    status += streamingemote + " Streaming, ["+whois.Game.Value.Name+"]("+whois.Game.Value.StreamUrl+")";
             if (whois.Status == UserStatus.Online)
-                status += onlineemote + " Online";
+            { status += onlineemote + " Online"; }
             if (whois.Status == UserStatus.AFK || whois.Status == UserStatus.Idle)
-                status += idleemote + " AFK/Idle";
+            { status += idleemote + " AFK/Idle"; }
             if (whois.Status == UserStatus.DoNotDisturb)
-                status += dontdisturbemote + " Do not Disturb/Busy";
+            { status += dontdisturbemote + " Do not Disturb/Busy"; }
             if (whois.Status == UserStatus.Invisible)
-                status += invisibleemote + " Invisible";
+            { status += invisibleemote + " Invisible"; }
             if (whois.Status == UserStatus.Offline)
-                status += offlineemote + " Offline";
+            { status += offlineemote + " Offline"; }
 
-            var embed = new EmbedBuilder()
+            var embed = new EmbedBuilder
             {
                 Color = Tools.Tools.RandomColor(),
-                Author = new EmbedAuthorBuilder() { IconUrl = whois.GetAvatarUrl(ImageFormat.Auto) ?? "", Name = whois.Username+$"#{whois.DiscriminatorValue} {nickname ?? ""}"  },
+                Author = new EmbedAuthorBuilder { IconUrl = whois.GetAvatarUrl(ImageFormat.Auto) ?? "", Name = whois.Username+$"#{whois.DiscriminatorValue} {nickname ?? ""}"  },
                 ImageUrl = whois.GetAvatarUrl(ImageFormat.Auto) ?? ""
             };
             int seencount = 0;
             foreach (var item in Bot.bot.Guilds)
+            {
                 if (item.GetUser(whois.Id) != null)
-                    seencount++;
+                { seencount++; }
+            }
             string game = null;
             if (!String.IsNullOrEmpty(whois.Activity.Name))
             {
                 game = whois.Activity.Name;
             }
             else
-                game = "Nothing";
+            { game = "Nothing"; }
             embed.AddField(":id: ID", whois.Id.ToString() ?? "Unknown",inline: true);
             embed.AddField(":vertical_traffic_light:  Status", status ?? "Unknown",inline: true);
             embed.AddField(":video_game: Currently Playing", game,inline: true);
@@ -307,7 +303,7 @@ namespace Skuld.Commands
         }
         [Command("roles", RunMode = RunMode.Async), Summary("Gets your current roles")]
         public async Task GetRole() =>
-            await GetRole(Context.User as IGuildUser);
+            await GetRole(Context.User as IGuildUser).ConfigureAwait(false);
         [Command("roles", RunMode = RunMode.Async), Summary("Gets a users current roles")]
         public async Task GetRole(IGuildUser user)
         {
@@ -316,9 +312,9 @@ namespace Skuld.Commands
             var roles = userroles.Select(query => guild.GetRole(query).Name).Aggregate((current, next) => current.TrimStart('@') + ", " + next);
             string username = null;
             if (!String.IsNullOrEmpty(user.Nickname))
-                username = user.Nickname + "#" + user.DiscriminatorValue;
+            { username = user.Nickname + "#" + user.DiscriminatorValue; }
             else
-                username = user.Username + "#" + user.DiscriminatorValue;
+            { username = user.Username + "#" + user.DiscriminatorValue; }
             await MessageHandler.SendChannel(Context.Channel, "Roles of __**" + username + "**__\n\n`" + (roles ?? "No roles") + "`");
         }
         [Command("epoch", RunMode = RunMode.Async), Summary("Gets Current Time in Epoch")]
@@ -340,18 +336,17 @@ namespace Skuld.Commands
             var epochtodt = new DateTime(1970, 1, 1, 0, 0, 0,DateTimeKind.Utc).AddSeconds(Convert.ToDouble(epoch));
             await MessageHandler.SendChannel(Context.Channel, $"Your epoch ({epoch}) in DateTime is: {epochtodt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")}");
         }
-        [Command("isup", RunMode = RunMode.Async), Summary("Check if a website is online"),Alias("downforeveryone","isitonline")]
+        [Command("isup", RunMode = RunMode.Async), Summary("Check if a website is online"), Alias("downforeveryone", "isitonline")]
         public async Task IsUp(string website)
         {
-
-            var doc = await APIWebReq.ScrapeUrl(new Uri("http://downforeveryoneorjustme.com/" + website));        
+            var doc = await APIWebReq.ScrapeUrl(new Uri("http://downforeveryoneorjustme.com/" + website));
             string response = null;
             var container = doc.GetElementbyId("container");
             var isup = container.ChildNodes.FindFirst("p");
             if (isup.InnerHtml.ToLowerInvariant().Contains("not"))
-                response = $"The website: `{website}` is down or not replying.";
+            { response = $"The website: `{website}` is down or not replying."; }
             else
-                response = $"The website: `{website}` is working and replying as intended.";
+            { response = $"The website: `{website}` is working and replying as intended."; }
             response = response + "\n\n`Source:` <http://downforeveryoneorjustme.com/" + website + ">";
             await MessageHandler.SendChannel(Context.Channel, response);
         }

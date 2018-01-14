@@ -7,7 +7,7 @@ using StatsdClient;
 
 namespace Skuld.Tools
 {
-    public partial class SqlTools
+    public class SqlTools : SqlConnection
     {
         public static async Task<SkuldUser> GetUserAsync(ulong id)
         {

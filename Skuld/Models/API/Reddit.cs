@@ -2,7 +2,7 @@
 
 namespace Skuld.Models.API.Reddit
 {
-	public class Post
+    public class Post
     {
         [JsonProperty(PropertyName = "kind")]
         public string Kind { get; set; }
@@ -152,69 +152,69 @@ namespace Skuld.Models.API.Reddit
         [JsonProperty(PropertyName = "distinguished")]
         public string Distinguished { get; set; }
     }
-	public class SubReddit
-	{
-		[JsonProperty(PropertyName = "kind")]
-		public string Kind { get; set; }
-		[JsonProperty(PropertyName = "data")]
-		public SubRedditData Data { get; set; }
-	}
-	public class SubRedditData
-	{
-		[JsonProperty(PropertyName = "modhash")]
-		public string ModHash { get; set; }
-		[JsonProperty(PropertyName = "whitelist_status")]
-		public string WhiteListStatus { get; set; }
-		[JsonProperty(PropertyName = "children")]
-		public Post[] Posts { get; set; }
-		[JsonProperty(PropertyName = "after")]
-		public string After { get; set; }
-		[JsonProperty(PropertyName = "before")]
-		public string Before { get; set; }
-	}
-	public class ImagePreview
-	{
-		[JsonProperty(PropertyName = "images")]
-		public ImageData[] Images { get; set; }
-		[JsonProperty(PropertyName = "enabled")]
-		public bool Enabled { get; set; }
-	}
-	public class Images
-	{
-		[JsonProperty(PropertyName = "source")]
-		public ImageMeta Source { get; set; }
-		[JsonProperty(PropertyName = "resolutions")]
-		public ImageMeta[] Resolutions { get; set; }
-		[JsonProperty(PropertyName = "variants")]
-		public ImageVariants[] Variants { get; set; }
-		[JsonProperty(PropertyName = "id")]
-		public string ID { get; set; }
-	}
-	public class ImageData
-	{
-		[JsonProperty(PropertyName = "source")]
-		public ImageMeta Source { get; set; }
-		[JsonProperty(PropertyName = "resolutions")]
-		public ImageMeta[] Resolutions { get; set; }
-	}
-	public class ImageMeta
-	{
-		[JsonProperty(PropertyName = "url")]
-		public string Url { get; set; }
-		[JsonProperty(PropertyName = "width")]
-		public int Width { get; set; }
-		[JsonProperty(PropertyName = "height")]
-		public int Height { get; set; }
-	}
-	public class Media
+    public class SubReddit
+    {
+        [JsonProperty(PropertyName = "kind")]
+        public string Kind { get; set; }
+        [JsonProperty(PropertyName = "data")]
+        public SubRedditData Data { get; set; }
+    }
+    public class SubRedditData
+    {
+        [JsonProperty(PropertyName = "modhash")]
+        public string ModHash { get; set; }
+        [JsonProperty(PropertyName = "whitelist_status")]
+        public string WhiteListStatus { get; set; }
+        [JsonProperty(PropertyName = "children")]
+        public Post[] Posts { get; set; }
+        [JsonProperty(PropertyName = "after")]
+        public string After { get; set; }
+        [JsonProperty(PropertyName = "before")]
+        public string Before { get; set; }
+    }
+    public class ImagePreview
+    {
+        [JsonProperty(PropertyName = "images")]
+        public ImageData[] Images { get; set; }
+        [JsonProperty(PropertyName = "enabled")]
+        public bool Enabled { get; set; }
+    }
+    public class Images
+    {
+        [JsonProperty(PropertyName = "source")]
+        public ImageMeta Source { get; set; }
+        [JsonProperty(PropertyName = "resolutions")]
+        public ImageMeta[] Resolutions { get; set; }
+        [JsonProperty(PropertyName = "variants")]
+        public ImageVariants[] Variants { get; set; }
+        [JsonProperty(PropertyName = "id")]
+        public string ID { get; set; }
+    }
+    public class ImageData
+    {
+        [JsonProperty(PropertyName = "source")]
+        public ImageMeta Source { get; set; }
+        [JsonProperty(PropertyName = "resolutions")]
+        public ImageMeta[] Resolutions { get; set; }
+    }
+    public class ImageMeta
+    {
+        [JsonProperty(PropertyName = "url")]
+        public string Url { get; set; }
+        [JsonProperty(PropertyName = "width")]
+        public int Width { get; set; }
+        [JsonProperty(PropertyName = "height")]
+        public int Height { get; set; }
+    }
+    public class Media
     {
         [JsonProperty(PropertyName = "oembed")]
         public OEmbed OEmbed { get; set; }
         [JsonProperty(PropertyName = "type")]
         public string Type { get; set; }
     }
-	public class MediaEmbed
-	{
+    public class MediaEmbed
+    {
         [JsonProperty(PropertyName = "content")]
         public string Content { get; set; }
         [JsonProperty(PropertyName = "scrolling")]
@@ -226,13 +226,13 @@ namespace Skuld.Models.API.Reddit
         [JsonProperty(PropertyName = "media_domain_url")]
         public string MediaDomainUrl { get; set; }
     }
-	public class ImageVariants
-	{
-		[JsonProperty(PropertyName = "obfuscated")]
-		public ImageData Obfuscated { get; set; }
-		[JsonProperty(PropertyName = "nsfw")]
-		public ImageData NSFW { get; set; }
-	}
+    public class ImageVariants
+    {
+        [JsonProperty(PropertyName = "obfuscated")]
+        public ImageData Obfuscated { get; set; }
+        [JsonProperty(PropertyName = "nsfw")]
+        public ImageData NSFW { get; set; }
+    }
     public class OEmbed
     {
         [JsonProperty(PropertyName = "provider_url")]
