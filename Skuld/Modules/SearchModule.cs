@@ -11,13 +11,15 @@ using Skuld.Models.API;
 using Skuld.APIS;
 using Skuld.Tools;
 using Google.Apis.Customsearch.v1;
-using YoutubeSearch;
+using System.IO;
+using YoutubeExplode;
 using System.Collections.Generic;
 using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Imgur.API.Models;
 using System.Web;
 using Discord.Addons.Interactive;
+using System.Text;
 
 namespace Skuld.Commands
 {
@@ -103,7 +105,7 @@ namespace Skuld.Commands
                 _embed.AddInlineField("Genre", media.Genre);
                 _embed.AddInlineField("Rating", media.imdbRating);
                 _embed.AddInlineField("Votes", media.imdbVotes);
-                await MessageHandler.SendChannel(Context.Channel,"", _embed);
+                await MessageHandler.SendChannelAsync(Context.Channel,"", _embed);
             }
             else
             {
@@ -125,7 +127,7 @@ namespace Skuld.Commands
                 _embed.AddInlineField("Genre", media.Genre);
                 _embed.AddInlineField("Rating", media.imdbRating);
                 _embed.AddInlineField("Votes", media.imdbVotes);
-                await MessageHandler.SendChannel(Context.Channel,"", _embed);
+                await MessageHandler.SendChannelAsync(Context.Channel,"", _embed);
             }
         }*/
 
@@ -174,7 +176,7 @@ namespace Skuld.Commands
                 embed.AddField("Total Views", $"{chan.Views.ToString("N0")}",inline: true);
                 embed.ThumbnailUrl = chan.VideoBannerUrl;
             }
-            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+            await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
         }
 
         //Start Search Platforms
@@ -232,7 +234,7 @@ namespace Skuld.Commands
                                 $"https://google.com/search?q={query.Replace(" ", "%20")}",
                             Color = Tools.Tools.RandomColor()
                         };
-                        await MessageHandler.SendChannel(Context.Channel, $"<{item.Link}>", embed.Build());
+                        await MessageHandler.SendChannelAsync(Context.Channel, $"<{item.Link}>", embed.Build());
                     }
                     //Can be ignored
                     catch
@@ -241,7 +243,7 @@ namespace Skuld.Commands
                 }
                 else
                 {
-                    await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder
+                    await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder
                     {
                         Title = "Error with the command",
                         Description = $"I couldn't find anything matching: `{query}`, please try again.",
@@ -252,8 +254,8 @@ namespace Skuld.Commands
             }
             catch (Exception ex)
             {
-                Bot.Logs.Add(new Models.LogMessage("GogSrch", "Error with google search", LogSeverity.Error, ex));
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder { Title = "Error with the command", Color = Tools.Tools.RandomColor() }.Build());
+                Bot.Logger.AddToLogs(new Models.LogMessage("GogSrch", "Error with google search", LogSeverity.Error, ex));
+                await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Title = "Error with the command", Color = Tools.Tools.RandomColor() }.Build());
                 StatsdClient.DogStatsd.Increment("commands.errors.exception");
             }
         }
@@ -261,29 +263,21 @@ namespace Skuld.Commands
         {
             try
             {
-                var search = new VideoSearch();
-                var items = search.SearchQuery(query, 1);
+                var items = await Bot.YouTubeClient.SearchVideosAsync(query);
                 var item = items.FirstOrDefault();
-                var embed = new EmbedBuilder
-                {
-                    Author = new EmbedAuthorBuilder
-                    {
-                        Name = item.Author,
-                        Url = item.Url,
-                        IconUrl = "https://youtube.com/favicon.ico"
-                    },
-                    Title = $"{HttpUtility.HtmlDecode(item.Title)}",
-                    Description = $"{item.Url}\nDuration: {HttpUtility.HtmlDecode(item.Duration)}",
-                    ImageUrl = item.Thumbnail,
-                    Color = Tools.Tools.RandomColor()
-                };
+                var totalreactions = item.Statistics.LikeCount + item.Statistics.DislikeCount;
+                double ratiog = ((double)item.Statistics.LikeCount / totalreactions)*100;
+                double ratiob = ((double)item.Statistics.DislikeCount / totalreactions) * 100;
 
-                await MessageHandler.SendChannel(Context.Channel, $"<:youtube:314349922885566475> | {item.Url}\nDuration: {HttpUtility.HtmlDecode(item.Duration)}");
+                await MessageHandler.SendChannelAsync(Context.Channel, $"<:youtube:314349922885566475> | http://youtu.be/{item.Id}\n" +
+                    $"`👀: {item.Statistics.ViewCount.ToString("N0")}`\n" +
+                    $"`👍: {item.Statistics.LikeCount.ToString("N0")} ({ratiog.ToString("0.0")}%)\t👎: {item.Statistics.DislikeCount.ToString("N0")} ({ratiob.ToString("0.0")}%)`\n" +
+                    $"`Duration: {item.Duration}`");
             }
             catch (Exception ex)
             {
-                Bot.Logs.Add(new Models.LogMessage("YTBSrch", "Error with Youtube Search", LogSeverity.Error, ex));
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder { Title = "Error with the command", Description = ex.Message, Color = Tools.Tools.RandomColor() }.Build());
+                Bot.Logger.AddToLogs(new Models.LogMessage("YTBSrch", "Error with Youtube Search", LogSeverity.Error, ex));
+                await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Title = "Error with the command", Description = ex.Message, Color = Tools.Tools.RandomColor() }.Build());
                 StatsdClient.DogStatsd.Increment("commands.errors.exception");
             }
         }
@@ -299,15 +293,15 @@ namespace Skuld.Commands
                 if (album != null && album.Nsfw != true)
                 {
                     string message = "I found this:\n" + album.Link;
-                    await MessageHandler.SendChannel(Context.Channel, message);
+                    await MessageHandler.SendChannelAsync(Context.Channel, message);
                 }
                 else
-                    await MessageHandler.SendChannel(Context.Channel, "I found nothing sorry. :/");
+                    await MessageHandler.SendChannelAsync(Context.Channel, "I found nothing sorry. :/");
             }
             catch (Exception ex)
             {
-                Bot.Logs.Add(new Models.LogMessage("ImgrSch", "Error with Imgur search", LogSeverity.Error, ex));
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder { Title = "Error with the command", Description = ex.Message, Color = Tools.Tools.RandomColor() }.Build() );
+                Bot.Logger.AddToLogs(new Models.LogMessage("ImgrSch", "Error with Imgur search", LogSeverity.Error, ex));
+                await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Title = "Error with the command", Description = ex.Message, Color = Tools.Tools.RandomColor() }.Build() );
                 StatsdClient.DogStatsd.Increment("commands.errors.exception");
             }
         }
@@ -330,9 +324,9 @@ namespace Skuld.Commands
             if (engine == "d" || engine == "duckduckgo")
             { url = url + "?s=d&q=" + query.Replace(" ", "%20"); }
             if (url != "https://lmgtfy.com/")
-                await MessageHandler.SendChannel(Context.Channel, url);
+                await MessageHandler.SendChannelAsync(Context.Channel, url);
             else
-            { await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder { Author = new EmbedAuthorBuilder() { Name = "Error with command" }, Color = new Color(255, 0, 0), Description = $"Ensure your parameters are correct, example: `{Bot.Configuration.Prefix}lmgtfy g How to use lmgtfy`" }.Build());
+            { await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Author = new EmbedAuthorBuilder() { Name = "Error with command" }, Color = new Color(255, 0, 0), Description = $"Ensure your parameters are correct, example: `{Bot.Configuration.Prefix}lmgtfy g How to use lmgtfy`" }.Build());
                 StatsdClient.DogStatsd.Increment("commands.errors.generic");
             }
         }
@@ -346,6 +340,80 @@ namespace Skuld.Commands
         [Command("urban", RunMode = RunMode.Async), Summary("Gets a random thing from urban dictionary")]
         public async Task Urban() => 
             await Geturban(new Uri("http://api.urbandictionary.com/v0/random")).ConfigureAwait(false);
+
+        [Command("osu!", RunMode = RunMode.Async), Summary("Get a person's Osu! Sig")]
+        public async Task OsuSig([Remainder]string User) => await SendSigAsync(0, User);
+
+        [Command("osu!taiko", RunMode = RunMode.Async), Summary("Gets a person's Osu!Taiko Sig")]
+        public async Task TaikoSig([Remainder]string User) => await SendSigAsync(1, User);
+
+        [Command("osu!ctb", RunMode = RunMode.Async), Summary("Gets a person's Osu!CTB Sig")]
+        public async Task CTBSig([Remainder]string User) => await SendSigAsync(2, User);
+
+        [Command("osu!mania", RunMode = RunMode.Async), Summary("Gets a person's Osu!Mania Sig")]
+        public async Task ManiaSig([Remainder]string User) => await SendSigAsync(3, User);
+
+        private async Task SendSigAsync(int mode, string User)
+        {
+            Uri url = null;
+
+            var folder = AppContext.BaseDirectory + "/skuld/storage/OsuSigs/";
+
+            string msgmode="";
+
+            if (mode == 0)
+            {
+                url = new Uri($"http://lemmmy.pw/osusig/sig.php?colour=pink&uname={User}&pp=1&countryrank&rankedscore&onlineindicator=undefined&xpbar");
+                folder += "Standard/";
+            }
+            if (mode == 1)
+            {
+                url = new Uri($"http://lemmmy.pw/osusig/sig.php?colour=pink&uname={User}&mode=1&pp=1&countryrank&rankedscore&onlineindicator=undefined&xpbar");
+                folder += "Taiko/";
+                msgmode = "Taiko";
+            }
+            if (mode == 2)
+            {
+                url = new Uri($"http://lemmmy.pw/osusig/sig.php?colour=pink&uname={User}&mode=2&pp=1&countryrank&rankedscore&onlineindicator=undefined&xpbar");
+                folder += "CTB/";
+                msgmode = "CTB";
+            }
+            if (mode == 3)
+            {
+                url = new Uri($"http://lemmmy.pw/osusig/sig.php?colour=pink&uname={User}&mode=3&pp=1&countryrank&rankedscore&onlineindicator=undefined&xpbar");
+                folder += "Mania/";
+                msgmode = "Mania";
+            }
+
+            if (!Directory.Exists(folder))
+            { Directory.CreateDirectory(folder); }
+
+            var filepath = folder + User + ".png";
+            await APIWebReq.DownloadFile(url, filepath);
+
+            var file = File.OpenRead(filepath);
+
+            if (ValidatePNG(file))
+            { await MessageHandler.SendChannelAsync(Context.Channel, "", filepath); }
+            else
+            {
+                await MessageHandler.SendChannelAsync(Context.Channel, "The user either doesn't exist or they haven't played osu!" + msgmode);
+            }
+
+            file.Close();
+
+            File.Delete(filepath);
+        }
+
+        private bool ValidatePNG(FileStream fs)
+        {
+            var header = new byte[4];
+
+            fs.Read(header, 0, 4);
+
+            var strHeader = Encoding.ASCII.GetString(header);
+            return strHeader.ToLower().EndsWith("png");
+        }
 
         private async Task Geturban(Uri url)
         {
@@ -375,7 +443,7 @@ namespace Skuld.Commands
             embed.AddField("Example", word.Example??"Not Available");
             embed.AddField("Upvotes", word.UpVotes??"Not Available");
             embed.AddField("Downvotes", word.DownVotes??"Not Available");
-            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+            await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
         }
 
         [Command("wikipedia", RunMode = RunMode.Async), Summary("Gets wikipedia information, supports all languages that wikipedia offers"), Alias("wiki")]
@@ -406,7 +474,7 @@ namespace Skuld.Commands
                 Color = Tools.Tools.RandomColor()
             };
             embed.AddField("Description", page.Description??"Not Available",inline: true);
-            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+            await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
         }
 
         [Command("gif", RunMode = RunMode.Async), Summary("Gets a gif")]
@@ -433,12 +501,12 @@ namespace Skuld.Commands
                 var gif = new Gif(item["id"].ToString());
                 embed.Url = gif.Url;
                 embed.ImageUrl = gif.Url;
-                await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+                await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
             }
             catch (Exception ex)
             {
                 if (ex is ArgumentOutOfRangeException)
-                { await MessageHandler.SendChannel(Context.Channel, Context.User.Mention + " No results found for: `" + query + "`"); }
+                { await MessageHandler.SendChannelAsync(Context.Channel, Context.User.Mention + " No results found for: `" + query + "`"); }
                 StatsdClient.DogStatsd.Increment("commands.errors.generic");
             }
         }
@@ -465,7 +533,7 @@ namespace Skuld.Commands
             embed.AddField("Example",definedword.Example??"Not Available");
             embed.AddField("Part of speech",definedword.PartOfSpeech??"Not Available",inline: true);
             embed.AddField("Terms", definedword.Terms??"Not Available",inline: true);
-            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+            await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
         }
 
         [Command("reddit", RunMode = RunMode.Async), Summary("Gets a subreddit")]
@@ -477,7 +545,7 @@ namespace Skuld.Commands
             var subReddit = await APIReddit.GetSubRedditAsync(subreddit, amount);
             var paginatedMessage = new PaginatedMessage
             {
-                Title = "https://reddit.com/r/" + subreddit,
+                Title = "https://reddit.com/" + subreddit,
                 Color = Tools.Tools.RandomColor(),
                 Options = new PaginatedAppearanceOptions
                 {
@@ -512,14 +580,14 @@ namespace Skuld.Commands
                     }
                     if (counter % 10 == 0)
                     {
-                        tempstring = tempstring + (cycle+counter) + ". " + pageText.ElementAtOrDefault((cycle + counter)-1);
+                        tempstring = tempstring + (cycle + counter) + ". " + pageText.ElementAtOrDefault((cycle + counter) - 1);
                         pages.Add(tempstring);
                         tempstring = null;
-                        cycle= cycle+10;
+                        cycle = cycle + 10;
                         counter = 0;
                     }
                     else
-                        tempstring = tempstring + (cycle+counter) + ". " + pageText.ElementAtOrDefault((cycle + counter)-1) + "\n";
+                    { tempstring = tempstring + (cycle + counter) + ". " + pageText.ElementAtOrDefault((cycle + counter) - 1) + "\n"; }
                 }
             }
             else
@@ -542,7 +610,7 @@ namespace Skuld.Commands
             { await PagedReplyAsync(paginatedMessage); }
             else
             {
-                await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder()
+                await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder()
                 {
                     Title = paginatedMessage.Title,
                     Color = Tools.Tools.RandomColor(),

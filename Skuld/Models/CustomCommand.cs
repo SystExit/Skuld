@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Skuld.Models
+﻿namespace Skuld.Models
 {
     public class CustomCommand
     {

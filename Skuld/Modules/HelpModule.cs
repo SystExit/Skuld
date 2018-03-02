@@ -15,7 +15,7 @@ namespace Skuld.Commands
         {
             var cmd = new MySqlCommand("select prefix from guild where id = @guildid");
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-            string resp = await SqlConnection.GetSingleAsync(cmd);
+            string resp = await Bot.Database.GetSingleAsync(cmd);
             string prefix = Bot.Configuration.Prefix;
             var embed = new EmbedBuilder
             {
@@ -46,10 +46,10 @@ namespace Skuld.Commands
                 }
             }
             embed.Description = $"The prefix of **{Context.Guild.Name}** is: `{resp ?? prefix}`";
-            await MessageHandler.SendDMs(Context.Channel, (await Context.User.GetOrCreateDMChannelAsync()), "", embed.Build());
+            await MessageHandler.SendDMsAsync(Context.Channel, (await Context.User.GetOrCreateDMChannelAsync()), "", embed.Build());
         }
         [Command("help", RunMode = RunMode.Async), Summary("Gets specific command information")]
-        public async Task _Help(string command)
+        public async Task _Help([Remainder]string command)
         {
             if (command != "pasta")
             {
@@ -57,7 +57,7 @@ namespace Skuld.Commands
 
                 if (!result.IsSuccess)
                 {
-                    await MessageHandler.SendChannel(Context.Channel,$"Sorry, I couldn't find a command like **{command}**.");
+                    await MessageHandler.SendChannelAsync(Context.Channel,$"Sorry, I couldn't find a command like **{command}**.");
                     return;
                 }
 
@@ -79,7 +79,7 @@ namespace Skuld.Commands
                         x.IsInline = false;
                     });
                 }
-                await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+                await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
             }
         }
     }

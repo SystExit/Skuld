@@ -6,12 +6,13 @@ using Discord.Commands;
 using System.Linq;
 using MySql.Data.MySqlClient;
 using StatsdClient;
+using System.Threading;
 
 namespace Skuld.Tools
 {
     public class CommandManager : Bot
     {
-        private static string defaultPrefix = Bot.Configuration.Prefix;
+        private static string defaultPrefix = Configuration.Prefix;
         private static string customPrefix;
         public static async Task Bot_MessageReceived(SocketMessage arg)
         {
@@ -19,57 +20,93 @@ namespace Skuld.Tools
             {
                 DogStatsd.Increment("messages.recieved");
                 var message = arg as SocketUserMessage;
-                if (message == null)
-                {
-                    return;
-                }
+
+                if (message == null) return;
+
                 int argPos = 0;
                 var chan = message.Channel as SocketGuildChannel;
                 var context = new ShardedCommandContext(bot, message);
-                if (!String.IsNullOrEmpty(Bot.Configuration.SqlDBHost))
+
+                if (!String.IsNullOrEmpty(Configuration.SqlDBHost))
                 {
-                    if (String.IsNullOrEmpty(await SqlConnection.GetSingleAsync(new MySqlCommand("SELECT `ID` FROM `guild` WHERE `ID` = " + context.Guild.Id))))
-                    {
-                        await Events.DiscordEvents.PopulateSpecificGuild(context.Guild);
-                    }
+                    await CheckUser(context.User);
+
                     var command = new MySqlCommand("SELECT prefix FROM guild WHERE ID = @guildid");
                     command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
-                    customPrefix = await SqlConnection.GetSingleAsync(command);
+                    customPrefix = await Database.GetSingleAsync(command);
+
                     if (message.Content.ToLower() == $"{bot.CurrentUser.Username.ToLower()}.resetprefix")
                     {
                         var guilduser = message.Author as SocketGuildUser;
-                        Logs.Add(new Models.LogMessage("HandCmd", $"Prefix reset on guild {context.Guild.Name}", LogSeverity.Info));
+                        Logger.AddToLogs(new Models.LogMessage("HandCmd", $"Prefix reset on guild {context.Guild.Name}", LogSeverity.Info));
                         if (guilduser.GuildPermissions.ManageGuild)
                         {
                             command = new MySqlCommand("UPDATE guild SET prefix = @prefix WHERE ID = @guildid");
                             command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
                             command.Parameters.AddWithValue("@prefix", defaultPrefix);
-                            await SqlConnection.InsertAsync(command).ContinueWith(async x =>
+                            await Database.NonQueryAsync(command).ContinueWith(async x =>
                             {
                                 command = new MySqlCommand("SELECT prefix FROM guild WHERE ID = @guildid");
                                 command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
-                                string newprefix = await SqlConnection.GetSingleAsync(command);
+                                string newprefix = await Database.GetSingleAsync(command);
                                 if (newprefix == defaultPrefix)
                                 {
-                                    await MessageHandler.SendChannel(message.Channel as SocketTextChannel, $"Successfully reset the prefix, it is now `{newprefix}`");
+                                    await MessageHandler.SendChannelAsync(message.Channel as SocketTextChannel, $"Successfully reset the prefix, it is now `{newprefix}`");
                                 }
                                 DogStatsd.Increment("commands.processed");
                             });
                         }
                         else
                         {
-                            StatsdClient.DogStatsd.Increment("commands.errors.unm-precon");
-                            await MessageHandler.SendChannel(message.Channel, "I'm sorry, you don't have permissions to reset the prefix, you need `MANAGE_SERVER` or `ADMINISTRATOR`");
+                            DogStatsd.Increment("commands.errors.unm-precon");
+                            await MessageHandler.SendChannelAsync(message.Channel, "I'm sorry, you don't have permissions to reset the prefix, you need `MANAGE_SERVER` or `ADMINISTRATOR`");
                         }
                     }
                 }
-                if (String.IsNullOrEmpty(customPrefix) || String.IsNullOrEmpty(Bot.Configuration.SqlDBHost))
+
+                if (String.IsNullOrEmpty(customPrefix) || String.IsNullOrEmpty(Configuration.SqlDBHost))
                 {
                     customPrefix = defaultPrefix;
                 }
+
                 await DispatchCommand(message, context, argPos, arg);
             }            
         }        
+
+        private static async Task CheckUser(SocketUser usr)
+        {
+            try
+            {
+                if (await Database.GetUserAsync(usr.Id) == null)
+                {
+                    var res = await Database.InsertUserAsync(usr);
+                    if (res.Successful)
+                    {
+                        Logger.AddToLogs(new Models.LogMessage("ChkUsr", $"Added {usr.Username} to database", LogSeverity.Info));
+                    }
+                    else
+                    {
+                        Logger.AddToLogs(new Models.LogMessage("ChkUsr", $"Couldn't fix user from being missing; {res.Error}", LogSeverity.Error));
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                Logger.AddToLogs(new Models.LogMessage("Cmd-Mgr","Couldn't fix user from being missing", LogSeverity.Error, ex));
+            }
+        }
+        private static async Task CheckGuild(SocketGuild gld)
+        {
+            try
+            {
+                if (await Database.GetGuildAsync(gld.Id) == null)
+                    await Events.DiscordEvents.PopulateSpecificGuild(gld);
+            }
+            catch (Exception ex)
+            {
+                Logger.AddToLogs(new Models.LogMessage("Cmd-Mgr", "Couldn't fix guild not existing.", LogSeverity.Error, ex));
+            }
+        }
 
         private static async Task DispatchCommand(SocketUserMessage message, ShardedCommandContext context, int argPos, SocketMessage arg)
         {
@@ -79,29 +116,36 @@ namespace Skuld.Tools
                 {
                     IResult result = null;
                     CommandInfo cmd = null;
-                    if (!String.IsNullOrEmpty(Bot.Configuration.SqlDBHost))
+                    if (!String.IsNullOrEmpty(Configuration.SqlDBHost))
                     {
-                        var guild = await SqlTools.GetGuildAsync(context.Guild.Id);
-                        var command = commands.Search(context, arg.Content.Split(' ')[0].Replace(defaultPrefix, "").Replace(customPrefix, "")).Commands;
-                        if (command == null)
+                        var guild = await Database.GetGuildAsync(context.Guild.Id);
+                        if(guild!=null)
                         {
-                            return;
+                            var command = commands.Search(context, arg.Content.Split(' ')[0].Replace(defaultPrefix, "").Replace(customPrefix, "")).Commands;
+                            if (command == null)
+                            {
+                                return;
+                            }
+                            else
+                            {
+                                var res = command.FirstOrDefault();
+                                var module = CheckModule(guild, res.Command.Module);
+                                if (module)
+                                {
+                                    result = await commands.ExecuteAsync(context, argPos, services);
+                                    cmd = command.FirstOrDefault().Command;
+                                    await InsertCommand(cmd, message);
+                                }
+                            }
                         }
                         else
                         {
-                            var res = command.FirstOrDefault();
-                            var module = CheckModule(guild, res.Command.Module);
-                            if (module)
-                            {
-                                result = await commands.ExecuteAsync(context, argPos, map);
-                                cmd = command.FirstOrDefault().Command;
-                                await InsertCommand(cmd, message);
-                            }
+                            await MessageHandler.SendChannelAsync(context.Channel, "Something happened... (skuldguild is null)");
                         }
                     }
                     else
                     {
-                        result = await commands.ExecuteAsync(context, argPos, map);
+                        result = await commands.ExecuteAsync(context, argPos, services);
                     }
                     if(result!=null)
                     {
@@ -109,8 +153,8 @@ namespace Skuld.Tools
                         {
                             if (result.Error != CommandError.UnknownCommand)
                             {
-                                Logs.Add(new Models.LogMessage("CmdHand", "Error with command, Error is: " + result, LogSeverity.Error));
-                                await MessageHandler.SendChannel(context.Channel, "", new EmbedBuilder { Author = new EmbedAuthorBuilder { Name = "Error with the command" }, Description = Convert.ToString(result.ErrorReason), Color = new Color(255, 0, 0) }.Build());
+                                Logger.AddToLogs(new Models.LogMessage("CmdHand", "Error with command, Error is: " + result, LogSeverity.Error));
+                                await MessageHandler.SendChannelAsync(context.Channel, "", new EmbedBuilder { Author = new EmbedAuthorBuilder { Name = "Error with the command" }, Description = Convert.ToString(result.ErrorReason), Color = new Color(255, 0, 0) }.Build());
                             }
                             DogStatsd.Increment("commands.errors");
                             if (result.Error == CommandError.MultipleMatches)
@@ -139,16 +183,17 @@ namespace Skuld.Tools
             }
             catch(Exception ex)
             {
-                Logs.Add(new Models.LogMessage("CmdHand", "Error with command dispatching", LogSeverity.Error, ex));
+                Logger.AddToLogs(new Models.LogMessage("CmdHand", "Error with command dispatching", LogSeverity.Error, ex));
             }
         }
+
         private static async Task InsertCommand(CommandInfo command, SocketMessage arg)
         {
             var user = arg.Author;
             var cmd = new MySqlCommand("SELECT UserUsage FROM commandusage WHERE UserID = @userid AND Command = @command");
             cmd.Parameters.AddWithValue("@userid", user.Id);
             cmd.Parameters.AddWithValue("@command", command.Name?? command.Module.Name);
-            var resp = await SqlConnection.GetSingleAsync(cmd);
+            var resp = await Database.GetSingleAsync(cmd);
             if (!String.IsNullOrEmpty(resp))
             {
                 var cmdusg = Convert.ToInt32(resp);
@@ -157,7 +202,7 @@ namespace Skuld.Tools
                 cmd.Parameters.AddWithValue("@userusg", cmdusg);
                 cmd.Parameters.AddWithValue("@userid", user.Id);
                 cmd.Parameters.AddWithValue("@command", command.Name ?? command.Module.Name);
-                await SqlConnection.InsertAsync(cmd);
+                await Database.NonQueryAsync(cmd);
             }
             else
             {
@@ -165,7 +210,7 @@ namespace Skuld.Tools
                 cmd.Parameters.AddWithValue("@userusg", 1);
                 cmd.Parameters.AddWithValue("@userid", user.Id);
                 cmd.Parameters.AddWithValue("@command", command.Name ?? command.Module.Name);
-                await SqlConnection.InsertAsync(cmd);
+                await Database.NonQueryAsync(cmd);
             }
         }
 
