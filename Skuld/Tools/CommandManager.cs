@@ -44,7 +44,7 @@ namespace Skuld.Tools
                             command = new MySqlCommand("UPDATE guild SET prefix = @prefix WHERE ID = @guildid");
                             command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
                             command.Parameters.AddWithValue("@prefix", defaultPrefix);
-                            await Database.InsertAsync(command).ContinueWith(async x =>
+                            await Database.NonQueryAsync(command).ContinueWith(async x =>
                             {
                                 command = new MySqlCommand("SELECT prefix FROM guild WHERE ID = @guildid");
                                 command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
@@ -202,7 +202,7 @@ namespace Skuld.Tools
                 cmd.Parameters.AddWithValue("@userusg", cmdusg);
                 cmd.Parameters.AddWithValue("@userid", user.Id);
                 cmd.Parameters.AddWithValue("@command", command.Name ?? command.Module.Name);
-                await Database.InsertAsync(cmd);
+                await Database.NonQueryAsync(cmd);
             }
             else
             {
@@ -210,7 +210,7 @@ namespace Skuld.Tools
                 cmd.Parameters.AddWithValue("@userusg", 1);
                 cmd.Parameters.AddWithValue("@userid", user.Id);
                 cmd.Parameters.AddWithValue("@command", command.Name ?? command.Module.Name);
-                await Database.InsertAsync(cmd);
+                await Database.NonQueryAsync(cmd);
             }
         }
 

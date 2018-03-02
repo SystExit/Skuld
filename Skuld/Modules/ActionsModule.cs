@@ -60,14 +60,14 @@ namespace Skuld.Commands
                             command = new MySqlCommand("UPDATE accounts SET hp = @hp where ID = @userid");
                             command.Parameters.AddWithValue("@hp", hp);
                             command.Parameters.AddWithValue("@userid", guilduser.Id);
-                            await Bot.Database.InsertAsync(command);
+                            await Bot.Database.NonQueryAsync(command);
                             await Send($"{contuser.Nickname ?? contuser.Username} just stabbed {guilduser.Nickname ?? guilduser.Username} for {dhp} HP, they now have {hp} HP left", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=stab"))).ConfigureAwait(false);
                         }
                         else
                         {
                             command = new MySqlCommand("UPDATE accounts SET hp = 0 where ID = @userid");
                             command.Parameters.AddWithValue("@userid", guilduser.Id);
-                            await Bot.Database.InsertAsync(command);
+                            await Bot.Database.NonQueryAsync(command);
                             await Send($"{contuser.Nickname ?? contuser.Username} just stabbed {guilduser.Nickname ?? guilduser.Username} for {dhp} HP, they have no HP left", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=stab"))).ConfigureAwait(false);
                         }
                     }
@@ -168,7 +168,7 @@ namespace Skuld.Commands
                         command.Parameters.AddWithValue("@newpets", newpets);
                         command.Parameters.AddWithValue("@userid", contuser.Id);
 
-                        await Bot.Database.InsertAsync(command);
+                        await Bot.Database.NonQueryAsync(command);
 
                         command = new MySqlCommand("SELECT petted from accounts where id = @userid");
                         command.Parameters.AddWithValue("@userid", guilduser.Id);
@@ -187,7 +187,7 @@ namespace Skuld.Commands
                             command.Parameters.AddWithValue("@newpetted", newpetted);
                             command.Parameters.AddWithValue("@userid", guilduser.Id);
 
-                            await Bot.Database.InsertAsync(command);
+                            await Bot.Database.NonQueryAsync(command);
                             await Send($"{contuser.Nickname ?? contuser.Username} just petted {guilduser.Nickname ?? guilduser.Username}, they've been petted {newpetted} time(s)!", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=pet"))).ConfigureAwait(false);
                         }
                     }
@@ -228,7 +228,7 @@ namespace Skuld.Commands
                         command = new MySqlCommand("UPDATE accounts SET glares = @newglares WHERE id = @userid");
                         command.Parameters.AddWithValue("@newglares", newglares);
                         command.Parameters.AddWithValue("@userid", contuser.Id);
-                        await Bot.Database.InsertAsync(command);
+                        await Bot.Database.NonQueryAsync(command);
 
                         command = new MySqlCommand("SELECT glaredat from accounts where id = @userid");
                         command.Parameters.AddWithValue("@userid", guilduser.Id);
@@ -246,7 +246,7 @@ namespace Skuld.Commands
                             command = new MySqlCommand("UPDATE accounts SET glaredat = @glaredat WHERE id = @userid");
                             command.Parameters.AddWithValue("@glaredat", newglaredat);
                             command.Parameters.AddWithValue("@userid", guilduser.Id);
-                            await Bot.Database.InsertAsync(command);
+                            await Bot.Database.NonQueryAsync(command);
 
                             await Send($"{contuser.Nickname ?? contuser.Username} glares at {guilduser.Nickname ?? guilduser.Username}, they've been glared at {newglaredat} time(s)!", await APIWebReq.ReturnString(new Uri("https://gaia.systemexit.co.uk/gifs/actions/?f=glare"))).ConfigureAwait(false);
                         }
@@ -264,7 +264,7 @@ namespace Skuld.Commands
             var command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");");
             command.Parameters.AddWithValue("@username", $"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}");
             command.Parameters.AddWithValue("@userid",user.Id);
-            await Bot.Database.InsertAsync(command);
+            await Bot.Database.NonQueryAsync(command);
         }
         private async Task Send(string message, string image)
             => await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder() { Description = message, Color = Tools.Tools.RandomColor(), ImageUrl = image }.Build());

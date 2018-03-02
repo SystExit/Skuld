@@ -92,7 +92,7 @@ namespace Skuld.Events
                 var command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");");
                 command.Parameters.AddWithValue("@username", arg.Username.Replace("\"","\\").Replace("\'","\\'"));
                 command.Parameters.AddWithValue("@userid", arg.Id);
-                await Database.InsertAsync(command);
+                await Database.NonQueryAsync(command);
                 
                 string autorole = Convert.ToString(await Database.GetSingleAsync(new MySqlCommand("SELECT `autojoinrole` FROM `guild` WHERE `id` = "+arg.Guild.Id)));
 
@@ -149,7 +149,7 @@ namespace Skuld.Events
             {
                 var command = new MySqlCommand("DELETE FROM guild WHERE id = @guildid");
                 command.Parameters.AddWithValue("@guildid", arg.Id);
-                await Database.InsertAsync(command);
+                await Database.NonQueryAsync(command);
             }
             new Thread(() =>
             {
@@ -182,15 +182,15 @@ namespace Skuld.Events
             {
                 var gcmd = new MySqlCommand("INSERT IGNORE INTO `guild` (`ID`,`name`,`prefix`) VALUES ");
                 gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Bot.Configuration.Prefix}\" )";
-                await Database.InsertAsync(gcmd);
+                await Database.NonQueryAsync(gcmd);
 
                 //Configures Modules
                 gcmd = new MySqlCommand($"INSERT IGNORE INTO `guildcommandmodules` (`ID`,`Accounts`,`Actions`,`Admin`,`Fun`,`Help`,`Information`,`Search`,`Stats`) VALUES ( {guild.Id} , 1, 1, 1, 1, 1, 1, 1, 1 )");
-                await Database.InsertAsync(gcmd);
+                await Database.NonQueryAsync(gcmd);
 
                 //Configures Settings
                 gcmd = new MySqlCommand($"INSERT IGNORE INTO `guildfeaturemodules` (`ID`,`Experience`,`UserJoinLeave`) VALUES ( {guild.Id} , 0, 0)");
-                await Database.InsertAsync(gcmd);
+                await Database.NonQueryAsync(gcmd);
 
                 Logger.AddToLogs(new Models.LogMessage("IsrtGld", $"Inserted {guild.Name}!", LogSeverity.Info));
 

@@ -5,6 +5,7 @@ using System;
 using System.Data.Common;
 using Skuld.Models;
 using Discord.WebSocket;
+using System.Collections.Generic;
 
 namespace Skuld.Tools
 {
@@ -21,7 +22,7 @@ namespace Skuld.Tools
 
         //static MySqlConnection Connection = new MySqlConnection(cs);
 
-        public async Task<bool> InsertAsync(MySqlCommand command)
+        public async Task<bool> NonQueryAsync(MySqlCommand command)
         {
             using (var conn = new MySqlConnection(cs))
             {
@@ -327,7 +328,7 @@ namespace Skuld.Tools
 
             return guild;
         }
-        public async Task<Pasta> GetPasta(string name)
+        public async Task<Pasta> GetPastaAsync(string name)
         {
             var pasta = new Pasta();
             var command = new MySqlCommand("SELECT * FROM pasta WHERE pastaname = @pastaname");
@@ -370,7 +371,7 @@ namespace Skuld.Tools
             return pasta;
         }
 
-        public async Task<SqlError> InsertAdvancedSettings(bool feature, SocketGuild guild)
+        public async Task<SqlError> InsertAdvancedSettingsAsync(bool feature, SocketGuild guild)
         {
             var command = new MySqlCommand("INSERT INTO ");
             if (feature)
@@ -383,7 +384,7 @@ namespace Skuld.Tools
                 command.CommandText += "`guildfeaturemodules` (`ID`,`Accounts`, `Actions`,`Admin`,`Fun`,`Help`,`Information`,`Search`,`Stats`) VALUES (@guildid,1,1,1,1,1,1,1,1);";
                 command.Parameters.AddWithValue("@guildid", guild.Id);
             }
-            return new SqlError(await InsertAsync(command));
+            return new SqlError(await NonQueryAsync(command));
         }
         public async Task<SqlError> InsertUserAsync(SocketUser user)
         {
@@ -393,7 +394,7 @@ namespace Skuld.Tools
                 command.Parameters.AddWithValue("@username", $"{user.Username.Replace("\"", "\\").Replace("\'", "\\'")}");
                 command.Parameters.AddWithValue("@userid", user.Id);
                 command.Parameters.AddWithValue("@locale", Locale.defaultLocale);
-                return new SqlError(await InsertAsync(command));
+                return new SqlError(await NonQueryAsync(command));
             }
             else { return new SqlError(false, "Robots are not supported."); }
         }
@@ -401,16 +402,16 @@ namespace Skuld.Tools
         {
             if (!user.IsBot)
             {
-                return new SqlError(await InsertAsync(new MySqlCommand($"UPDATE `accounts` SET `{column}`='{value}' WHERE ID='{user.Id}'")));
+                return new SqlError(await NonQueryAsync(new MySqlCommand($"UPDATE `accounts` SET `{column}`='{value}' WHERE ID='{user.Id}'")));
             }
             else { return new SqlError(false, "Robots are not supported."); }
         }
 
         public async Task DropUserAsync(SocketUser user)
         {
-            await InsertAsync(new MySqlCommand($"DELETE FROM `accounts` WHERE ID = `{user.Id}`; DELETE FROM `commandusage` WHERE UserID = `{user.Id}`"));
+            await NonQueryAsync(new MySqlCommand($"DELETE FROM `accounts` WHERE ID = `{user.Id}`; DELETE FROM `commandusage` WHERE UserID = `{user.Id}`"));
         }
-        public async Task UpdateUser(SkuldUser user)
+        public async Task UpdateUserAsync(SkuldUser user)
         {
             var command = new MySqlCommand("UPDATE `accounts` " +
                 "SET `Username` = @username, `Money` = @money, " +
@@ -447,7 +448,7 @@ namespace Skuld.Tools
                 }
             }
         }
-        public async Task UpdateGuild(SkuldGuild guild)
+        public async Task UpdateGuildAsync(SkuldGuild guild)
         {
             var command = new MySqlCommand("UPDATE `guild` " +
                 "SET `Name` = @name, `JoinMessage` = @jmsg, " +
@@ -500,5 +501,64 @@ namespace Skuld.Tools
                 }
             }
         }
+
+		public async Task<IReadOnlyList<Pasta>> GetAllPastasAsync()
+		{
+			var command = new MySqlCommand("SELECT * FROM `pasta`;");
+			var allpasta = new List<Pasta>();
+			using (var conn = new MySqlConnection(cs))
+			{
+				await conn.OpenAsync();
+				if (conn.State == ConnectionState.Open)
+				{
+					command.Connection = conn;
+
+					StatsdClient.DogStatsd.Increment("mysql.queries");
+
+					var reader = await command.ExecuteReaderAsync();
+
+					int rows = 0;
+
+					rows = reader.Depth + 1;
+
+					StatsdClient.DogStatsd.Set("mysql.rows-ret", rows);
+
+					if (reader.HasRows)
+					{
+						while (await reader.ReadAsync())
+						{
+							var pasta = new Pasta
+							{
+								ID = Tools.ParseUInt32OrDefault(Convert.ToString(reader["ID"])),
+
+								OwnerID = Tools.ParseUInt64OrDefault(Convert.ToString(reader["OwnerID"])),
+
+								PastaName = Convert.ToString(reader["PastaName"]),
+
+								Created = Convert.ToString(reader["Created"]),
+
+								Content = Convert.ToString(reader["Content"]),
+
+								Downvotes = Tools.ParseUInt32OrDefault(Convert.ToString(reader["Downvotes"])),
+
+								Upvotes = Tools.ParseUInt32OrDefault(Convert.ToString(reader["Upvotes"]))
+							};
+
+							allpasta.Add(pasta);
+
+							pasta = null;
+						}
+
+						await conn.CloseAsync();
+					}
+					else
+					{
+						await conn.CloseAsync();
+						return null;
+					}
+				}
+			}
+			return allpasta;
+		}
     }
 }

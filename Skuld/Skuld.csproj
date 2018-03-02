@@ -70,6 +70,7 @@
     <PackageReference Include="MySql.Data" Version="6.10.5" />
     <PackageReference Include="NodaTime" Version="2.3.0-beta01" />
     <PackageReference Include="NTwitch" Version="0.2.1-build-00025" />
+    <PackageReference Include="NuGet.CommandLine" Version="4.5.1" />
     <PackageReference Include="System.Drawing.Common" Version="4.5.0-preview1-26216-02" />
     <PackageReference Include="YoutubeExplode" Version="4.1.1" />
   </ItemGroup>

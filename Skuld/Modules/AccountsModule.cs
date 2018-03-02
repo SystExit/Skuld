@@ -164,7 +164,7 @@ namespace Skuld.Commands
             var command = new MySqlCommand("UPDATE accounts SET description = @description WHERE ID = @userid");
             command.Parameters.AddWithValue("@userid", Context.User.Id);
             command.Parameters.AddWithValue("@description", description);
-            await Bot.Database.InsertAsync(command).ContinueWith(async x =>
+            await Bot.Database.NonQueryAsync(command).ContinueWith(async x =>
             {
                 if (x.IsCompleted)
                 { await MessageHandler.SendChannelAsync(Context.Channel, $"Successfully set your description to **{description}**"); }
@@ -207,7 +207,7 @@ namespace Skuld.Commands
             {
                 suser.Daily = Convert.ToString(DateTime.UtcNow);
                 suser.Money += Bot.Configuration.DailyAmount;
-                await Bot.Database.UpdateUser(suser);
+                await Bot.Database.UpdateUserAsync(suser);
                 await MessageHandler.SendChannelAsync(Context.Channel, $"You got your daily of: `{Bot.Configuration.MoneySymbol+Bot.Configuration.DailyAmount}`, you now have: {Bot.Configuration.MoneySymbol}{(suser.Money + Bot.Configuration.DailyAmount)}");
             }
             else
@@ -229,17 +229,24 @@ namespace Skuld.Commands
             }
             else
             {
-                var suser = await Bot.Database.GetUserAsync(user.Id);
-                if (suser != null && !user.IsBot)
-                {
-                    await Bot.Database.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "money", Convert.ToString(suser.Money + Bot.Configuration.DailyAmount));
-                    await Bot.Database.ModifyUserAsync((Context.User as Discord.WebSocket.SocketUser), "daily", Convert.ToString(DateTime.UtcNow));
-                    await MessageHandler.SendChannelAsync(Context.Channel, $"Yo, you just gave {user.Nickname ?? user.Username} {Bot.Configuration.MoneySymbol}{Bot.Configuration.DailyAmount}! They now have {Bot.Configuration.MoneySymbol}{suser.Money + Bot.Configuration.DailyAmount}");
-                }
-                else
-                {
-                    await InsertUser(user).ConfigureAwait(false);
-                }
+				if(user!=Context.User)
+				{
+					var suser = await Bot.Database.GetUserAsync(user.Id);
+					if (suser != null && !user.IsBot)
+					{
+						await Bot.Database.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "money", Convert.ToString(suser.Money + Bot.Configuration.DailyAmount));
+						await Bot.Database.ModifyUserAsync((Context.User as Discord.WebSocket.SocketUser), "daily", Convert.ToString(DateTime.UtcNow));
+						await MessageHandler.SendChannelAsync(Context.Channel, $"Yo, you just gave {user.Nickname ?? user.Username} {Bot.Configuration.MoneySymbol}{Bot.Configuration.DailyAmount}! They now have {Bot.Configuration.MoneySymbol}{suser.Money + Bot.Configuration.DailyAmount}");
+					}
+					else
+					{
+						await InsertUser(user).ConfigureAwait(false);
+					}
+				}
+				else
+				{
+					await Daily();
+				}
             }
         }
 
@@ -297,7 +304,7 @@ namespace Skuld.Commands
                 var cmd = new MySqlCommand("UPDATE accounts SET username = @username WHERE ID = @userid");
                 cmd.Parameters.AddWithValue("@username", $"{Context.User.Username.Replace("\"", "\\").Replace("\'", "\\'")}");
                 cmd.Parameters.AddWithValue("@userid", Context.User.Id);
-                await Bot.Database.InsertAsync(cmd).ContinueWith(async x =>
+                await Bot.Database.NonQueryAsync(cmd).ContinueWith(async x =>
                 {
                     if (x.IsCompleted)
                     { await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Author = new EmbedAuthorBuilder() { Name = "Success" }, Description = "Synced your username :D", Color = Tools.Tools.RandomColor() }.Build()); }

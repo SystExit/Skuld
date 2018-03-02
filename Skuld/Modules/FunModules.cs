@@ -147,7 +147,7 @@ namespace Skuld.Commands
                     cmd = new MySqlCommand("UPDATE accounts SET luckfactor = @luckfactor where ID = @userid");
                     cmd.Parameters.AddWithValue("@userid", Context.User.Id);
                     cmd.Parameters.AddWithValue("@luckfactor", currluckfact);
-                    await Bot.Database.InsertAsync(cmd);
+                    await Bot.Database.NonQueryAsync(cmd);
                     await Context.Channel.SendMessageAsync($"{Context.User.Mention} just rolled and got a {rand} :weary:");
                 }
                 else
@@ -163,7 +163,7 @@ namespace Skuld.Commands
         [Command("pasta", RunMode = RunMode.Async), Summary("Pastas are nice")]
         public async Task Pasta(string cmd, string title)
         {
-            var pastaLocal = await Bot.Database.GetPasta(title);
+            var pastaLocal = await Bot.Database.GetPastaAsync(title);
             pastaLocal.Username = Context.Client.GetUser(pastaLocal.OwnerID).Username??"Unknown";
             if (pastaLocal != null)
             {
@@ -190,7 +190,7 @@ namespace Skuld.Commands
                     command = new MySqlCommand("UPDATE pasta SET upvotes = @upvotes WHERE pastaname = @title");
                     command.Parameters.AddWithValue("@title", title);
                     command.Parameters.AddWithValue("@upvotes", upvotes);
-                    await Sql.InsertAsync(command);
+                    await Sql.NonQueryAsync(command);
                     command = new MySqlCommand("SELECT upvotes FROM pasta WHERE pastaname = @title");
                     command.Parameters.AddWithValue("@title", title);
                     uint upvote = Convert.ToUInt32(await Sql.GetSingleAsync(command));
@@ -207,7 +207,7 @@ namespace Skuld.Commands
                     command = new MySqlCommand("UPDATE pasta SET downvotes = @downvotes WHERE pastaname = @title");
                     command.Parameters.AddWithValue("@title", title);
                     command.Parameters.AddWithValue("@downvotes", downvotes);
-                    await Sql.InsertAsync(command);
+                    await Sql.NonQueryAsync(command);
                     command = new MySqlCommand("SELECT downvotes FROM pasta WHERE pastaname = @title");
                     command.Parameters.AddWithValue("@title", title);
                     uint Downvote = Convert.ToUInt32(await Sql.GetSingleAsync(command));
@@ -220,7 +220,7 @@ namespace Skuld.Commands
                     {
                         var command = new MySqlCommand("DELETE FROM pasta WHERE pastaname = @title");
                         command.Parameters.AddWithValue("@title", title);
-                        await Bot.Database.InsertAsync(command).ContinueWith(async x =>
+                        await Bot.Database.NonQueryAsync(command).ContinueWith(async x =>
                         {
                             if (x.IsCompleted)
                             { await MessageHandler.SendChannelAsync(Context.Channel, $"Successfully deleted: **{title}**"); }
@@ -266,7 +266,7 @@ namespace Skuld.Commands
                         command.Parameters.AddWithValue("@created", DateTime.UtcNow);
                         command.Parameters.AddWithValue("@pastatitle", title);
 
-                        await Bot.Database.InsertAsync(command).ContinueWith(async x =>
+                        await Bot.Database.NonQueryAsync(command).ContinueWith(async x =>
                         {
                             command = new MySqlCommand("SELECT pastaname FROM pasta WHERE pastaname = @pastatitle");
                             command.Parameters.AddWithValue("@pastatitle", title);
@@ -294,7 +294,7 @@ namespace Skuld.Commands
                     command = new MySqlCommand("UPDATE pasta SET content = @content WHERE pastaname = @title");
                     command.Parameters.AddWithValue("@content", content);
                     command.Parameters.AddWithValue("@title", title);
-                    await Bot.Database.InsertAsync(command).ContinueWith(async x =>
+                    await Bot.Database.NonQueryAsync(command).ContinueWith(async x =>
                     {
                         command = new MySqlCommand("SELECT content FROM pasta where pastaname = @title");
                         command.Parameters.AddWithValue("@title", title);
@@ -314,29 +314,25 @@ namespace Skuld.Commands
         [Command("pasta", RunMode = RunMode.Async), Summary("Pastas are nice")]
         public async Task Pasta([Remainder]string title)
         {
-            /*if (title == "list")
+            if (title == "list")
             {
-                string columndata = null;
-                var rows = new List<string>();
-                var reader = await Bot.Database.GetAsync(new MySqlCommand($"SELECT PastaName FROM pasta"));
-                while (await reader.ReadAsync())
-                {
-                    rows.Add(reader["PastaName"].ToString());
-                }
-                reader.Close();
-                if (rows.Count > 0)
-                {
-                    foreach (var item in rows)
-                    {
-                        if (item != rows.Last())
-                            columndata += $"`{item}`, ";
-                        else
-                            columndata += $"`{item}`";
-                    }
-                }
-                await MessageHandler.SendChannelAsync(Context.Channel, $"I found:\n{columndata}");
+				var pastas = await Bot.Database.GetAllPastasAsync();
+
+				string pastanames = "```\n";
+
+				foreach(var pasta in pastas)
+				{
+					if (pasta == pastas.LastOrDefault())
+					{ pastanames += pasta.PastaName; }
+					else
+					{ pastanames += pasta.PastaName + ", "; }
+				}
+
+				pastanames += "\n```";
+
+                await MessageHandler.SendChannelAsync(Context.Channel, $"I found:\n{pastanames}");
             }
-            else*/ if (title == "help")
+            else if (title == "help")
             {
                 string help = "Here's how to do stuff with **pasta**:\n\n" +
                     "```cs\n"+
@@ -687,7 +683,7 @@ namespace Skuld.Commands
                     if (user.HP > 10000)
                         user.HP = 10000;
 
-                    await Bot.Database.UpdateUser(user);
+                    await Bot.Database.UpdateUserAsync(user);
 
                     if (User == Context.User)
                         await MessageHandler.SendChannelAsync(Context.Channel, $"You have healed your hp by {hp} for {Bot.Configuration.MoneySymbol}{cost.ToString("N0")}");

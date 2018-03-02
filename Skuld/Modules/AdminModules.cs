@@ -81,7 +81,7 @@ namespace Skuld.Commands
                 cmd = new MySqlCommand("UPDATE guild SET MutedRole = @roleid WHERE ID = @guildid");
                 cmd.Parameters.AddWithValue("@guildid", guild.Id);
                 cmd.Parameters.AddWithValue("@roleid", role.Id);
-                await Bot.Database.InsertAsync(cmd);
+                await Bot.Database.NonQueryAsync(cmd);
                 await user.AddRoleAsync(role);
                 await MessageHandler.SendChannelAsync(Context.Channel, $"{Context.User.Mention} just muted **{usertomute.Username}**");
             }
@@ -301,7 +301,7 @@ namespace Skuld.Commands
             {
                 cmd = new MySqlCommand("UPDATE guild SET autojoinrole = NULL WHERE ID = @guildid");
                 cmd.Parameters.AddWithValue("@guildid", guild.Id);
-                await Bot.Database.InsertAsync(cmd).ContinueWith(async x =>
+                await Bot.Database.NonQueryAsync(cmd).ContinueWith(async x =>
                 {
                     await MessageHandler.SendChannelAsync(Context.Channel, $"Successfully removed the member join role");
                 });
@@ -314,7 +314,7 @@ namespace Skuld.Commands
             var cmd = new MySqlCommand("UPDATE guild SET autojoinrole = @roleid WHERE ID = @guildid");
             cmd.Parameters.AddWithValue("@guildid", guild.Id);
             cmd.Parameters.AddWithValue("@roleid", role.Id);
-            await Bot.Database.InsertAsync(cmd).ContinueWith(async x =>
+            await Bot.Database.NonQueryAsync(cmd).ContinueWith(async x =>
             {
                 cmd = new MySqlCommand("select autojoinrole from guild where id = @guildid");
                 cmd.Parameters.AddWithValue("@guildid", guild.Id);
@@ -331,7 +331,7 @@ namespace Skuld.Commands
             var cmd = new MySqlCommand("UPDATE guild SET autojoinrole = @roleid WHERE ID = @guildid");
             cmd.Parameters.AddWithValue("@guildid", guild.Id);
             cmd.Parameters.AddWithValue("@roleid", role.Id);
-            await Bot.Database.InsertAsync(cmd).ContinueWith(async x =>
+            await Bot.Database.NonQueryAsync(cmd).ContinueWith(async x =>
             {
                 cmd = new MySqlCommand("select autojoinrole from guild where id = @guildid");
                 cmd.Parameters.AddWithValue("@guildid", guild.Id);
@@ -364,7 +364,7 @@ namespace Skuld.Commands
             cmd = new MySqlCommand("UPDATE guild SET prefix = @prefix WHERE ID = @guildid");
             cmd.Parameters.AddWithValue("@prefix", prefix);
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-            await Bot.Database.InsertAsync(cmd).ContinueWith(async x =>
+            await Bot.Database.NonQueryAsync(cmd).ContinueWith(async x =>
             {
                 cmd = new MySqlCommand("select prefix from guild where id = @guildid");
                 cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
@@ -388,7 +388,7 @@ namespace Skuld.Commands
             cmd.Parameters.AddWithValue("@prefix", Bot.Configuration.Prefix);
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
 
-            await Bot.Database.InsertAsync(cmd).ContinueWith(async x =>
+            await Bot.Database.NonQueryAsync(cmd).ContinueWith(async x =>
             {
                 cmd = new MySqlCommand("select prefix from guild where id = @guildid");
                 cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
@@ -406,11 +406,11 @@ namespace Skuld.Commands
             var cmd = new MySqlCommand("UPDATE guild SET UserJoinChan = @chanid WHERE ID = @guildid");
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
             cmd.Parameters.AddWithValue("@chanid", Context.Channel.Id);
-            await Bot.Database.InsertAsync(cmd);
+            await Bot.Database.NonQueryAsync(cmd);
             cmd = new MySqlCommand("UPDATE guild SET joinmessage = @mesg WHERE ID = @guildid");
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
             cmd.Parameters.AddWithValue("@mesg", welcome);
-            await Bot.Database.InsertAsync(cmd).ContinueWith(async x =>
+            await Bot.Database.NonQueryAsync(cmd).ContinueWith(async x =>
             {
                 await MessageHandler.SendChannelAsync(Context.Channel, $"Set Welcome message!");
             });
@@ -424,11 +424,11 @@ namespace Skuld.Commands
             var cmd = new MySqlCommand("UPDATE guild SET UserJoinChan = @chanid WHERE ID = @guildid");
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
             cmd.Parameters.AddWithValue("@chanid", channel.Id);
-            await Bot.Database.InsertAsync(cmd);
+            await Bot.Database.NonQueryAsync(cmd);
             cmd = new MySqlCommand("UPDATE guild SET joinmessage = @mesg WHERE ID = @guildid");
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
             cmd.Parameters.AddWithValue("@mesg", welcome);
-            await Bot.Database.InsertAsync(cmd).ContinueWith(async x =>
+            await Bot.Database.NonQueryAsync(cmd).ContinueWith(async x =>
             {
                 await MessageHandler.SendChannelAsync(Context.Channel, $"Set Welcome message!");
             });
@@ -441,7 +441,7 @@ namespace Skuld.Commands
         {
             var cmd = new MySqlCommand("UPDATE guild SET joinmessage = NULL WHERE ID = @guildid");
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-            await Bot.Database.InsertAsync(cmd).ContinueWith(async x =>
+            await Bot.Database.NonQueryAsync(cmd).ContinueWith(async x =>
             {
                 await MessageHandler.SendChannelAsync(Context.Channel, $"Removed Welcome message!");
             });            
@@ -455,11 +455,11 @@ namespace Skuld.Commands
             var cmd = new MySqlCommand("UPDATE guild SET UserLeaveChan = @chanid WHERE ID = @guildid");
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
             cmd.Parameters.AddWithValue("@chanid", channel.Id);
-            await Bot.Database.InsertAsync(cmd);
+            await Bot.Database.NonQueryAsync(cmd);
             cmd = new MySqlCommand("UPDATE guild SET leavemessage = @mesg WHERE ID = @guildid");
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
             cmd.Parameters.AddWithValue("@mesg", leave);
-            await Bot.Database.InsertAsync(cmd).ContinueWith(async x =>
+            await Bot.Database.NonQueryAsync(cmd).ContinueWith(async x =>
             {
                 await MessageHandler.SendChannelAsync(Context.Channel, $"Set Leave message!");
             });
@@ -473,11 +473,11 @@ namespace Skuld.Commands
             var cmd = new MySqlCommand("UPDATE guild SET UserLeaveChan = @chanid WHERE ID = @guildid");
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
             cmd.Parameters.AddWithValue("@chanid", Context.Channel.Id);
-            await Bot.Database.InsertAsync(cmd);
+            await Bot.Database.NonQueryAsync(cmd);
             cmd = new MySqlCommand("UPDATE guild SET leavemessage = @mesg WHERE ID = @guildid");
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
             cmd.Parameters.AddWithValue("@mesg", leave);
-            await Bot.Database.InsertAsync(cmd).ContinueWith(async x =>
+            await Bot.Database.NonQueryAsync(cmd).ContinueWith(async x =>
             {
                 await MessageHandler.SendChannelAsync(Context.Channel, $"Set Leave message!");
             });
@@ -490,7 +490,7 @@ namespace Skuld.Commands
         {
             var cmd = new MySqlCommand("UPDATE guild SET leavemessage = NULL WHERE ID = @guildid");
             cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-            await Bot.Database.InsertAsync(cmd).ContinueWith(async x =>
+            await Bot.Database.NonQueryAsync(cmd).ContinueWith(async x =>
             {
                 await MessageHandler.SendChannelAsync(Context.Channel, $"Removed Leave message!");
             });
@@ -524,7 +524,7 @@ namespace Skuld.Commands
                     if (!String.IsNullOrEmpty(await Bot.Database.GetSingleAsync(new MySqlCommand("SELECT `ID` from `guildfeaturemodules` WHERE `ID` = " + Context.Guild.Id))))
                     {
                         var setting = settings.FirstOrDefault(x => x.Key == module || x.Value == module);
-                        await Bot.Database.InsertAsync(new MySqlCommand($"UPDATE `guildfeaturemodules` SET `{setting.Value}` = {value} WHERE `ID` = {Context.Guild.Id}"));
+                        await Bot.Database.NonQueryAsync(new MySqlCommand($"UPDATE `guildfeaturemodules` SET `{setting.Value}` = {value} WHERE `ID` = {Context.Guild.Id}"));
                         if (value == 0)
                         { await MessageHandler.SendChannelAsync(Context.Channel, $"I disabled the `{module}` feature"); }
                         else
@@ -532,7 +532,7 @@ namespace Skuld.Commands
                     }
                     else
                     {
-                        await Bot.Database.InsertAdvancedSettings(feature: false, guild: Context.Guild as Discord.WebSocket.SocketGuild);
+                        await Bot.Database.InsertAdvancedSettingsAsync(feature: false, guild: Context.Guild as Discord.WebSocket.SocketGuild);
                     }
                 }
                 else
@@ -562,7 +562,7 @@ namespace Skuld.Commands
                 {
                     if (!String.IsNullOrEmpty(await Bot.Database.GetSingleAsync(new MySqlCommand("SELECT `ID` from `guildcommandmodules` WHERE `ID` = " + Context.Guild.Id))))
                     {
-                        await Bot.Database.InsertAsync(new MySqlCommand($"UPDATE `guildcommandmodules` SET `{module}` = {value} WHERE `ID` = {Context.Guild.Id}"));
+                        await Bot.Database.NonQueryAsync(new MySqlCommand($"UPDATE `guildcommandmodules` SET `{module}` = {value} WHERE `ID` = {Context.Guild.Id}"));
                         if (value == 0)
                         { await MessageHandler.SendChannelAsync(Context.Channel, $"I disabled the `{module}` module"); }
                         else
@@ -570,7 +570,7 @@ namespace Skuld.Commands
                     }
                     else
                     {
-                        await Bot.Database.InsertAdvancedSettings(feature: false, guild: Context.Guild as Discord.WebSocket.SocketGuild);
+                        await Bot.Database.InsertAdvancedSettingsAsync(feature: false, guild: Context.Guild as Discord.WebSocket.SocketGuild);
                     }
                 }
                 else
@@ -607,12 +607,12 @@ namespace Skuld.Commands
                 if (!String.IsNullOrEmpty(await Bot.Database.GetSingleAsync(new MySqlCommand("SELECT `ID` from `guildcommandmodules` WHERE `ID` = " + Context.Guild.Id))))
                 {
                     var setting = modules.FirstOrDefault(x => x.Key == module || x.Value == module);
-                    await Bot.Database.InsertAsync(new MySqlCommand($"UPDATE `guild` SET `{setting.Value}` = {channel.Id} WHERE `ID` = {Context.Guild.Id}"));
+                    await Bot.Database.NonQueryAsync(new MySqlCommand($"UPDATE `guild` SET `{setting.Value}` = {channel.Id} WHERE `ID` = {Context.Guild.Id}"));
                     await MessageHandler.SendChannelAsync(Context.Channel, $"I set `{channel.Name}` as the channel for the `{module}` module");
                 }
                 else
                 {
-                    await Bot.Database.InsertAdvancedSettings(feature: false, guild: Context.Guild as Discord.WebSocket.SocketGuild);
+                    await Bot.Database.InsertAdvancedSettingsAsync(feature: false, guild: Context.Guild as Discord.WebSocket.SocketGuild);
                 }
             }
             else

@@ -203,7 +203,7 @@ namespace Skuld.Commands
             foreach(var guild in Bot.bot.Guilds)
             {
                 var cmd = new MySqlCommand($"UPDATE guild SET Name = \"{guild.Name.Replace("\"","\\").Replace("\'","\\")}\" WHERE ID = {guild.Id}");
-                await Bot.Database.InsertAsync(cmd);
+                await Bot.Database.NonQueryAsync(cmd);
             }
             await MessageHandler.SendChannelAsync(Context.Channel, $"Synced the guilds");
         }
@@ -291,18 +291,18 @@ namespace Skuld.Commands
             {
                 var gcmd = new MySqlCommand("INSERT IGNORE INTO `guild` (`ID`,`name`,`prefix`) VALUES ");
                 gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Bot.Configuration.Prefix}\" )";
-                await Bot.Database.InsertAsync(gcmd);
+                await Bot.Database.NonQueryAsync(gcmd);
 
                 //Configures Modules
                 gcmd = new MySqlCommand("INSERT IGNORE INTO `guildcommandmodules` " +
                     "(`ID`,`Accounts`,`Actions`,`Admin`,`Fun`,`Help`,`Information`,`Search`,`Stats`) " +
                     $"VALUES ( {guild.Id} , 1, 1, 1, 1, 1, 1, 1, 1 )");
-                await Bot.Database.InsertAsync(gcmd);
+                await Bot.Database.NonQueryAsync(gcmd);
 
                 //Configures Settings
                 gcmd = new MySqlCommand("INSERT IGNORE INTO `guildfeaturemodules` " +                            "(`ID`,`Starboard`,`Pinning`,`Experience`,`UserJoinLeave`,`UserModification`,`UserBanEvents`,`GuildModification`,`GuildChannelModification`,`GuildRoleModification`) " +
                     $"VALUES ( {guild.Id} , 0, 0, 0, 0, 0, 0, 0, 0, 0 )");
-                await Bot.Database.InsertAsync(gcmd);
+                await Bot.Database.NonQueryAsync(gcmd);
 
                 Bot.Logger.AddToLogs(new Models.LogMessage("IsrtGld", $"Inserted {guild.Name}!", LogSeverity.Info));
                 await Events.DiscordEvents.PopulateEntireGuildUsers(guild);
@@ -313,7 +313,7 @@ namespace Skuld.Commands
         public async Task Test()
         {
             var gld = await Bot.Database.GetGuildAsync(Context.Guild.Id);
-            await Bot.Database.UpdateGuild(gld);
+            await Bot.Database.UpdateGuildAsync(gld);
         }
     }
     public class Globals
