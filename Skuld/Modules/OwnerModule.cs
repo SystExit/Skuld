@@ -307,15 +307,9 @@ namespace Skuld.Commands
                 Bot.Logger.AddToLogs(new Models.LogMessage("IsrtGld", $"Inserted {guild.Name}!", LogSeverity.Info));
                 await Events.DiscordEvents.PopulateEntireGuildUsers(guild);
             }
-        }
-
-        [Command("test", RunMode = RunMode.Async)]
-        public async Task Test()
-        {
-            var gld = await Bot.Database.GetGuildAsync(Context.Guild.Id);
-            await Bot.Database.UpdateGuildAsync(gld);
-        }
+        }        
     }
+
     public class Globals
     {
         public ShardedCommandContext Context { get; set; }

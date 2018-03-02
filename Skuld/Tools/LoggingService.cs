@@ -41,8 +41,7 @@ namespace Skuld.Tools
             string tolog = null;
             string ConsoleMessage = null,
                 FileMessage = null;
-
-
+			
             if(message.Exception!=null)
             {
                 var loglines = new List<string[]>

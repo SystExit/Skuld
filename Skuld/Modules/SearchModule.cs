@@ -179,8 +179,56 @@ namespace Skuld.Commands
             await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
         }
 
-        //Start Search Platforms
-        [Command("search", RunMode = RunMode.Async), Summary("Gets the first search on a google search"), Alias("s")]
+		[Command("instagram", RunMode = RunMode.Async), Alias("insta"), Ratelimit(20, 1, Measure.Minutes)]
+		public async Task Test(string usr)
+		{
+			var data = await APIS.Social.Instagram.GetInstagramUserAsync(usr);
+			if (data != null)
+			{
+				if (!data.PrivateAccount)
+				{
+					if (data.Images.Images.Count() > 0)
+					{
+						var recentpost = data.Images.Images.FirstOrDefault();
+						var embed = new EmbedBuilder
+						{
+							Author = new EmbedAuthorBuilder
+							{
+								Name = $"{data.FullName} ({data.Username})",
+								IconUrl = data.ProfilePicture,
+								Url = "https://instagr.am/" + data.Username
+							},
+							ImageUrl = recentpost.DisplaySrc,
+							Description = recentpost.Caption,
+							Color = Tools.Tools.RandomColor(),
+							Title = "Newest Post",
+							Url = "https://www.instagr.am/p/" + recentpost.Code + "/",
+							Timestamp = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(recentpost.Date),
+							Footer = new EmbedFooterBuilder
+							{
+								Text = "Uploaded"
+							}
+						};
+						await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
+					}
+					else
+					{
+						await MessageHandler.SendChannelAsync(Context.Channel, "This account has no images in their feed");
+					}
+				}
+				else
+				{
+					await MessageHandler.SendChannelAsync(Context.Channel, "This account is a Private Account, so I can't access their feed.");
+				}
+			}
+			else
+			{
+				await MessageHandler.SendChannelAsync(Context.Channel, $"I can't find an account named: `{usr}`. Check your spelling and try again.");
+			}
+		}
+
+		//Start Search Platforms
+		[Command("search", RunMode = RunMode.Async), Summary("Gets the first search on a google search"), Alias("s")]
         public async Task GetSearch(string platform, [Remainder]string query)
         {
             platform = platform.ToLowerInvariant();
@@ -330,9 +378,7 @@ namespace Skuld.Commands
                 StatsdClient.DogStatsd.Increment("commands.errors.generic");
             }
         }
-
-        static string urbanphrase;
-
+		
         [Command("urban", RunMode = RunMode.Async), Summary("Gets a thing from urban dictionary")]
         public async Task Urban([Remainder]string phrase) =>
             await Geturban(new Uri($"http://api.urbandictionary.com/v0/define?term={phrase}")).ConfigureAwait(false);
