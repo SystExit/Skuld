@@ -14,12 +14,12 @@ namespace Skuld.APIS
         {
             try
             {
-                Bot.Logger.AddToLogs(new Models.LogMessage("RedditGet", $"Attempting to access {subRedditName} for {amountOfPosts} posts", Discord.LogSeverity.Info));
+                await Bot.Logger.AddToLogs(new Models.LogMessage("RedditGet", $"Attempting to access {subRedditName} for {amountOfPosts} posts", Discord.LogSeverity.Info));
                 var uri = new Uri("https://www.reddit.com/" + subRedditName + "/.json?limit=" + amountOfPosts);
                 var response = await APIWebReq.ReturnString(uri);
                 if (!string.IsNullOrEmpty(response) || !string.IsNullOrWhiteSpace(response))
                 {
-                    Bot.Logger.AddToLogs(new Models.LogMessage("RedditGet", "I got a response from " + subRedditName, Discord.LogSeverity.Verbose));
+                    await Bot.Logger.AddToLogs(new Models.LogMessage("RedditGet", "I got a response from " + subRedditName, Discord.LogSeverity.Verbose));
                     return JsonConvert.DeserializeObject<SubReddit>(response);
                 }
                 else
@@ -29,7 +29,7 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                Bot.Logger.AddToLogs(new Models.LogMessage("RedditGet", ex.Message, Discord.LogSeverity.Error, ex));
+                await Bot.Logger.AddToLogs(new Models.LogMessage("RedditGet", ex.Message, Discord.LogSeverity.Error, ex));
                 return null;
             }
         }

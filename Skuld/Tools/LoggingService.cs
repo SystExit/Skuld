@@ -21,8 +21,10 @@ namespace Skuld.Tools
             Logs = new List<LogMessage>();
             Console = false;
             File = false;
-            sw = new StreamWriter(logfile, true, Encoding.Unicode);
-			sw.AutoFlush = true;
+			sw = new StreamWriter(logfile, true, Encoding.Unicode)
+			{
+				AutoFlush = true
+			};
 		}
 
         public LoggingService(bool OutputToConsole, bool OutputToFile, string logfile)
@@ -30,8 +32,10 @@ namespace Skuld.Tools
             Logs = new List<LogMessage>();
             Console = OutputToConsole;
             File = OutputToFile;
-            sw = new StreamWriter(logfile, true, Encoding.Unicode);
-			sw.AutoFlush = true;
+			sw = new StreamWriter(logfile, true, Encoding.Unicode)
+			{
+				AutoFlush = true
+			};
 		}
 
         public async Task AddToLogs(LogMessage message)

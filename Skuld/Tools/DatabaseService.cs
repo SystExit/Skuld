@@ -6,6 +6,7 @@ using System.Data.Common;
 using Skuld.Models;
 using Discord.WebSocket;
 using System.Collections.Generic;
+using Discord.Commands;
 
 namespace Skuld.Tools
 {
@@ -40,7 +41,7 @@ namespace Skuld.Tools
                     }
                     catch (Exception ex)
                     {
-                        Bot.Logger.AddToLogs(new LogMessage("SQL-Ins", "Error with SQL Command", Discord.LogSeverity.Error, ex));
+                        await Bot.Logger.AddToLogs(new LogMessage("SQL-Ins", "Error with SQL Command", Discord.LogSeverity.Error, ex));
                         return false;
                     }
                 }
@@ -69,7 +70,7 @@ namespace Skuld.Tools
                     }
                     catch (Exception ex)
                     {
-                        Bot.Logger.AddToLogs(new LogMessage("SQL-Get", "Error with SQL Command", Discord.LogSeverity.Error, ex));
+                        await Bot.Logger.AddToLogs(new LogMessage("SQL-Get", "Error with SQL Command", Discord.LogSeverity.Error, ex));
                     }
                 }
                 return null;
@@ -355,7 +356,7 @@ namespace Skuld.Tools
                     {
                         while (await reader.ReadAsync())
                         {
-                            pasta.PastaName = reader["pastaname"].ToString();
+                            pasta.Name = reader["pastaname"].ToString();
                             pasta.Content = reader["content"].ToString();
                             pasta.OwnerID = Convert.ToUInt64(reader["ownerid"].ToString());
                             pasta.Created = reader["created"].ToString();
@@ -370,8 +371,56 @@ namespace Skuld.Tools
 
             return pasta;
         }
+		public async Task<CustomCommand> GetCustomCommandAsync(ulong GuildID, string Command)
+		{
+			var cmd = new CustomCommand();
+			var command = new MySqlCommand("SELECT * FROM `customcommand` WHERE GuildID = @guildID AND CommandName = @command");
 
-        public async Task<SqlError> InsertAdvancedSettingsAsync(bool feature, SocketGuild guild)
+			command.Parameters.AddWithValue("@guildID", GuildID);
+			command.Parameters.AddWithValue("@command", Command);
+
+
+			using (var conn = new MySqlConnection(cs))
+			{
+				await conn.OpenAsync();
+				if (conn.State == ConnectionState.Open)
+				{
+					command.Connection = conn;
+
+					StatsdClient.DogStatsd.Increment("mysql.queries");
+
+					var reader = await command.ExecuteReaderAsync();
+
+					int rows = 0;
+
+					rows = reader.Depth + 1;
+
+					StatsdClient.DogStatsd.Set("mysql.rows-ret", rows);
+
+					if (reader.HasRows)
+					{
+						while (await reader.ReadAsync())
+						{
+							cmd.GuildID = Tools.ParseUInt64OrDefault(Convert.ToString(reader["GuildID"]));
+
+							cmd.Content = Convert.ToString(reader["Content"]);
+
+							cmd.CommandName = Convert.ToString(reader["CommandName"]);
+						}
+
+						await conn.CloseAsync();
+					}
+					else
+					{
+						return null;
+					}
+				}
+			}
+
+			return cmd;
+		}
+
+		public async Task<SqlError> InsertAdvancedSettingsAsync(bool feature, SocketGuild guild)
         {
             var command = new MySqlCommand("INSERT INTO ");
             if (feature)
@@ -500,7 +549,7 @@ namespace Skuld.Tools
                     await conn.CloseAsync();
                 }
             }
-        }
+        }		
 
 		public async Task<IReadOnlyList<Pasta>> GetAllPastasAsync()
 		{
@@ -533,7 +582,7 @@ namespace Skuld.Tools
 
 								OwnerID = Tools.ParseUInt64OrDefault(Convert.ToString(reader["OwnerID"])),
 
-								PastaName = Convert.ToString(reader["PastaName"]),
+								Name = Convert.ToString(reader["PastaName"]),
 
 								Created = Convert.ToString(reader["Created"]),
 

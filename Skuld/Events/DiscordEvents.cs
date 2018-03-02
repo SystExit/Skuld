@@ -62,7 +62,7 @@ namespace Skuld.Events
                                 if (!dldedmsg.IsPinned)
                                 {
                                     await dldedmsg.PinAsync();
-                                    Logger.AddToLogs(new Models.LogMessage("PinBrd", $"Reached or Over Threshold, pinned a message in: {dldedmsg.Channel.Name} from: {gld.Name}", LogSeverity.Info));
+                                    await Logger.AddToLogs(new Models.LogMessage("PinBrd", $"Reached or Over Threshold, pinned a message in: {dldedmsg.Channel.Name} from: {gld.Name}", LogSeverity.Info));
                                 }
                             }
                         }
@@ -86,7 +86,7 @@ namespace Skuld.Events
         static async Task Bot_UserJoined(SocketGuildUser arg)
         {
             DogStatsd.Increment("total.users");
-            Logger.AddToLogs(new Models.LogMessage("UsrJoin", $"User {arg.Username} joined {arg.Guild.Name}", LogSeverity.Info));
+            await Logger.AddToLogs(new Models.LogMessage("UsrJoin", $"User {arg.Username} joined {arg.Guild.Name}", LogSeverity.Info));
             if (!string.IsNullOrEmpty(Configuration.SqlDBHost))
             {
                 var command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `username`, `description`) VALUES (@userid , @username, \"I have no description\");");
@@ -101,7 +101,7 @@ namespace Skuld.Events
                     var joinroleid = Convert.ToUInt64(autorole);
                     var joinrole = arg.Guild.GetRole(joinroleid);
                     await arg.AddRoleAsync(joinrole);
-                    Logger.AddToLogs(new Models.LogMessage("UsrJoin", $"Gave user {arg.Username}, the automatic role as per request of {arg.Guild.Name}.", LogSeverity.Info));
+                    await Logger.AddToLogs(new Models.LogMessage("UsrJoin", $"Gave user {arg.Username}, the automatic role as per request of {arg.Guild.Name}.", LogSeverity.Info));
                 }
 
                 string welcomemessage = await Database.GetSingleAsync(new MySqlCommand("SELECT `joinmessage` FROM `guild` WHERE `id` = " + arg.Guild.Id));
@@ -119,7 +119,7 @@ namespace Skuld.Events
         static async Task Bot_UserLeft(SocketGuildUser arg)
         {
             DogStatsd.Decrement("total.users");
-            Logger.AddToLogs(new Models.LogMessage("UsrLeft", $"User {arg.Username} just left {arg.Guild.Name}", LogSeverity.Info));
+            await Logger.AddToLogs(new Models.LogMessage("UsrLeft", $"User {arg.Username} just left {arg.Guild.Name}", LogSeverity.Info));
             if (!string.IsNullOrEmpty(Configuration.SqlDBHost))
             {
                 var guild = await Database.GetGuildAsync(arg.Guild.Id);
@@ -156,7 +156,7 @@ namespace Skuld.Events
                 Thread.CurrentThread.IsBackground = true;
                 CheckGuildUsersAsync(arg).Wait();
             }).Start();
-            Logger.AddToLogs(new Models.LogMessage("LeftGld", $"Left a guild", LogSeverity.Info));
+            await Logger.AddToLogs(new Models.LogMessage("LeftGld", $"Left a guild", LogSeverity.Info));
         }
         static Task Bot_JoinedGuild(SocketGuild arg)
         {
@@ -192,7 +192,7 @@ namespace Skuld.Events
                 gcmd = new MySqlCommand($"INSERT IGNORE INTO `guildfeaturemodules` (`ID`,`Experience`,`UserJoinLeave`) VALUES ( {guild.Id} , 0, 0)");
                 await Database.NonQueryAsync(gcmd);
 
-                Logger.AddToLogs(new Models.LogMessage("IsrtGld", $"Inserted {guild.Name}!", LogSeverity.Info));
+                await Logger.AddToLogs(new Models.LogMessage("IsrtGld", $"Inserted {guild.Name}!", LogSeverity.Info));
 
                 await PopulateEntireGuildUsers(guild).ConfigureAwait(false);
             }

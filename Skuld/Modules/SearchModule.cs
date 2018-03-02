@@ -367,9 +367,13 @@ namespace Skuld.Commands
                 await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Title = "Error with the command", Description = ex.Message, Color = Tools.Tools.RandomColor() }.Build() );
                 StatsdClient.DogStatsd.Increment("commands.errors.exception");
             }
-        }
+		}
 
-        [Command("lmgtfy",RunMode = RunMode.Async), Summary("Creates a \"lmgtfy\"(Let me google that for you) link")]
+		[Command("lmgtfy", RunMode = RunMode.Async), Summary("Creates a \"lmgtfy\"(Let me google that for you) link")]
+		public async Task LMGTFY([Remainder]string query) =>
+			await MessageHandler.SendChannelAsync(Context.Channel, "https://lmgtfy.com/" + "?q=" + query.Replace(" ", "%20"));
+
+		[Command("lmgtfy",RunMode = RunMode.Async), Summary("Creates a \"lmgtfy\"(Let me google that for you) link")]
         public async Task LMGTFY(string engine, [Remainder]string query)
         {
             string url = "https://lmgtfy.com/";

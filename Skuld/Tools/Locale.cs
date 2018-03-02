@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Resources;
 using Skuld.Languages;
+using System.Threading.Tasks;
 
 namespace Skuld.Tools
 {
@@ -14,7 +15,7 @@ namespace Skuld.Tools
 
         public static string defaultLocale = "en-GB";
 
-		public static void InitialiseLocales()
+		public static async Task InitialiseLocales()
 		{
             locales.Add("en-GB", en_GB.ResourceManager);
             localehumannames.Add("English (Great Britain)", "en-GB");
@@ -28,7 +29,7 @@ namespace Skuld.Tools
             locales.Add("tr-TR", tr_TR.ResourceManager);
             localehumannames.Add("Turkish (Turkey)", "tr-TR");
 
-			Bot.Logger.AddToLogs(new Models.LogMessage("LocaleInit", "Initialized all the languages", Discord.LogSeverity.Info));
+			await Bot.Logger.AddToLogs(new Models.LogMessage("LocaleInit", "Initialized all the languages", Discord.LogSeverity.Info));
 		}
 
 		public static ResourceManager GetLocale(string id)

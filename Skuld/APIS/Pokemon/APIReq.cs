@@ -75,7 +75,7 @@ namespace Skuld.APIS
             }
             catch(Exception ex)
             {
-                Bot.Logger.AddToLogs(new Models.LogMessage("PokeAPI-G", "Error", Discord.LogSeverity.Error, ex));
+                await Bot.Logger.AddToLogs(new Models.LogMessage("PokeAPI-G", "Error", Discord.LogSeverity.Error, ex));
                 return null;
             }
         }

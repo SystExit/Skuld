@@ -6,7 +6,7 @@ using Discord.Commands;
 using System.Linq;
 using MySql.Data.MySqlClient;
 using StatsdClient;
-using System.Threading;
+using Skuld.Models;
 
 namespace Skuld.Tools
 {
@@ -38,7 +38,7 @@ namespace Skuld.Tools
                     if (message.Content.ToLower() == $"{bot.CurrentUser.Username.ToLower()}.resetprefix")
                     {
                         var guilduser = message.Author as SocketGuildUser;
-                        Logger.AddToLogs(new Models.LogMessage("HandCmd", $"Prefix reset on guild {context.Guild.Name}", LogSeverity.Info));
+                        await Logger.AddToLogs(new Models.LogMessage("HandCmd", $"Prefix reset on guild {context.Guild.Name}", LogSeverity.Info));
                         if (guilduser.GuildPermissions.ManageGuild)
                         {
                             command = new MySqlCommand("UPDATE guild SET prefix = @prefix WHERE ID = @guildid");
@@ -82,17 +82,17 @@ namespace Skuld.Tools
                     var res = await Database.InsertUserAsync(usr);
                     if (res.Successful)
                     {
-                        Logger.AddToLogs(new Models.LogMessage("ChkUsr", $"Added {usr.Username} to database", LogSeverity.Info));
+                        await Logger.AddToLogs(new Models.LogMessage("ChkUsr", $"Added {usr.Username} to database", LogSeverity.Info));
                     }
                     else
                     {
-                        Logger.AddToLogs(new Models.LogMessage("ChkUsr", $"Couldn't fix user from being missing; {res.Error}", LogSeverity.Error));
+                        await Logger.AddToLogs(new Models.LogMessage("ChkUsr", $"Couldn't fix user from being missing; {res.Error}", LogSeverity.Error));
                     }
                 }
             }
             catch(Exception ex)
             {
-                Logger.AddToLogs(new Models.LogMessage("Cmd-Mgr","Couldn't fix user from being missing", LogSeverity.Error, ex));
+                await Logger.AddToLogs(new Models.LogMessage("Cmd-Mgr","Couldn't fix user from being missing", LogSeverity.Error, ex));
             }
         }
         private static async Task CheckGuild(SocketGuild gld)
@@ -104,7 +104,7 @@ namespace Skuld.Tools
             }
             catch (Exception ex)
             {
-                Logger.AddToLogs(new Models.LogMessage("Cmd-Mgr", "Couldn't fix guild not existing.", LogSeverity.Error, ex));
+                await Logger.AddToLogs(new Models.LogMessage("Cmd-Mgr", "Couldn't fix guild not existing.", LogSeverity.Error, ex));
             }
         }
 
@@ -121,26 +121,39 @@ namespace Skuld.Tools
                         var guild = await Database.GetGuildAsync(context.Guild.Id);
                         if(guild!=null)
                         {
-                            var command = commands.Search(context, arg.Content.Split(' ')[0].Replace(defaultPrefix, "").Replace(customPrefix, "")).Commands;
-                            if (command == null)
-                            {
-                                return;
-                            }
-                            else
-                            {
-                                var res = command.FirstOrDefault();
-                                var module = CheckModule(guild, res.Command.Module);
-                                if (module)
-                                {
-                                    result = await commands.ExecuteAsync(context, argPos, services);
-                                    cmd = command.FirstOrDefault().Command;
-                                    await InsertCommand(cmd, message);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            await MessageHandler.SendChannelAsync(context.Channel, "Something happened... (skuldguild is null)");
+							string cmdname = context.Message.Content;
+							if (cmdname.StartsWith(customPrefix))
+								cmdname = cmdname.Remove(0,customPrefix.Length);
+							if (cmdname.StartsWith(defaultPrefix))
+								cmdname = cmdname.Remove(0,defaultPrefix.Length);
+							var content = cmdname.Split(' ');
+
+							var custcmd = await Database.GetCustomCommandAsync(context.Guild.Id, content[0]);
+
+							if (custcmd != null)
+							{
+								await MessageHandler.SendChannelAsync(context.Channel, custcmd.Content);
+								await InsertCommand(custcmd, message);
+							}
+							else
+							{
+								var command = commands.Search(context, arg.Content.Split(' ')[0].Replace(defaultPrefix, "").Replace(customPrefix, "")).Commands;
+								if (command == null)
+								{
+									return;
+								}
+								else
+								{
+									var res = command.FirstOrDefault();
+									var module = CheckModule(guild, res.Command.Module);
+									if (module)
+									{
+										result = await commands.ExecuteAsync(context, argPos, services);
+										cmd = command.FirstOrDefault().Command;
+										await InsertCommand(cmd, message);
+									}
+								}
+							}
                         }
                     }
                     else
@@ -153,7 +166,7 @@ namespace Skuld.Tools
                         {
                             if (result.Error != CommandError.UnknownCommand)
                             {
-                                Logger.AddToLogs(new Models.LogMessage("CmdHand", "Error with command, Error is: " + result, LogSeverity.Error));
+                                await Logger.AddToLogs(new Models.LogMessage("CmdHand", "Error with command, Error is: " + result, LogSeverity.Error));
                                 await MessageHandler.SendChannelAsync(context.Channel, "", new EmbedBuilder { Author = new EmbedAuthorBuilder { Name = "Error with the command" }, Description = Convert.ToString(result.ErrorReason), Color = new Color(255, 0, 0) }.Build());
                             }
                             DogStatsd.Increment("commands.errors");
@@ -183,7 +196,7 @@ namespace Skuld.Tools
             }
             catch(Exception ex)
             {
-                Logger.AddToLogs(new Models.LogMessage("CmdHand", "Error with command dispatching", LogSeverity.Error, ex));
+                await Logger.AddToLogs(new Models.LogMessage("CmdHand", "Error with command dispatching", LogSeverity.Error, ex));
             }
         }
 
@@ -212,9 +225,35 @@ namespace Skuld.Tools
                 cmd.Parameters.AddWithValue("@command", command.Name ?? command.Module.Name);
                 await Database.NonQueryAsync(cmd);
             }
-        }
+		}
+		private static async Task InsertCommand(CustomCommand command, SocketMessage arg)
+		{
+			var user = arg.Author;
+			var cmd = new MySqlCommand("SELECT UserUsage FROM commandusage WHERE UserID = @userid AND Command = @command");
+			cmd.Parameters.AddWithValue("@userid", user.Id);
+			cmd.Parameters.AddWithValue("@command", command.CommandName);
+			var resp = await Database.GetSingleAsync(cmd);
+			if (!String.IsNullOrEmpty(resp))
+			{
+				var cmdusg = Convert.ToInt32(resp);
+				cmdusg = cmdusg + 1;
+				cmd = new MySqlCommand("UPDATE commandusage SET UserUsage = @userusg WHERE UserID = @userid AND Command = @command");
+				cmd.Parameters.AddWithValue("@userusg", cmdusg);
+				cmd.Parameters.AddWithValue("@userid", user.Id);
+				cmd.Parameters.AddWithValue("@command", command.CommandName);
+				await Database.NonQueryAsync(cmd);
+			}
+			else
+			{
+				cmd = new MySqlCommand("INSERT INTO commandusage (`UserID`, `UserUsage`, `Command`) VALUES (@userid , @userusg , @command)");
+				cmd.Parameters.AddWithValue("@userusg", 1);
+				cmd.Parameters.AddWithValue("@userid", user.Id);
+				cmd.Parameters.AddWithValue("@command", command.CommandName);
+				await Database.NonQueryAsync(cmd);
+			}
+		}
 
-        private static bool CheckModule (Models.SkuldGuild guild, ModuleInfo module)
+		private static bool CheckModule(SkuldGuild guild, ModuleInfo module)
         {
             switch (module.Name)
             {

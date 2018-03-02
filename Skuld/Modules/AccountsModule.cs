@@ -217,37 +217,56 @@ namespace Skuld.Commands
         }
         [Command("daily", RunMode = RunMode.Async), Summary("Daily Money")]
         public async Task GiveDaily([Remainder]IGuildUser user)
-        {
-            if (user.IsBot)
-            {
-                await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder {
-                    Author = new EmbedAuthorBuilder() {
-                        Name = "Error with the command" },
-                    Description = "Bot Accounts cannot be given any money", Color = new Color(255,0,0)
-                }.Build());
-                StatsdClient.DogStatsd.Increment("commands.errors.generic");
-            }
-            else
-            {
-				if(user!=Context.User)
+		{
+			var csuser = await Bot.Database.GetUserAsync(Context.User.Id);
+			if (!String.IsNullOrEmpty(csuser.Daily))
+			{
+				var olddate = Convert.ToDateTime(csuser.Daily);
+				var newdate = olddate.AddHours(23).AddMinutes(59).AddSeconds(59);
+				if (DateTime.Compare(newdate, DateTime.UtcNow) == 1)
 				{
-					var suser = await Bot.Database.GetUserAsync(user.Id);
-					if (suser != null && !user.IsBot)
-					{
-						await Bot.Database.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "money", Convert.ToString(suser.Money + Bot.Configuration.DailyAmount));
-						await Bot.Database.ModifyUserAsync((Context.User as Discord.WebSocket.SocketUser), "daily", Convert.ToString(DateTime.UtcNow));
-						await MessageHandler.SendChannelAsync(Context.Channel, $"Yo, you just gave {user.Nickname ?? user.Username} {Bot.Configuration.MoneySymbol}{Bot.Configuration.DailyAmount}! They now have {Bot.Configuration.MoneySymbol}{suser.Money + Bot.Configuration.DailyAmount}");
-					}
-					else
-					{
-						await InsertUser(user).ConfigureAwait(false);
-					}
+					var remain = olddate.AddDays(1).Subtract(DateTime.UtcNow);
+					string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
+					await MessageHandler.SendChannelAsync(Context.Channel, $"You must wait `{remaining}`");
 				}
 				else
 				{
-					await Daily();
+					if (user.IsBot)
+					{
+						await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder
+						{
+							Author = new EmbedAuthorBuilder()
+							{
+								Name = "Error with the command"
+							},
+							Description = "Bot Accounts cannot be given any money",
+							Color = new Color(255, 0, 0)
+						}.Build());
+						StatsdClient.DogStatsd.Increment("commands.errors.generic");
+					}
+					else
+					{
+						if (user != Context.User)
+						{
+							var suser = await Bot.Database.GetUserAsync(user.Id);
+							if (suser != null && !user.IsBot)
+							{
+								await Bot.Database.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "money", Convert.ToString(suser.Money + Bot.Configuration.DailyAmount));
+								await Bot.Database.ModifyUserAsync((Context.User as Discord.WebSocket.SocketUser), "daily", Convert.ToString(DateTime.UtcNow));
+								await MessageHandler.SendChannelAsync(Context.Channel, $"Yo, you just gave {user.Nickname ?? user.Username} {Bot.Configuration.MoneySymbol}{Bot.Configuration.DailyAmount}! They now have {Bot.Configuration.MoneySymbol}{suser.Money + Bot.Configuration.DailyAmount}");
+							}
+							else
+							{
+								await InsertUser(user).ConfigureAwait(false);
+							}
+						}
+						else
+						{
+							await Daily();
+						}
+					}
 				}
-            }
+			}
         }
 
         [Command("give", RunMode = RunMode.Async), Summary("Give away ur money")]

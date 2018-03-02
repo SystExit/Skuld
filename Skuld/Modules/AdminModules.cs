@@ -496,7 +496,75 @@ namespace Skuld.Commands
             });
         }
 
-        [RequireUserPermission(GuildPermission.Administrator), RequireUserPermission(GuildPermission.ManageGuild)]
+		[RequireUserPermission(GuildPermission.Administrator), RequireUserPermission(GuildPermission.ManageGuild)]
+		[Command("addcommand", RunMode = RunMode.Async), Summary("Adds a custom command")]
+		public async Task AddCustomCommand(string name, [Remainder]string content)
+		{
+			if(name.Split(' ').Length>1)
+			{
+				await MessageHandler.SendChannelAsync(Context.Channel, "Commands can't contain a space");
+				return;
+			}
+			else
+			{
+				var cmdsearch = Bot.commands.Search(Context, name);
+				if (cmdsearch.Commands!=null)
+				{
+					await MessageHandler.SendChannelAsync(Context.Channel, "The bot already has this command");
+				}
+				else
+				{
+					var custcmd = await Bot.Database.GetCustomCommandAsync(Context.Guild.Id, name);
+					if (custcmd != null)
+					{
+						await MessageHandler.SendChannelAsync(Context.Channel, $"Custom command named `{custcmd.CommandName}` already exists, overwrite with new content? Y/N");
+						var msg = await NextMessageAsync(true, true, TimeSpan.FromSeconds(5));
+						if (msg.Content.ToLower() == "y")
+						{
+							var cmd = new MySqlCommand("UPDATE `CustomCommand` SET `Content` = @newcontent WHERE `GuildID` = @guildID AND `CommandName` = @commandName ;");
+							cmd.Parameters.AddWithValue("@newcontent", content);
+							cmd.Parameters.AddWithValue("@guildID", Context.Guild.Id);
+							cmd.Parameters.AddWithValue("@commandName", name);
+							await Bot.Database.NonQueryAsync(cmd);
+							await MessageHandler.SendChannelAsync(Context.Channel, $"Updated the command.");
+						}
+						if (msg == null)
+							await MessageHandler.SendChannelAsync(Context.Channel, "Reply timed out, not updating.", 5);
+						return;
+					}
+					else
+					{
+						var cmd = new MySqlCommand("INSERT INTO `CustomCommand` ( `Content`, `GuildID`, `CommandName` ) VALUES ( @newcontent , @guildID , @commandName ) ;");
+						cmd.Parameters.AddWithValue("@newcontent", content);
+						cmd.Parameters.AddWithValue("@guildID", Context.Guild.Id);
+						cmd.Parameters.AddWithValue("@commandName", name);
+						await Bot.Database.NonQueryAsync(cmd);
+						await MessageHandler.SendChannelAsync(Context.Channel, $"Added the command.");
+					}
+				}				
+			}
+		}
+
+		[RequireUserPermission(GuildPermission.Administrator), RequireUserPermission(GuildPermission.ManageGuild)]
+		[Command("deletecommand", RunMode = RunMode.Async), Summary("Deletes a custom command")]
+		public async Task DeleteCustomCommand(string name)
+		{
+			if (name.Split(' ').Length > 1)
+			{
+				await MessageHandler.SendChannelAsync(Context.Channel, "Commands can't contain a space");
+				return;
+			}
+			else
+			{				
+				var cmd = new MySqlCommand("DELETE FROM `CustomCommand` WHERE `GuildID` = @guildID AND `CommandName` = @commandName ;");
+				cmd.Parameters.AddWithValue("@guildID", Context.Guild.Id);
+				cmd.Parameters.AddWithValue("@commandName", name);
+				await Bot.Database.NonQueryAsync(cmd);
+				await MessageHandler.SendChannelAsync(Context.Channel, $"Deleted the command.");							
+			}
+		}
+
+		[RequireUserPermission(GuildPermission.Administrator), RequireUserPermission(GuildPermission.ManageGuild)]
         [Command("guildfeature", RunMode = RunMode.Async), Summary("Configures guild features")]
         public async Task ConfigureGuildFeatures(string module, int value)
         {
@@ -509,15 +577,8 @@ namespace Skuld.Commands
                 module = module.ToLowerInvariant();
                 var settings = new Dictionary<string, string>()
                 {
-                    {"starboard","starboard" },
                     {"pinning","pinning" },
-                    {"levels","experience" },
-                    {"userjoin", "userjoinleave" },
-                    {"userleave","userjoinleave" },
-                    {"usermod", "usermodification" },
-                    {"guildmod", "guildmodification" },
-                    {"chanmod", "guildchannelmodification" },
-                    {"rolemod", "guildrolemodification" }
+                    {"levels","experience" }
                 };
                 if (settings.ContainsKey(module) || settings.ContainsValue(module))
                 {
@@ -598,10 +659,8 @@ namespace Skuld.Commands
                 {"userjoin","userjoinchan" },
                 {"userjoined","userjoinchan" },
                 {"userleave","userleavechan" },
-                {"userleft","userleavechan" },
-                {"starboard","starboardchannel" },
-                {"starboardchan","starboardchannel" }
-            };
+                {"userleft","userleavechan" }
+			};
             if (modules.ContainsKey(module)||modules.ContainsValue(module))
             {
                 if (!String.IsNullOrEmpty(await Bot.Database.GetSingleAsync(new MySqlCommand("SELECT `ID` from `guildcommandmodules` WHERE `ID` = " + Context.Guild.Id))))

@@ -48,7 +48,7 @@ namespace Skuld
                 Configuration = Config.Load();
                 await InstallServices().ConfigureAwait(false);
                 ConfigureStatsCollector();
-                Locale.InitialiseLocales();
+                await Locale.InitialiseLocales();
 				await Logger.AddToLogs(new Models.LogMessage("FrameWk", $"Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
                 DogStatsd.Event("FrameWork", $"Configured and Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", "info", hostname: "Skuld");
                 await StartBot(Configuration.Token).ConfigureAwait(false);

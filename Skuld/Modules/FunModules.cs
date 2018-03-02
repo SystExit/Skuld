@@ -229,7 +229,6 @@ namespace Skuld.Commands
         public async Task Pasta(string cmd, string title)
         {
             var pastaLocal = await Bot.Database.GetPastaAsync(title);
-            pastaLocal.Username = Context.Client.GetUser(pastaLocal.OwnerID).Username??"Unknown";
             if (pastaLocal != null)
             {
                 if (cmd == "who" || cmd == "?")
@@ -237,9 +236,9 @@ namespace Skuld.Commands
                     var embed = new EmbedBuilder()
                     {
                         Color = Tools.Tools.RandomColor(),
-                        Title = pastaLocal.PastaName
+                        Title = pastaLocal.Name
                     };
-                    embed.AddField("Author", pastaLocal.Username, inline: true);
+                    embed.AddField("Author", Bot.bot.GetUser(pastaLocal.OwnerID).Username, inline: true);
                     embed.AddField("Created", pastaLocal.Created, inline: true);
                     embed.AddField("UpVotes", ":arrow_double_up: " + pastaLocal.Upvotes, inline: true);
                     embed.AddField("DownVotes", ":arrow_double_down: " + pastaLocal.Downvotes, inline: true);
@@ -325,7 +324,7 @@ namespace Skuld.Commands
                         content = content.Replace("\'", "\\\'");
                         content = content.Replace("\"", "\\\"");
 
-                        command = new MySqlCommand("INSERT INTO pasta (content,username,ownerid,created,pastaname) VALUES ( @content , @username , @ownerid , @created , @pastatitle )");
+                        command = new MySqlCommand("INSERT INTO pasta (content,ownerid,created,pastaname) VALUES ( @content , @ownerid , @created , @pastatitle )");
                         command.Parameters.AddWithValue("@content", content);
                         command.Parameters.AddWithValue("@ownerid", Context.User.Id);
                         command.Parameters.AddWithValue("@created", DateTime.UtcNow);
@@ -388,9 +387,9 @@ namespace Skuld.Commands
 				foreach(var pasta in pastas)
 				{
 					if (pasta == pastas.LastOrDefault())
-					{ pastanames += pasta.PastaName; }
+					{ pastanames += pasta.Name; }
 					else
-					{ pastanames += pasta.PastaName + ", "; }
+					{ pastanames += pasta.Name + ", "; }
 				}
 
 				pastanames += "\n```";
