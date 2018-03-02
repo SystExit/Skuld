@@ -180,8 +180,12 @@ namespace Skuld.Commands
         }
 
 		[Command("instagram", RunMode = RunMode.Async), Alias("insta"), Ratelimit(20, 1, Measure.Minutes)]
-		public async Task Test(string usr)
+		public async Task Instagram(string usr) => await Instagram(usr, "-recent");
+
+		[Command("instagram", RunMode = RunMode.Async), Alias("insta"), Ratelimit(20, 1, Measure.Minutes)]
+		public async Task Instagram(string usr, string oprtr)
 		{
+			string optxt="";
 			var data = await APIS.Social.Instagram.GetInstagramUserAsync(usr);
 			if (data != null)
 			{
@@ -189,7 +193,18 @@ namespace Skuld.Commands
 				{
 					if (data.Images.Images.Count() > 0)
 					{
-						var recentpost = data.Images.Images.FirstOrDefault();
+						oprtr = oprtr.ToLowerInvariant();
+						Models.API.Social.Instagram.Node post = null;
+						if(oprtr.StartsWith("-rand"))
+						{
+							optxt = "Random";
+							post = data.Images.Images.ElementAtOrDefault(Bot.random.Next(data.Images.Images.Count()));
+						}
+						if(oprtr.StartsWith("-rec"))
+						{
+							optxt = "Recent";
+							post = data.Images.Images.FirstOrDefault();
+						}
 						var embed = new EmbedBuilder
 						{
 							Author = new EmbedAuthorBuilder
@@ -198,12 +213,12 @@ namespace Skuld.Commands
 								IconUrl = data.ProfilePicture,
 								Url = "https://instagr.am/" + data.Username
 							},
-							ImageUrl = recentpost.DisplaySrc,
-							Description = recentpost.Caption,
+							ImageUrl = post.DisplaySrc,
+							Description = post.Caption,
 							Color = Tools.Tools.RandomColor(),
-							Title = "Newest Post",
-							Url = "https://www.instagr.am/p/" + recentpost.Code + "/",
-							Timestamp = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(recentpost.Date),
+							Title = optxt+" Post",
+							Url = "https://www.instagr.am/p/" + post.Code + "/",
+							Timestamp = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(post.Date),
 							Footer = new EmbedFooterBuilder
 							{
 								Text = "Uploaded"
