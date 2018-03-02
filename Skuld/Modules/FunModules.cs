@@ -8,11 +8,11 @@ using Skuld.Tools;
 using Discord;
 using System.Globalization;
 using System.Linq;
-using Newtonsoft.Json.Linq;
 using MySql.Data.MySqlClient;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Discord.Addons.Interactive;
+using Imgur.API.Endpoints.Impl;
 
 namespace Skuld.Commands
 {
@@ -57,6 +57,8 @@ namespace Skuld.Commands
             ".mpg",
             ".mpeg"
         };
+		static List<Models.API.Reddit.Post> KitsunePosts;
+		static int kitsucount = 0;
         
         [Command("neko", RunMode = RunMode.Async),Summary("neko grill"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Neko()
@@ -76,9 +78,72 @@ namespace Skuld.Commands
             {
                 await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = neko }.Build());
             }
-        }
+		}
+		[Command("kitsune", RunMode = RunMode.Async), Summary("Kitsunemimi Grill"), Ratelimit(20, 1, Measure.Minutes, false, true)]
+		public async Task Kitsune()
+		{
+			if (KitsunePosts == null || kitsucount >= KitsunePosts.Count)
+			{
+				var data = await APIReddit.GetSubRedditAsync("r/kitsunemimi", 200);
+				if (data != null)
+				{
+					KitsunePosts = data.Data.Posts.ToList();
+				}
+			}
+			var vettedposts = KitsunePosts
+						.Where(x => x.Data.Over18 == false && x.Data.Url != null && !x.Data.Stickied && x.Data.Domain != "reddit.com");
+			if (vettedposts != null)
+			{
+				var rnd = Bot.random.Next(vettedposts.Count());
+				var post = vettedposts.ElementAtOrDefault(rnd);
+				if (post != null)
+				{
+					string imgurl = post.Data.Url;
+					if (post.Data.Url.StartsWith("https://imgur.com"))
+					{
+						var albumep = new AlbumEndpoint(Bot.imgurClient);
+						var album = await albumep.GetAlbumImagesAsync(post.Data.Url.Remove(0, "https://imgur.com/a/".Count()));
+						imgurl = album.FirstOrDefault().Link;
+					}
+					await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = imgurl }.Build());
+					kitsucount++;
+				}
+			}
+		}
+		[RequireNsfw]
+		[Command("lewdkitsune", RunMode = RunMode.Async), Summary("Lewd Kitsunemimi Grill"), Ratelimit(20, 1, Measure.Minutes, false, true)]
+		public async Task LewdKitsune()
+		{
+			if (KitsunePosts == null || kitsucount >= KitsunePosts.Count)
+			{
+				var data = await APIReddit.GetSubRedditAsync("r/kitsunemimi", 200);
+				if (data != null)
+				{
+					KitsunePosts = data.Data.Posts.ToList();
+				}
+			}
+			var vettedposts = KitsunePosts
+						.Where(x => x.Data.Over18 == true && x.Data.Url != null && !x.Data.Stickied && x.Data.Domain != "reddit.com");
+			if (vettedposts != null)
+			{
+				var rnd = Bot.random.Next(vettedposts.Count());
+				var post = vettedposts.ElementAtOrDefault(rnd);
+				if (post != null)
+				{
+					string imgurl = post.Data.Url;
+					if (post.Data.Url.StartsWith("https://imgur.com"))
+					{
+						var albumep = new AlbumEndpoint(Bot.imgurClient);
+						var album = await albumep.GetAlbumImagesAsync(post.Data.Url.Remove(0, "https://imgur.com/a/".Count()));
+						imgurl = album.FirstOrDefault().Link;
+					}
+					await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = imgurl }.Build());
+					kitsucount++;
+				}
+			}
+		}
 
-        [Command("kitty", RunMode = RunMode.Async), Summary("kitty"), Ratelimit(20, 1, Measure.Minutes)]
+		[Command("kitty", RunMode = RunMode.Async), Summary("kitty"), Ratelimit(20, 1, Measure.Minutes)]
         [Alias("cat", "cats", "kittycat", "kitty cat", "meow", "kitties", "kittys")]
         public async Task Kitty()
         {
@@ -536,7 +601,7 @@ namespace Skuld.Commands
             }
             catch(Exception ex)
             {
-                Bot.Logger.AddToLogs(new Models.LogMessage("CAH-Cmd", "Error parsing website", LogSeverity.Error, ex));
+                await Bot.Logger.AddToLogs(new Models.LogMessage("CAH-Cmd", "Error parsing website", LogSeverity.Error, ex));
             }
         }
 

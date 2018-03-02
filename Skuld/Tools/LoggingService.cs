@@ -22,7 +22,8 @@ namespace Skuld.Tools
             Console = false;
             File = false;
             sw = new StreamWriter(logfile, true, Encoding.Unicode);
-        }
+			sw.AutoFlush = true;
+		}
 
         public LoggingService(bool OutputToConsole, bool OutputToFile, string logfile)
         {
@@ -30,9 +31,10 @@ namespace Skuld.Tools
             Console = OutputToConsole;
             File = OutputToFile;
             sw = new StreamWriter(logfile, true, Encoding.Unicode);
-        }
+			sw.AutoFlush = true;
+		}
 
-        public void AddToLogs(LogMessage message)
+        public async Task AddToLogs(LogMessage message)
         {
             Logs.Add(message);
             string source = String.Join("", message.Source.Take(1));
@@ -85,7 +87,7 @@ namespace Skuld.Tools
                     consolelines.Add(new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", message.TimeStamp), "[" + source + "]", "[" + message.Severity.ToString()[0] + "]", message.Message });
                 }
                 string toconsole = ConsoleUtils.PrettyLines(consolelines, 2);
-                System.Console.Out.WriteLineAsync(toconsole).Wait();
+                await System.Console.Out.WriteLineAsync(toconsole);
                 System.Console.ForegroundColor = ConsoleColor.White;
             }
             if(File)
@@ -99,8 +101,7 @@ namespace Skuld.Tools
                     tolog = ConsoleUtils.PrettyLines(new List<string[]> { new string[] { String.Format("{0:dd/MM/yyyy HH:mm:ss}", message.TimeStamp), "[" + message.Source + "]", "[" + message.Severity.ToString()[0] + "]", message.Message } }, 2);
                 }
 
-                sw.WriteLineAsync(tolog).Wait();
-                sw.FlushAsync().Wait();
+                sw.WriteLine(tolog);
             }
         }
     }

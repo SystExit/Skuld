@@ -265,7 +265,7 @@ namespace Skuld.Commands
                     Color = new Color(255, 0, 0),
                     Description = $"{ex.Message}"
                 };
-                Bot.Logger.AddToLogs(new Models.LogMessage("EvalCMD", "Error with eval command " + ex.Message, LogSeverity.Error, ex));
+                await Bot.Logger.AddToLogs(new Models.LogMessage("EvalCMD", "Error with eval command " + ex.Message, LogSeverity.Error, ex));
                 await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
             }
         }
@@ -304,7 +304,7 @@ namespace Skuld.Commands
                     $"VALUES ( {guild.Id} , 0, 0, 0, 0, 0, 0, 0, 0, 0 )");
                 await Bot.Database.NonQueryAsync(gcmd);
 
-                Bot.Logger.AddToLogs(new Models.LogMessage("IsrtGld", $"Inserted {guild.Name}!", LogSeverity.Info));
+                await Bot.Logger.AddToLogs(new Models.LogMessage("IsrtGld", $"Inserted {guild.Name}!", LogSeverity.Info));
                 await Events.DiscordEvents.PopulateEntireGuildUsers(guild);
             }
         }        

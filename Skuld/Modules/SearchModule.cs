@@ -302,7 +302,7 @@ namespace Skuld.Commands
             }
             catch (Exception ex)
             {
-                Bot.Logger.AddToLogs(new Models.LogMessage("GogSrch", "Error with google search", LogSeverity.Error, ex));
+                await Bot.Logger.AddToLogs(new Models.LogMessage("GogSrch", "Error with google search", LogSeverity.Error, ex));
                 await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Title = "Error with the command", Color = Tools.Tools.RandomColor() }.Build());
                 StatsdClient.DogStatsd.Increment("commands.errors.exception");
             }
@@ -324,7 +324,7 @@ namespace Skuld.Commands
             }
             catch (Exception ex)
             {
-                Bot.Logger.AddToLogs(new Models.LogMessage("YTBSrch", "Error with Youtube Search", LogSeverity.Error, ex));
+                await Bot.Logger.AddToLogs(new Models.LogMessage("YTBSrch", "Error with Youtube Search", LogSeverity.Error, ex));
                 await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Title = "Error with the command", Description = ex.Message, Color = Tools.Tools.RandomColor() }.Build());
                 StatsdClient.DogStatsd.Increment("commands.errors.exception");
             }
@@ -348,7 +348,7 @@ namespace Skuld.Commands
             }
             catch (Exception ex)
             {
-                Bot.Logger.AddToLogs(new Models.LogMessage("ImgrSch", "Error with Imgur search", LogSeverity.Error, ex));
+                await Bot.Logger.AddToLogs(new Models.LogMessage("ImgrSch", "Error with Imgur search", LogSeverity.Error, ex));
                 await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Title = "Error with the command", Description = ex.Message, Color = Tools.Tools.RandomColor() }.Build() );
                 StatsdClient.DogStatsd.Increment("commands.errors.exception");
             }

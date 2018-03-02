@@ -15,6 +15,7 @@ using Discord.Addons.Interactive;
 using System.Linq;
 using YoutubeExplode;
 using StatsdClient;
+using Imgur.API.Authentication.Impl;
 
 namespace Skuld
 {
@@ -28,6 +29,7 @@ namespace Skuld
         public static LoggingService Logger;
         public static YoutubeClient YouTubeClient;
         public static IServiceProvider services;
+		public static ImgurClient imgurClient;
         public static string logfile;
         public static Random random = new Random();
         public static string Prefix;
@@ -47,7 +49,7 @@ namespace Skuld
                 await InstallServices().ConfigureAwait(false);
                 ConfigureStatsCollector();
                 Locale.InitialiseLocales();
-				Logger.AddToLogs(new Models.LogMessage("FrameWk", $"Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
+				await Logger.AddToLogs(new Models.LogMessage("FrameWk", $"Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
                 DogStatsd.Event("FrameWork", $"Configured and Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", "info", hostname: "Skuld");
                 await StartBot(Configuration.Token).ConfigureAwait(false);
                 await Task.Delay(-1);
@@ -77,7 +79,7 @@ namespace Skuld
             }
             catch(Exception ex)
             {
-                Logger.AddToLogs(new Models.LogMessage("Strt-Bot", "ERROR WITH THE BOT", LogSeverity.Error, ex));
+                await Logger.AddToLogs(new Models.LogMessage("Strt-Bot", "ERROR WITH THE BOT", LogSeverity.Error, ex));
                 DogStatsd.Event("FrameWork", $"Bot Crashed on start: {ex}", alertType: "error", hostname: "Skuld");
                 await StopBot("Init-Bt").ConfigureAwait(false);
             }
@@ -87,7 +89,7 @@ namespace Skuld
         {
             Events.DiscordEvents.UnRegisterEvents();
             await bot.SetStatusAsync(UserStatus.Offline);
-            Logger.AddToLogs(new Models.LogMessage(source, "Skuld is shutting down", LogSeverity.Info));
+            await Logger.AddToLogs(new Models.LogMessage(source, "Skuld is shutting down", LogSeverity.Info));
             DogStatsd.Event("FrameWork", $"Bot Stopped", alertType: "info", hostname: "Skuld");
             await Logger.sw.WriteLineAsync("-------------------------------------------").ConfigureAwait(false);
             Logger.sw.Close();
@@ -120,16 +122,18 @@ namespace Skuld
                 InteractiveCommands = new InteractiveService(bot, TimeSpan.FromSeconds(60));
                 Database = new DatabaseService(bot);
                 YouTubeClient = new YoutubeClient();
-                services = new ServiceCollection()
-                    .AddSingleton(bot)
-                    .AddSingleton(commands)
-                    .AddSingleton(InteractiveCommands)
-                    .AddSingleton(Database)
-                    .AddSingleton(Logger)
-                    .AddSingleton(YouTubeClient)
+				imgurClient = new ImgurClient(Configuration.ImgurClientID, Configuration.ImgurClientSecret);
+				services = new ServiceCollection()
+					.AddSingleton(bot)
+					.AddSingleton(commands)
+					.AddSingleton(InteractiveCommands)
+					.AddSingleton(Database)
+					.AddSingleton(Logger)
+					.AddSingleton(YouTubeClient)
+					.AddSingleton(imgurClient)
                     .BuildServiceProvider();
                 await commands.AddModulesAsync(Assembly.GetEntryAssembly(), services);                
-                Logger.AddToLogs(new Models.LogMessage("CmdSrvc", $"Loaded {commands.Commands.Count()} Commands from {commands.Modules.Count()} Modules", LogSeverity.Info));
+                await Logger.AddToLogs(new Models.LogMessage("CmdSrvc", $"Loaded {commands.Commands.Count()} Commands from {commands.Modules.Count()} Modules", LogSeverity.Info));
             }
             catch(Exception ex)
             {

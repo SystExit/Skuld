@@ -134,7 +134,7 @@ namespace Skuld.Modules
             }
             catch (Exception ex)
             {
-                Bot.Logger.AddToLogs(new Models.LogMessage("Weeb-Mng", "Something happened", LogSeverity.Error, ex));
+                await Bot.Logger.AddToLogs(new Models.LogMessage("Weeb-Mng", "Something happened", LogSeverity.Error, ex));
             }
         }
 
@@ -242,7 +242,7 @@ namespace Skuld.Modules
             }
             catch (Exception ex)
             {
-                Bot.Logger.AddToLogs(new Models.LogMessage("Weeb-Anm", "Something happened", LogSeverity.Error, ex));
+                await Bot.Logger.AddToLogs(new Models.LogMessage("Weeb-Anm", "Something happened", LogSeverity.Error, ex));
             }
         }
         

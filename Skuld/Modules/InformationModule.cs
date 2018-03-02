@@ -325,7 +325,7 @@ namespace Skuld.Commands
             }
             catch (Exception ex)
             {
-                Bot.Logger.AddToLogs(new Models.LogMessage("Cmd", "Error Encountered Parsing Whois", LogSeverity.Error, ex));
+                await Bot.Logger.AddToLogs(new Models.LogMessage("Cmd", "Error Encountered Parsing Whois", LogSeverity.Error, ex));
             }
         }
         

@@ -64,7 +64,7 @@ namespace Skuld.Commands
                 }
                 else
                 {
-                    Bot.Logger.AddToLogs(new Models.LogMessage("CMD-Prof", "User doesn't exist", LogSeverity.Error));
+                    await Bot.Logger.AddToLogs(new Models.LogMessage("CMD-Prof", "User doesn't exist", LogSeverity.Error));
                     var msg = await MessageHandler.SendChannelAsync(Context.Channel, "Error!! Fixing...");
                     StatsdClient.DogStatsd.Increment("commands.errors.generic");
                     await InsertUser(user).ConfigureAwait(false);
@@ -73,7 +73,7 @@ namespace Skuld.Commands
             }
             catch (Exception ex)
             {
-                Bot.Logger.AddToLogs(new Models.LogMessage("CMD-Prof", "Error in Profile", LogSeverity.Error, ex));
+                await Bot.Logger.AddToLogs(new Models.LogMessage("CMD-Prof", "Error in Profile", LogSeverity.Error, ex));
                 var msg = await MessageHandler.SendChannelAsync(Context.Channel, "Error!! Fixing...");
                 StatsdClient.DogStatsd.Increment("commands.errors.generic");
                 await InsertUser(user).ConfigureAwait(false);
@@ -141,7 +141,7 @@ namespace Skuld.Commands
                 }
                 else
                 {
-                    Bot.Logger.AddToLogs(new Models.LogMessage("CMD-ProfExt", "User doesn't exist", LogSeverity.Error));
+                    await Bot.Logger.AddToLogs(new Models.LogMessage("CMD-ProfExt", "User doesn't exist", LogSeverity.Error));
                     var msg = await MessageHandler.SendChannelAsync(Context.Channel, "Error!! Fixing...");
                     StatsdClient.DogStatsd.Increment("commands.errors.generic");
                     await InsertUser(user).ConfigureAwait(false);
@@ -150,7 +150,7 @@ namespace Skuld.Commands
             }
             catch(Exception ex)
             {
-                Bot.Logger.AddToLogs(new Models.LogMessage("CMD-ProfExt", "Error in Profile-Ext", LogSeverity.Error, ex));
+                await Bot.Logger.AddToLogs(new Models.LogMessage("CMD-ProfExt", "Error in Profile-Ext", LogSeverity.Error, ex));
                 var msg = await MessageHandler.SendChannelAsync(Context.Channel, "Error!! Fixing...");
                 StatsdClient.DogStatsd.Increment("commands.errors.generic");
                 await InsertUser(user).ConfigureAwait(false);
@@ -276,7 +276,7 @@ namespace Skuld.Commands
                         else
                         {
                             string message = $"Res1 error: {res1.Error ?? "None"}\nRes2 error: {res2.Error ?? "None"}";
-                            Bot.Logger.AddToLogs(new Models.LogMessage("DailyGive", $"{res1.Error}\t{res2.Error}", LogSeverity.Error));
+                            await Bot.Logger.AddToLogs(new Models.LogMessage("DailyGive", $"{res1.Error}\t{res2.Error}", LogSeverity.Error));
                             await MessageHandler.SendChannelAsync(Context.Channel, $"Oops, something bad happened. :(\n```\n{message}```");
                             StatsdClient.DogStatsd.Increment("commands.errors.generic");
                         }
@@ -319,7 +319,7 @@ namespace Skuld.Commands
             var result = await Bot.Database.InsertUserAsync((user as Discord.WebSocket.SocketUser));
             if (!result.Successful)
             {
-                Bot.Logger.AddToLogs(new Models.LogMessage("AccountModule", result.Error, LogSeverity.Error));
+                await Bot.Logger.AddToLogs(new Models.LogMessage("AccountModule", result.Error, LogSeverity.Error));
                 await MessageHandler.SendChannelAsync(Context.Channel, $"I'm sorry there was an issue; `{result.Error}`");
                 StatsdClient.DogStatsd.Increment("commands.errors.generic");
             }
