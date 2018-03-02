@@ -20,7 +20,7 @@ namespace Skuld.Modules
         [Command("manga", RunMode = RunMode.Async), Summary("Gets a manga from MyAnimeList.Net")]
         public async Task MangaGet([Remainder]string mangatitle)
         {
-            var skuser = await SqlTools.GetUserAsync(Context.User.Id);
+            var skuser = await Bot.Database.GetUserAsync(Context.User.Id);
             var pages = new List<string>();
             MangaArray = await MALAPI.GetMangasAsync(mangatitle);
             int manganode = MangaArray.Entry.Count;
@@ -76,7 +76,7 @@ namespace Skuld.Modules
                 else
                 {
                     entrymessage += String.Join(Environment.NewLine, entries.ToArray());
-                    msg = await MessageHandler.SendChannel(Context.Channel, entrymessage);
+                    msg = await MessageHandler.SendChannelAsync(Context.Channel, entrymessage);
                 }
                 var response = await NextMessageAsync(fromSourceUser: true, inSourceChannel: true, timeout:TimeSpan.FromSeconds(timeout));
                 await GetMangaAtPosition(Convert.ToInt32(response.Content), response.Channel).ConfigureAwait(false);
@@ -104,14 +104,45 @@ namespace Skuld.Modules
             await SendManga(MangaArray.Entry.First());
         private async Task GetMangaAtPosition(int position, IMessageChannel channel) =>
             await SendManga(MangaArray.Entry.ElementAt(position - 1), channel);
-        public async Task SendManga(Manga mango, IMessageChannel channel = null) =>
-			await MessageHandler.SendChannel(channel ?? Context.Channel, "", BuildMALEmbed(mango, Locale.GetLocale((await SqlTools.GetUserAsync(Context.User.Id)).Language)));
+
+        public async Task SendManga(Manga mango, IMessageChannel channel = null)
+        {
+            try
+            {
+                var user = await Bot.Database.GetUserAsync(Context.User.Id);
+                var locale = Locale.GetLocale(user.Language ?? Locale.defaultLocale);
+                var embed = new EmbedBuilder
+                {
+                    Color = Tools.Tools.RandomColor(),
+                    Author = new EmbedAuthorBuilder
+                    {
+                        Url = $"https://myanimelist.net/manga/{mango.Id}/",
+                        Name = mango.Title
+                    },
+                    ThumbnailUrl = mango.Image
+                };
+                embed.AddField(locale.GetString("SKULD_SEARCH_WEEB_ENGTITLE"), Tools.Tools.CheckForEmptyWithLocale(mango.EnglishTitle, locale), true);
+                embed.AddField(locale.GetString("SKULD_SEARCH_WEEB_SYNON"), Tools.Tools.CheckForEmptyWithLocale(mango.Synonyms, locale), true);
+                embed.AddField(locale.GetString("SKULD_SEARCH_WEEB_CHPS"), Tools.Tools.CheckForEmptyWithLocale(mango.Chapters, locale), true);
+                embed.AddField(locale.GetString("SKULD_SEARCH_WEEB_VOLS"), Tools.Tools.CheckForEmptyWithLocale(mango.Volumes, locale), true);
+                embed.AddField(locale.GetString("SKULD_SEARCH_WEEB_SDATE"), Tools.Tools.CheckForEmptyWithLocale(mango.StartDate, locale), true);
+                embed.AddField(locale.GetString("SKULD_SEARCH_WEEB_EDATE"), Tools.Tools.CheckForEmptyWithLocale(mango.EndDate, locale), true);
+                embed.AddField(locale.GetString("SKULD_SEARCH_WEEB_SCORE"), Tools.Tools.CheckForEmptyWithLocale(mango.Score, locale), true);
+                embed.AddField(locale.GetString("SKULD_SEARCH_WEEB_SYNOP"), Tools.Tools.CheckForEmptyWithLocale(HttpUtility.HtmlDecode(mango.Synopsis.Split('<')[0]), locale), true);
+
+                await MessageHandler.SendChannelAsync(channel ?? Context.Channel, "", embed.Build());
+            }
+            catch (Exception ex)
+            {
+                Bot.Logger.AddToLogs(new Models.LogMessage("Weeb-Mng", "Something happened", LogSeverity.Error, ex));
+            }
+        }
 
         private AnimeArr AnimeArray;
         [Command("anime", RunMode = RunMode.Async), Summary("Gets an anime from MyAnimeList.Net")]
         public async Task Animuget([Remainder]string animetitle)
         {
-            var skuser = await SqlTools.GetUserAsync(Context.User.Id);
+            var skuser = await Bot.Database.GetUserAsync(Context.User.Id);
             var pages = new List<string>();
             AnimeArray = await MALAPI.GetAnimesAsync(animetitle);
             int animenodes = AnimeArray.Entry.Count;
@@ -157,7 +188,7 @@ namespace Skuld.Modules
                 else
                 {
                     entrymessage += String.Join(Environment.NewLine, entries.ToArray());
-                    msg = await MessageHandler.SendChannel(Context.Channel, entrymessage);
+                    msg = await MessageHandler.SendChannelAsync(Context.Channel, entrymessage);
                 }
                 var response = await NextMessageAsync(fromSourceUser: true, inSourceChannel: true, timeout: TimeSpan.FromSeconds(timeout));
                 await GetAnimeAtPosition(Convert.ToInt32(response.Content), response.Channel).ConfigureAwait(false);
@@ -175,62 +206,50 @@ namespace Skuld.Modules
                 await GetAnimeAtZeroNonSearch().ConfigureAwait(false);
             }
         }
+
         public async Task GetAnimeAtZeroNonSearch() =>
-            await SendAnime(AnimeArray.Entry.First()).ConfigureAwait(false);
+            await SendAnime(AnimeArray.Entry.FirstOrDefault()).ConfigureAwait(false);
         private async Task GetAnimeAtPosition(int position, IMessageChannel channel) =>
             await SendAnime(AnimeArray.Entry[position - 1], channel).ConfigureAwait(false);
-        private async Task SendAnime(Anime animu, IMessageChannel channel = null) =>
-            await MessageHandler.SendChannel(channel ?? Context.Channel, "", BuildMALEmbed(animu, Locale.GetLocale((await SqlTools.GetUserAsync(Context.User.Id)).Language)));
 
-        private static Embed BuildMALEmbed(Anime animu, System.Resources.ResourceManager userlocale)
+        private async Task SendAnime(Anime animu, IMessageChannel channel = null)
         {
-            var embed = new EmbedBuilder
+            try
             {
-                Color = Tools.Tools.RandomColor(),
-                Author = new EmbedAuthorBuilder
-                {
-                    Url = $"https://myanimelist.net/anime/{animu.Id}/",
-                    Name = animu.Title
-                },
-                ThumbnailUrl = animu.Image
-            };
-            embed.AddField(userlocale.GetString("SKULD_SEARCH_WEEB_ENGTITLE"), animu.EnglishTitle ?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
-            embed.AddField(userlocale.GetString("SKULD_SEARCH_WEEB_SYNON"), animu.Synonyms ?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
-            embed.AddField(userlocale.GetString("SKULD_SEARCH_WEEB_EPS"), animu.Episodes ?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
-            embed.AddField(userlocale.GetString("SKULD_SEARCH_WEEB_SDATE"), animu.StartDate ?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
-            embed.AddField(userlocale.GetString("SKULD_SEARCH_WEEB_EDATE"), animu.EndDate ?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
-            embed.AddField(userlocale.GetString("SKULD_SEARCH_WEEB_SCORE"), animu.Score ?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
-            embed.AddField(userlocale.GetString("SKULD_SEARCH_WEEB_SYNOP"), HttpUtility.HtmlDecode(animu.Synopsis.Split('<')[0]) ?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
-            return embed.Build();
-        }
+                var user = await Bot.Database.GetUserAsync(Context.User.Id);
+                var locale = Locale.GetLocale(user.Language ?? Locale.defaultLocale);
 
-        private static Embed BuildMALEmbed(Manga mango, System.Resources.ResourceManager userlocale)
-        {
-            var embed = new EmbedBuilder
+                var embed = new EmbedBuilder
+                {
+                    Color = Tools.Tools.RandomColor(),
+                    Author = new EmbedAuthorBuilder
+                    {
+                        Url = $"https://myanimelist.net/anime/{animu.Id}/",
+                        Name = animu.Title
+                    },
+                    ThumbnailUrl = animu.Image
+                };
+
+                embed.AddField(locale.GetString("SKULD_SEARCH_WEEB_ENGTITLE"), Tools.Tools.CheckForEmptyWithLocale(animu.EnglishTitle,locale), true);
+                embed.AddField(locale.GetString("SKULD_SEARCH_WEEB_SYNON"), Tools.Tools.CheckForEmptyWithLocale(animu.Synonyms, locale), true);
+                embed.AddField(locale.GetString("SKULD_SEARCH_WEEB_EPS"), Tools.Tools.CheckForEmptyWithLocale(animu.Episodes, locale), true);
+                embed.AddField(locale.GetString("SKULD_SEARCH_WEEB_SDATE"), Tools.Tools.CheckForEmptyWithLocale(animu.StartDate, locale), true);
+                embed.AddField(locale.GetString("SKULD_SEARCH_WEEB_EDATE"), Tools.Tools.CheckForEmptyWithLocale(animu.EndDate, locale), true);
+                embed.AddField(locale.GetString("SKULD_SEARCH_WEEB_SCORE"), Tools.Tools.CheckForEmptyWithLocale(animu.Score, locale), true);
+                embed.AddField(locale.GetString("SKULD_SEARCH_WEEB_SYNOP"), Tools.Tools.CheckForEmptyWithLocale(HttpUtility.HtmlDecode(animu.Synopsis.Split('<')[0]), locale), true);
+
+                await MessageHandler.SendChannelAsync(channel ?? Context.Channel, "", embed.Build());
+            }
+            catch (Exception ex)
             {
-                Color = Tools.Tools.RandomColor(),
-                Author = new EmbedAuthorBuilder
-                {
-                    Url = $"https://myanimelist.net/manga/{mango.Id}/",
-                    Name = mango.Title
-                },
-                ThumbnailUrl = mango.Image
-            };
-            embed.AddField(userlocale.GetString("SKULD_SEARCH_WEEB_ENGTITLE"), mango.EnglishTitle ?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
-            embed.AddField(userlocale.GetString("SKULD_SEARCH_WEEB_SYNON"), mango.Synonyms ?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
-            embed.AddField(userlocale.GetString("SKULD_SEARCH_WEEB_CHPS"), mango.Chapters ?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
-            embed.AddField(userlocale.GetString("SKULD_SEARCH_WEEB_VOLS"), mango.Volumes ?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
-            embed.AddField(userlocale.GetString("SKULD_SEARCH_WEEB_SDATE"), mango.StartDate ?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
-            embed.AddField(userlocale.GetString("SKULD_SEARCH_WEEB_EDATE"), mango.EndDate ?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
-            embed.AddField(userlocale.GetString("SKULD_SEARCH_WEEB_SCORE"), mango.Score ?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
-            embed.AddField(userlocale.GetString("SKULD_SEARCH_WEEB_SYNOP"), HttpUtility.HtmlDecode(mango.Synopsis.Split('<')[0]) ?? userlocale.GetString("SKULD_GENERIC_EMPTY"), inline: true);
-            return embed.Build();
+                Bot.Logger.AddToLogs(new Models.LogMessage("Weeb-Anm", "Something happened", LogSeverity.Error, ex));
+            }
         }
-
+        
         [Command("weebgif", RunMode = RunMode.Async), Summary("Gets a weeb gif")]
         public async Task WeebGif()
         {
-            await MessageHandler.SendChannel(Context.Channel, "", new EmbedBuilder
+            await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder
             {
                 ImageUrl = await APIWebReq.ReturnString(new Uri("http://gaia.systemexit.co.uk/gifs/reactions/")),
                 Color = Tools.Tools.RandomColor()

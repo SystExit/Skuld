@@ -20,7 +20,7 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                Bot.Logs.Add(new Models.LogMessage("StrwPoll", "Error: " + ex.Message, Discord.LogSeverity.Error, ex));
+                Bot.Logger.AddToLogs(new Models.LogMessage("StrwPoll", "Error: " + ex.Message, Discord.LogSeverity.Error, ex));
             }
             return null;
         }
@@ -33,7 +33,7 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                Bot.Logs.Add(new Models.LogMessage("StrwPoll", "Error: " + ex.Message, Discord.LogSeverity.Error, ex));
+                Bot.Logger.AddToLogs(new Models.LogMessage("StrwPoll", "Error: " + ex.Message, Discord.LogSeverity.Error, ex));
             }
             return null;
         }
@@ -59,7 +59,7 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                Bot.Logs.Add(new Models.LogMessage("StrwPoll", "Error: " + ex.Message, Discord.LogSeverity.Error, ex));
+                Bot.Logger.AddToLogs(new Models.LogMessage("StrwPoll", "Error: " + ex.Message, Discord.LogSeverity.Error, ex));
             }
             return null;
         }

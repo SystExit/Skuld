@@ -24,7 +24,7 @@ namespace Skuld.APIS
                     return 721;
                 }
             }
-            catch (Exception ex)
+            catch
             {
                 return 0;
             }
@@ -75,7 +75,7 @@ namespace Skuld.APIS
             }
             catch(Exception ex)
             {
-                Bot.Logs.Add(new Models.LogMessage("PokeAPI-G", "Error", Discord.LogSeverity.Error, ex));
+                Bot.Logger.AddToLogs(new Models.LogMessage("PokeAPI-G", "Error", Discord.LogSeverity.Error, ex));
                 return null;
             }
         }

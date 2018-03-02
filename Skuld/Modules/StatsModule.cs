@@ -7,22 +7,21 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 using Skuld.Tools;
 using System.Reflection;
-using System.Threading;
 
 namespace Skuld.Commands
 {
-    [Group("Stats"),Name("Stats")]
+    [Name("Stats")]
     public class Stats : ModuleBase
     {
         [Command("ping", RunMode = RunMode.Async), Summary("Print Ping")]
         public async Task Ping() =>
-            await MessageHandler.SendChannel(Context.Channel, "PONG: " + Bot.bot.GetShardFor(Context.Guild).Latency + "ms");
+            await MessageHandler.SendChannelAsync(Context.Channel, "PONG: " + Bot.bot.GetShardFor(Context.Guild).Latency + "ms");
 
         [Command("uptime", RunMode = RunMode.Async), Summary("Current Uptime")]
         public async Task Uptime()=>
-            await MessageHandler.SendChannel(Context.Channel, $"Uptime: {string.Format("{0:dd} Days {0:hh} Hours {0:mm} Minutes {0:ss} Seconds", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}");
+            await MessageHandler.SendChannelAsync(Context.Channel, $"Uptime: {string.Format("{0:dd} Days {0:hh} Hours {0:mm} Minutes {0:ss} Seconds", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}");
 
-        [Command("", RunMode = RunMode.Async), Summary("All stats")]
+        [Command("stats", RunMode = RunMode.Async), Summary("All stats")]
         public async Task StatsAll()
         {
             var currentuser = await Context.Guild.GetCurrentUserAsync();
@@ -53,15 +52,15 @@ namespace Skuld.Commands
             var currProcess = Process.GetCurrentProcess();
             embed.AddField("Commands", Bot.commands.Commands.Count().ToString(),inline:true);
             embed.AddField("Memory Used", (currProcess.WorkingSet64 / 1024) / 1024 + "MB",inline:true);
-            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+            await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
         }
 
         [Command("netfw", RunMode = RunMode.Async), Summary(".Net Info")]
         public async Task Netinfo() =>
-            await MessageHandler.SendChannel(Context.Channel, $"{RuntimeInformation.FrameworkDescription} {RuntimeInformation.OSArchitecture}");
+            await MessageHandler.SendChannelAsync(Context.Channel, $"{RuntimeInformation.FrameworkDescription} {RuntimeInformation.OSArchitecture}");
 
         [Command("discord", RunMode = RunMode.Async), Summary("Discord Info")]
         public async Task Discnet() => 
-            await MessageHandler.SendChannel(Context.Channel, $"Discord.Net Library Version: {DiscordConfig.Version}");
+            await MessageHandler.SendChannelAsync(Context.Channel, $"Discord.Net Library Version: {DiscordConfig.Version}");
     }
 }

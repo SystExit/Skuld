@@ -116,7 +116,7 @@ namespace Skuld.Modules
                 embed.Author = auth;
                 embed.ThumbnailUrl = sprite;
             }
-            await MessageHandler.SendChannel(Context.Channel, "", embed.Build());
+            await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
         }
     }
 }

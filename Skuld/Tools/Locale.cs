@@ -28,7 +28,7 @@ namespace Skuld.Tools
             locales.Add("tr-TR", tr_TR.ResourceManager);
             localehumannames.Add("Turkish (Turkey)", "tr-TR");
 
-			Bot.Logs.Add(new Models.LogMessage("LocaleInit", "Initialized all the languages", Discord.LogSeverity.Info));
+			Bot.Logger.AddToLogs(new Models.LogMessage("LocaleInit", "Initialized all the languages", Discord.LogSeverity.Info));
 		}
 
 		public static ResourceManager GetLocale(string id)
