@@ -20,9 +20,7 @@ namespace Skuld.Tools
         {
             SClient = client;
         }
-
-        //static MySqlConnection Connection = new MySqlConnection(cs);
-
+		
         public async Task<bool> NonQueryAsync(MySqlCommand command)
         {
             using (var conn = new MySqlConnection(cs))
@@ -458,7 +456,7 @@ namespace Skuld.Tools
 
         public async Task DropUserAsync(SocketUser user)
         {
-            await NonQueryAsync(new MySqlCommand($"DELETE FROM `accounts` WHERE ID = `{user.Id}`; DELETE FROM `commandusage` WHERE UserID = `{user.Id}`"));
+            await NonQueryAsync(new MySqlCommand($"DELETE FROM `accounts` WHERE `ID` = {user.Id}; DELETE FROM `commandusage` WHERE `UserID` = {user.Id}"));
         }
         public async Task UpdateUserAsync(SkuldUser user)
         {

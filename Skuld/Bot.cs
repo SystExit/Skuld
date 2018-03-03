@@ -69,12 +69,12 @@ namespace Skuld
                     await APIS.Twitch.TwitchClient.CreateTwitchClient(Configuration.TwitchToken, Configuration.TwitchClientID);
                 await bot.LoginAsync(TokenType.Bot, token);
                 await bot.StartAsync();
-                //Parallel.Invoke(() => SendDataToDataDog());
-                //foreach (var shard in bot.Shards)
-                //{
-                //    if (shard.ConnectionState == ConnectionState.Connected)
-                //    { await PublishStats(shard.ShardId).ConfigureAwait(false); }
-                //}
+                Parallel.Invoke(() => SendDataToDataDog());
+                foreach (var shard in bot.Shards)
+                {
+                    if (shard.ConnectionState == ConnectionState.Connected)
+                    { await PublishStats(shard.ShardId).ConfigureAwait(false); }
+                }
                 await Task.Delay(-1).ConfigureAwait(false);
             }
             catch(Exception ex)
@@ -197,7 +197,7 @@ namespace Skuld
             DogStatsd.Configure(dogstatsconfig);
         }
 
-        Task SendDataToDataDog()
+        static Task SendDataToDataDog()
         {
             while (true)
             {

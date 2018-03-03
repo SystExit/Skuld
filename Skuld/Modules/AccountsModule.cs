@@ -208,7 +208,7 @@ namespace Skuld.Commands
                 suser.Daily = Convert.ToString(DateTime.UtcNow);
                 suser.Money += Bot.Configuration.DailyAmount;
                 await Bot.Database.UpdateUserAsync(suser);
-                await MessageHandler.SendChannelAsync(Context.Channel, $"You got your daily of: `{Bot.Configuration.MoneySymbol+Bot.Configuration.DailyAmount}`, you now have: {Bot.Configuration.MoneySymbol}{(suser.Money + Bot.Configuration.DailyAmount)}");
+                await MessageHandler.SendChannelAsync(Context.Channel, $"You got your daily of: `{Bot.Configuration.MoneySymbol+Bot.Configuration.DailyAmount}`, you now have: {Bot.Configuration.MoneySymbol}{(suser.Money)}");
             }
             else
             {

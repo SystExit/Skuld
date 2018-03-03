@@ -521,7 +521,7 @@ namespace Skuld.Commands
 						var msg = await NextMessageAsync(true, true, TimeSpan.FromSeconds(5));
 						if (msg.Content.ToLower() == "y")
 						{
-							var cmd = new MySqlCommand("UPDATE `CustomCommand` SET `Content` = @newcontent WHERE `GuildID` = @guildID AND `CommandName` = @commandName ;");
+							var cmd = new MySqlCommand("UPDATE `customcommand` SET `Content` = @newcontent WHERE `GuildID` = @guildID AND `CommandName` = @commandName ;");
 							cmd.Parameters.AddWithValue("@newcontent", content);
 							cmd.Parameters.AddWithValue("@guildID", Context.Guild.Id);
 							cmd.Parameters.AddWithValue("@commandName", name);
@@ -534,7 +534,7 @@ namespace Skuld.Commands
 					}
 					else
 					{
-						var cmd = new MySqlCommand("INSERT INTO `CustomCommand` ( `Content`, `GuildID`, `CommandName` ) VALUES ( @newcontent , @guildID , @commandName ) ;");
+						var cmd = new MySqlCommand("INSERT INTO `customcommand` ( `Content`, `GuildID`, `CommandName` ) VALUES ( @newcontent , @guildID , @commandName ) ;");
 						cmd.Parameters.AddWithValue("@newcontent", content);
 						cmd.Parameters.AddWithValue("@guildID", Context.Guild.Id);
 						cmd.Parameters.AddWithValue("@commandName", name);
@@ -556,7 +556,7 @@ namespace Skuld.Commands
 			}
 			else
 			{				
-				var cmd = new MySqlCommand("DELETE FROM `CustomCommand` WHERE `GuildID` = @guildID AND `CommandName` = @commandName ;");
+				var cmd = new MySqlCommand("DELETE FROM `customcommand` WHERE `GuildID` = @guildID AND `CommandName` = @commandName ;");
 				cmd.Parameters.AddWithValue("@guildID", Context.Guild.Id);
 				cmd.Parameters.AddWithValue("@commandName", name);
 				await Bot.Database.NonQueryAsync(cmd);

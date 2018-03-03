@@ -5,7 +5,8 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <RootNamespace>Skuld</RootNamespace>
     <StartupObject>Skuld.Bot</StartupObject>
-    <Version>0.3.8.75</Version>
+    <Version>0.3.8.8</Version>
+    <NoWin32Manifest>true</NoWin32Manifest>
   </PropertyGroup>
 
   <ItemGroup>
