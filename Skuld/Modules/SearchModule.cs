@@ -453,7 +453,7 @@ namespace Skuld.Commands
             { Directory.CreateDirectory(folder); }
 
             var filepath = folder + User + ".png";
-            await WebHandler.DownloadFile(url, filepath);
+            await WebHandler.DownloadFileAsync(url, filepath);
 
             var file = File.OpenRead(filepath);
 

@@ -6,149 +6,61 @@ using System.IO;
 using System.Net;
 using HtmlAgilityPack;
 using System.Text;
+using System.Reflection;
 
 namespace Skuld.APIS
 {
-    public class WebHandler
-    {
-        public static async Task<string> ReturnStringAsync(Uri url)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                using (HttpResponseMessage resp = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
-                {
-                    if (resp.IsSuccessStatusCode)
-                    {
-                        var responce = await resp.Content.ReadAsStringAsync();
-                        resp.Dispose();
-                        client.Dispose();
-                        return responce;
-                    }
-                    else
-                    {
-                        resp.Dispose();
-                        client.Dispose();
-                        return null;
-                    }
-                }
-            }
-        }
-        public static async Task<Stream> ReturnStreamAsync(Uri url)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                using (HttpResponseMessage resp = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
-                {
-                    if (resp.IsSuccessStatusCode)
-                    {
-                        var responce = await resp.Content.ReadAsStreamAsync();
-                        resp.Dispose();
-                        client.Dispose();
-                        return responce;
-                    }
-                    else
-                    {
-                        resp.Dispose();
-                        client.Dispose();
-                        return null;
-                    }
-                }
-            }
-        }
-        public static async Task<byte[]> ReturnByteArrayAsync(Uri url)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                using (HttpResponseMessage resp = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
-                {
-                    if (resp.IsSuccessStatusCode)
-                    {
-                        var responce = await resp.Content.ReadAsByteArrayAsync();
-                        resp.Dispose();
-                        client.Dispose();
-                        return responce;
-                    }
-                    else
-                    {
-                        resp.Dispose();
-                        client.Dispose();
-                        return null;
-                    }
-                }
-            }
-        }
+	public class WebHandler
+	{
+		static HttpWebRequest client;
+		static string UAGENT = "Skuld/" + Assembly.GetEntryAssembly().GetName().Version + " (https://github.com/exsersewo/Skuld)";
+
+		public static async Task<string> ReturnStringAsync(Uri url)
+		{
+			client = (HttpWebRequest)WebRequest.Create(url);
+			client.UserAgent = UAGENT;
+
+			var resp = (HttpWebResponse)(await client.GetResponseAsync());
+			if (resp.StatusCode == HttpStatusCode.OK)
+			{
+				var reader = new StreamReader(resp.GetResponseStream());
+				var responce = await reader.ReadToEndAsync();
+				resp.Dispose();
+				client.Abort();
+				return responce;
+			}
+			else
+			{
+				resp.Dispose();
+				client.Abort();
+				return null;
+			}
+		}
         public static async Task<string> ReturnStringAsync(Uri url, byte[] headers)
         {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(headers));
-                using (HttpResponseMessage resp = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
-                {
-                    if (resp.IsSuccessStatusCode)
-                    {
-                        var responce = await resp.Content.ReadAsStringAsync();
-                        resp.Dispose();
-                        client.Dispose();
-                        return responce;
-                    }
-                    else
-                    {
-                        resp.Dispose();
-                        client.Dispose();
-                        return null;
-                    }
-                }
-            }
-        }
-        public static async Task<Stream> ReturnStreamAsync(Uri url, byte[] headers)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(headers));
-                using (HttpResponseMessage resp = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
-                {
-                    if (resp.IsSuccessStatusCode)
-                    {
-                        var responce = await resp.Content.ReadAsStreamAsync();
-                        resp.Dispose();
-                        client.Dispose();
-                        return responce;
-                    }
-                    else
-                    {
-                        resp.Dispose();
-                        client.Dispose();
-                        return null;
-                    }
-                }
-            }
-        }
-        public static async Task<byte[]> ReturnByteArrayAsync(Uri url, byte[] headers)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(headers));
-                using (HttpResponseMessage resp = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
-                {
-                    if (resp.IsSuccessStatusCode)
-                    {
-                        var responce = await resp.Content.ReadAsByteArrayAsync();
-                        resp.Dispose();
-                        client.Dispose();
-                        return responce;
-                    }
-                    else
-                    {
-                        resp.Dispose();
-                        client.Dispose();
-                        return null;
-                    }
-                }
-            }
+			client.Headers.Add("Basic", Convert.ToBase64String(headers));
+			client.UserAgent = UAGENT;
+
+			var resp = (HttpWebResponse)(await client.GetResponseAsync());
+			if (resp.StatusCode == HttpStatusCode.OK)
+			{
+				var reader = new StreamReader(resp.GetResponseStream());
+				var responce = await reader.ReadToEndAsync();
+				resp.Dispose();
+				client.Abort();
+				return responce;
+			}
+			else
+			{
+				resp.Dispose();
+				client.Abort();
+				return null;
+			}
 		}
 		public static async Task<HtmlDocument> ScrapeUrlAsync(Uri url)
 		{
 			var request = (HttpWebRequest)WebRequest.Create(url);
+			request.UserAgent = UAGENT;
 			request.AllowAutoRedirect = true;
 			var response = (HttpWebResponse)await request.GetResponseAsync();
 			var doc = new HtmlDocument();
@@ -162,20 +74,21 @@ namespace Skuld.APIS
 			else
 			{ return null; }
 		}
-
-		public static Task<string> DownloadFile(Uri url, string filepath)
+		public static async Task<string> DownloadFileAsync(Uri url, string filepath)
 		{
 			var client = new WebClient();
-			var thing = client.DownloadFileTaskAsync(url, filepath);
-			while (thing.Status != TaskStatus.RanToCompletion) { }
-			return Task.FromResult(filepath);
+			client.Headers.Add("User-Agent", UAGENT);
+			await client.DownloadFileTaskAsync(url, filepath);
+			client.Dispose();
+			return filepath;
 		}
 
 		public static async Task<string> PostStringAsync(Uri url, HttpContent content)
         {
             using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
+			{
+				client.DefaultRequestHeaders.Add("User-Agent", UAGENT);
+				client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
                 using (HttpResponseMessage resp = await client.PostAsync(url, content))
                 {
                     return await resp.Content.ReadAsStringAsync();
@@ -185,8 +98,9 @@ namespace Skuld.APIS
         public static async Task<Stream> PostStreamAsync(Uri url, HttpContent content)
         {
             using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
+			{
+				client.DefaultRequestHeaders.Add("User-Agent", UAGENT);
+				client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
                 using (HttpResponseMessage resp = await client.PostAsync(url, content))
                 {
                     if (resp.IsSuccessStatusCode)
@@ -204,6 +118,7 @@ namespace Skuld.APIS
         {
             using (HttpClient client = new HttpClient())
             {
+				client.DefaultRequestHeaders.Add("User-Agent", UAGENT);
                 client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
                 using (HttpResponseMessage resp = await client.PostAsync(url, content))
                 {
