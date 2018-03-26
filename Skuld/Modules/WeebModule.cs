@@ -251,7 +251,7 @@ namespace Skuld.Modules
         {
             await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder
             {
-                ImageUrl = await APIWebReq.ReturnString(new Uri("http://gaia.systemexit.co.uk/gifs/reactions/")),
+                ImageUrl = await WebHandler.ReturnStringAsync(new Uri("http://gaia.systemexit.co.uk/gifs/reactions/")),
                 Color = Tools.Tools.RandomColor()
             }.Build());
         }

@@ -7,6 +7,7 @@ using System.Linq;
 using MySql.Data.MySqlClient;
 using StatsdClient;
 using Skuld.Models;
+using Discord.Addons.Interactive;
 
 namespace Skuld.Tools
 {
@@ -16,62 +17,61 @@ namespace Skuld.Tools
         private static string customPrefix;
         public static async Task Bot_MessageReceived(SocketMessage arg)
         {
-            if (!arg.Author.IsBot)
+            DogStatsd.Increment("messages.recieved");
+
+            var message = arg as SocketUserMessage;
+
+			if (arg.Author.IsBot) return;
+            if (message == null) return;
+
+            int argPos = 0;
+            var chan = message.Channel as SocketGuildChannel;
+            var context = new ShardedCommandContext(bot, message);
+
+            if (!String.IsNullOrEmpty(Configuration.SqlDBHost))
             {
-                DogStatsd.Increment("messages.recieved");
-                var message = arg as SocketUserMessage;
+                await CheckUser(context.User);
 
-                if (message == null) return;
+                var command = new MySqlCommand("SELECT prefix FROM guild WHERE ID = @guildid");
+                command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
+                customPrefix = await Database.GetSingleAsync(command);
 
-                int argPos = 0;
-                var chan = message.Channel as SocketGuildChannel;
-                var context = new ShardedCommandContext(bot, message);
-
-                if (!String.IsNullOrEmpty(Configuration.SqlDBHost))
+                if (message.Content.ToLower() == $"{bot.CurrentUser.Username.ToLower()}.resetprefix")
                 {
-                    await CheckUser(context.User);
-
-                    var command = new MySqlCommand("SELECT prefix FROM guild WHERE ID = @guildid");
-                    command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
-                    customPrefix = await Database.GetSingleAsync(command);
-
-                    if (message.Content.ToLower() == $"{bot.CurrentUser.Username.ToLower()}.resetprefix")
+                    var guilduser = message.Author as SocketGuildUser;
+                    await Logger.AddToLogs(new Models.LogMessage("HandCmd", $"Prefix reset on guild {context.Guild.Name}", LogSeverity.Info));
+                    if (guilduser.GuildPermissions.ManageGuild)
                     {
-                        var guilduser = message.Author as SocketGuildUser;
-                        await Logger.AddToLogs(new Models.LogMessage("HandCmd", $"Prefix reset on guild {context.Guild.Name}", LogSeverity.Info));
-                        if (guilduser.GuildPermissions.ManageGuild)
+                        command = new MySqlCommand("UPDATE guild SET prefix = @prefix WHERE ID = @guildid");
+                        command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
+                        command.Parameters.AddWithValue("@prefix", defaultPrefix);
+                        await Database.NonQueryAsync(command).ContinueWith(async x =>
                         {
-                            command = new MySqlCommand("UPDATE guild SET prefix = @prefix WHERE ID = @guildid");
+                            command = new MySqlCommand("SELECT prefix FROM guild WHERE ID = @guildid");
                             command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
-                            command.Parameters.AddWithValue("@prefix", defaultPrefix);
-                            await Database.NonQueryAsync(command).ContinueWith(async x =>
+                            string newprefix = await Database.GetSingleAsync(command);
+                            if (newprefix == defaultPrefix)
                             {
-                                command = new MySqlCommand("SELECT prefix FROM guild WHERE ID = @guildid");
-                                command.Parameters.AddWithValue("@guildid", chan.Guild.Id);
-                                string newprefix = await Database.GetSingleAsync(command);
-                                if (newprefix == defaultPrefix)
-                                {
-                                    await MessageHandler.SendChannelAsync(message.Channel as SocketTextChannel, $"Successfully reset the prefix, it is now `{newprefix}`");
-                                }
-                                DogStatsd.Increment("commands.processed");
-                            });
-                        }
-                        else
-                        {
-                            DogStatsd.Increment("commands.errors.unm-precon");
-                            await MessageHandler.SendChannelAsync(message.Channel, "I'm sorry, you don't have permissions to reset the prefix, you need `MANAGE_SERVER` or `ADMINISTRATOR`");
-                        }
+                                await MessageHandler.SendChannelAsync(message.Channel as SocketTextChannel, $"Successfully reset the prefix, it is now `{newprefix}`");
+                            }
+                            DogStatsd.Increment("commands.processed");
+                        });
+                    }
+                    else
+                    {
+                        DogStatsd.Increment("commands.errors.unm-precon");
+                        await MessageHandler.SendChannelAsync(message.Channel, "I'm sorry, you don't have permissions to reset the prefix, you need `MANAGE_SERVER` or `ADMINISTRATOR`");
                     }
                 }
+            }
 
-                if (String.IsNullOrEmpty(customPrefix) || String.IsNullOrEmpty(Configuration.SqlDBHost))
-                {
-                    customPrefix = defaultPrefix;
-                }
+            if (String.IsNullOrEmpty(customPrefix) || String.IsNullOrEmpty(Configuration.SqlDBHost))
+            {
+                customPrefix = defaultPrefix;
+            }
 
-                await DispatchCommand(message, context, argPos, arg);
-            }            
-        }        
+            await DispatchCommand(message, context, argPos, arg);
+        }     
 
         private static async Task CheckUser(SocketUser usr)
         {
@@ -150,48 +150,55 @@ namespace Skuld.Tools
 									{
 										result = await commands.ExecuteAsync(context, argPos, services);
 										cmd = command.FirstOrDefault().Command;
-										await InsertCommand(cmd, message);
+										if (result.IsSuccess)
+										{ await InsertCommand(cmd, message); }
 									}
 								}
 							}
                         }
                     }
-                    else
-                    {
+                    else                    
                         result = await commands.ExecuteAsync(context, argPos, services);
-                    }
+                    
                     if(result!=null)
                     {
                         if (!result.IsSuccess)
                         {
-                            if (result.Error != CommandError.UnknownCommand)
+                            if (result.Error != CommandError.UnknownCommand && !result.ErrorReason.Contains("Timeout"))
                             {
                                 await Logger.AddToLogs(new Models.LogMessage("CmdHand", "Error with command, Error is: " + result, LogSeverity.Error));
                                 await MessageHandler.SendChannelAsync(context.Channel, "", new EmbedBuilder { Author = new EmbedAuthorBuilder { Name = "Error with the command" }, Description = Convert.ToString(result.ErrorReason), Color = new Color(255, 0, 0) }.Build());
                             }
                             DogStatsd.Increment("commands.errors");
-                            if (result.Error == CommandError.MultipleMatches)
-                            { DogStatsd.Increment("commands.errors.mul-matches"); }
-                            if (result.Error == CommandError.UnmetPrecondition)
-                            { DogStatsd.Increment("commands.errors.unm-precon"); }
-                            if (result.Error == CommandError.Unsuccessful)
-                            { DogStatsd.Increment("commands.errors.generic"); }
-                            if (result.Error == CommandError.MultipleMatches)
-                            { DogStatsd.Increment("commands.errors.multiple"); }
-                            if (result.Error == CommandError.BadArgCount)
-                            { DogStatsd.Increment("commands.errors.incorr-args"); }
-                            if (result.Error == CommandError.ParseFailed)
-                            { DogStatsd.Increment("commands.errors.parse-fail"); }
-                            if (result.Error == CommandError.Exception)
-                            { DogStatsd.Increment("commands.errors.exception"); }
-                            if (result.Error == CommandError.UnknownCommand)
-                            { DogStatsd.Increment("commands.errors.unk-cmd"); }
+
+							switch (result.Error)
+							{
+								case CommandError.UnmetPrecondition:
+									DogStatsd.Increment("commands.errors.unm-precon");
+									break;
+								case CommandError.Unsuccessful:
+									DogStatsd.Increment("commands.errors.generic");
+									break;
+								case CommandError.MultipleMatches:
+									DogStatsd.Increment("commands.errors.multiple");
+									break;
+								case CommandError.BadArgCount:
+									DogStatsd.Increment("commands.errors.incorr-args");
+									break;
+								case CommandError.ParseFailed:
+									DogStatsd.Increment("commands.errors.parse-fail");
+									break;
+								case CommandError.Exception:
+									DogStatsd.Increment("commands.errors.exception");
+									break;
+								case CommandError.UnknownCommand:
+									DogStatsd.Increment("commands.errors.unk-cmd");
+									break;
+							}
+							return;
                         }
-                        else
-                        {
-                            DogStatsd.Increment("commands.processed");
-                        }
-                    }
+						DogStatsd.Increment("commands.processed");
+					}
                 }
             }
             catch(Exception ex)

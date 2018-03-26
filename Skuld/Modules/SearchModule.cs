@@ -12,14 +12,13 @@ using Skuld.APIS;
 using Skuld.Tools;
 using Google.Apis.Customsearch.v1;
 using System.IO;
-using YoutubeExplode;
 using System.Collections.Generic;
 using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Imgur.API.Models;
-using System.Web;
 using Discord.Addons.Interactive;
 using System.Text;
+using Skuld.APIS.Social;
 
 namespace Skuld.Commands
 {
@@ -191,19 +190,19 @@ namespace Skuld.Commands
 			{
 				if (!data.PrivateAccount)
 				{
-					if (data.Images.Images.Count() > 0)
+					if (data.TimelineMedia.Images.Count() > 0)
 					{
 						oprtr = oprtr.ToLowerInvariant();
-						Models.API.Social.Instagram.Node post = null;
+						Models.API.Social.Instagram.Image post = null;
 						if(oprtr.StartsWith("-rand"))
 						{
 							optxt = "Random";
-							post = data.Images.Images.ElementAtOrDefault(Bot.random.Next(data.Images.Images.Count()));
+							post = data.TimelineMedia.Images.ElementAtOrDefault(Bot.random.Next(data.TimelineMedia.Images.Count())).Node;
 						}
 						if(oprtr.StartsWith("-rec"))
 						{
 							optxt = "Recent";
-							post = data.Images.Images.FirstOrDefault();
+							post = data.TimelineMedia.Images.FirstOrDefault().Node;
 						}
 						var embed = new EmbedBuilder
 						{
@@ -214,7 +213,7 @@ namespace Skuld.Commands
 								Url = "https://instagr.am/" + data.Username
 							},
 							ImageUrl = post.DisplaySrc,
-							Description = post.Caption,
+							Description = post.PrimaryCaption,
 							Color = Tools.Tools.RandomColor(),
 							Title = optxt+" Post",
 							Url = "https://www.instagr.am/p/" + post.Code + "/",
@@ -454,7 +453,7 @@ namespace Skuld.Commands
             { Directory.CreateDirectory(folder); }
 
             var filepath = folder + User + ".png";
-            await APIWebReq.DownloadFile(url, filepath);
+            await WebHandler.DownloadFile(url, filepath);
 
             var file = File.OpenRead(filepath);
 
@@ -483,7 +482,7 @@ namespace Skuld.Commands
         private async Task Geturban(Uri url)
         {
             var rnd = Bot.random;
-            var rawresp = await APIWebReq.ReturnString(url);
+            var rawresp = await WebHandler.ReturnStringAsync(url);
             var jsonresp = JObject.Parse(rawresp);
             var lists = (JArray)jsonresp["list"];
             dynamic item = lists[rnd.Next(0, lists.Count)];
@@ -520,7 +519,7 @@ namespace Skuld.Commands
             await GetWiki("en", query).ConfigureAwait(false);
         public async Task GetWiki(string langcode, string query)
         {
-            var jsonresp = JObject.Parse((await APIWebReq.ReturnString(new Uri($"https://{langcode}.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles={query}"))));
+            var jsonresp = JObject.Parse((await WebHandler.ReturnStringAsync(new Uri($"https://{langcode}.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles={query}"))));
             dynamic item = jsonresp["query"]["pages"].First.First;
             string desc = Convert.ToString(item["extract"]);
             var page = new Wiki()
@@ -559,7 +558,7 @@ namespace Skuld.Commands
             try
             {
                 query = query.Replace(" ", "%20");
-                var rawresp = await APIWebReq.ReturnString(new Uri($"https://api.giphy.com/v1/gifs/search?q={query}&api_key=dc6zaTOxFJmzC"));
+                var rawresp = await WebHandler.ReturnStringAsync(new Uri($"https://api.giphy.com/v1/gifs/search?q={query}&api_key=dc6zaTOxFJmzC"));
                 var jsonresp = JObject.Parse(rawresp);
                 var photo = (JArray)jsonresp["data"];
                 dynamic item = photo[rnd.Next(0, photo.Count)];
@@ -579,7 +578,7 @@ namespace Skuld.Commands
         [Command("define", RunMode = RunMode.Async), Summary("Defines a word")]
         public async Task Define([Remainder]string word)
         {
-            var stringifiedxml = await APIWebReq.ReturnString(new Uri($"http://www.stands4.com/services/v2/defs.php?uid={Bot.Configuration.STANDSUid}&tokenid={Bot.Configuration.STANDSToken}&word={word}"));
+            var stringifiedxml = await WebHandler.ReturnStringAsync(new Uri($"http://www.stands4.com/services/v2/defs.php?uid={Bot.Configuration.STANDSUid}&tokenid={Bot.Configuration.STANDSToken}&word={word}"));
             var xml = new XmlDocument();
             xml.LoadXml(stringifiedxml);
             XObject xNode = XDocument.Parse(xml.InnerXml);
@@ -607,7 +606,7 @@ namespace Skuld.Commands
         [Command("reddit", RunMode = RunMode.Async), Summary("Gets a subreddit")]
         public async Task SubReddit(string subreddit, int amount)
         {
-            var subReddit = await APIReddit.GetSubRedditAsync(subreddit, amount);
+            var subReddit = await Reddit.GetSubRedditAsync(subreddit, amount);
             var paginatedMessage = new PaginatedMessage
             {
                 Title = "https://reddit.com/" + subreddit,

@@ -377,7 +377,7 @@ namespace Skuld.Commands
         [Command("isup", RunMode = RunMode.Async), Summary("Check if a website is online"), Alias("downforeveryone", "isitonline")]
         public async Task IsUp(string website)
         {
-            var doc = await APIWebReq.ScrapeUrl(new Uri("http://downforeveryoneorjustme.com/" + website));
+            var doc = await WebHandler.ScrapeUrlAsync(new Uri("http://downforeveryoneorjustme.com/" + website));
             string response = null;
             var container = doc.GetElementbyId("domain-main-content");
             var isup = container.ChildNodes.FindFirst("p");

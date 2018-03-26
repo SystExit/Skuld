@@ -11,13 +11,13 @@ namespace Skuld.APIS.Social
 		public static async Task<InstagramUser> GetInstagramUserAsync(string username)
 		{
 			var url = new Uri(BaseURL.Replace("{{USERNAME}}", username));
-			var rawresp = await APIWebReq.ReturnString(url);
+			var rawresp = await WebHandler.ReturnStringAsync(url);
 			if (rawresp != null)
 			{
-				var data = JsonConvert.DeserializeObject<UserFeed>(rawresp).Feed;
+				var data = JsonConvert.DeserializeObject<RootNode>(rawresp);
 				if(data!=null)
 				{
-					return data;
+					return data.Feed.User;
 				}
 				else
 				{

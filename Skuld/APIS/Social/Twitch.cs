@@ -4,7 +4,7 @@ using NTwitch.Rest;
 
 namespace Skuld.APIS.Twitch
 {
-    public class TwitchClient : Bot
+    public class Twitch : Bot
     {
         public static async Task CreateTwitchClient(string token, string clientid)
         {

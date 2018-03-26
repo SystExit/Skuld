@@ -9,9 +9,9 @@ using System.Text;
 
 namespace Skuld.APIS
 {
-    public partial class APIWebReq
+    public class WebHandler
     {
-        public static async Task<string> ReturnString(Uri url)
+        public static async Task<string> ReturnStringAsync(Uri url)
         {
             using (HttpClient client = new HttpClient())
             {
@@ -33,7 +33,7 @@ namespace Skuld.APIS
                 }
             }
         }
-        public static async Task<Stream> ReturnStream(Uri url)
+        public static async Task<Stream> ReturnStreamAsync(Uri url)
         {
             using (HttpClient client = new HttpClient())
             {
@@ -55,7 +55,7 @@ namespace Skuld.APIS
                 }
             }
         }
-        public static async Task<byte[]> ReturnByteArray(Uri url)
+        public static async Task<byte[]> ReturnByteArrayAsync(Uri url)
         {
             using (HttpClient client = new HttpClient())
             {
@@ -77,7 +77,7 @@ namespace Skuld.APIS
                 }
             }
         }
-        public static async Task<string> ReturnString(Uri url, byte[] headers)
+        public static async Task<string> ReturnStringAsync(Uri url, byte[] headers)
         {
             using (HttpClient client = new HttpClient())
             {
@@ -100,7 +100,7 @@ namespace Skuld.APIS
                 }
             }
         }
-        public static async Task<Stream> ReturnStream(Uri url, byte[] headers)
+        public static async Task<Stream> ReturnStreamAsync(Uri url, byte[] headers)
         {
             using (HttpClient client = new HttpClient())
             {
@@ -123,7 +123,7 @@ namespace Skuld.APIS
                 }
             }
         }
-        public static async Task<byte[]> ReturnByteArray(Uri url, byte[] headers)
+        public static async Task<byte[]> ReturnByteArrayAsync(Uri url, byte[] headers)
         {
             using (HttpClient client = new HttpClient())
             {
@@ -145,8 +145,33 @@ namespace Skuld.APIS
                     }
                 }
             }
-        }
-        public static async Task<string> PostString(Uri url, HttpContent content)
+		}
+		public static async Task<HtmlDocument> ScrapeUrlAsync(Uri url)
+		{
+			var request = (HttpWebRequest)WebRequest.Create(url);
+			request.AllowAutoRedirect = true;
+			var response = (HttpWebResponse)await request.GetResponseAsync();
+			var doc = new HtmlDocument();
+			if (response.StatusCode == HttpStatusCode.OK)
+			{
+				doc.Load(response.GetResponseStream(), Encoding.UTF8);
+				request.Abort();
+			}
+			if (doc != null)
+			{ return doc; }
+			else
+			{ return null; }
+		}
+
+		public static Task<string> DownloadFile(Uri url, string filepath)
+		{
+			var client = new WebClient();
+			var thing = client.DownloadFileTaskAsync(url, filepath);
+			while (thing.Status != TaskStatus.RanToCompletion) { }
+			return Task.FromResult(filepath);
+		}
+
+		public static async Task<string> PostStringAsync(Uri url, HttpContent content)
         {
             using (HttpClient client = new HttpClient())
             {
@@ -157,7 +182,7 @@ namespace Skuld.APIS
                 }
             }
         }
-        public static async Task<Stream> PostStream(Uri url, HttpContent content)
+        public static async Task<Stream> PostStreamAsync(Uri url, HttpContent content)
         {
             using (HttpClient client = new HttpClient())
             {
@@ -175,7 +200,7 @@ namespace Skuld.APIS
                 }
             }
         }
-        public static async Task<byte[]> PostByteArray(Uri url, HttpContent content)
+        public static async Task<byte[]> PostByteArrayAsync(Uri url, HttpContent content)
         {
             using (HttpClient client = new HttpClient())
             {
@@ -192,29 +217,6 @@ namespace Skuld.APIS
                     }
                 }
             }
-        }
-        public static Task<string> DownloadFile(Uri url, string filepath)
-        {
-            var client = new WebClient();
-            var thing = client.DownloadFileTaskAsync(url, filepath);
-            while (thing.Status != TaskStatus.RanToCompletion) { }         
-            return Task.FromResult(filepath);
-        }
-        public static async Task<HtmlDocument> ScrapeUrl(Uri url)
-        {
-            var request = (HttpWebRequest)WebRequest.Create(url);
-            request.AllowAutoRedirect = true;
-            var response = (HttpWebResponse)await request.GetResponseAsync();
-            var doc = new HtmlDocument();
-            if (response.StatusCode == HttpStatusCode.OK)
-            {
-                doc.Load(response.GetResponseStream(), Encoding.UTF8);
-                request.Abort();
-            }
-            if (doc != null)
-            { return doc; }
-            else
-            { return null; }
-        }
+		}
     }
 }

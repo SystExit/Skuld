@@ -253,8 +253,10 @@ namespace Skuld.Commands
                     await MessageHandler.SendChannelAsync(Context.Channel, "Result is empty or null");
                 }                
             }
-            catch (NullReferenceException ex) { /*Do nothing here*/ }
-            catch (Exception ex)
+#pragma warning disable CS0168 // Variable is declared but never used
+			catch (NullReferenceException ex) { /*Do nothing here*/ }
+#pragma warning restore CS0168 // Variable is declared but never used
+			catch (Exception ex)
             {
                 var embed = new EmbedBuilder
                 {
@@ -307,7 +309,22 @@ namespace Skuld.Commands
                 await Bot.Logger.AddToLogs(new Models.LogMessage("IsrtGld", $"Inserted {guild.Name}!", LogSeverity.Info));
                 await Events.DiscordEvents.PopulateEntireGuildUsers(guild);
             }
-        }        
+        }
+
+		[Command("test")]
+		public async Task Test()
+		{
+			await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Glare)));
+			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Grope)));
+			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Hug)));
+			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Kill)));
+			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Kiss)));
+			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Pet)));
+			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Punch)));
+			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Shrug)));
+			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Slap)));
+			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Stab)));
+		}
     }
 
     public class Globals

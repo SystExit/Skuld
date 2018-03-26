@@ -7,7 +7,7 @@ using Skuld.Models.API.Strawpoll;
 
 namespace Skuld.APIS
 {
-    public partial class APIWebReq
+    public class StrawpollClient
     {
         public static async Task<RecievePoll> SendPoll(string title, string[] polloptions)
         {
@@ -15,7 +15,7 @@ namespace Skuld.APIS
             {
                 var sendpoll = new SendPoll(title, polloptions);
                 var sendpollserialized = JsonConvert.SerializeObject(sendpoll);
-                var post = await PostString(new Uri("https://strawpoll.me/api/v2/polls"), new StringContent(sendpollserialized, Encoding.UTF8, "application/json"));
+                var post = await WebHandler.PostStringAsync(new Uri("https://strawpoll.me/api/v2/polls"), new StringContent(sendpollserialized, Encoding.UTF8, "application/json"));
                 return JsonConvert.DeserializeObject<RecievePoll>(post);
             }
             catch (Exception ex)
@@ -28,7 +28,7 @@ namespace Skuld.APIS
         {
             try
             {
-                var result = await ReturnString(new Uri("https://strawpoll.me/api/v2/polls/" + pollid));
+                var result = await WebHandler.ReturnStringAsync(new Uri("https://strawpoll.me/api/v2/polls/" + pollid));
                 return JsonConvert.DeserializeObject<RecievePoll>(result);
             }
             catch (Exception ex)
@@ -54,7 +54,7 @@ namespace Skuld.APIS
                         }
                     }
                 }
-                var result = await ReturnString(new Uri("https://strawpoll.me/api/v2/polls/" + pollid));
+                var result = await WebHandler.ReturnStringAsync(new Uri("https://strawpoll.me/api/v2/polls/" + pollid));
                 return JsonConvert.DeserializeObject<RecievePoll>(result);
             }
             catch (Exception ex)

@@ -13,16 +13,16 @@ namespace Skuld.Modules
     {
         [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
         public async Task Getpokemon(string pokemon, string group) =>
-            await SendPokemon(await WebReq.GetPocketMonster(pokemon.ToLowerInvariant()), group).ConfigureAwait(false);
+            await SendPokemon(await PokeSharpClient.GetPocketMonster(pokemon.ToLowerInvariant()), group).ConfigureAwait(false);
         [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
         public async Task Getpokemon(string pokemon) =>
-            await SendPokemon(await WebReq.GetPocketMonster(pokemon.ToLowerInvariant()), "default").ConfigureAwait(false);
+            await SendPokemon(await PokeSharpClient.GetPocketMonster(pokemon.ToLowerInvariant()), "default").ConfigureAwait(false);
         [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
         public async Task Getpokemon(int pokemonid, string group) =>
-            await SendPokemon(await WebReq.GetPocketMonster(pokemonid), group).ConfigureAwait(false);
+            await SendPokemon(await PokeSharpClient.GetPocketMonster(pokemonid), group).ConfigureAwait(false);
         [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
         public async Task Getpokemon(int pokemonid) =>
-            await SendPokemon(await WebReq.GetPocketMonster(pokemonid), "default").ConfigureAwait(false);
+            await SendPokemon(await PokeSharpClient.GetPocketMonster(pokemonid), "default").ConfigureAwait(false);
         public async Task SendPokemon(PocketMonster pokemon, string group)
         {
             EmbedBuilder embed;

@@ -16,13 +16,13 @@ namespace Skuld.Models.API.Social.Instagram
 		[JsonProperty(PropertyName = "external_url")]
 		public string Website { get; set; }
 
-		[JsonProperty(PropertyName = "followed_by")]
+		[JsonProperty(PropertyName = "edge_followed_by")]
 		public Count Followers { get; set; }
 
 		[JsonProperty(PropertyName = "followed_by_viewer")]
 		public bool YouFollow { get; set; }
 
-		[JsonProperty(PropertyName = "follows")]
+		[JsonProperty(PropertyName = "edge_follow")]
 		public Count Follows { get; set; }
 
 		[JsonProperty(PropertyName = "follows_viewer")]
@@ -64,13 +64,7 @@ namespace Skuld.Models.API.Social.Instagram
 		[JsonProperty(PropertyName = "connected_fb_page")]
 		public string ConnectedFacebookPage { get; set; }
 
-		[JsonProperty(PropertyName = "media")]
-		public Media Images { get; set; }
-		
-		[JsonProperty(PropertyName = "logging_page_id")]
-		public string LoggingPageID { get; set; }
-
-		[JsonProperty(PropertyName = "show_suggested_profiles")]
-		public bool ShowSuggestedProfiles { get; set; }
+		[JsonProperty(PropertyName = "edge_owner_to_timeline_media")]
+		public Media TimelineMedia { get; set; }		
     }
 }

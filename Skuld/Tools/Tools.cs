@@ -27,6 +27,7 @@ namespace Skuld.Tools
             Bot.random.NextBytes(bytes);
             return new Color(bytes[0], bytes[1], bytes[2]);
         }
+
         public static MemoryStream GenerateStreamFromString(string value)
         {
             return new MemoryStream(Encoding.UTF8.GetBytes(value ?? ""));

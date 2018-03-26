@@ -66,15 +66,15 @@ namespace Skuld
             try
             {
                 if (Configuration.TwitchModule)
-                    await APIS.Twitch.TwitchClient.CreateTwitchClient(Configuration.TwitchToken, Configuration.TwitchClientID);
+                    await APIS.Twitch.Twitch.CreateTwitchClient(Configuration.TwitchToken, Configuration.TwitchClientID);
                 await bot.LoginAsync(TokenType.Bot, token);
                 await bot.StartAsync();
-                Parallel.Invoke(() => SendDataToDataDog());
+                /*Parallel.Invoke(() => SendDataToDataDog());
                 foreach (var shard in bot.Shards)
                 {
                     if (shard.ConnectionState == ConnectionState.Connected)
                     { await PublishStats(shard.ShardId).ConfigureAwait(false); }
-                }
+                }*/
                 await Task.Delay(-1).ConfigureAwait(false);
             }
             catch(Exception ex)

@@ -7,14 +7,14 @@ using System.IO;
 
 namespace Skuld.APIS
 {
-    public partial class APIWebReq
+    public class PokeSharpClient
     {
         public static int? HighestPokeID = GetHighestPokemon().Result;
         private static async Task<int> GetHighestPokemon()
         {
             try
             {
-                var result = await APIWebReq.ReturnString(new Uri($"https://pokeapi.co/api/v2/pokemon/802/"));
+                var result = await WebHandler.ReturnStringAsync(new Uri($"https://pokeapi.co/api/v2/pokemon/802/"));
                 if(result!=null)
                 {
                     return 802;
@@ -40,7 +40,7 @@ namespace Skuld.APIS
                     if (!Directory.Exists(AppContext.BaseDirectory + "/skuld/storage/pokemon/"))
                         Directory.CreateDirectory(AppContext.BaseDirectory + "/skuld/storage/pokemon/");
                     string pokejson = AppContext.BaseDirectory + $"/skuld/storage/pokemon/{id.Value}.json";
-                    var result = await APIWebReq.ReturnString(new Uri($"https://pokeapi.co/api/v2/pokemon/{id.Value}/"));
+                    var result = await WebHandler.ReturnStringAsync(new Uri($"https://pokeapi.co/api/v2/pokemon/{id.Value}/"));
                     if (!String.IsNullOrEmpty(result))
                     {
                         File.WriteAllText(pokejson, result);
@@ -57,7 +57,7 @@ namespace Skuld.APIS
                         if (!Directory.Exists(AppContext.BaseDirectory + "/skuld/storage/pokemon/"))
                             Directory.CreateDirectory(AppContext.BaseDirectory + "/skuld/storage/pokemon/");
                         string pokejson = AppContext.BaseDirectory + $"/skuld/storage/pokemon/{random}.json";
-                        var result = await APIWebReq.ReturnString(new Uri($"https://pokeapi.co/api/v2/pokemon/{random}/"));
+                        var result = await WebHandler.ReturnStringAsync(new Uri($"https://pokeapi.co/api/v2/pokemon/{random}/"));
                         if (!String.IsNullOrEmpty(result))
                         {
                             File.WriteAllText(pokejson, result);

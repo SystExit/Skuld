@@ -13,6 +13,8 @@ using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Discord.Addons.Interactive;
 using Imgur.API.Endpoints.Impl;
+using Skuld.APIS.Social;
+using Skuld.APIS.Animals;
 
 namespace Skuld.Commands
 {
@@ -64,31 +66,31 @@ namespace Skuld.Commands
         public async Task Neko()
         {
             var neko = await NekoLife.GetNekoAsync();
-            if (neko != null)
-            {
-                await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = neko }.Build());
-            }
+			if (neko != null)
+				await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = neko }.Build());
+			else
+				await MessageHandler.SendChannelAsync(Context.Channel, "Hmmm <:Thunk:350673785923567616>, I got an empty response.");
         }
         [RequireNsfw]
         [Command("lewdneko", RunMode = RunMode.Async), Summary("Lewd Neko Grill"), Ratelimit(20, 1, Measure.Minutes,false,true)]
         public async Task LewdNeko()
         {
             var neko = await NekoLife.GetLewdNekoAsync();
-            if (neko != null)
-            {
+            if (neko != null)            
                 await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = neko }.Build());
-            }
+			else
+				await MessageHandler.SendChannelAsync(Context.Channel, "Hmmm <:Thunk:350673785923567616>, I got an empty response.");
 		}
 		[Command("kitsune", RunMode = RunMode.Async), Summary("Kitsunemimi Grill"), Ratelimit(20, 1, Measure.Minutes, false, true)]
 		public async Task Kitsune()
 		{
 			if (KitsunePosts == null || kitsucount >= KitsunePosts.Count)
 			{
-				var data = await APIReddit.GetSubRedditAsync("r/kitsunemimi", 200);
+				var data = await Reddit.GetSubRedditAsync("r/kitsunemimi", 200);
 				if (data != null)
-				{
 					KitsunePosts = data.Data.Posts.ToList();
-				}
+				else
+				{ await MessageHandler.SendChannelAsync(Context.Channel, "Hmmm <:Thunk:350673785923567616>, I got an empty response."); return; }
 			}
 			var vettedposts = KitsunePosts
 						.Where(x => x.Data.Over18 == false && x.Data.Url != null && !x.Data.Stickied && x.Data.Domain != "reddit.com");
@@ -116,11 +118,11 @@ namespace Skuld.Commands
 		{
 			if (KitsunePosts == null || kitsucount >= KitsunePosts.Count)
 			{
-				var data = await APIReddit.GetSubRedditAsync("r/kitsunemimi", 200);
+				var data = await Reddit.GetSubRedditAsync("r/kitsunemimi", 200);
 				if (data != null)
-				{
 					KitsunePosts = data.Data.Posts.ToList();
-				}
+				else
+				{ await MessageHandler.SendChannelAsync(Context.Channel, "Hmmm <:Thunk:350673785923567616>, I got an empty response."); return; }
 			}
 			var vettedposts = KitsunePosts
 						.Where(x => x.Data.Over18 == true && x.Data.Url != null && !x.Data.Stickied && x.Data.Domain != "reddit.com");
@@ -147,36 +149,54 @@ namespace Skuld.Commands
         [Alias("cat", "cats", "kittycat", "kitty cat", "meow", "kitties", "kittys")]
         public async Task Kitty()
         {
-            var kitty = await APIS.Kitty.WebReq.GetKitty();
-            if (videoext.Any(kitty.ImageURL.Contains))
-            { await MessageHandler.SendChannelAsync(Context.Channel, kitty.ImageURL); }
-            else
-            { await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = kitty.ImageURL }.Build()); }
+            var kitty = await RandomCat.GetKittyAsync();
+			if(kitty != null)
+			{
+				if (videoext.Any(kitty.Contains))
+				{ await MessageHandler.SendChannelAsync(Context.Channel, kitty); }
+				else
+				{ await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = kitty }.Build()); }
+			}
+			else
+			{
+				await MessageHandler.SendChannelAsync(Context.Channel, "Hmmm <:Thunk:350673785923567616>, I got an empty response.");
+			}
         }
 
         [Command("doggo", RunMode = RunMode.Async), Summary("doggo"), Ratelimit(20, 1, Measure.Minutes)]
         [Alias("dog", "dogs", "doggy")]
         public async Task Doggo()
         {            
-            var doggo = await APIS.Doggo.WebReq.GetDoggo();
-            if (videoext.Any(doggo.ImageURL.Contains))
-            { await MessageHandler.SendChannelAsync(Context.Channel, doggo.ImageURL); }
+            var doggo = await RandomDog.GetDoggoAsync();
+            if (videoext.Any(doggo.Contains))
+            { await MessageHandler.SendChannelAsync(Context.Channel, doggo); }
             else
-            { await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = doggo.ImageURL }.Build()); }
+            { await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = doggo }.Build()); }
         }
 
-        [Command("llama", RunMode = RunMode.Async), Summary("Llama"), Ratelimit(20, 1, Measure.Minutes)]
+		[Command("bird", RunMode = RunMode.Async), Summary("birb"), Ratelimit(20, 1, Measure.Minutes)]
+		[Alias("birb")]
+		public async Task Birb()
+		{
+			var birb = await BirdsAreCool.GetBirbAsync();
+			if (videoext.Any(birb.Contains))
+			{ await MessageHandler.SendChannelAsync(Context.Channel, birb); }
+			else
+			{ await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = birb }.Build()); }
+		}
+
+		[Command("llama", RunMode = RunMode.Async), Summary("Llama"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Llama()
         {
-            var llama = JsonConvert.DeserializeObject<Animal>(await APIWebReq.ReturnString(new Uri("https://api.systemexit.co.uk/get/llama/random")));
-            await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = llama.FileUrl }.Build());
+			var llama = await SysExClient.GetLlamaAsync();
+            await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = llama }.Build());
         }
 
         [Command("seal", RunMode = RunMode.Async), Summary("Seal"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Seal()
         {
-            var seal = JsonConvert.DeserializeObject<Animal>(await APIWebReq.ReturnString(new Uri("https://api.systemexit.co.uk/get/seal/random")));
-            await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = seal.FileUrl }.Build());
+            var seal = await SysExClient.GetSealAsync();
+			await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = seal }.Build());
         }
 
         [Command("eightball", RunMode = RunMode.Async), Summary("Eightball")]
@@ -443,7 +463,7 @@ namespace Skuld.Commands
         public async Task StrawpollSend(string title, [Remainder]string options)
         {
             var optionsLocal = options.Split(',');
-            var poll = await APIWebReq.SendPoll(title, optionsLocal);            
+            var poll = await StrawpollClient.SendPoll(title, optionsLocal);            
             await MessageHandler.SendChannelAsync(Context.Channel,$"Strawpoll **{title}** has been created, here's the link: {poll.Url}");
         }
 
@@ -454,7 +474,7 @@ namespace Skuld.Commands
         [Command("strawpoll", RunMode = RunMode.Async), Summary("Gets a strawpoll")]
         public async Task StrawpollGet(string url)
         {
-            var poll = await APIWebReq.GetPoll(url);
+            var poll = await StrawpollClient.GetPoll(url);
             var embed = new EmbedBuilder()
             {
                 Author = new EmbedAuthorBuilder()
@@ -521,12 +541,12 @@ namespace Skuld.Commands
         public async Task XKCD()
         {
             int randComic = 0;
-            await APIWebReq.GetXKCDLastPage();
+            await XKCDClient.GetXKCDLastPage();
             for (int x = 0; x < 10; x++)
             {
-                randComic = Bot.random.Next(0, APIWebReq.XKCDLastPage.Value);
+                randComic = Bot.random.Next(0, XKCDClient.XKCDLastPage.Value);
             }
-            await SendXKCD((await APIWebReq.GetXKCDComic(randComic)));
+            await SendXKCD((await XKCDClient.GetXKCDComic(randComic)));
         }
         public async Task SendXKCD(XKCDComic comic)
         {
@@ -578,7 +598,7 @@ namespace Skuld.Commands
         {
             try
             {
-                var doc = await APIWebReq.ScrapeUrl(new Uri("http://explosm.net/comics/random"));
+                var doc = await WebHandler.ScrapeUrlAsync(new Uri("http://explosm.net/comics/random"));
                 var author = doc.DocumentNode.Descendants("div").FirstOrDefault(x => x.Attributes.Contains("class") && x.Attributes["class"].Value.Contains("small-2 medium-2 large-2 columns"));
                 var authorblock = doc.DocumentNode.Descendants("div").FirstOrDefault(z => z.Attributes.Contains("class") && z.Attributes["class"].Value.Contains("small-8 medium-9 large-8 columns"));
                 var authorblocksection = author.Descendants().Skip(1).FirstOrDefault();
@@ -631,14 +651,14 @@ namespace Skuld.Commands
             await Roast(Context.User as IGuildUser).ConfigureAwait(false);
         public async Task Roast(IGuildUser user)
         {
-            var roast = JsonConvert.DeserializeObject<Roasts>(await APIWebReq.ReturnString(new Uri("https://api.systemexit.co.uk/get/roasts/random")));
-            await MessageHandler.SendChannelAsync(Context.Channel, user.Mention + " " + roast.Roast);
+            var roast = await SysExClient.GetRoastAsync();
+            await MessageHandler.SendChannelAsync(Context.Channel, user.Mention + " " + roast);
         }
 
         [Command("dadjoke", RunMode = RunMode.Async), Summary("Gives you a bad dad joke to facepalm at.")]
         public async Task DadJoke()
         {
-            var joke = JsonConvert.DeserializeObject<PickupLine>(await APIWebReq.ReturnString(new Uri("https://api.systemexit.co.uk/get/dadjokes/random")));
+			var joke = await SysExClient.GetDadJokeAsync();
 
             await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder
             {
@@ -651,7 +671,7 @@ namespace Skuld.Commands
         [Command("pickup",RunMode = RunMode.Async),Summary("Cringe at these bad user-submitted pick up lines. (Don't actually use these or else you'll get laughed at. :3)"),Alias("pickupline")]
         public async Task PickUp()
         {
-            var pickup = JsonConvert.DeserializeObject<PickupLine>(await APIWebReq.ReturnString(new Uri("https://api.systemexit.co.uk/get/pickuplines/random")));
+			var pickup = await SysExClient.GetPickupLineAsync();
 
             await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder
             {
@@ -664,7 +684,7 @@ namespace Skuld.Commands
         [Command("apod", RunMode = RunMode.Async), Summary("Gets NASA's \"Astronomy Picture of the Day\""), Ratelimit(20, 1, Measure.Minutes)]
         public async Task APOD()
         {
-            var aPOD = await APIWebReq.NasaAPOD();
+            var aPOD = await NASAClient.GetAPODAsync();
             var embed = new EmbedBuilder
             {
                 Color = Tools.Tools.RandomColor(),
@@ -698,7 +718,7 @@ namespace Skuld.Commands
         [Command("yn", RunMode = RunMode.Async), Summary("Yes? or No?")]
         public async Task YN()
         {
-            var YNResp = await APIWebReq.AskYNWTF();
+			Models.API.YNWTF YNResp = await APIS.YNWTF.AskYNWTF();
             var embed = new EmbedBuilder
             {
                 Color = Tools.Tools.RandomColor(),

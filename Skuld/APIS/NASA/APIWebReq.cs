@@ -8,9 +8,9 @@ using Newtonsoft.Json;
 
 namespace Skuld.APIS
 {
-    public partial class APIWebReq
+    public class NASAClient
     {
-        public static async Task<APOD> NasaAPOD()
+        public static async Task<APOD> GetAPODAsync()
         {
             var client = (HttpWebRequest)WebRequest.Create("https://api.nasa.gov/planetary/apod?api_key=" + Bot.Configuration.NASAApiKey);
             var response = (HttpWebResponse)await client.GetResponseAsync();
