@@ -146,13 +146,13 @@ namespace Skuld
             using (var webclient = new HttpClient())
             using (var content = new StringContent($"{{ \"server_count\": {bot.GetShard(shardid).Guilds.Count}, \"shard_id\": {shardid}, \"shard_count\": {bot.Shards.Count}}}", Encoding.UTF8, "application/json"))
             {
-                webclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(Configuration.DBotsOrgKey);
+                webclient.DefaultRequestHeaders.Add("Authorization", Configuration.DBotsOrgKey);
                 await webclient.PostAsync(new Uri($"https://discordbots.org/api/bots/{bot.CurrentUser.Id}/stats"), content);
             }
             using (var webclient = new HttpClient())
             using (var content = new StringContent($"{{ \"server_count\": {bot.GetShard(shardid).Guilds.Count}, \"shard_id\": {shardid}, \"shard_count\": {bot.Shards.Count}}}", Encoding.UTF8, "application/json"))
             {
-                webclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(Configuration.DiscordPWKey);
+				webclient.DefaultRequestHeaders.Add("Authorization", Configuration.DiscordPWKey);
                 await webclient.PostAsync(new Uri($"https://bots.discord.pw/api/bots/{bot.CurrentUser.Id}/stats"), content);
             }
         }
