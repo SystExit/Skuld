@@ -82,6 +82,13 @@ namespace Skuld.Tools
                 return s;
         }
 
+		public static bool IsWebsite(string input)
+		{
+			if (input.Contains('.') || input.Contains("www.") || input.Contains("http://") || input.Contains("https://"))
+				return true;
+			return false;
+		}
+
         public static ConsoleColor ColorBasedOnSeverity(LogSeverity sev)
         {
             if (sev == LogSeverity.Critical)

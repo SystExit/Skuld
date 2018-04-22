@@ -492,7 +492,7 @@ namespace Skuld.Modules
 		[RequireUserPermission(GuildPermission.Administrator)]
 		public async Task AddCustomCommand(string name, [Remainder]string content)
 		{
-			if(name.Contains('.')||name.Contains("www.")||name.Contains("http://")||name.Contains("https://"))
+			if(Tools.Tools.IsWebsite(name))
 			{
 				await messageService.SendChannelAsync(Context.Channel, "Commands can't be a url/website", 5);
 				return;

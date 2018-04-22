@@ -13,6 +13,7 @@ using YoutubeExplode;
 using StatsdClient;
 using Imgur.API.Authentication.Impl;
 using Skuld.Services;
+using Google.Apis.Customsearch.v1;
 
 namespace Skuld
 {
@@ -59,7 +60,7 @@ namespace Skuld
 				LogLevel = LogSeverity.Verbose,
 				TotalShards = Configuration.Discord.Shards
 			});
-			
+
 			services = new ServiceCollection()
 				.AddSingleton(cli)
 				.AddSingleton<BotService>()
@@ -87,6 +88,7 @@ namespace Skuld
 					Prefix = Configuration.Discord.Prefix,
 					AltPrefix = Configuration.Discord.AltPrefix
 				})
+				.AddSingleton(new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer() { ApiKey = Configuration.APIS.GoogleAPI, ApplicationName = "Skuld" }))
 				.BuildServiceProvider();
 
 			await InitializeServicesAsync();

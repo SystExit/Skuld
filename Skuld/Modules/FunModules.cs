@@ -298,129 +298,127 @@ namespace Skuld.Modules
         [Command("pasta"), Summary("Pastas are nice"), RequireDatabase]
         public async Task Pasta(string cmd, string title, [Remainder]string content)
         {
-			if (database.CanConnect)
+			if (cmd == "new" || cmd == "+" || cmd == "create")
 			{
-				if (cmd == "new" || cmd == "+" || cmd == "create")
+				if (title == "list" || title == "help")
 				{
-					if (title == "list" || title == "help")
+					await messageService.SendChannelAsync(Context.Channel, "Nope");
+					StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
+				}
+				else
+				{
+					var pasta = await database.GetPastaAsync(title);
+					if (pasta!=null)
 					{
-						await messageService.SendChannelAsync(Context.Channel, "Nope");
+						await messageService.SendChannelAsync(Context.Channel, $"Pasta already exists with name: **{title}**");
 						StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
 					}
 					else
 					{
-						var pasta = await database.GetPastaAsync(title);
-						if (pasta!=null)
-						{
-							await messageService.SendChannelAsync(Context.Channel, $"Pasta already exists with name: **{title}**");
-							StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
-						}
-						else
-						{
-							var resp = await database.InsertPastaAsync(Context.User, title, content);
-							if(resp.Successful)
-							{
-								await messageService.SendChannelAsync(Context.Channel, $"Successfully added: **{title}**");
-							}
-						}
-					}
-				}
-				if (cmd == "edit" || cmd == "change" || cmd == "modify")
-				{
-					var pasta = await database.GetPastaAsync(title);
-					if (pasta.OwnerID == Context.User.Id)
-					{
-						content = content.Replace("\'", "\\\'");
-						content = content.Replace("\"", "\\\"");
-
-						pasta.Content = content;
-
-						var resp = await database.UpdatePastaAsync(pasta);
+						var resp = await database.InsertPastaAsync(Context.User, title, content);
 						if(resp.Successful)
 						{
-							await messageService.SendChannelAsync(Context.Channel, $"Successfully changed the content of **{title}**");
+							await messageService.SendChannelAsync(Context.Channel, $"Successfully added: **{title}**");
 						}
-					}
-					else
-					{
-						StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "unm-precon" });
-						await messageService.SendChannelAsync(Context.Channel, "I'm sorry, but you don't own the Pasta");
 					}
 				}
 			}
-			else
-				await messageService.SendChannelAsync(Context.Channel, "ERR: Database not connected, pasta commands are disabled");
+			if (cmd == "edit" || cmd == "change" || cmd == "modify")
+			{
+				var pasta = await database.GetPastaAsync(title);
+				if (pasta.OwnerID == Context.User.Id)
+				{
+					content = content.Replace("\'", "\\\'");
+					content = content.Replace("\"", "\\\"");
+
+					pasta.Content = content;
+
+					var resp = await database.UpdatePastaAsync(pasta);
+					if(resp.Successful)
+					{
+						await messageService.SendChannelAsync(Context.Channel, $"Successfully changed the content of **{title}**");
+					}
+				}
+				else
+				{
+					StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "unm-precon" });
+					await messageService.SendChannelAsync(Context.Channel, "I'm sorry, but you don't own the Pasta");
+				}
+			}
         }
 
         [Command("pasta"), Summary("Pastas are nice"), RequireDatabase]
         public async Task Pasta([Remainder]string title)
         {
-			if (database.CanConnect)
+			if (title == "list")
 			{
-				if (title == "list")
+				var pastas = await database.GetAllPastasAsync();
+
+				string pastanames = "```\n";
+
+				foreach (var pasta in pastas)
 				{
-					var pastas = await database.GetAllPastasAsync();
-
-					string pastanames = "```\n";
-
-					foreach (var pasta in pastas)
-					{
-						if (pasta == pastas.LastOrDefault())
-						{ pastanames += pasta.Name; }
-						else
-						{ pastanames += pasta.Name + ", "; }
-					}
-
-					pastanames += "\n```";
-
-					await messageService.SendChannelAsync(Context.Channel, $"I found:\n{pastanames}");
-				}
-				else if (title == "help")
-				{
-					string help = "Here's how to do stuff with **pasta**:\n\n" +
-						"```cs\n" +
-						"   give   : Give a user your pasta\n" +
-						"   list   : List all pasta\n" +
-						"   edit   : Change the content of your pasta\n" +
-						"  change  : Same as above\n" +
-						"   new    : Creates a new pasta\n" +
-						"    +     : Same as above\n" +
-						"   who    : Gets information about a pasta\n" +
-						"    ?     : Same as above\n" +
-						"  upvote  : Upvotes a pasta\n" +
-						" downvote : Downvotes a pasta\n" +
-						"  delete  : deletes a pasta```";
-					await messageService.SendChannelAsync(Context.Channel, help);
-				}
-				else
-				{
-					var pasta = await database.GetPastaAsync(title);
-					if (pasta != null)
-					{
-						await messageService.SendChannelAsync(Context.Channel, pasta.Content);
-					}
+					if (pasta == pastas.LastOrDefault())
+					{ pastanames += pasta.Name; }
 					else
-					{
-						StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-						await messageService.SendChannelAsync(Context.Channel, $"Whoops, `{title}` doesn't exist");
-					}
+					{ pastanames += pasta.Name + ", "; }
 				}
+
+				pastanames += "\n```";
+
+				await messageService.SendChannelAsync(Context.Channel, $"I found:\n{pastanames}");
+			}
+			else if (title == "help")
+			{
+				string help = "Here's how to do stuff with **pasta**:\n\n" +
+					"```cs\n" +
+					"   give   : Give a user your pasta\n" +
+					"   list   : List all pasta\n" +
+					"   edit   : Change the content of your pasta\n" +
+					"  change  : Same as above\n" +
+					"   new    : Creates a new pasta\n" +
+					"    +     : Same as above\n" +
+					"   who    : Gets information about a pasta\n" +
+					"    ?     : Same as above\n" +
+					"  upvote  : Upvotes a pasta\n" +
+					" downvote : Downvotes a pasta\n" +
+					"  delete  : deletes a pasta```";
+				await messageService.SendChannelAsync(Context.Channel, help);
 			}
 			else
 			{
-				await messageService.SendChannelAsync(Context.Channel, "ERR: Database not connected, pasta commands are disabled");
+				var pasta = await database.GetPastaAsync(title);
+				if (pasta != null)
+				{
+					await messageService.SendChannelAsync(Context.Channel, pasta.Content);
+				}
+				else
+				{
+					StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+					await messageService.SendChannelAsync(Context.Channel, $"Whoops, `{title}` doesn't exist");
+				}
 			}
 		}
         
         [Command("fuse"), Summary("Fuses 2 of the 1st generation pokemon")]
         public async Task Fuse(int int1, int int2)
         {
-            if (int1 > 151 || int1 < 0)
+			if (int1 > 151 || int1 < 0)
+			{
 				await messageService.SendChannelAsync(Context.Channel, $"{int1} over/under limit. (151)");
-            else if (int2 > 151 || int2 < 0)
+			}
+			else if (int2 > 151 || int2 < 0)
+			{
 				await messageService.SendChannelAsync(Context.Channel, $"{int2} over/under limit. (151)");
-            else
-				await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder() { Color = Tools.Tools.RandomColor(), ImageUrl = $"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png" }.Build());
+			}
+			else
+			{
+				await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder
+				{
+					Color = Tools.Tools.RandomColor(),
+					ImageUrl = $"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png"
+				}.Build());
+			}
         }
 
         [Command("strawpoll"), Summary("Creates Strawpoll")]

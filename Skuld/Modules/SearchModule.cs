@@ -33,6 +33,7 @@ namespace Skuld.Modules
 		readonly LoggingService logger;
 		readonly Random random;
 		readonly ImgurClient imgurClient;
+		readonly CustomsearchService googleSearchService;
 
 		public Search(TwitchService twi,
 			MessageService msg,
@@ -40,6 +41,7 @@ namespace Skuld.Modules
 			YoutubeClient yout,
 			LoggingService log,
 			Random ran,
+			CustomsearchService google,
 			ImgurClient imgur) //depinj
 		{
 			twitch = twi;
@@ -48,6 +50,7 @@ namespace Skuld.Modules
 			youtube = yout;
 			logger = log;
 			random = ran;
+			googleSearchService = google;
 			imgurClient = imgur;
 		}
 
@@ -283,8 +286,7 @@ namespace Skuld.Modules
         {
             try
             {
-                var css = new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer() { ApiKey = Bot.Configuration.APIS.GoogleAPI, ApplicationName = "Skuld" });
-                var listRequest = css.Cse.List(query);
+                var listRequest = googleSearchService.Cse.List(query);
                 listRequest.Cx = Bot.Configuration.APIS.GoogleCx;
                 listRequest.Safe = CseResource.ListRequest.SafeEnum.High;
                 var search = await listRequest.ExecuteAsync();
