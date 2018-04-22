@@ -5,12 +5,18 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <RootNamespace>Skuld</RootNamespace>
     <StartupObject>Skuld.Bot</StartupObject>
-    <Version>0.3.8.75</Version>
+    <Version>0.3.9.0</Version>
+    <NoWin32Manifest>true</NoWin32Manifest>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Old Tools\**" />
+    <EmbeddedResource Remove="Old Tools\**" />
+    <None Remove="Old Tools\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="..\src\APIS\Steam\" />
-    <Folder Include="APIS\Steam\" />
   </ItemGroup>
 
   <ItemGroup>
@@ -59,20 +65,21 @@
     <Analyzer Include="..\packages\Microsoft.CodeAnalysis.Analyzers.1.1.0\analyzers\dotnet\cs\Microsoft.CodeAnalysis.CSharp.Analyzers.dll" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Discord.Net" Version="2.0.0-beta2-00891" />
+    <PackageReference Include="Discord.Net" Version="2.0.0-beta2-00921" />
     <PackageReference Include="DogStatsD-CSharp-Client" Version="3.1.0" />
     <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.32.2.1146" />
-    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.32.2.1131" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.7.0" />
+    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.32.2.1198" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.8.0" />
     <PackageReference Include="Imgur.API" Version="5.0.0-beta1" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="2.6.1" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="2.6.1" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="2.8.0-beta3" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="2.8.0-beta3" />
     <PackageReference Include="MySql.Data" Version="6.10.5" />
-    <PackageReference Include="NodaTime" Version="2.3.0-beta01" />
+    <PackageReference Include="NodaTime" Version="2.3.0-beta02" />
     <PackageReference Include="NTwitch" Version="0.2.1-build-00025" />
-    <PackageReference Include="NuGet.CommandLine" Version="4.5.1" />
-    <PackageReference Include="System.Drawing.Common" Version="4.5.0-preview1-26216-02" />
-    <PackageReference Include="YoutubeExplode" Version="4.1.1" />
+    <PackageReference Include="NuGet.CommandLine" Version="4.6.2" />
+    <PackageReference Include="System.Drawing.Common" Version="4.5.0-preview2-26406-04" />
+    <PackageReference Include="System.Reactive.Linq" Version="4.0.0-preview00001" />
+    <PackageReference Include="YoutubeExplode" Version="4.2.2" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="CowsaySharp.Library">

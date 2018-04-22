@@ -2,11 +2,8 @@
 {
     public class CustomCommand
     {
-        public ulong GuildID { get => guildid; }
-        public string Command { get => command; }
-        public string Content { get => content; }
-        ulong guildid;
-        string command;
-        string content;
+        public ulong GuildID { get; set; }
+        public string CommandName { get; set; }
+        public string Content { get; set; }
     }
 }

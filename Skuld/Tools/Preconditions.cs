@@ -1,127 +1,107 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using Discord;
 using Discord.Commands;
+using Discord;
+using Skuld.Services;
+using Discord.WebSocket;
 
 namespace Skuld.Tools
 {
-    public class Preconditions
+    public class RequireRole : PreconditionAttribute
     {
-    }
+		private readonly AccessLevel Level;
+		readonly DiscordShardedClient client = (DiscordShardedClient)Bot.services.GetService(typeof(DiscordShardedClient));
 
-    //https://github.com/Joe4evr/Discord.Addons/blob/master/src/Discord.Addons.Preconditions/Ratelimit/RatelimitAttribute.cs
-
-    /// <summary> Sets how often a user is allowed to use this command
-    /// or any command in this module. </summary>
-    /// <remarks>This is backed by an in-memory collection
-    /// and will not persist with restarts.</remarks>
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
-    public sealed class RatelimitAttribute : PreconditionAttribute
-    {
-        private readonly uint _invokeLimit;
-        private readonly bool _noLimitInDMs;
-        private readonly bool _noLimitForAdmins;
-        private readonly bool _applyPerGuild;
-        private readonly TimeSpan _invokeLimitPeriod;
-        private readonly Dictionary<(ulong, ulong?), CommandTimeout> _invokeTracker = new Dictionary<(ulong, ulong?), CommandTimeout>();
-
-        /// <summary> Sets how often a user is allowed to use this command. </summary>
-        /// <param name="times">The number of times a user may use the command within a certain period.</param>
-        /// <param name="period">The amount of time since first invoke a user has until the limit is lifted.</param>
-        /// <param name="measure">The scale in which the <paramref name="period"/> parameter should be measured.</param>
-        /// <param name="noLimitInDMs">Set whether or not there is no limit to the command in DMs. Defaults to false.</param>
-        /// <param name="noLimitForAdmins">Set whether or not there is no limit to the command for guild admins. Defaults to false.</param>
-        /// <param name="applyPerGuild">Set whether or not to apply a limit per guild. Defaults to false.</param>
-        public RatelimitAttribute(uint times, double period, Measure measure, bool noLimitInDMs = false, bool noLimitForAdmins = false, bool applyPerGuild = false)
+        public RequireRole(AccessLevel level)
         {
-            _invokeLimit = times;
-            _noLimitInDMs = noLimitInDMs;
-            _noLimitForAdmins = noLimitForAdmins;
-            _applyPerGuild = applyPerGuild;
-
-            //TODO: C# 7 candidate switch expression
-            switch (measure)
-            {
-                case Measure.Days:
-                    _invokeLimitPeriod = TimeSpan.FromDays(period);
-                    break;
-                case Measure.Hours:
-                    _invokeLimitPeriod = TimeSpan.FromHours(period);
-                    break;
-                case Measure.Minutes:
-                    _invokeLimitPeriod = TimeSpan.FromMinutes(period);
-                    break;
-            }
+            Level = level;
         }
 
-        /// <summary> Sets how often a user is allowed to use this command. </summary>
-        /// <param name="times">The number of times a user may use the command within a certain period.</param>
-        /// <param name="period">The amount of time since first invoke a user has until the limit is lifted.</param>
-        /// <param name="noLimitInDMs">Set whether or not there is no limit to the command in DMs. Defaults to false.</param>
-        /// <param name="noLimitForAdmins">Set whether or not there is no limit to the command for guild admins. Defaults to false.</param>
-        /// <param name="applyPerGuild">Set whether or not to apply a limit per guild. Defaults to false.</param>
-        public RatelimitAttribute(uint times, TimeSpan period, bool noLimitInDMs = false, bool noLimitForAdmins = false, bool applyPerGuild = false)
-        {
-            _invokeLimit = times;
-            _noLimitInDMs = noLimitInDMs;
-            _noLimitForAdmins = noLimitForAdmins;
-            _invokeLimitPeriod = period;
-            _applyPerGuild = applyPerGuild;
-        }
-
-        /// <inheritdoc />
-        /// Changed from: `CheckPermissions` to `CheckPermissionsAsync`
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
-            if (_noLimitInDMs && context.Channel is IPrivateChannel)
-                return Task.FromResult(PreconditionResult.FromSuccess());
-
-            if (_noLimitForAdmins && context.User is IGuildUser gu && gu.GuildPermissions.Administrator)
-                return Task.FromResult(PreconditionResult.FromSuccess());
-
-            var now = DateTime.UtcNow;
-            var key = _applyPerGuild ? (context.User.Id, context.Guild?.Id) : (context.User.Id, null);
-
-            var timeout = (_invokeTracker.TryGetValue(key, out var t)
-                && ((now - t.FirstInvoke) < _invokeLimitPeriod))
-                    ? t : new CommandTimeout(now);
-
-            timeout.TimesInvoked++;
-
-            if (timeout.TimesInvoked <= _invokeLimit)
-            {
-                _invokeTracker[key] = timeout;
-                return Task.FromResult(PreconditionResult.FromSuccess());
-            }
+            var access = GetPermission(context);
+            if (access >= Level)
+            { return Task.FromResult(PreconditionResult.FromSuccess()); }
             else
-            {
-                return Task.FromResult(PreconditionResult.FromError("You are currently in Timeout."));
-            }
+            { return Task.FromResult(PreconditionResult.FromError("Insufficient permissions.")); }
         }
 
-        private class CommandTimeout
+        public AccessLevel GetPermission(ICommandContext c)
         {
-            public uint TimesInvoked { get; set; }
-            public DateTime FirstInvoke { get; }
-
-            public CommandTimeout(DateTime timeStarted)
+            if (c.User.IsBot)
+            { return AccessLevel.Blocked; }
+            if (Bot.Configuration.Owners.Contains(c.User.Id) || (client.GetApplicationInfoAsync().Result).Owner.Id == c.User.Id)
+            { return AccessLevel.BotOwner; }
+            IGuildUser user = (IGuildUser)c.User;
+            if (user != null)
             {
-                FirstInvoke = timeStarted;
+                if (c.Guild.OwnerId == user.Id)
+                { return AccessLevel.ServerOwner; }
+                if (user.GuildPermissions.Administrator)
+                { return AccessLevel.ServerAdmin; }
+                if (user.GuildPermissions.ManageMessages && user.GuildPermissions.BanMembers && user.GuildPermissions.KickMembers && user.GuildPermissions.ManageRoles)
+                { return AccessLevel.ServerMod; }
             }
+
+            return AccessLevel.User;                             // If nothing else, return a default permission.
         }
     }
+	
+	public class RequireBotAndUserPermission : PreconditionAttribute
+	{
+		private readonly GuildPermission Permission;
 
-    /// <summary> Sets the scale of the period parameter. </summary>
-    public enum Measure
-    {
-        /// <summary> Period is measured in days. </summary>
-        Days,
+		public RequireBotAndUserPermission(GuildPermission perm)
+		{
+			Permission = perm;
+		}
 
-        /// <summary> Period is measured in hours. </summary>
-        Hours,
+		public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
+		{
+			var perm = GetPermission(context);
+			if (perm)
+			{ return Task.FromResult(PreconditionResult.FromSuccess()); }
+			else
+			{ return Task.FromResult(PreconditionResult.FromError("Insufficient permissions.")); }
+		}
 
-        /// <summary> Period is measured in minutes. </summary>
-        Minutes
-    }
+		public bool GetPermission(ICommandContext c)
+		{
+			if (c.User.IsBot)
+			{ return false; }
+
+			IGuildUser user = (IGuildUser)c.User;
+			IGuildUser botu = c.Guild.GetCurrentUserAsync().Result;
+
+			foreach(var perm in user.GuildPermissions.ToList())
+			{
+				foreach(var bperm in botu.GuildPermissions.ToList())
+				{
+					if (perm == Permission && bperm == Permission)
+						return true;
+				}
+			}
+
+			return false;                             // If nothing else, return a default value of false.
+		}
+	}
+
+	public class RequireDatabase : PreconditionAttribute
+	{
+		public RequireDatabase() { }
+
+		public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
+		{
+			var dbserv = (DatabaseService)services.GetService(typeof(DatabaseService));
+
+			if(dbserv!=null)
+			{
+				if (dbserv.CanConnect)
+					return Task.FromResult(PreconditionResult.FromSuccess());
+			}
+
+			return Task.FromResult(PreconditionResult.FromError("Command requires an active Database Connection"));
+		}
+	}
 }

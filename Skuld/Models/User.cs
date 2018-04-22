@@ -5,7 +5,6 @@ namespace Skuld.Models
     public class SkuldUser
     {
         public ulong ID { get; set; }
-        public string Username { get; set; }
         public ulong Money { get; set; }
 		public string Language { get; set; }
         public string Description { get; set; }

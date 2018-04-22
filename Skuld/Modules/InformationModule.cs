@@ -3,18 +3,28 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using System.Linq;
-using Skuld.Tools;
+using Skuld.Utilities;
 using Discord.WebSocket;
 using System.Globalization;
 using Skuld.APIS;
-using HtmlAgilityPack;
 using NodaTime;
+using Skuld.Services;
 
-namespace Skuld.Commands
+namespace Skuld.Modules
 {
     [Group, Name("Information")]
-    public class Information : ModuleBase
+    public class Information : ModuleBase<ShardedCommandContext>
     {
+		readonly LoggingService logger;
+		readonly MessageService messageService;
+
+		public Information(LoggingService log,
+			MessageService msg)
+		{
+			logger = log;
+			messageService = msg;
+		}
+
         string streamingemote = "<:streaming:313956277132853248>";
         string onlineemote = "<:online:313956277808005120>";
         string idleemote = "<:away:313956277220802560>";
@@ -25,30 +35,28 @@ namespace Skuld.Commands
         [Command("server", RunMode = RunMode.Async), Summary("Gets information about the server")]
         public async Task GetServer()
         {
-            var bot = Bot.bot;
             var guild = Context.Guild;
             var roles = guild.Roles;
             var embed = new EmbedBuilder { Color = Tools.Tools.RandomColor() };
             if (!String.IsNullOrEmpty(guild.IconUrl))
             { embed.ThumbnailUrl = guild.IconUrl; }
             embed.Author = new EmbedAuthorBuilder { Name = guild.Name };
-            var users = await guild.GetUsersAsync();
+            var users = guild.Users;
             int usercount = users.Count(x => x.IsBot == false);
-            var gusers = await guild.GetUsersAsync();
-            var gusersnobot = gusers.Where(x => x.IsBot == false);
-            var gusersbotonly = gusers.Where(x => x.IsBot == true);
-            var owner = await guild.GetOwnerAsync();
+            var gusersnobot = users.Where(x => x.IsBot == false);
+            var gusersbotonly = users.Where(x => x.IsBot == true);
+            var owner = guild.Owner;
             string afkname = null;
-            if (guild.AFKChannelId.HasValue)
-            { afkname = (await guild.GetVoiceChannelAsync(guild.AFKChannelId.Value)).Name; }
+            if (guild.AFKChannel != null)
+            { afkname = guild.AFKChannel.Name; }
             embed.AddField("Users", usercount.ToString(),inline: true);
             embed.AddField("Bots", $"{gusersbotonly.Count()}", inline: true);
-            embed.AddField("Shard", bot.GetShardIdFor(guild).ToString(), inline: true);
+            embed.AddField("Shard", Context.Client.GetShardIdFor(guild).ToString(), inline: true);
             embed.AddField("Verification Level", guild.VerificationLevel.ToString(),inline: true);
             embed.AddField("Voice Region ID", guild.VoiceRegionId, inline: true);
             embed.AddField("Owner", owner.Nickname??owner.Username + "#" + owner.DiscriminatorValue,inline: true);
-            embed.AddField("Text Channels", (await guild.GetTextChannelsAsync()).Count()+" channels",inline: true);
-            embed.AddField("Voice Channels", (await guild.GetVoiceChannelsAsync()).Count()+ " channels",inline: true);
+            embed.AddField("Text Channels", (guild.Channels.Count(x=>x.GetType() == typeof(ITextChannel)))+" channels",inline: true);
+            embed.AddField("Voice Channels", (guild.Channels.Count(x=>x.GetType() == typeof(IVoiceChannel)))+ " channels",inline: true);
             int seconds = guild.AFKTimeout;
             string minutes = ((seconds % 3600) / 60).ToString();
             embed.AddField("AFK Timeout", minutes + " minutes",inline: true);
@@ -57,9 +65,9 @@ namespace Skuld.Commands
             { embed.AddField("Server Avatar", "Doesn't exist", inline: true); }
             embed.AddField("Default Notifications", guild.DefaultMessageNotifications.ToString(),inline: true);
             embed.AddField("Created", guild.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
-            embed.AddField("Emojis", guild.Emotes.Count + Environment.NewLine + $"Use `{Bot.Prefix}server emojis` to view all of the emojis");
-            embed.AddField("Roles", guild.Roles.Count() + Environment.NewLine + $"Use `{Bot.Prefix}server roles` to view all of the roles");
-            await MessageHandler.SendChannelAsync((ITextChannel)Context.Channel,"", embed.Build());
+            embed.AddField("Emojis", guild.Emotes.Count + Environment.NewLine + $"Use `{messageService.config.Prefix}server emojis` to view all of the emojis");
+            embed.AddField("Roles", guild.Roles.Count() + Environment.NewLine + $"Use `{messageService.config.Prefix}server roles` to view all of the roles");
+            await messageService.SendChannelAsync((ITextChannel)Context.Channel,"", embed.Build());
         }
         [Command("server emojis", RunMode = RunMode.Async), Alias("server emoji")]
         public async Task ServerEmoji()
@@ -86,7 +94,7 @@ namespace Skuld.Commands
                     }
                 }
             }
-            await MessageHandler.SendChannelAsync(Context.Channel,message);
+            await messageService.SendChannelAsync(Context.Channel,message);
         }
         [Command("server roles", RunMode = RunMode.Async), Alias("server role")]
         public async Task ServerRoles()
@@ -108,43 +116,43 @@ namespace Skuld.Commands
             { message += "Server contains no roles"; }
             else
             { message += "`" + serverroles + "`"; }
-            await MessageHandler.SendChannelAsync(Context.Channel,message);
+            await messageService.SendChannelAsync(Context.Channel,message);
         }
 
         [Command("bot", RunMode = RunMode.Async)]
         public async Task DInfo() =>
-            await MessageHandler.SendDMsAsync((ITextChannel)Context.Channel, await Context.User.GetOrCreateDMChannelAsync(), $"Hey. I'm Skuld, a utility bot that aims to bring tools and fun stuff to your server! :blush:\n\nThanks for using the bot. It means a lot. <3\n\nP.S. I also have a twitter where you can also get support from: <https://twitter.com/SkuldDiscordBot> \n\nOr there's the Support server: http://discord.gg/JYzvjah \n\n" +
+            await messageService.SendDMsAsync((ITextChannel)Context.Channel, await Context.User.GetOrCreateDMChannelAsync(), $"Hey. I'm Skuld, a utility bot that aims to bring tools and fun stuff to your server! :blush:\n\nThanks for using the bot. It means a lot. <3\n\nP.S. I also have a twitter where you can also get support from: <https://twitter.com/SkuldDiscordBot> \n\nOr there's the Support server: http://discord.gg/JYzvjah \n\n" +
                 "P.S. from the Dev:\n" +
                 "By using this command and all others, past-present-future, you consent to having your User Data be stored for proper functionality of the commands. This also applies to the server information if you are a server admin/moderator");
-
-        [Command("id", RunMode = RunMode.Async), Summary("Gets the users ID only")]
-        public async Task InstigatorgetID()
-            => await MessageHandler.SendChannelAsync(Context.Channel, $"Your ID is: `{Context.User.Id}`");
-        
+		        
         [Command("id guild", RunMode = RunMode.Async), Summary("Get ID of Guild")]
-        public async Task GuildID()
-        => await MessageHandler.SendChannelAsync(Context.Channel, $"The ID of **{Context.Guild.Name}** is `{Context.Guild.Id}`");
-        
-        [Command("id", RunMode = RunMode.Async), Summary("Gets the users ID only")]
-        public async Task GetID(IGuildUser user)
-        => await MessageHandler.SendChannelAsync(Context.Channel, $"The ID of **{user.Username + "#" + user.DiscriminatorValue}** is: `{user.Id}`");
+        public async Task GuildID() => 
+			await messageService.SendChannelAsync(Context.Channel, $"The ID of **{Context.Guild.Name}** is `{Context.Guild.Id}`");
+
+		[Command("id", RunMode = RunMode.Async), Summary("Gets a users ID")]
+		public async Task GetID(IUser user = null)
+		{
+			if (user == null)
+				user = Context.User;
+			await messageService.SendChannelAsync(Context.Channel, $"The ID of **{user.Username + "#" + user.DiscriminatorValue}** is: `{user.Id}`");
+		}
         
         [Command("id", RunMode = RunMode.Async), Summary("Get id of channel")]
-        public async Task ChanID(IChannel channel)
-        => await MessageHandler.SendChannelAsync(Context.Channel, $"The ID of **{channel.Name}** is `{channel.Id}`");        
+        public async Task ChanID(IChannel channel) => 
+			await messageService.SendChannelAsync(Context.Channel, $"The ID of **{channel.Name}** is `{channel.Id}`");        
 
-        [Command("serverinvite", RunMode = RunMode.Async), Summary("Gives discord invite")]
+        [Command("support", RunMode = RunMode.Async), Summary("Gives discord invite")]
         public async Task DevDisc()
         {
             var user = await Context.User.GetOrCreateDMChannelAsync();
-            await MessageHandler.SendDMsAsync((ITextChannel)Context.Channel, user, $"Join the support server at: http://discord.gg/JYzvjah");
+            await messageService.SendDMsAsync((ITextChannel)Context.Channel, user, $"Join the support server at: http://discord.gg/JYzvjah");
         }
         [Command("invite", RunMode = RunMode.Async), Summary("OAuth2 Invite")]
         public async Task BotInvite()
         {
-            var bot = await Skuld.Bot.bot.GetApplicationInfoAsync();
+            var bot = await Context.Client.GetApplicationInfoAsync();
             var user = await Context.User.GetOrCreateDMChannelAsync();
-            await MessageHandler.SendDMsAsync((ITextChannel)Context.Channel, user, $"Invite me using: https://discordapp.com/oauth2/authorize?client_id={bot.Id}&scope=bot&permissions=1073802246");
+            await messageService.SendDMsAsync((ITextChannel)Context.Channel, user, $"Invite me using: https://discordapp.com/oauth2/authorize?client_id={bot.Id}&scope=bot&permissions=1073802246");
         }
         [Command("userratio", RunMode = RunMode.Async), Summary("Gets the ratio of users to bots")]
         public async Task HumanToBotRatio()
@@ -156,14 +164,15 @@ namespace Skuld.Commands
             int guildusers = guild.Users.Count;
             var oldperc = (decimal)bots / guildusers*100m;
             var total = Math.Round(oldperc, 2);
-            await MessageHandler.SendChannelAsync(Context.Channel, $"Current Bots are: {bots}\nCurrent Users are: {humans}\nTotal Guild Users: {guildusers}\n{total}% of the Guild Users are bots");
+            await messageService.SendChannelAsync(Context.Channel, $"Current Bots are: {bots}\nCurrent Users are: {humans}\nTotal Guild Users: {guildusers}\n{total}% of the Guild Users are bots");
         }
-        [Command("avatar",RunMode = RunMode.Async), Summary("Gets your avatar url")]
-        public async Task Avatar() =>
-            await MessageHandler.SendChannelAsync(Context.Channel, Context.User.GetAvatarUrl(ImageFormat.Auto) ?? "You have no avatar set");
-        [Command("avatar", RunMode = RunMode.Async), Summary("Gets your avatar url")]
-        public async Task Avatar([Remainder]IGuildUser user) =>
-            await MessageHandler.SendChannelAsync(Context.Channel, user.GetAvatarUrl(ImageFormat.Auto) ?? $"User {user.Nickname??user.Username} has no avatar set");
+		[Command("avatar", RunMode = RunMode.Async), Summary("Gets your avatar url")]
+		public async Task Avatar([Remainder]IUser user = null)
+		{
+			if (user == null)
+				user = Context.User;
+			await messageService.SendChannelAsync(Context.Channel, user.GetAvatarUrl(ImageFormat.Auto) ?? $"User {user.Username} has no avatar set");
+		}
 
         [Command("mods", RunMode = RunMode.Async),Summary("Gives online status of Moderators/Admins")]
         public async Task ModsOnline()
@@ -210,10 +219,10 @@ namespace Skuld.Commands
             { message = modstatus + "\n" + adminstatus; }
             else
             { message = adminstatus; }
-            await MessageHandler.SendChannelAsync(Context.Channel, message);
+            await messageService.SendChannelAsync(Context.Channel, message);
         }
         [Command("createinvite",RunMode = RunMode.Async),Summary("Creates a new invite to the guild")]
-        public async Task NewInvite(ITextChannel channel,int maxAge,int maxUses, bool permanent, bool unique)
+        public async Task NewInvite(ITextChannel channel,int maxAge = 0,int maxUses=0, bool permanent=true, bool unique=true)
         {
             IInviteMetadata invite;
             if (maxAge > 0 && maxUses < 0)
@@ -224,7 +233,7 @@ namespace Skuld.Commands
             { invite = await channel.CreateInviteAsync(null, null, permanent, unique); }
             else
             { invite = await channel.CreateInviteAsync(maxAge, maxUses, permanent, unique); }
-            await MessageHandler.SendChannelAsync(Context.Channel,
+            await messageService.SendChannelAsync(Context.Channel,
                 "I created the invite with the following settings:\n" +
                 "```cs\n" +
                 $"       Channel : {channel.Name}\n"+
@@ -238,17 +247,20 @@ namespace Skuld.Commands
         public async Task Nickname([Remainder]IGuildUser user)
         {
             if (!String.IsNullOrEmpty(user.Nickname))
-            { await MessageHandler.SendChannelAsync(Context.Channel, $"The user **{user.Username}#{user.DiscriminatorValue}** has a nickname of: {user.Nickname}"); }
+            { await messageService.SendChannelAsync(Context.Channel, $"The user **{user.Username}#{user.DiscriminatorValue}** has a nickname of: {user.Nickname}"); }
             else
-            { await MessageHandler.SendChannelAsync(Context.Channel, "This user doesn't have a nickname set."); }
+            { await messageService.SendChannelAsync(Context.Channel, "This user doesn't have a nickname set."); }
         }
 
         [Command("me", RunMode = RunMode.Async)]
         public async Task Whois() 
             => await GetProile(Context.User as IGuildUser).ConfigureAwait(false);
+
         [Command("whois", RunMode = RunMode.Async), Summary("Get's information about a user"), Alias("user")]
-        public async Task GetProile([Remainder]IGuildUser whois)
+        public async Task GetProile([Remainder]IGuildUser whois = null)
         {
+			if (whois == null)
+				whois = (IGuildUser)Context.User;
             try
             {
                 string nickname = null;
@@ -297,7 +309,7 @@ namespace Skuld.Commands
                 };
 
                 int seencount = 0;
-                foreach (var item in Bot.bot.Guilds)
+                foreach (var item in Context.Client.Guilds)
                 {
                     if (item.GetUser(whois.Id) != null)
                     { seencount++; }
@@ -321,11 +333,11 @@ namespace Skuld.Commands
                 embed.AddField(":inbox_tray: Server Join", whois.JoinedAt.Value.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + $" ({joinedatstring})\t`DD/MM/YYYY`");
                 embed.AddField(":globe_with_meridians: Discord Join", whois.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + $" ({createdatstring})\t`DD/MM/YYYY`");
 
-                await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
+                await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
             }
             catch (Exception ex)
             {
-                Bot.Logger.AddToLogs(new Models.LogMessage("Cmd", "Error Encountered Parsing Whois", LogSeverity.Error, ex));
+                await logger.AddToLogsAsync(new Models.LogMessage("Cmd", "Error Encountered Parsing Whois", LogSeverity.Error, ex));
             }
         }
         
@@ -339,45 +351,43 @@ namespace Skuld.Commands
             return rtnstrng + "ago";
         }
 
-        [Command("roles", RunMode = RunMode.Async), Summary("Gets your current roles")]
-        public async Task GetRole() =>
-            await GetRole(Context.User as IGuildUser).ConfigureAwait(false);
-        [Command("roles", RunMode = RunMode.Async), Summary("Gets a users current roles")]
-        public async Task GetRole(IGuildUser user)
-        {
-            var guild = Context.Guild;
-            var userroles = user.RoleIds;
-            var roles = userroles.Select(query => guild.GetRole(query).Name).Aggregate((current, next) => current.TrimStart('@') + ", " + next);
-            string username = null;
-            if (!String.IsNullOrEmpty(user.Nickname))
-            { username = user.Nickname + "#" + user.DiscriminatorValue; }
-            else
-            { username = user.Username + "#" + user.DiscriminatorValue; }
-            await MessageHandler.SendChannelAsync(Context.Channel, "Roles of __**" + username + "**__\n\n`" + (roles ?? "No roles") + "`");
+		[Command("roles", RunMode = RunMode.Async), Summary("Gets a users current roles")]
+		public async Task GetRole(IGuildUser user = null)
+		{
+			if (user == null)
+				user = (IGuildUser)Context.User;
+			var guild = Context.Guild;
+			var userroles = user.RoleIds;
+			var roles = userroles.Select(query => guild.GetRole(query).Name).Aggregate((current, next) => current.TrimStart('@') + ", " + next);
+			await messageService.SendChannelAsync(Context.Channel, $"Roles of __**{user.Username}({user.Nickname})#{user.Discriminator}**__\n\n`" + (roles ?? "No roles") + "`");
         }
-        [Command("epoch", RunMode = RunMode.Async), Summary("Gets Current Time in Epoch")]
-        public async Task Epoch()
+
+        [Command("epoch", RunMode = RunMode.Async), Summary("Gets a DateTime DD/MM/YYYY HH:MM:SS (24 Hour) or the current time in POSIX/Unix Epoch time")]
+        public async Task Epoch([Remainder]string epoch = null)
         {
-            var dtnowutc = DateTime.UtcNow;
-            await MessageHandler.SendChannelAsync(Context.Channel, $"The current time in UTC ({dtnowutc.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")}) in epoch is: {(Int32)(dtnowutc.Subtract(new DateTime(1970, 1, 1))).TotalSeconds}");
-        }
-        [Command("epoch", RunMode = RunMode.Async), Summary("Gets a specific DateTime DD/MM/YYYY HH:MM:SS (24 Hour) in POSIX/Unix Epoch time")]
-        public async Task Epoch([Remainder]string epoch)
-        {
-            var datetime = Convert.ToDateTime(epoch, new CultureInfo("en-GB"));
-            var epochdt = (Int32)(datetime.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
-            await MessageHandler.SendChannelAsync(Context.Channel, $"Your DateTime ({datetime.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")}) in epoch is: {epochdt}");
+			if(epoch == null)
+			{
+				var dtnowutc = DateTime.UtcNow;
+				await messageService.SendChannelAsync(Context.Channel, $"The current time in UTC ({dtnowutc.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")}) in epoch is: {(Int32)(dtnowutc.Subtract(new DateTime(1970, 1, 1))).TotalSeconds}");
+			}
+			else
+			{
+				var datetime = Convert.ToDateTime(epoch, new CultureInfo("en-GB"));
+				var epochdt = (Int32)(datetime.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+				await messageService.SendChannelAsync(Context.Channel, $"Your DateTime ({datetime.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")}) in epoch is: {epochdt}");
+			}
         }
         [Command("epoch", RunMode = RunMode.Async), Summary("epoch to DateTime format")]
         public async Task Epoch(ulong epoch)
         {
             var epochtodt = new DateTime(1970, 1, 1, 0, 0, 0,DateTimeKind.Utc).AddSeconds(Convert.ToDouble(epoch));
-            await MessageHandler.SendChannelAsync(Context.Channel, $"Your epoch ({epoch}) in DateTime is: {epochtodt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")}");
+            await messageService.SendChannelAsync(Context.Channel, $"Your epoch ({epoch}) in DateTime is: {epochtodt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")}");
         }
+
         [Command("isup", RunMode = RunMode.Async), Summary("Check if a website is online"), Alias("downforeveryone", "isitonline")]
         public async Task IsUp(string website)
         {
-            var doc = await APIWebReq.ScrapeUrl(new Uri("http://downforeveryoneorjustme.com/" + website));
+            var doc = await WebHandler.ScrapeUrlAsync(new Uri("http://downforeveryoneorjustme.com/" + website));
             string response = null;
             var container = doc.GetElementbyId("domain-main-content");
             var isup = container.ChildNodes.FindFirst("p");
@@ -386,7 +396,7 @@ namespace Skuld.Commands
             else
             { response = $"The website: `{website}` is working and replying as intended."; }
             response = response + "\n\n`Source:` <http://downforeveryoneorjustme.com/" + website + ">";
-            await MessageHandler.SendChannelAsync(Context.Channel, response);
+            await messageService.SendChannelAsync(Context.Channel, response);
         }
         [Command("time"), Summary("Converts a time to a set of times")]
         public async Task ConvertTime(string primarytimezone, string time, [Remainder]string timezones)
@@ -403,11 +413,11 @@ namespace Skuld.Commands
                     response += $"\n{usertime} - {convertedTime}";
                 }
 
-                await MessageHandler.SendChannelAsync(Context.Channel, response + "```");
+                await messageService.SendChannelAsync(Context.Channel, response + "```");
             }
             catch (Exception ex)
             {
-                await MessageHandler.SendChannelAsync(Context.Channel, Skuld.Languages.en_GB.ResourceManager.GetString("SKULD_GENERIC_ERROR") + "\n" + ex.Message);
+                await messageService.SendChannelAsync(Context.Channel, Skuld.Languages.en_GB.ResourceManager.GetString("SKULD_GENERIC_ERROR") + "\n" + ex.Message);
             }        
         }        
 

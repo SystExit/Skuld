@@ -2,6 +2,8 @@
 using System.Linq;
 using System.Resources;
 using Skuld.Languages;
+using System.Threading.Tasks;
+using Skuld.Services;
 
 namespace Skuld.Tools
 {
@@ -11,10 +13,16 @@ namespace Skuld.Tools
 		static Dictionary<string, string> localehumannames = new Dictionary<string, string>();
         public Dictionary<string, ResourceManager> Locales { get => locales; }
         public Dictionary<string, string> LocaleHumanNames { get => localehumannames; }
+		readonly LoggingService logger;
 
-        public static string defaultLocale = "en-GB";
+		public Locale(LoggingService log)
+		{
+			logger = log;
+		}
 
-		public static void InitialiseLocales()
+        public string defaultLocale = "en-GB";
+
+		public async Task InitialiseLocalesAsync()
 		{
             locales.Add("en-GB", en_GB.ResourceManager);
             localehumannames.Add("English (Great Britain)", "en-GB");
@@ -28,10 +36,10 @@ namespace Skuld.Tools
             locales.Add("tr-TR", tr_TR.ResourceManager);
             localehumannames.Add("Turkish (Turkey)", "tr-TR");
 
-			Bot.Logger.AddToLogs(new Models.LogMessage("LocaleInit", "Initialized all the languages", Discord.LogSeverity.Info));
+			await logger.AddToLogsAsync(new Models.LogMessage("LocaleInit", "Initialized all the languages", Discord.LogSeverity.Info));
 		}
 
-		public static ResourceManager GetLocale(string id)
+		public ResourceManager GetLocale(string id)
 		{
 			var locale = locales.FirstOrDefault(x => x.Key == id);
 			if (locale.Value != null)

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Discord.Commands;
 using Skuld.APIS;
@@ -8,17 +7,52 @@ using Skuld.Tools;
 using Discord;
 using System.Globalization;
 using System.Linq;
-using Newtonsoft.Json.Linq;
 using MySql.Data.MySqlClient;
 using System.Text.RegularExpressions;
-using Newtonsoft.Json;
 using Discord.Addons.Interactive;
+using Skuld.Utilities;
+using Skuld.Services;
+using Discord.WebSocket;
 
-namespace Skuld.Commands
+namespace Skuld.Modules
 {
     [Group,Name("Fun")]
-    public class Fun : InteractiveBase
-    {        
+    public class Fun : InteractiveBase<ShardedCommandContext>
+    {
+		readonly DatabaseService database;
+		readonly Random random;
+		readonly LoggingService logger;
+		readonly AnimalAPIS animals;
+		readonly Locale locale;
+		readonly MessageService messageService;
+		readonly WebComicClients comicClients;
+		readonly SysExClient sysExClient;
+		readonly Strawpoll strawpoll;
+		readonly APIS.YNWTF YNWTFcli;
+
+		public Fun(DatabaseService db,
+			Random ran,
+			LoggingService log,
+			AnimalAPIS anim,
+			Locale loc,
+			MessageService msgsrv,
+			SysExClient sysEx,
+			Strawpoll straw,
+			APIS.YNWTF yn,
+			WebComicClients comicli)
+		{
+			database = db;
+			random = ran;
+			logger = log;
+			animals = anim;
+			locale = loc;
+			comicClients = comicli;
+			sysExClient = sysEx;
+			strawpoll = straw;
+			YNWTFcli = yn;
+			messageService = msgsrv;
+		} //depinject
+
         static string[] eightball = {
 			"SKULD_FUN_8BALL_YES1",
 			"SKULD_FUN_8BALL_YES2",
@@ -61,72 +95,98 @@ namespace Skuld.Commands
         [Command("neko", RunMode = RunMode.Async),Summary("neko grill"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Neko()
         {
-            var neko = await NekoLife.GetNekoAsync();
-            if (neko != null)
-            {
-                await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = neko }.Build());
-            }
+            var neko = await animals.GetNekoAsync();
+			if (neko != null)
+				await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = neko }.Build());
+			else
+				await messageService.SendChannelAsync(Context.Channel, "Hmmm <:Thunk:350673785923567616>, I got an empty response.");
         }
         [RequireNsfw]
-        [Command("lewdneko", RunMode = RunMode.Async), Summary("Lewd Neko Grill"), Ratelimit(20, 1, Measure.Minutes,false,true)]
+        [Command("lewdneko", RunMode = RunMode.Async), Summary("Lewd Neko Grill"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task LewdNeko()
         {
-            var neko = await NekoLife.GetLewdNekoAsync();
-            if (neko != null)
-            {
-                await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = neko }.Build());
-            }
-        }
+            var neko = await animals.GetLewdNekoAsync();
+            if (neko != null)            
+                await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = neko }.Build());
+			else
+				await messageService.SendChannelAsync(Context.Channel, "Hmmm <:Thunk:350673785923567616>, I got an empty response.");
+		}
 
-        [Command("kitty", RunMode = RunMode.Async), Summary("kitty"), Ratelimit(20, 1, Measure.Minutes)]
+		[Command("kitsune", RunMode = RunMode.Async), Summary("Kitsunemimi Grill"), Ratelimit(20, 1, Measure.Minutes)]
+		public async Task Kitsune()
+		{
+			var kitsu = await sysExClient.GetKitsuneAsync();
+			await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = kitsu }.Build());
+		}
+		[RequireNsfw]
+		[Command("lewdkitsune", RunMode = RunMode.Async), Summary("Lewd Kitsunemimi Grill"), Ratelimit(20, 1, Measure.Minutes)]
+		public async Task LewdKitsune()
+		{
+			var kitsu = await sysExClient.GetLewdKitsuneAsync();
+			await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = kitsu }.Build());
+		}
+
+		[Command("kitty", RunMode = RunMode.Async), Summary("kitty"), Ratelimit(20, 1, Measure.Minutes)]
         [Alias("cat", "cats", "kittycat", "kitty cat", "meow", "kitties", "kittys")]
         public async Task Kitty()
         {
-            var kitty = await APIS.Kitty.WebReq.GetKitty();
-            if (videoext.Any(kitty.ImageURL.Contains))
-            { await MessageHandler.SendChannelAsync(Context.Channel, kitty.ImageURL); }
-            else
-            { await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = kitty.ImageURL }.Build()); }
+            var kitty = await animals.GetKittyAsync();
+
+			if (videoext.Any(kitty.Contains))
+				await messageService.SendChannelAsync(Context.Channel, kitty);
+			if (kitty == "https://i.ytimg.com/vi/29AcbY5ahGo/hqdefault.jpg")
+				await messageService.SendChannelAsync(Context.Channel, "Both the api's are down, that makes the sad a big sad. <:blobcry:350681079415439361>", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = kitty }.Build());
+			else
+				await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = kitty }.Build());
         }
 
         [Command("doggo", RunMode = RunMode.Async), Summary("doggo"), Ratelimit(20, 1, Measure.Minutes)]
         [Alias("dog", "dogs", "doggy")]
         public async Task Doggo()
         {            
-            var doggo = await APIS.Doggo.WebReq.GetDoggo();
-            if (videoext.Any(doggo.ImageURL.Contains))
-            { await MessageHandler.SendChannelAsync(Context.Channel, doggo.ImageURL); }
-            else
-            { await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = doggo.ImageURL }.Build()); }
+            var doggo = await animals.GetDoggoAsync();
+            if (videoext.Any(doggo.Contains))
+				await messageService.SendChannelAsync(Context.Channel, doggo);
+			if (doggo == "https://i.imgur.com/ZSMi3Zt.jpg")
+				await messageService.SendChannelAsync(Context.Channel, "The api is down, that makes the sad a big sad. <:blobcry:350681079415439361>", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = doggo }.Build());
+			else
+				await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = doggo }.Build());
         }
 
-        [Command("llama", RunMode = RunMode.Async), Summary("Llama"), Ratelimit(20, 1, Measure.Minutes)]
+		[Command("bird", RunMode = RunMode.Async), Summary("birb"), Ratelimit(20, 1, Measure.Minutes)]
+		[Alias("birb")]
+		public async Task Birb()
+		{
+			var birb = await animals.GetBirbAsync();
+			if (videoext.Any(birb.Contains))
+			 await messageService.SendChannelAsync(Context.Channel, birb);
+			else
+			 await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = birb }.Build());
+		}
+
+		[Command("llama", RunMode = RunMode.Async), Summary("Llama"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Llama()
         {
-            var llama = JsonConvert.DeserializeObject<Animal>(await APIWebReq.ReturnString(new Uri("https://api.systemexit.co.uk/get/llama/random")));
-            await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = llama.FileUrl }.Build());
+			var llama = await sysExClient.GetLlamaAsync();
+            await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = llama }.Build());
         }
 
         [Command("seal", RunMode = RunMode.Async), Summary("Seal"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Seal()
         {
-            var seal = JsonConvert.DeserializeObject<Animal>(await APIWebReq.ReturnString(new Uri("https://api.systemexit.co.uk/get/seal/random")));
-            await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = seal.FileUrl }.Build());
+            var seal = await sysExClient.GetSealAsync();
+			await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = seal }.Build());
         }
 
         [Command("eightball", RunMode = RunMode.Async), Summary("Eightball")]
         [Alias("8ball")]
-#pragma warning disable RECS0154 // Parameter is never used
-        public async Task Eightball([Remainder]string whatisyourquestion) => await Eightball();
-#pragma warning restore RECS0154 // Parameter is never used        
-
-        [Command("eightball", RunMode = RunMode.Async), Summary("Eightball")]
-        [Alias("8ball")]
-        public async Task Eightball()
+        public async Task Eightball([Remainder]string question = null)
         {
-            var usr = await Bot.Database.GetUserAsync(Context.User.Id);
-            var locale = Locale.GetLocale(usr.Language);
-            await MessageHandler.SendChannelAsync(Context.Channel, $"{Context.User.Username} :8ball: says: {locale.GetString(eightball[Bot.random.Next(0, eightball.Length)])}");
+            var usr = await database.GetUserAsync(Context.User.Id);
+			var local = locale.GetLocale(locale.defaultLocale);
+			if(usr!=null)
+				local = locale.GetLocale(usr.Language);
+			await messageService.SendChannelAsync(Context.Channel, $"{Context.User.Username} :8ball: says: {local.GetString(eightball[random.Next(0, eightball.Length)])}");
         }
 
         [Command("roll", RunMode = RunMode.Async), Summary("Roll a die")]
@@ -134,253 +194,266 @@ namespace Skuld.Commands
         {
             try
             {
-                int rand = Bot.random.Next(1, (upper + 1));
+                int rand = random.Next(1, (upper + 1));
                 if (rand == 1)
                 {
-                    var cmd = new MySqlCommand("SELECT luckfactor FROM accounts where ID = @userid");
-                    cmd.Parameters.AddWithValue("@userid", Context.User.Id);
-                    var currluckfact = Convert.ToDouble(await Bot.Database.GetSingleAsync(cmd));
-                    currluckfact = currluckfact / 1.1;
-                    currluckfact = Math.Round(currluckfact, 4);
-                    if (currluckfact < 0.1)
-                    { currluckfact = 0.1; }
-                    cmd = new MySqlCommand("UPDATE accounts SET luckfactor = @luckfactor where ID = @userid");
-                    cmd.Parameters.AddWithValue("@userid", Context.User.Id);
-                    cmd.Parameters.AddWithValue("@luckfactor", currluckfact);
-                    await Bot.Database.NonQueryAsync(cmd);
+					if (database.CanConnect)
+					{
+						var oldusr = await database.GetUserAsync(Context.User.Id);
+						oldusr.LuckFactor = Math.Round((oldusr.LuckFactor / 1.1), 4);
+
+						if (oldusr.LuckFactor < 0.1)
+							oldusr.LuckFactor = 0.1;
+
+						await database.UpdateUserAsync(oldusr);
+					}
+
                     await Context.Channel.SendMessageAsync($"{Context.User.Mention} just rolled and got a {rand} :weary:");
                 }
                 else
-                { await Context.Channel.SendMessageAsync($"{Context.User.Mention} just rolled and got a {rand}"); }
+                 await Context.Channel.SendMessageAsync($"{Context.User.Mention} just rolled and got a {rand}");
             }
             catch (FormatException)
             {
                 await Context.Channel.SendMessageAsync($"{Context.User.Mention} this command only accepts numbers, try again");
-                StatsdClient.DogStatsd.Increment("commands.errors.exception");
+                StatsdClient.DogStatsd.Increment("commands.errors",1,1,new string[] { "exception" });
             }
         }
 
-        [Command("pasta", RunMode = RunMode.Async), Summary("Pastas are nice")]
+        [Command("pasta", RunMode = RunMode.Async), Summary("Pastas are nice"), RequireDatabase]
         public async Task Pasta(string cmd, string title)
         {
-            var pastaLocal = await Bot.Database.GetPastaAsync(title);
-            pastaLocal.Username = Context.Client.GetUser(pastaLocal.OwnerID).Username??"Unknown";
-            if (pastaLocal != null)
-            {
-                if (cmd == "who" || cmd == "?")
-                {
-                    var embed = new EmbedBuilder()
-                    {
-                        Color = Tools.Tools.RandomColor(),
-                        Title = pastaLocal.PastaName
-                    };
-                    embed.AddField("Author", pastaLocal.Username, inline: true);
-                    embed.AddField("Created", pastaLocal.Created, inline: true);
-                    embed.AddField("UpVotes", ":arrow_double_up: " + pastaLocal.Upvotes, inline: true);
-                    embed.AddField("DownVotes", ":arrow_double_down: " + pastaLocal.Downvotes, inline: true);
-                    await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
-                }
-                if (cmd == "upvote")
-                {
-                    await MessageHandler.SendChannelAsync(Context.Channel, "This function is currently disabled due to a new update coming soon. :( Sorry for the inconvenience");
-                    /*command = new MySqlCommand("SELECT upvotes FROM pasta WHERE pastaname = @title");
-                    command.Parameters.AddWithValue("@title", title);
-                    uint upvotes = Convert.ToUInt32(await Sql.GetSingleAsync(command));
-                    upvotes = upvotes+1;
-                    command = new MySqlCommand("UPDATE pasta SET upvotes = @upvotes WHERE pastaname = @title");
-                    command.Parameters.AddWithValue("@title", title);
-                    command.Parameters.AddWithValue("@upvotes", upvotes);
-                    await Sql.NonQueryAsync(command);
-                    command = new MySqlCommand("SELECT upvotes FROM pasta WHERE pastaname = @title");
-                    command.Parameters.AddWithValue("@title", title);
-                    uint upvote = Convert.ToUInt32(await Sql.GetSingleAsync(command));
-                    if (upvotes == upvote)
-                        await MessageHandler.SendChannelAsync(Context.Channel, $"Upvote added to **{title}** it currently has: {upvotes} Upvotes");*/
-                }
-                if (cmd == "downvote")
-                {
-                    await MessageHandler.SendChannelAsync(Context.Channel, "This function is currently disabled due to a new update coming soon. :( Sorry for the inconvenience");
-                    /*command = new MySqlCommand("SELECT downvotes FROM pasta WHERE pastaname = @title");
-                    command.Parameters.AddWithValue("@title", title);
-                    uint downvotes = Convert.ToUInt32(await Sql.GetSingleAsync(command));
-                    downvotes = downvotes + 1;
-                    command = new MySqlCommand("UPDATE pasta SET downvotes = @downvotes WHERE pastaname = @title");
-                    command.Parameters.AddWithValue("@title", title);
-                    command.Parameters.AddWithValue("@downvotes", downvotes);
-                    await Sql.NonQueryAsync(command);
-                    command = new MySqlCommand("SELECT downvotes FROM pasta WHERE pastaname = @title");
-                    command.Parameters.AddWithValue("@title", title);
-                    uint Downvote = Convert.ToUInt32(await Sql.GetSingleAsync(command));
-                    if (downvotes == Downvote)
-                        await MessageHandler.SendChannelAsync(Context.Channel, $"Downvote added to **{title}** it currently has: {downvotes} Downvote");*/
-                }
-                if (cmd == "delete")
-                {
-                    if (Convert.ToUInt64(pastaLocal.OwnerID) == Context.User.Id)
-                    {
-                        var command = new MySqlCommand("DELETE FROM pasta WHERE pastaname = @title");
-                        command.Parameters.AddWithValue("@title", title);
-                        await Bot.Database.NonQueryAsync(command).ContinueWith(async x =>
-                        {
-                            if (x.IsCompleted)
-                            { await MessageHandler.SendChannelAsync(Context.Channel, $"Successfully deleted: **{title}**"); }
-                        });
-                    }
-                }
-            }
-            else
-            {
-                StatsdClient.DogStatsd.Increment("commands.errors.generic");
-                await MessageHandler.SendChannelAsync(Context.Channel, $"Pasta `{title}` doesn't exist. :/ Sorry.");
-            }
+			var pastaLocal = await database.GetPastaAsync(title);
+			if (pastaLocal != null)
+			{
+				if (cmd == "who" || cmd == "?")
+				{
+					var embed = new EmbedBuilder()
+					{
+						Color = Tools.Tools.RandomColor(),
+						Title = pastaLocal.Name
+					};
+					var usr = Context.Client.GetUser(pastaLocal.OwnerID);
+					if (usr != null)
+						embed.AddField("Author", usr.Username + "#" + usr.Discriminator, inline: true);
+					else
+						embed.AddField("Author", $"Unknown User ({pastaLocal.OwnerID})");
+					embed.AddField("Created", pastaLocal.Created, inline: true);
+					embed.AddField("UpVotes", ":arrow_double_up: " + pastaLocal.Upvotes, inline: true);
+					embed.AddField("DownVotes", ":arrow_double_down: " + pastaLocal.Downvotes, inline: true);
+					await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
+				}
+				if (cmd == "upvote")
+				{
+					await messageService.SendChannelAsync(Context.Channel, "This function is currently disabled due to a new update coming soon. :( Sorry for the inconvenience");
+					/*command = new MySqlCommand("SELECT upvotes FROM pasta WHERE pastaname = @title");
+					command.Parameters.AddWithValue("@title", title);
+					uint upvotes = Convert.ToUInt32(await Sql.GetSingleAsync(command));
+					upvotes = upvotes+1;
+					command = new MySqlCommand("UPDATE pasta SET upvotes = @upvotes WHERE pastaname = @title");
+					command.Parameters.AddWithValue("@title", title);
+					command.Parameters.AddWithValue("@upvotes", upvotes);
+					await Sql.NonQueryAsync(command);
+					command = new MySqlCommand("SELECT upvotes FROM pasta WHERE pastaname = @title");
+					command.Parameters.AddWithValue("@title", title);
+					uint upvote = Convert.ToUInt32(await Sql.GetSingleAsync(command));
+					if (upvotes == upvote)
+						await messageService.SendChannelAsync(Context.Channel, $"Upvote added to **{title}** it currently has: {upvotes} Upvotes");*/
+				}
+				if (cmd == "downvote")
+				{
+					await messageService.SendChannelAsync(Context.Channel, "This function is currently disabled due to a new update coming soon. :( Sorry for the inconvenience");
+					/*command = new MySqlCommand("SELECT downvotes FROM pasta WHERE pastaname = @title");
+					command.Parameters.AddWithValue("@title", title);
+					uint downvotes = Convert.ToUInt32(await Sql.GetSingleAsync(command));
+					downvotes = downvotes + 1;
+					command = new MySqlCommand("UPDATE pasta SET downvotes = @downvotes WHERE pastaname = @title");
+					command.Parameters.AddWithValue("@title", title);
+					command.Parameters.AddWithValue("@downvotes", downvotes);
+					await Sql.NonQueryAsync(command);
+					command = new MySqlCommand("SELECT downvotes FROM pasta WHERE pastaname = @title");
+					command.Parameters.AddWithValue("@title", title);
+					uint Downvote = Convert.ToUInt32(await Sql.GetSingleAsync(command));
+					if (downvotes == Downvote)
+						await messageService.SendChannelAsync(Context.Channel, $"Downvote added to **{title}** it currently has: {downvotes} Downvote");*/
+				}
+				if (cmd == "delete")
+				{
+					if (Convert.ToUInt64(pastaLocal.OwnerID) == Context.User.Id)
+					{
+						var command = new MySqlCommand("DELETE FROM pasta WHERE pastaname = @title");
+						command.Parameters.AddWithValue("@title", title);
+						await database.NonQueryAsync(command).ContinueWith(async x =>
+						{
+							if (x.IsCompleted)
+							{ await messageService.SendChannelAsync(Context.Channel, $"Successfully deleted: **{title}**"); }
+						});
+					}
+				}
+			}
+			else
+			{
+				StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
+				await messageService.SendChannelAsync(Context.Channel, $"Pasta `{title}` doesn't exist. :/ Sorry.");
+			}
         }
 
-        [Command("pasta", RunMode = RunMode.Async), Summary("Pastas are nice")]
+        [Command("pasta", RunMode = RunMode.Async), Summary("Pastas are nice"), RequireDatabase]
         public async Task Pasta(string cmd, string title, [Remainder]string content)
         {
-            if (cmd == "new" || cmd == "+" || cmd == "create")
-            {
-                if (title == "list" || title == "help")
-                {
-                    await MessageHandler.SendChannelAsync(Context.Channel, "Nope");
-                    StatsdClient.DogStatsd.Increment("commands.errors.generic");
-                }
-                else
-                {
-                    var command = new MySqlCommand("SELECT pastaname FROM pasta WHERE pastaname = @pastatitle");
-                    command.Parameters.AddWithValue("@pastatitle", title);
-                    var pastaname = await Bot.Database.GetSingleAsync(command);
-                    if (!string.IsNullOrEmpty(pastaname))
-                    {
-                        await MessageHandler.SendChannelAsync(Context.Channel, $"Pasta already exists with name: **{title}**");
-                        StatsdClient.DogStatsd.Increment("commands.errors.generic");
-                    }
-                    else
-                    {
-                        content = content.Replace("\'", "\\\'");
-                        content = content.Replace("\"", "\\\"");
+			if (database.CanConnect)
+			{
+				if (cmd == "new" || cmd == "+" || cmd == "create")
+				{
+					if (title == "list" || title == "help")
+					{
+						await messageService.SendChannelAsync(Context.Channel, "Nope");
+						StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
+					}
+					else
+					{
+						var command = new MySqlCommand("SELECT pastaname FROM pasta WHERE pastaname = @pastatitle");
+						command.Parameters.AddWithValue("@pastatitle", title);
+						var pastaname = await database.GetSingleAsync(command);
+						if (!string.IsNullOrEmpty(pastaname))
+						{
+							await messageService.SendChannelAsync(Context.Channel, $"Pasta already exists with name: **{title}**");
+							StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
+						}
+						else
+						{
+							content = content.Replace("\'", "\\\'");
+							content = content.Replace("\"", "\\\"");
 
-                        command = new MySqlCommand("INSERT INTO pasta (content,username,ownerid,created,pastaname) VALUES ( @content , @username , @ownerid , @created , @pastatitle )");
-                        command.Parameters.AddWithValue("@content", content);
-                        command.Parameters.AddWithValue("@ownerid", Context.User.Id);
-                        command.Parameters.AddWithValue("@created", DateTime.UtcNow);
-                        command.Parameters.AddWithValue("@pastatitle", title);
+							command = new MySqlCommand("INSERT INTO pasta (content,ownerid,created,pastaname) VALUES ( @content , @ownerid , @created , @pastatitle )");
+							command.Parameters.AddWithValue("@content", content);
+							command.Parameters.AddWithValue("@ownerid", Context.User.Id);
+							command.Parameters.AddWithValue("@created", DateTime.UtcNow);
+							command.Parameters.AddWithValue("@pastatitle", title);
 
-                        await Bot.Database.NonQueryAsync(command).ContinueWith(async x =>
-                        {
-                            command = new MySqlCommand("SELECT pastaname FROM pasta WHERE pastaname = @pastatitle");
-                            command.Parameters.AddWithValue("@pastatitle", title);
-                            var newpasta = await Bot.Database.GetSingleAsync(command);
-                            if (x.IsCompleted && !string.IsNullOrEmpty(newpasta))
-                            {
-                                await MessageHandler.SendChannelAsync(Context.Channel, $"Successfully added: **{title}**");
-                            }
-                        });
-                    }
-                }
-            }
-            if (cmd == "edit" || cmd == "change" || cmd == "modify")
-            {
-                var command = new MySqlCommand("SELECT ownerid from pasta where pastaname = @title");
-                command.Parameters.AddWithValue("@title", title);
-                var ownerid = await Bot.Database.GetSingleAsync(command);
-                if (Convert.ToUInt64(ownerid) == Context.User.Id)
-                {
-                    command = new MySqlCommand("SELECT content FROM pasta where pastaname = @title");
-                    command.Parameters.AddWithValue("@title", title);
-                    var oldcontent = await Bot.Database.GetSingleAsync(command);
-                    content = content.Replace("\'", "\\\'");
-                    content = content.Replace("\"", "\\\"");
-                    command = new MySqlCommand("UPDATE pasta SET content = @content WHERE pastaname = @title");
-                    command.Parameters.AddWithValue("@content", content);
-                    command.Parameters.AddWithValue("@title", title);
-                    await Bot.Database.NonQueryAsync(command).ContinueWith(async x =>
-                    {
-                        command = new MySqlCommand("SELECT content FROM pasta where pastaname = @title");
-                        command.Parameters.AddWithValue("@title", title);
-                        var respnew = await Bot.Database.GetSingleAsync(command);
-                        if (x.IsCompleted && respnew != oldcontent)
-                            await MessageHandler.SendChannelAsync(Context.Channel, $"Successfully changed the content of **{title}**");
-                    });
-                }
-                else
-                {
-                    StatsdClient.DogStatsd.Increment("commands.errors.unm-precon");
-                    await MessageHandler.SendChannelAsync(Context.Channel, "I'm sorry, but you don't own the Pasta");
-                }
-            }
+							await database.NonQueryAsync(command).ContinueWith(async x =>
+							{
+								command = new MySqlCommand("SELECT pastaname FROM pasta WHERE pastaname = @pastatitle");
+								command.Parameters.AddWithValue("@pastatitle", title);
+								var newpasta = await database.GetSingleAsync(command);
+								if (x.IsCompleted && !string.IsNullOrEmpty(newpasta))
+								{
+									await messageService.SendChannelAsync(Context.Channel, $"Successfully added: **{title}**");
+								}
+							});
+						}
+					}
+				}
+				if (cmd == "edit" || cmd == "change" || cmd == "modify")
+				{
+					var command = new MySqlCommand("SELECT ownerid from pasta where pastaname = @title");
+					command.Parameters.AddWithValue("@title", title);
+					var ownerid = await database.GetSingleAsync(command);
+					if (Convert.ToUInt64(ownerid) == Context.User.Id)
+					{
+						command = new MySqlCommand("SELECT content FROM pasta where pastaname = @title");
+						command.Parameters.AddWithValue("@title", title);
+						var oldcontent = await database.GetSingleAsync(command);
+						content = content.Replace("\'", "\\\'");
+						content = content.Replace("\"", "\\\"");
+						command = new MySqlCommand("UPDATE pasta SET content = @content WHERE pastaname = @title");
+						command.Parameters.AddWithValue("@content", content);
+						command.Parameters.AddWithValue("@title", title);
+						await database.NonQueryAsync(command).ContinueWith(async x =>
+						{
+							command = new MySqlCommand("SELECT content FROM pasta where pastaname = @title");
+							command.Parameters.AddWithValue("@title", title);
+							var respnew = await database.GetSingleAsync(command);
+							if (x.IsCompleted && respnew != oldcontent)
+								await messageService.SendChannelAsync(Context.Channel, $"Successfully changed the content of **{title}**");
+						});
+					}
+					else
+					{
+						StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "unm-precon" });
+						await messageService.SendChannelAsync(Context.Channel, "I'm sorry, but you don't own the Pasta");
+					}
+				}
+			}
+			else
+				await messageService.SendChannelAsync(Context.Channel, "ERR: Database not connected, pasta commands are disabled");
         }
 
-        [Command("pasta", RunMode = RunMode.Async), Summary("Pastas are nice")]
+        [Command("pasta", RunMode = RunMode.Async), Summary("Pastas are nice"), RequireDatabase]
         public async Task Pasta([Remainder]string title)
         {
-            if (title == "list")
-            {
-				var pastas = await Bot.Database.GetAllPastasAsync();
-
-				string pastanames = "```\n";
-
-				foreach(var pasta in pastas)
+			if(database.CanConnect)
+			{
+				if (title == "list")
 				{
-					if (pasta == pastas.LastOrDefault())
-					{ pastanames += pasta.PastaName; }
-					else
-					{ pastanames += pasta.PastaName + ", "; }
+					var pastas = await database.GetAllPastasAsync();
+
+					string pastanames = "```\n";
+
+					foreach (var pasta in pastas)
+					{
+						if (pasta == pastas.LastOrDefault())
+						{ pastanames += pasta.Name; }
+						else
+						{ pastanames += pasta.Name + ", "; }
+					}
+
+					pastanames += "\n```";
+
+					await messageService.SendChannelAsync(Context.Channel, $"I found:\n{pastanames}");
 				}
-
-				pastanames += "\n```";
-
-                await MessageHandler.SendChannelAsync(Context.Channel, $"I found:\n{pastanames}");
-            }
-            else if (title == "help")
-            {
-                string help = "Here's how to do stuff with **pasta**:\n\n" +
-                    "```cs\n"+
-                    "   give   : Give a user your pasta\n" +
-                    "   list   : List all pasta\n" +
-                    "   edit   : Change the content of your pasta\n" +
-                    "  change  : Same as above\n" +
-                    "   new    : Creates a new pasta\n" +
-                    "    +     : Same as above\n" +
-                    "   who    : Gets information about a pasta\n" +
-                    "    ?     : Same as above\n" +
-                    "  upvote  : Upvotes a pasta\n" +
-                    " downvote : Downvotes a pasta\n" +
-                    "  delete  : deletes a pasta```";
-                await MessageHandler.SendChannelAsync(Context.Channel, help);
-            }
-            else
-            {
-                var command = new MySqlCommand("SELECT content FROM pasta WHERE pastaname = @title");
-                command.Parameters.AddWithValue("@title", title);
-                string response = await Bot.Database.GetSingleAsync(command);
-                if (!String.IsNullOrEmpty(response))
-                { await MessageHandler.SendChannelAsync(Context.Channel, response); }
-                else
-                {
-                    StatsdClient.DogStatsd.Increment("commands.errors.generic");
-                    await MessageHandler.SendChannelAsync(Context.Channel, $"Whoops, `{title}` doesn't exist");
-                }
-            }
-        }
+				else if (title == "help")
+				{
+					string help = "Here's how to do stuff with **pasta**:\n\n" +
+						"```cs\n" +
+						"   give   : Give a user your pasta\n" +
+						"   list   : List all pasta\n" +
+						"   edit   : Change the content of your pasta\n" +
+						"  change  : Same as above\n" +
+						"   new    : Creates a new pasta\n" +
+						"    +     : Same as above\n" +
+						"   who    : Gets information about a pasta\n" +
+						"    ?     : Same as above\n" +
+						"  upvote  : Upvotes a pasta\n" +
+						" downvote : Downvotes a pasta\n" +
+						"  delete  : deletes a pasta```";
+					await messageService.SendChannelAsync(Context.Channel, help);
+				}
+				else
+				{
+					var command = new MySqlCommand("SELECT content FROM pasta WHERE pastaname = @title");
+					command.Parameters.AddWithValue("@title", title);
+					string response = await database.GetSingleAsync(command);
+					if (!String.IsNullOrEmpty(response))
+						await messageService.SendChannelAsync(Context.Channel, response);
+					else
+					{
+						StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
+						await messageService.SendChannelAsync(Context.Channel, $"Whoops, `{title}` doesn't exist");
+					}
+				}
+			}
+			else
+				await messageService.SendChannelAsync(Context.Channel, "ERR: Database not connected, pasta commands are disabled");
+		}
         
         [Command("fuse", RunMode = RunMode.Async), Summary("Fuses 2 of the 1st generation pokemon")]
         public async Task Fuse(int int1, int int2)
         {
             if (int1 > 151 || int1 < 0)
-            { await MessageHandler.SendChannelAsync(Context.Channel, $"{int1} over/under limit. (151)"); }
+				await messageService.SendChannelAsync(Context.Channel, $"{int1} over/under limit. (151)");
             else if (int2 > 151 || int2 < 0)
-            { await MessageHandler.SendChannelAsync(Context.Channel, $"{int2} over/under limit. (151)"); }
+				await messageService.SendChannelAsync(Context.Channel, $"{int2} over/under limit. (151)");
             else
-            { await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder() { Color = Tools.Tools.RandomColor(), ImageUrl = $"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png" }.Build()); }
+				await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder() { Color = Tools.Tools.RandomColor(), ImageUrl = $"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png" }.Build());
         }
 
         [Command("strawpoll", RunMode = RunMode.Async), Summary("Creates Strawpoll")]
         public async Task StrawpollSend(string title, [Remainder]string options)
         {
             var optionsLocal = options.Split(',');
-            var poll = await APIWebReq.SendPoll(title, optionsLocal);            
-            await MessageHandler.SendChannelAsync(Context.Channel,$"Strawpoll **{title}** has been created, here's the link: {poll.Url}");
+            var poll = await strawpoll.SendPoll(title, optionsLocal);            
+            await messageService.SendChannelAsync(Context.Channel,$"Strawpoll **{title}** has been created, here's the link: {poll.Url}");
         }
 
         [Command("strawpoll", RunMode = RunMode.Async), Summary("Gets a strawpoll")]
@@ -390,7 +463,7 @@ namespace Skuld.Commands
         [Command("strawpoll", RunMode = RunMode.Async), Summary("Gets a strawpoll")]
         public async Task StrawpollGet(string url)
         {
-            var poll = await APIWebReq.GetPoll(url);
+            var poll = await strawpoll.GetPoll(url);
             var embed = new EmbedBuilder()
             {
                 Author = new EmbedAuthorBuilder()
@@ -408,7 +481,7 @@ namespace Skuld.Commands
             for (int z = 0; z < poll.Options.Length; z++)
             { embed.AddField(poll.Options[z], poll.Votes[z]); }
 
-            await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
+            await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
         }
 
         [Command("emoji", RunMode = RunMode.Async), Summary("Turns text into bigmoji")]
@@ -419,13 +492,13 @@ namespace Skuld.Commands
             foreach (var character in message)
             {
                 if (!regexItem.IsMatch(Convert.ToString(character)))
-                { newmessage += character; }
-                if (!Char.IsWhiteSpace(character))
-                { newmessage += ":regional_indicator_" + character + ": "; }
+					newmessage += character;
+                else if (!Char.IsWhiteSpace(character))
+					newmessage += ":regional_indicator_" + character + ": ";
                 else
-                { newmessage += " "; }
+					newmessage += " ";
             }
-            await MessageHandler.SendChannelAsync(Context.Channel, newmessage);
+            await messageService.SendChannelAsync(Context.Channel, newmessage);
         }
 
         /*[Command("slots", RunMode= RunMode.Async),Summary("Test your luck")]
@@ -454,59 +527,63 @@ namespace Skuld.Commands
 		}*/
 
         [Command("xkcd", RunMode = RunMode.Async), Summary("Get's random XKCD comic"), Ratelimit(5, 1, Measure.Minutes)]
-        public async Task XKCD()
+        public async Task XKCD(int comicid = -1)
         {
-            int randComic = 0;
-            await APIWebReq.GetXKCDLastPage();
-            for (int x = 0; x < 10; x++)
-            {
-                randComic = Bot.random.Next(0, APIWebReq.XKCDLastPage.Value);
-            }
-            await SendXKCD((await APIWebReq.GetXKCDComic(randComic)));
+			if(comicid == -1)
+			{
+				await SendXKCD((await comicClients.GetRandomXKCDComicAsync()));
+			}
+			else
+			{
+				await SendXKCD((await comicClients.GetXKCDComicAsync(comicid)));
+			}
         }
         public async Task SendXKCD(XKCDComic comic)
         {
-            string datefixed;
-            string monthfixed;
-            DateTime dateTime;
-            if (comic.day.Length == 1 && comic.month.Length == 1)
-            {
-                datefixed = "0" + comic.day;
-                monthfixed = "0" + comic.month;
-                dateTime = DateTime.ParseExact($"{datefixed} {monthfixed} {comic.year}", "dd MM yyyy", CultureInfo.InvariantCulture);
-            }
-            else if (comic.day.Length == 1)
-            {
-                datefixed = "0" + comic.day;
-                dateTime = DateTime.ParseExact($"{datefixed} {comic.month} {comic.year}", "dd MM yyyy", CultureInfo.InvariantCulture);
-            }
-            else if (comic.month.Length == 1)
-            {
-                monthfixed = "0" + comic.month;
-                dateTime = DateTime.ParseExact($"{comic.day} {monthfixed} {comic.year}", "dd MM yyyy", CultureInfo.InvariantCulture);
-            }
-            else
-            {
-                dateTime = DateTime.ParseExact($"{comic.day} {comic.month} {comic.year}", "dd MM yyyy", CultureInfo.InvariantCulture);
-            }
-            await MessageHandler.SendChannelAsync(Context.Channel,string.Empty, new EmbedBuilder()
-            {
-                Author = new EmbedAuthorBuilder()
-                {
-                    Name = "Randall Patrick Munroe - XKCD",
-                    Url = "https://xkcd.com/" + comic.num + "/",
-                    IconUrl = "https://xkcd.com/favicon.ico"
-                },
-                Footer = new EmbedFooterBuilder()
-                {
-                    Text = "Strip released on"
-                },
-                Color = Tools.Tools.RandomColor(),
-                Timestamp = dateTime,
-                ImageUrl = comic.img,
-                Title = comic.safe_title,
-                Description = comic.alt
-            }.Build());
+			if (comic != null)
+			{
+				string datefixed;
+				string monthfixed;
+				DateTime dateTime;
+				if (comic.day.Length == 1 && comic.month.Length == 1)
+				{
+					datefixed = "0" + comic.day;
+					monthfixed = "0" + comic.month;
+					dateTime = DateTime.ParseExact($"{datefixed} {monthfixed} {comic.year}", "dd MM yyyy", CultureInfo.InvariantCulture);
+				}
+				else if (comic.day.Length == 1)
+				{
+					datefixed = "0" + comic.day;
+					dateTime = DateTime.ParseExact($"{datefixed} {comic.month} {comic.year}", "dd MM yyyy", CultureInfo.InvariantCulture);
+				}
+				else if (comic.month.Length == 1)
+				{
+					monthfixed = "0" + comic.month;
+					dateTime = DateTime.ParseExact($"{comic.day} {monthfixed} {comic.year}", "dd MM yyyy", CultureInfo.InvariantCulture);
+				}
+				else
+				{
+					dateTime = DateTime.ParseExact($"{comic.day} {comic.month} {comic.year}", "dd MM yyyy", CultureInfo.InvariantCulture);
+				}
+				await messageService.SendChannelAsync(Context.Channel, string.Empty, new EmbedBuilder()
+				{
+					Author = new EmbedAuthorBuilder()
+					{
+						Name = "Randall Patrick Munroe - XKCD",
+						Url = "https://xkcd.com/" + comic.num + "/",
+						IconUrl = "https://pbs.twimg.com/profile_images/602808103281692673/8lIim6cB_400x400.png"
+					},
+					Footer = new EmbedFooterBuilder()
+					{
+						Text = "Strip released on"
+					},
+					Color = Tools.Tools.RandomColor(),
+					Timestamp = dateTime,
+					ImageUrl = comic.img,
+					Title = comic.safe_title,
+					Description = comic.alt
+				}.Build());
+			}
         }
 
         [Command("cah", RunMode = RunMode.Async), Summary("Gets a random Cynaide & Happiness Comic"), Alias("cyanide&happiness","c&h"), Ratelimit(5, 1, Measure.Minutes)]
@@ -514,29 +591,23 @@ namespace Skuld.Commands
         {
             try
             {
-                var doc = await APIWebReq.ScrapeUrl(new Uri("http://explosm.net/comics/random"));
-                var author = doc.DocumentNode.Descendants("div").FirstOrDefault(x => x.Attributes.Contains("class") && x.Attributes["class"].Value.Contains("small-2 medium-2 large-2 columns"));
-                var authorblock = doc.DocumentNode.Descendants("div").FirstOrDefault(z => z.Attributes.Contains("class") && z.Attributes["class"].Value.Contains("small-8 medium-9 large-8 columns"));
-                var authorblocksection = author.Descendants().Skip(1).FirstOrDefault();
-                var authorurl = "http://explosm.net" + authorblocksection.Attributes["href"].Value;
-                var authoravatar = "http:" + authorblocksection.ChildNodes.FirstOrDefault().Attributes["src"].Value;
-                var image = "http:" + doc.GetElementbyId("main-comic").Attributes["src"].Value;
+				var comic = await comicClients.GetCAHComicAsync();
                 var embed = new EmbedBuilder
                 {
                     Author = new EmbedAuthorBuilder
                     {
-                        Name = "Strip done "+ authorblock.InnerText.Split('\n')[2],
-                        Url = authorurl,
-                        IconUrl = authoravatar
+                        Name = "Strip done "+ comic.Author,
+                        Url = comic.AuthorURL,
+                        IconUrl = comic.AuthorAvatar
                     },
-                    ImageUrl = image,
+                    ImageUrl = comic.ImageURL,
                     Color = Tools.Tools.RandomColor()
                 }.Build();
-                await MessageHandler.SendChannelAsync(Context.Channel, doc.GetElementbyId("permalink").GetAttributeValue("value", ""), embed);
+                await messageService.SendChannelAsync(Context.Channel, comic.URL, embed);
             }
             catch(Exception ex)
             {
-                Bot.Logger.AddToLogs(new Models.LogMessage("CAH-Cmd", "Error parsing website", LogSeverity.Error, ex));
+                await logger.AddToLogsAsync(new Models.LogMessage("CAH-Cmd", "Error parsing website", LogSeverity.Error, ex));
             }
         }
 
@@ -544,7 +615,7 @@ namespace Skuld.Commands
         public async Task Time()
         {
             var offset = new DateTimeOffset(DateTime.UtcNow);
-            await MessageHandler.SendChannelAsync(Context.Channel,offset.ToString());
+            await messageService.SendChannelAsync(Context.Channel,offset.ToString());
         }
 
         [Command("time", RunMode = RunMode.Async), Summary("Gets time from utc with offset")]
@@ -555,28 +626,24 @@ namespace Skuld.Commands
             var nts = ts.Add(TimeSpan.FromHours(ofs));
             var dtOffset = new DateTimeOffset(DateTime.UtcNow);
             var ndtof = dtOffset.ToOffset(nts);
-            await MessageHandler.SendChannelAsync(Context.Channel,ndtof.ToString());
+            await messageService.SendChannelAsync(Context.Channel,ndtof.ToString());
         }
 
         [Command("roast", RunMode = RunMode.Async), Summary("\"Roasts\" a user, these are all taken as jokes, and aren't actually meant to cause harm.")]
-        public async Task RoastCmd(IGuildUser user) =>
-            await Roast(user).ConfigureAwait(false);
-
-        [Command("roastme", RunMode = RunMode.Async), Summary("\"Roast\" yourself, these are all taken as jokes, and aren't actually meant to cause harm.")]
-        public async Task RoastYourselfCmd() =>
-            await Roast(Context.User as IGuildUser).ConfigureAwait(false);
-        public async Task Roast(IGuildUser user)
+        public async Task RoastCmd(IUser user = null)
         {
-            var roast = JsonConvert.DeserializeObject<Roasts>(await APIWebReq.ReturnString(new Uri("https://api.systemexit.co.uk/get/roasts/random")));
-            await MessageHandler.SendChannelAsync(Context.Channel, user.Mention + " " + roast.Roast);
+			if (user == null)
+				user = Context.User;
+            var roast = await sysExClient.GetRoastAsync();
+            await messageService.SendChannelAsync(Context.Channel, user.Mention + " " + roast);
         }
 
         [Command("dadjoke", RunMode = RunMode.Async), Summary("Gives you a bad dad joke to facepalm at.")]
         public async Task DadJoke()
         {
-            var joke = JsonConvert.DeserializeObject<PickupLine>(await APIWebReq.ReturnString(new Uri("https://api.systemexit.co.uk/get/dadjokes/random")));
+			var joke = await sysExClient.GetDadJokeAsync();
 
-            await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder
+            await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder
             {
                 Title = joke.Setup,
                 Description = Tools.Tools.CheckForNull(joke.Punchline),
@@ -587,9 +654,9 @@ namespace Skuld.Commands
         [Command("pickup",RunMode = RunMode.Async),Summary("Cringe at these bad user-submitted pick up lines. (Don't actually use these or else you'll get laughed at. :3)"),Alias("pickupline")]
         public async Task PickUp()
         {
-            var pickup = JsonConvert.DeserializeObject<PickupLine>(await APIWebReq.ReturnString(new Uri("https://api.systemexit.co.uk/get/pickuplines/random")));
+			var pickup = await sysExClient.GetPickupLineAsync();
 
-            await MessageHandler.SendChannelAsync(Context.Channel, "", new EmbedBuilder
+            await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder
             {
                 Title = pickup.Setup,
                 Description = Tools.Tools.CheckForNull(pickup.Punchline),
@@ -600,7 +667,7 @@ namespace Skuld.Commands
         [Command("apod", RunMode = RunMode.Async), Summary("Gets NASA's \"Astronomy Picture of the Day\""), Ratelimit(20, 1, Measure.Minutes)]
         public async Task APOD()
         {
-            var aPOD = await APIWebReq.NasaAPOD();
+            var aPOD = await NASAClient.GetAPODAsync();
             var embed = new EmbedBuilder
             {
                 Color = Tools.Tools.RandomColor(),
@@ -613,89 +680,104 @@ namespace Skuld.Commands
                     Name = aPOD.CopyRight
                 }
             };
-            await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
+            await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
         }
 
         [Command("choose", RunMode = RunMode.Async), Summary("Choose from things")]
         public async Task Choose([Remainder]string choices)
         {
             var choicearr = choices.Split('|');
-            var choice = choicearr[Bot.random.Next(0, choicearr.Length)];
+            var choice = choicearr[random.Next(0, choicearr.Length)];
             if (Char.IsWhiteSpace(choice[0]))
             { choice = choice.Remove(choice[0], 1); }
             else if (Char.IsWhiteSpace(choice[choice.Length - 1]))
             { choice = choice.Remove(choice.Length - 1); }
-            await MessageHandler.SendChannelAsync(Context.Channel, $"<:blobthinkcool:350673773113901056> | __{(Context.User as IGuildUser).Nickname??Context.User.Username}__ I choose: **{choice}**");
+            await messageService.SendChannelAsync(Context.Channel, $"<:blobthinkcool:350673773113901056> | __{(Context.User as IGuildUser).Nickname??Context.User.Username}__ I choose: **{choice}**");
         }
 
         [Command("yn", RunMode = RunMode.Async), Summary("Yes? or No?")]
-        public async Task YN([Remainder]string question) => await YN();
-
-        [Command("yn", RunMode = RunMode.Async), Summary("Yes? or No?")]
-        public async Task YN()
+        public async Task YN([Remainder]string question = null)
         {
-            var YNResp = await APIWebReq.AskYNWTF();
+			Models.API.YNWTF YNResp = await YNWTFcli.AskYNWTF();
             var embed = new EmbedBuilder
             {
                 Color = Tools.Tools.RandomColor(),
                 Title = YNResp.Answer,
                 ImageUrl = YNResp.Image
             };
-            await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
+            await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
         }
 
-        [Command("heal", RunMode = RunMode.Async), Summary("Did you run out of health? Here's the healing station")]
-        public async Task Heal()
-            => await MessageHandler.SendChannelAsync(Context.Channel, "You need to supply how much to heal by.");
+		[Command("heal", RunMode = RunMode.Async), Summary("Did you run out of health? Here's the healing station"), RequireDatabase]
+		public async Task Heal(uint hp, [Remainder]IUser User = null)
+		{
+			if (User == null)
+				User = Context.User;
+			if (User == Context.User)
+			{
+				var user = await database.GetUserAsync(User.Id);
+				var offset = 10000 - user.HP;
+				if (hp > offset)
+				{
+					await messageService.SendChannelAsync(Context.Channel, "You sure you wanna do that? You only need to heal by: `" + offset + "` HP");
+				}
+				var cost = GetCostOfHP(hp);
+				if (user.Money >= cost)
+				{
+					if (user.HP == 10000)
+					{
+						await messageService.SendChannelAsync(Context.Channel, "You're already at max health");
+						return;
+					}
+					user.Money -= cost;
+					user.HP += hp;
 
-        [Command("heal", RunMode = RunMode.Async), Summary("Did you run out of health? Here's the healing station")]
-        public async Task Heal(uint hp)
-            => await Heal(hp, Context.User as IGuildUser);
+					if (user.HP > 10000)
+						user.HP = 10000;
 
-        [Command("heal", RunMode = RunMode.Async), Summary("Did you run out of health? Here's the healing station")]
-        public async Task Heal(uint hp, [Remainder]IGuildUser User)
-        {
-            var user = await Bot.Database.GetUserAsync(User.Id);
-            if (user != null)
-            {
-                var offset = 10000 - user.HP;
-                if (hp > offset)
-                {
-                    if (User == Context.User)
-                        await MessageHandler.SendChannelAsync(Context.Channel, "You sure you wanna do that? You only need to heal by: `"+offset+"` HP");
-                    else
-                        await MessageHandler.SendChannelAsync(Context.Channel, "You sure you wanna do that? They only need to heal by: `" + offset + "` HP");
-                    return;
-                }
+					await database.UpdateUserAsync(user);
+					
+					await messageService.SendChannelAsync(Context.Channel, $"You have healed your hp by {hp} for {Bot.Configuration.MoneySymbol}{cost.ToString("N0")}");
+				}
+				else
+				{
+					await messageService.SendChannelAsync(Context.Channel, "You don't have enough money for this action.");
+				}
+			}
+			else
+			{
+				var user = await database.GetUserAsync(User.Id);
+				var you  = await database.GetUserAsync(Context.User.Id);
+				var offset = 10000 - user.HP;
+				if (hp > offset)
+				{
+					await messageService.SendChannelAsync(Context.Channel, "You sure you wanna do that? They only need to heal by: `" + offset + "` HP");
+				}
+				var cost = GetCostOfHP(hp);
+				if (you.Money >= cost)
+				{
+					if (user.HP == 10000)
+					{
+						await messageService.SendChannelAsync(Context.Channel, "They're already at max health");
+						return;
+					}
+					user.HP += hp;
+					you.Money -= cost;
 
-                var cost = GetCostOfHP(hp);
-                if (user.Money >= cost)
-                {
-                    if (user.HP == 10000)
-                    {
-                        await MessageHandler.SendChannelAsync(Context.Channel, "You're already at max health");
-                        return;
-                    }
+					if (user.HP > 10000)
+						user.HP = 10000;
 
-                    user.Money -= cost;
-                    user.HP += hp;
+					await database.UpdateUserAsync(user);
+					await database.UpdateUserAsync(you);
 
-                    if (user.HP > 10000)
-                        user.HP = 10000;
-
-                    await Bot.Database.UpdateUserAsync(user);
-
-                    if (User == Context.User)
-                        await MessageHandler.SendChannelAsync(Context.Channel, $"You have healed your hp by {hp} for {Bot.Configuration.MoneySymbol}{cost.ToString("N0")}");
-                    else
-                        await MessageHandler.SendChannelAsync(Context.Channel, $"You have healed {User.Nickname ?? User.Username}'s health by {hp} for {Bot.Configuration.MoneySymbol}{cost.ToString("N0")}");
-                }
-                else
-                {
-                    await MessageHandler.SendChannelAsync(Context.Channel, "You don't have enough money for this action.");
-                }
-            }
-        }
+					await messageService.SendChannelAsync(Context.Channel, $"You have healed {User.Username}'s health by {hp} for {Bot.Configuration.MoneySymbol}{cost.ToString("N0")}");
+				}
+				else
+				{
+					await messageService.SendChannelAsync(Context.Channel, "You don't have enough money for this action.");
+				}
+			}
+		}
 
         ulong GetCostOfHP(uint hp)
         {

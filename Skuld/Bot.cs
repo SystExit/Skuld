@@ -6,154 +6,135 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using System.IO;
-using NTwitch.Rest;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
+using Skuld.APIS;
 using Microsoft.Extensions.DependencyInjection;
 using Discord.Addons.Interactive;
-using System.Linq;
 using YoutubeExplode;
 using StatsdClient;
+using Imgur.API.Authentication.Impl;
+using Skuld.Services;
 
 namespace Skuld
 {
     public class Bot
     {
-        /*START VARS*/
-        public static DiscordShardedClient bot;
-        public static CommandService commands;
-        public static InteractiveService InteractiveCommands;
-        public static DatabaseService Database;
-        public static LoggingService Logger;
-        public static YoutubeClient YouTubeClient;
+		/*START VARS*/
         public static IServiceProvider services;
-        public static string logfile;
-        public static Random random = new Random();
-        public static string Prefix;
-        public static TwitchRestClient NTwitchClient;
-        public static string PathToUserData;
+        static string logfile;
+        static string Prefix;
         public static Config Configuration;
         /*END VARS*/
+		static void Main() => Create().GetAwaiter().GetResult();
 
-        static void Main() => CreateBot().GetAwaiter().GetResult();
-
-        public static async Task CreateBot()
+        public static async Task Create()
         {
-            try
+			try
             {
                 EnsureConfigExists();
                 Configuration = Config.Load();
-                await InstallServices().ConfigureAwait(false);
-                ConfigureStatsCollector();
-                Locale.InitialiseLocales();
-				Logger.AddToLogs(new Models.LogMessage("FrameWk", $"Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
+				ConfigureStatsCollector();
+				await InstallServices().ConfigureAwait(false);
+
+				await services.GetRequiredService<LoggingService>().AddToLogsAsync(new Models.LogMessage("FrameWk", $"Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
                 DogStatsd.Event("FrameWork", $"Configured and Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", "info", hostname: "Skuld");
-                await StartBot(Configuration.Token).ConfigureAwait(false);
-                await Task.Delay(-1);
-            }
+
+				await services.GetRequiredService<BotService>().StartAsync();
+			}
             catch (Exception ex)
-            {
-                Console.WriteLine(ex);
+			{
+				await services.GetRequiredService<BotService>().StopBot("MainBot");
+				Console.WriteLine(ex);
                 Console.ReadLine();
             }
         }
         
-        public static async Task StartBot(string token)
-        {
-            try
-            {
-                if (Configuration.TwitchModule)
-                    await APIS.Twitch.TwitchClient.CreateTwitchClient(Configuration.TwitchToken, Configuration.TwitchClientID);
-                await bot.LoginAsync(TokenType.Bot, token);
-                await bot.StartAsync();
-                //Parallel.Invoke(() => SendDataToDataDog());
-                //foreach (var shard in bot.Shards)
-                //{
-                //    if (shard.ConnectionState == ConnectionState.Connected)
-                //    { await PublishStats(shard.ShardId).ConfigureAwait(false); }
-                //}
-                await Task.Delay(-1).ConfigureAwait(false);
-            }
-            catch(Exception ex)
-            {
-                Logger.AddToLogs(new Models.LogMessage("Strt-Bot", "ERROR WITH THE BOT", LogSeverity.Error, ex));
-                DogStatsd.Event("FrameWork", $"Bot Crashed on start: {ex}", alertType: "error", hostname: "Skuld");
-                await StopBot("Init-Bt").ConfigureAwait(false);
-            }
-        }
-
-        public static async Task StopBot(string source)
-        {
-            Events.DiscordEvents.UnRegisterEvents();
-            await bot.SetStatusAsync(UserStatus.Offline);
-            Logger.AddToLogs(new Models.LogMessage(source, "Skuld is shutting down", LogSeverity.Info));
-            DogStatsd.Event("FrameWork", $"Bot Stopped", alertType: "info", hostname: "Skuld");
-            await Logger.sw.WriteLineAsync("-------------------------------------------").ConfigureAwait(false);
-            Logger.sw.Close();
-            await Console.Out.WriteLineAsync("Bot shutdown").ConfigureAwait(false);
-            Console.ReadLine();
-            Environment.Exit(0);
-        }
-        
         static async Task InstallServices()
-        {
-            try
-            {
-                Logger = new LoggingService(true, true, logfile);
-                Prefix = Configuration.Prefix;
-                bot = new DiscordShardedClient(new DiscordSocketConfig
-                {
-                    MessageCacheSize = 1000,
-                    DefaultRetryMode = RetryMode.RetryTimeouts,
-                    LogLevel = LogSeverity.Verbose,
-                    TotalShards = Configuration.Shards
-                });
-                bot.Log += Events.SkuldEvents.Bot_Log;
-                Events.DiscordEvents.RegisterEvents();
-                commands = new CommandService(new CommandServiceConfig
-                {
-                    CaseSensitiveCommands = false,
-                    DefaultRunMode = RunMode.Async,
-                    LogLevel = LogSeverity.Info
-                });
-                InteractiveCommands = new InteractiveService(bot, TimeSpan.FromSeconds(60));
-                Database = new DatabaseService(bot);
-                YouTubeClient = new YoutubeClient();
-                services = new ServiceCollection()
-                    .AddSingleton(bot)
-                    .AddSingleton(commands)
-                    .AddSingleton(InteractiveCommands)
-                    .AddSingleton(Database)
-                    .AddSingleton(Logger)
-                    .AddSingleton(YouTubeClient)
-                    .BuildServiceProvider();
-                await commands.AddModulesAsync(Assembly.GetEntryAssembly(), services);                
-                Logger.AddToLogs(new Models.LogMessage("CmdSrvc", $"Loaded {commands.Commands.Count()} Commands from {commands.Modules.Count()} Modules", LogSeverity.Info));
-            }
-            catch(Exception ex)
-            {
-                Console.WriteLine(ex);
-            }
-        }
+		{
+			Prefix = Configuration.Prefix;
 
-        public static async Task PublishStats(int shardid)
-        {
-            using (var webclient = new HttpClient())
-            using (var content = new StringContent($"{{ \"server_count\": {bot.GetShard(shardid).Guilds.Count}, \"shard_id\": {shardid}, \"shard_count\": {bot.Shards.Count}}}", Encoding.UTF8, "application/json"))
-            {
-                webclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(Configuration.DBotsOrgKey);
-                await webclient.PostAsync(new Uri($"https://discordbots.org/api/bots/{bot.CurrentUser.Id}/stats"), content);
-            }
-            using (var webclient = new HttpClient())
-            using (var content = new StringContent($"{{ \"server_count\": {bot.GetShard(shardid).Guilds.Count}, \"shard_id\": {shardid}, \"shard_count\": {bot.Shards.Count}}}", Encoding.UTF8, "application/json"))
-            {
-                webclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(Configuration.DiscordPWKey);
-                await webclient.PostAsync(new Uri($"https://bots.discord.pw/api/bots/{bot.CurrentUser.Id}/stats"), content);
-            }
-        }
+			var cli = new DiscordShardedClient(new DiscordSocketConfig
+			{
+				MessageCacheSize = 1000,
+				DefaultRetryMode = RetryMode.RetryTimeouts,
+				LogLevel = LogSeverity.Verbose,
+				TotalShards = Configuration.Shards
+			});
+			
+			services = new ServiceCollection()
+				.AddSingleton(cli)
+				.AddSingleton<BotService>()
+				.AddSingleton(new InteractiveService(cli, TimeSpan.FromSeconds(60)))
+				.AddSingleton(new LoggingService(true, true, logfile))
+				.AddSingleton<DatabaseService>()
+				.AddSingleton<YoutubeClient>()
+				.AddSingleton(new ImgurClient(Configuration.ImgurClientID, Configuration.ImgurClientSecret))
+				.AddSingleton<Random>()
+				.AddSingleton<PokeSharpClient>()
+				.AddSingleton<SysExClient>()
+				.AddSingleton<NASAClient>()
+				.AddSingleton<AnimalAPIS>()
+				.AddSingleton<MALAPI>()
+				.AddSingleton<YNWTF>()
+				.AddSingleton<SocialAPIS>()
+				.AddSingleton<TwitchService>()
+				.AddSingleton<Strawpoll>()
+				.AddSingleton<WebComicClients>()
+				.AddSingleton<Locale>()
+				.AddSingleton<MessageService>()
+				.AddSingleton(new Utilities.MessageServiceConfig
+				{
+					ArgPos = 0,
+					Prefix = Configuration.Prefix,
+					AltPrefix = "skuld."
+				})
+				.BuildServiceProvider();
 
-        public static void EnsureConfigExists()
+			await InitializeServicesAsync();
+			
+			services.GetRequiredService<BotService>().AddConfg(Configuration);
+		}
+
+		static async Task InitializeServicesAsync()
+		{
+			services.GetRequiredService<Random>();
+			services.GetRequiredService<PokeSharpClient>();
+			services.GetRequiredService<SysExClient>();
+			services.GetRequiredService<NASAClient>();
+			services.GetRequiredService<AnimalAPIS>();
+			services.GetRequiredService<MALAPI>();
+			services.GetRequiredService<YNWTF>();
+			services.GetRequiredService<SocialAPIS>();
+			services.GetRequiredService<Strawpoll>();
+			await services.GetRequiredService<WebComicClients>().GetXKCDLastPageAsync();
+			services.GetRequiredService<Locale>();
+			
+			var db = services.GetRequiredService<DatabaseService>();
+			await db.CheckConnectionAsync();
+
+			await services.GetRequiredService<Locale>().InitialiseLocalesAsync();
+
+			var logger = services.GetRequiredService<LoggingService>();
+
+			logger.Config(services.GetRequiredService<BotService>(),
+				services.GetRequiredService<DiscordShardedClient>(),
+				services.GetRequiredService<MessageService>(),
+				services.GetRequiredService<DatabaseService>(),
+				services.GetRequiredService<Random>());
+
+			logger.RegisterEvents();
+
+			await services.GetRequiredService<MessageService>().ConfigureAsync(new CommandServiceConfig
+			{
+				CaseSensitiveCommands = false,
+				DefaultRunMode = RunMode.Async,
+				LogLevel = LogSeverity.Verbose,
+				IgnoreExtraArgs = true
+			}, services);
+
+			services.GetRequiredService<DiscordShardedClient>().Log += logger.DiscordLogger;
+		}
+
+		public static void EnsureConfigExists()
         {
             try
             {
@@ -181,33 +162,14 @@ namespace Skuld
             }
         }
 
-        static void ConfigureStatsCollector()
-        {
-            var dogstatsconfig = new StatsdConfig
-            {
-                StatsdTruncateIfTooLong = true,
-                StatsdServerName = Configuration.DataDogHost,
-                StatsdPort = 8125,
-                Prefix = "skuld"
-            };
-            DogStatsd.Configure(dogstatsconfig);
-        }
-
-        Task SendDataToDataDog()
-        {
-            while (true)
-            {
-                int users = 0;
-                foreach (var guild in bot.Guilds)
-                { users += guild.MemberCount; }
-                DogStatsd.Gauge("shards.count", bot.Shards.Count);
-                DogStatsd.Gauge("shards.connected", bot.Shards.Count(x => x.ConnectionState == ConnectionState.Connected));
-                DogStatsd.Gauge("shards.disconnected", bot.Shards.Count(x => x.ConnectionState == ConnectionState.Disconnected));
-                DogStatsd.Gauge("commands.count", commands.Commands.Count());
-                DogStatsd.Gauge("guilds.total", bot.Guilds.Count);
-                DogStatsd.Gauge("users.total", users);
-                System.Threading.Thread.Sleep(TimeSpan.FromSeconds(5));
-            }
-        }
-    }
+		static void ConfigureStatsCollector()
+		{
+			DogStatsd.Configure(new StatsdConfig
+			{
+				StatsdServerName = Configuration.DataDogHost,
+				StatsdPort = 8125,
+				Prefix = "skuld"
+			});
+		}
+	}
 }

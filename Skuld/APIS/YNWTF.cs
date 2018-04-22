@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Skuld.Models.API;
 
 namespace Skuld.APIS
 {
-    public partial class APIWebReq
+    public class YNWTF
     {
-        public static async Task<YNWTF> AskYNWTF()
-            => JsonConvert.DeserializeObject<YNWTF>((await APIWebReq.ReturnString(new Uri($"https://yesno.wtf/api"))));
+        public async Task<Models.API.YNWTF> AskYNWTF()
+            => JsonConvert.DeserializeObject<Models.API.YNWTF>((await WebHandler.ReturnStringAsync(new Uri($"https://yesno.wtf/api"))));
     }
 }

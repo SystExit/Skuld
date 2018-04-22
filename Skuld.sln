@@ -1,10 +1,9 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27004.2010
+VisualStudioVersion = 15.0.27130.2036
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "References", "References", "{5C56A68A-D80A-4B9C-A437-D82A323BEF18}"
 	ProjectSection(SolutionItems) = preProject
-		References\CowsaySharp.Library.dll = References\CowsaySharp.Library.dll
 		GCop.json = GCop.json
 	EndProjectSection
 EndProject

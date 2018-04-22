@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace PokeSharp.Deserializer
 {
-    public class WebReq
+    public class PokeSharpClient
     {
         public static async Task<PocketMonster> GetPocketMonster(int id)
         {
