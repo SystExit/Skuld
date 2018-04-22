@@ -260,8 +260,10 @@ namespace Skuld.Modules
             try
             {
 				if (code.ToLowerInvariant().Contains("token") || code.ToLowerInvariant().Contains("config"))
-				{ await messageService.SendChannelAsync(Context.Channel, "Nope."); return; }
-
+				{
+					await messageService.SendChannelAsync(Context.Channel, "Nope.");
+					return;
+				}
                 if (code.StartsWith("```cs", StringComparison.Ordinal)&&code.EndsWith("```", StringComparison.Ordinal))
                 {
                     code = code.Replace("`", "");
@@ -285,19 +287,21 @@ namespace Skuld.Modules
 
                 var result = (await script.RunAsync(globals: globals)).ReturnValue;
 
-                embed.Author = new EmbedAuthorBuilder()
+                embed.Author = new EmbedAuthorBuilder
                 {
                     Name = result.GetType().ToString()
                 };
 
                 embed.Color = Tools.Tools.RandomColor();
                 embed.Description = $"{result}";
-                if (result != null)
-                    await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
-                else
-                {
-                    await messageService.SendChannelAsync(Context.Channel, "Result is empty or null");
-                }                
+				if (result != null)
+				{
+					await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
+				}
+				else
+				{
+					await messageService.SendChannelAsync(Context.Channel, "Result is empty or null");
+				}                
             }
 #pragma warning disable CS0168 // Variable is declared but never used
 			catch (NullReferenceException ex) { /*Do nothing here*/ }
@@ -306,7 +310,7 @@ namespace Skuld.Modules
             {
                 var embed = new EmbedBuilder
                 {
-                    Author = new EmbedAuthorBuilder()
+                    Author = new EmbedAuthorBuilder
                     {
                         Name = "ERROR WITH EVAL"
                     },
