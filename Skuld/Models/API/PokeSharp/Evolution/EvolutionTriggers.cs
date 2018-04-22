@@ -10,7 +10,7 @@ namespace PokeSharp.Models.Evolution
         [JsonProperty(PropertyName = "name")]
         public string Name { get; set; }
         [JsonProperty(PropertyName = "names")]
-        public ListName[] Names {get;set;}
+		public ListName[] Names { get; set; }
         [JsonProperty(PropertyName = "pokemon_species")]
         public NamedAPIResource[] PokemonSpecies { get; set; }
     }

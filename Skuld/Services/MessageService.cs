@@ -205,8 +205,7 @@ namespace Skuld.Services
 				return;
 			}
 		}
-		
-		
+				
 		//MessageSending
 		public async Task<IUserMessage> SendChannelAsync(IChannel channel, string message)
 		{

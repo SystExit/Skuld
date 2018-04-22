@@ -33,7 +33,7 @@ namespace PokeSharp.Models
         [JsonProperty(PropertyName = "held_by_pokemon")]
         public ItemHolderPokemon[] HeldByPokemon { get; set; }
         [JsonProperty(PropertyName = "baby_trigger_for")]
-        public APIResource BabyTriggerFor {get;set;}
+		public APIResource BabyTriggerFor { get; set; }
         [JsonProperty(PropertyName = "machines")]
         public MachineVersionDetail[] Machines { get; set; }
     }

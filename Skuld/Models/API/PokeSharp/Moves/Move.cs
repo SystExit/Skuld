@@ -44,7 +44,7 @@ namespace PokeSharp.Models
         [JsonProperty(PropertyName = "names")]
         public ListName[] Names { get; set; }
         [JsonProperty(PropertyName = "past_values")]
-        public PastMoveStatValues PastValues {get;set; }
+        public PastMoveStatValues PastValues {get; set; }
         [JsonProperty(PropertyName = "stat_changes")]
         public MoveStatChange[] StatChanges { get; set; }
         [JsonProperty(PropertyName = "target")]

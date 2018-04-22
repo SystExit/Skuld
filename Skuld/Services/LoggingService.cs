@@ -139,8 +139,7 @@ namespace Skuld.Services
                 sw.WriteLine(tolog);
             }
         }
-
-
+		
 		//DiscordLoging
 		public void RegisterEvents()
 		{

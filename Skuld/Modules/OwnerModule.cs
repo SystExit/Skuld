@@ -34,8 +34,7 @@ namespace Skuld.Modules
 			logger = log;
 			random = ran;
 		}
-        
-			
+        			
 		[Command("stop")]
         public async Task Stop()
 		{
@@ -82,7 +81,6 @@ namespace Skuld.Modules
         [Command("shardrestart"), Summary("Restarts shard")]
         public async Task ReShard(int shard)
         {
-
             await Context.Client.GetShard(shard).StopAsync().ConfigureAwait(false);
             await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
             await Context.Client.GetShard(shard).StartAsync().ConfigureAwait(false);
