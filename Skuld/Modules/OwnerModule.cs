@@ -40,7 +40,7 @@ namespace Skuld.Modules
         public async Task Stop()
 		{
 			await messageService.SendChannelAsync(Context.Channel, "Stopping!");
-			await botService.StopBot("StopCmd").ConfigureAwait(false);
+			await botService.StopBotAsync("StopCmd").ConfigureAwait(false);
 		}
 
         [Command("populate"), RequireDatabase]
@@ -326,7 +326,7 @@ namespace Skuld.Modules
             await messageService.SendChannelAsync(Context.Channel, "Ok, publishing stats to the Discord Bot lists.");
             string list = "";
             int shardcount = Context.Client.Shards.Count;
-			await botService.UpdateStats();
+			await botService.UpdateStatsAsync();
             foreach(var shard in Context.Client.Shards)
             {                
                 list += $"I sent ShardID: {shard.ShardId} Guilds: {shard.Guilds.Count} Shards: {shardcount}\n";

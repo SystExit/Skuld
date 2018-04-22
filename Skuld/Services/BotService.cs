@@ -47,11 +47,11 @@ namespace Skuld.Services
 			{
 				await logger.AddToLogsAsync(new Models.LogMessage("Strt-Bot", "ERROR WITH THE BOT", LogSeverity.Error, ex));
 				DogStatsd.Event("FrameWork", $"Bot Crashed on start: {ex}", alertType: "error", hostname: "Skuld");
-				await StopBot("Init-Bt").ConfigureAwait(false);
+				await StopBotAsync("Init-Bt").ConfigureAwait(false);
 			}
 		}
 		
-		public async Task StopBot(string source)
+		public async Task StopBotAsync(string source)
 		{
 			logger.UnRegisterEvents();
 			await client.SetStatusAsync(UserStatus.Offline);
@@ -83,7 +83,7 @@ namespace Skuld.Services
 			}
 		}
 
-		public async Task<string> UpdateStats()
+		public async Task<string> UpdateStatsAsync()
 		{
 			System.Collections.Generic.List<Models.API.BotStats> botStats = new System.Collections.Generic.List<Models.API.BotStats>();
 			for (var x = 0; x < client.Shards.Count; x++)
@@ -94,7 +94,7 @@ namespace Skuld.Services
 					ShardCount = client.Shards.Count,
 					ShardID = x
 				});
-				await PublishStats(x);
+				await PublishStatsAsync(x);
 			}
 
 			var webclient = (HttpWebRequest)WebRequest.Create(new Uri($"https://skuld.systemexit.co.uk/tools/updateStats.php"));
@@ -115,7 +115,7 @@ namespace Skuld.Services
 			}
 		}
 
-		public async Task PublishStats(int shardid)
+		public async Task PublishStatsAsync(int shardid)
 		{
 			var bstats = new Models.API.BotStats()
 			{

@@ -24,16 +24,16 @@ namespace Skuld
         static string Prefix;
         public static Config Configuration;
         /*END VARS*/
-		static void Main() => Create().GetAwaiter().GetResult();
+		static void Main() => CreateAsync().GetAwaiter().GetResult();
 
-        public static async Task Create()
+        public static async Task CreateAsync()
         {
 			try
             {
                 EnsureConfigExists();
                 Configuration = Config.Load();
 				ConfigureStatsCollector();
-				await InstallServices().ConfigureAwait(false);
+				await InstallServicesAsync().ConfigureAwait(false);
 
 				await services.GetRequiredService<LoggingService>().AddToLogsAsync(new Models.LogMessage("FrameWk", $"Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
                 DogStatsd.Event("FrameWork", $"Configured and Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", "info", hostname: "Skuld");
@@ -42,13 +42,13 @@ namespace Skuld
 			}
             catch (Exception ex)
 			{
-				await services.GetRequiredService<BotService>().StopBot("MainBot");
+				await services.GetRequiredService<BotService>().StopBotAsync("MainBot");
 				Console.WriteLine(ex);
                 Console.ReadLine();
             }
         }
         
-        static async Task InstallServices()
+        static async Task InstallServicesAsync()
 		{
 			Prefix = Configuration.Discord.Prefix;
 

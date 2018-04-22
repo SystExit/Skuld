@@ -313,7 +313,7 @@ namespace Skuld.Services
 				IsBackground = true 
 			};
 			thd.Start();
-			await botService.UpdateStats();
+			await botService.UpdateStatsAsync();
 		}
 		async Task Bot_JoinedGuild(SocketGuild arg)
 		{
@@ -326,7 +326,7 @@ namespace Skuld.Services
 				IsBackground = true
 			};
 			thd.Start();
-			await botService.UpdateStats();
+			await botService.UpdateStatsAsync();
 		}
 		//End Guilds
 	}
