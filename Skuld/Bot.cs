@@ -50,14 +50,14 @@ namespace Skuld
         
         static async Task InstallServices()
 		{
-			Prefix = Configuration.Prefix;
+			Prefix = Configuration.Discord.Prefix;
 
 			var cli = new DiscordShardedClient(new DiscordSocketConfig
 			{
 				MessageCacheSize = 1000,
 				DefaultRetryMode = RetryMode.RetryTimeouts,
 				LogLevel = LogSeverity.Verbose,
-				TotalShards = Configuration.Shards
+				TotalShards = Configuration.Discord.Shards
 			});
 			
 			services = new ServiceCollection()
@@ -67,7 +67,7 @@ namespace Skuld
 				.AddSingleton(new LoggingService(true, true, logfile))
 				.AddSingleton<DatabaseService>()
 				.AddSingleton<YoutubeClient>()
-				.AddSingleton(new ImgurClient(Configuration.ImgurClientID, Configuration.ImgurClientSecret))
+				.AddSingleton(new ImgurClient(Configuration.APIS.ImgurClientID, Configuration.APIS.ImgurClientSecret))
 				.AddSingleton<Random>()
 				.AddSingleton<PokeSharpClient>()
 				.AddSingleton<SysExClient>()
@@ -84,8 +84,8 @@ namespace Skuld
 				.AddSingleton(new Utilities.MessageServiceConfig
 				{
 					ArgPos = 0,
-					Prefix = Configuration.Prefix,
-					AltPrefix = "skuld."
+					Prefix = Configuration.Discord.Prefix,
+					AltPrefix = Configuration.Discord.AltPrefix
 				})
 				.BuildServiceProvider();
 
@@ -166,7 +166,7 @@ namespace Skuld
 		{
 			DogStatsd.Configure(new StatsdConfig
 			{
-				StatsdServerName = Configuration.DataDogHost,
+				StatsdServerName = Configuration.APIS.DataDogHost,
 				StatsdPort = 8125,
 				Prefix = "skuld"
 			});

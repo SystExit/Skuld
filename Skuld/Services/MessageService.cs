@@ -166,7 +166,7 @@ namespace Skuld.Services
 				bool displayerror = true;
 				if (result.ErrorReason.Contains("few parameters"))
 				{
-					var cmdembed = GetCommandHelp(context, command.Name);
+					var cmdembed = Tools.Tools.GetCommandHelp(commandService, context, command.Name);
 					await SendChannelAsync(context.Channel, "You seem to be missing a parameter or 2, here's the help", cmdembed);
 					displayerror = false;
 				}
@@ -385,120 +385,16 @@ namespace Skuld.Services
 				return null;
 			}
 		}
-
-		//tools
-		Embed GetCommandHelp(ICommandContext context, string command)
-		{
-			if (command.ToLower() != "pasta")
-			{
-				var result = commandService.Search(context, command);
-
-				if (!result.IsSuccess)
-				{
-					return null;
-				}
-
-				var embed = new EmbedBuilder()
-				{
-					Description = $"Here are some commands like **{command}**",
-					Color = Tools.Tools.RandomColor()
-				};
-
-				var cmd = result.Commands.FirstOrDefault();
-
-				var summ = GetSummaryAsync(cmd.Command, result.Commands, command);
-
-				embed.AddField(x =>
-				{
-					x.Name = string.Join(", ", cmd.Command.Aliases);
-					x.Value = summ;
-					x.IsInline = false;
-				});
-
-				return embed.Build();
-			}
-			return null;
-		}
-
-		string GetSummaryAsync(CommandInfo cmd, IReadOnlyList<CommandMatch> Commands, string comm)
-		{
-			string summ = "Summary: " + cmd.Summary;
-			int totalparams = 0;
-			foreach (var com in Commands)
-				totalparams += com.Command.Parameters.Count;
-
-			if (totalparams > 0)
-			{
-				summ += "\nParameters:\n";
-
-				foreach (var param in cmd.Parameters)
-				{
-					if (param.IsOptional)
-					{
-						summ += $"**[Optional]** {param.Name} - {param.Type.Name}\n";
-					}
-					else
-					{
-						summ += $"**[Required]** {param.Name} - {param.Type.Name}\n";
-					}
-				}
-
-				return summ;
-			}
-			return summ + "\nParameters: None";
-		}
-
+		
 		private async Task InsertCommand(CommandInfo command, SocketMessage arg)
 		{
-			var user = arg.Author;
-			var cmd = new MySqlCommand("SELECT UserUsage FROM commandusage WHERE UserID = @userid AND Command = @command");
-			cmd.Parameters.AddWithValue("@userid", user.Id);
-			cmd.Parameters.AddWithValue("@command", command.Name ?? command.Module.Name);
-			var resp = await database.GetSingleAsync(cmd);
-			if (!String.IsNullOrEmpty(resp))
-			{
-				var cmdusg = Convert.ToInt32(resp);
-				cmdusg = cmdusg + 1;
-				cmd = new MySqlCommand("UPDATE commandusage SET UserUsage = @userusg WHERE UserID = @userid AND Command = @command");
-				cmd.Parameters.AddWithValue("@userusg", cmdusg);
-				cmd.Parameters.AddWithValue("@userid", user.Id);
-				cmd.Parameters.AddWithValue("@command", command.Name ?? command.Module.Name);
-				await database.NonQueryAsync(cmd);
-			}
-			else
-			{
-				cmd = new MySqlCommand("INSERT INTO commandusage (`UserID`, `UserUsage`, `Command`) VALUES (@userid , @userusg , @command)");
-				cmd.Parameters.AddWithValue("@userusg", 1);
-				cmd.Parameters.AddWithValue("@userid", user.Id);
-				cmd.Parameters.AddWithValue("@command", command.Name ?? command.Module.Name);
-				await database.NonQueryAsync(cmd);
-			}
+			var suser = await database.GetUserAsync(arg.Author.Id);
+			await database.UpdateUserUsageAsync(suser, command.Name ?? command.Module.Name);			
 		}
 		private async Task InsertCommand(CustomCommand command, SocketMessage arg)
 		{
-			var user = arg.Author;
-			var cmd = new MySqlCommand("SELECT UserUsage FROM commandusage WHERE UserID = @userid AND Command = @command");
-			cmd.Parameters.AddWithValue("@userid", user.Id);
-			cmd.Parameters.AddWithValue("@command", command.CommandName);
-			var resp = await database.GetSingleAsync(cmd);
-			if (!String.IsNullOrEmpty(resp))
-			{
-				var cmdusg = Convert.ToInt32(resp);
-				cmdusg = cmdusg + 1;
-				cmd = new MySqlCommand("UPDATE commandusage SET UserUsage = @userusg WHERE UserID = @userid AND Command = @command");
-				cmd.Parameters.AddWithValue("@userusg", cmdusg);
-				cmd.Parameters.AddWithValue("@userid", user.Id);
-				cmd.Parameters.AddWithValue("@command", command.CommandName);
-				await database.NonQueryAsync(cmd);
-			}
-			else
-			{
-				cmd = new MySqlCommand("INSERT INTO commandusage (`UserID`, `UserUsage`, `Command`) VALUES (@userid , @userusg , @command)");
-				cmd.Parameters.AddWithValue("@userusg", 1);
-				cmd.Parameters.AddWithValue("@userid", user.Id);
-				cmd.Parameters.AddWithValue("@command", command.CommandName);
-				await database.NonQueryAsync(cmd);
-			}
+			var suser = await database.GetUserAsync(arg.Author.Id);
+			await database.UpdateUserUsageAsync(suser, command.CommandName);
 		}
 	}
 }

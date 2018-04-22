@@ -38,14 +38,7 @@
     }
     public class GuildFeatureModules
     {
-        public bool Starboard { get; set; }
         public bool Pinning { get; set; }
         public bool Experience { get; set; }
-        public bool UserJoinLeave { get; set; }
-        public bool UserModification { get; set; }
-        public bool UserBanEvents { get; set; }
-        public bool GuildModification { get; set; }
-        public bool GuildChannelModification { get; set; }
-        public bool GuildRoleModification { get; set; }
     }
 }

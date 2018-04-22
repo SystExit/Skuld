@@ -37,7 +37,7 @@ namespace Skuld.Modules
 
         private static int timeout = 20;
         private MangaArr MangaArray;
-        [Command("manga", RunMode = RunMode.Async), Summary("Gets a manga from MyAnimeList.Net")]
+        [Command("manga"), Summary("Gets a manga from MyAnimeList.Net")]
         public async Task MangaGet([Remainder]string mangatitle)
 		{
 			var usr = await database.GetUserAsync(Context.User.Id);
@@ -166,7 +166,7 @@ namespace Skuld.Modules
         }
 
         private AnimeArr AnimeArray;
-        [Command("anime", RunMode = RunMode.Async), Summary("Gets an anime from MyAnimeList.Net")]
+        [Command("anime"), Summary("Gets an anime from MyAnimeList.Net")]
         public async Task Animuget([Remainder]string animetitle)
 		{
 			var usr = await database.GetUserAsync(Context.User.Id);
@@ -279,7 +279,7 @@ namespace Skuld.Modules
             }
         }
         
-        [Command("weebgif", RunMode = RunMode.Async), Summary("Gets a weeb gif")]
+        [Command("weebgif"), Summary("Gets a weeb gif")]
         public async Task WeebGif()
         {
 			var gif = await sysExClient.GetWeebReactionGifAsync();

@@ -12,10 +12,11 @@ namespace Skuld.APIS
     {
         public static async Task<APOD> GetAPODAsync()
         {
-            var client = (HttpWebRequest)WebRequest.Create("https://api.nasa.gov/planetary/apod?api_key=" + Bot.Configuration.NASAApiKey);
+            var client = (HttpWebRequest)WebRequest.Create("https://api.nasa.gov/planetary/apod?api_key=" + Bot.Configuration.APIS.NASAApiKey);
             var response = (HttpWebResponse)await client.GetResponseAsync();
             int remainingcalls = 0;
-            for(int x=0;x<response.Headers.Count;x++)
+
+            for(int x=0; x<response.Headers.Count; x++)
             {
                 if (response.Headers.Keys[x] == "X-RateLimit-Remaining")
                 {
@@ -23,6 +24,7 @@ namespace Skuld.APIS
                     break;
                 }
             }
+
             if (remainingcalls > 0)
             {
                 var streamresp = response.GetResponseStream();
@@ -31,7 +33,9 @@ namespace Skuld.APIS
                 return JsonConvert.DeserializeObject<APOD>(stringifiedresp);
             }
             else
-            { return null; }
+            {
+				return null;
+			}
         }
     }
 }

@@ -22,16 +22,16 @@ namespace Skuld.Modules
 			messageService = msgsrv;
 		}
 
-        [Command("help", RunMode = RunMode.Async), Summary("Gets all commands or a specific command's information")]
+        [Command("help"), Summary("Gets all commands or a specific command's information")]
         public async Task _Help([Remainder]string command=null)
         {
 			if (command == null)
 			{
-				var mcmd = new MySqlCommand("select prefix from guild where id = @guildid");
-				mcmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-				string resp = await database.GetSingleAsync(mcmd);
+				string prefix = Bot.Configuration.Discord.Prefix;
 
-				string prefix = Bot.Configuration.Prefix;
+				var guild = await database.GetGuildAsync(Context.Guild.Id);
+				if (guild != null)
+					prefix = guild.Prefix;
 
 				var embed = new EmbedBuilder
 				{
@@ -61,13 +61,13 @@ namespace Skuld.Modules
 							embed.AddField(module.Name, $"`{description.Remove(description.Length - 3)}`");
 					}
 				}
-				embed.Description = $"The prefix of **{Context.Guild.Name}** is: `{resp ?? prefix}`";
+				embed.Description = $"The prefix of **{Context.Guild.Name}** is: `{prefix}`";
 
 				await messageService.SendDMsAsync(Context.Channel, (await Context.User.GetOrCreateDMChannelAsync()), "", embed.Build());
 			}
 			else
 			{
-				var cmd = GetCommandHelp(Context, command);
+				var cmd = Tools.Tools.GetCommandHelp(messageService.commandService, Context, command);
 				if(cmd==null)
 				{
 					await messageService.SendChannelAsync(Context.Channel, $"Sorry, I couldn't find a command like **{command}**.");
@@ -79,66 +79,5 @@ namespace Skuld.Modules
 				}
 			}
         }
-
-		public Embed GetCommandHelp(ICommandContext context, string command)
-		{
-			if (command.ToLower() != "pasta")
-			{
-				var result = messageService.commandService.Search(context, command);
-
-				if (!result.IsSuccess)
-				{					
-					return null;
-				}
-
-				var embed = new EmbedBuilder()
-				{
-					Description = $"Here are some commands like **{command}**",
-					Color = Tools.Tools.RandomColor()
-				};
-
-				var cmd = result.Commands.FirstOrDefault();
-
-				var summ = GetSummaryAsync(cmd.Command, result.Commands, command);
-
-				embed.AddField(x =>
-				{
-					x.Name = string.Join(", ", cmd.Command.Aliases);
-					x.Value = summ;
-					x.IsInline = false;
-				});
-
-				return embed.Build();
-			}
-			return null;
-		}
-
-		public static string GetSummaryAsync(CommandInfo cmd, IReadOnlyList<CommandMatch> Commands, string comm)
-		{
-			string summ = "Summary: " + cmd.Summary;
-			int totalparams = 0;
-			foreach(var com in Commands)			
-				totalparams += com.Command.Parameters.Count;			
-
-			if (totalparams > 0)
-			{
-				summ += "\nParameters:\n";
-
-				foreach(var param in cmd.Parameters)
-				{
-					if (param.IsOptional)
-					{
-						summ += $"**[Optional]** {param.Name} - {param.Type.Name}\n";
-					}
-					else
-					{
-						summ += $"**[Required]** {param.Name} - {param.Type.Name}\n";
-					}
-				}					
-				
-				return summ;
-			}
-			return summ+"\nParameters: None";
-		}
     }
 }

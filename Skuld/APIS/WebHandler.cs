@@ -14,13 +14,23 @@ namespace Skuld.APIS
 	{
 		static string UAGENT = "Mozilla/5.0 (compatible; SkuldBot/" + Assembly.GetEntryAssembly().GetName().Version.ToString().Substring(0, 3) + "; +https://github.com/exsersewo/Skuld/)";
 
+		public static HttpWebRequest CreateWebRequest(Uri uri, byte[] auth = null)
+		{
+			var returncli = (HttpWebRequest)WebRequest.Create(uri);
+			if(auth != null)
+				returncli.Headers.Add("Authorization", "Basic " + Convert.ToBase64String(auth));
+			returncli.UserAgent = UAGENT;
+			returncli.AllowAutoRedirect = true;
+			returncli.KeepAlive = false;
+			returncli.Timeout = 20000;
+			returncli.ProtocolVersion = HttpVersion.Version10;
+
+			return returncli;
+		}
+
 		public static async Task<string> ReturnStringAsync(Uri url)
 		{
-			HttpWebRequest client = (HttpWebRequest)WebRequest.Create(url);
-			client.UserAgent = UAGENT;
-			client.KeepAlive = false;
-			client.Timeout = 20000;
-			client.ProtocolVersion = HttpVersion.Version10;
+			var client = CreateWebRequest(url);
 
 			var resp = (HttpWebResponse)(await client.GetResponseAsync());
 			if (resp.StatusCode == HttpStatusCode.OK)
@@ -40,12 +50,7 @@ namespace Skuld.APIS
 		}
         public static async Task<string> ReturnStringAsync(Uri url, byte[] headers)
 		{
-			HttpWebRequest client = (HttpWebRequest)WebRequest.Create(url);
-			client.Headers.Add("Authorization", "Basic " + Convert.ToBase64String(headers));
-			client.UserAgent = UAGENT;
-			client.KeepAlive = false;
-			client.Timeout = 20000;
-			client.ProtocolVersion = HttpVersion.Version10;
+			var client = CreateWebRequest(url, headers);
 
 			var resp = (HttpWebResponse)(await client.GetResponseAsync());
 			if (resp.StatusCode == HttpStatusCode.OK)
@@ -65,12 +70,7 @@ namespace Skuld.APIS
 		}
 		public static async Task<HtmlDocument> ScrapeUrlAsync(Uri url)
 		{
-			var request = (HttpWebRequest)WebRequest.Create(url);
-			request.UserAgent = UAGENT;
-			request.AllowAutoRedirect = true;
-			request.KeepAlive = false;
-			request.Timeout = 20000;
-			request.ProtocolVersion = HttpVersion.Version10;
+			var request = CreateWebRequest(url);
 
 			var response = (HttpWebResponse)await request.GetResponseAsync();
 			var doc = new HtmlDocument();

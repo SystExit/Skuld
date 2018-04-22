@@ -6,21 +6,27 @@ using Skuld.Models;
 using Discord.WebSocket;
 using System.Collections.Generic;
 using Skuld.Tools;
+using Discord;
+using StatsdClient;
 
 namespace Skuld.Services
 {
     public class DatabaseService
     {
-		LoggingService logger;
-		Locale local;
-        private static string cs = $@"server={Bot.Configuration.SqlDBHost};user={Bot.Configuration.SqlUser};password={Bot.Configuration.SqlPass};database={Bot.Configuration.SqlDB};charset=utf8mb4";
+		readonly LoggingService logger;
+		readonly Locale local;
+		readonly DiscordShardedClient client;
+
+        private static string cs = $@"server={Bot.Configuration.SQL.Host};user={Bot.Configuration.SQL.Username};password={Bot.Configuration.SQL.Password};database={Bot.Configuration.SQL.Database};charset=utf8mb4";
 
 		public bool CanConnect = false;
 
 		public DatabaseService(LoggingService log,
+			DiscordShardedClient cli,
 			Locale loc) //inherits from depinjection
 		{
 			logger = log;
+			client = cli;
 			local = loc;
 		}
 
@@ -33,6 +39,7 @@ namespace Skuld.Services
 				{
 					await conn.OpenAsync();
 					canconnect = true;
+					await conn.CloseAsync();
 				}
 				catch
 				{
@@ -40,7 +47,7 @@ namespace Skuld.Services
 				}
 				finally
 				{
-					if(conn.State == ConnectionState.Open)
+					if(conn.State == System.Data.ConnectionState.Open)
 					{
 						await conn.CloseAsync();
 					}
@@ -49,105 +56,67 @@ namespace Skuld.Services
 			CanConnect = canconnect;
 		}
 		
-        public async Task<bool> NonQueryAsync(MySqlCommand command)
+        async Task<SqlResult> SingleQueryAsync(MySqlCommand command)
         {
 			if(CanConnect)
 			{
 				using (var conn = new MySqlConnection(cs))
 				{
 					await conn.OpenAsync();
-					if (conn.State == ConnectionState.Open)
+					if (conn.State == System.Data.ConnectionState.Open)
 					{
 						command.Connection = conn;
 						try
 						{
-							await command.ExecuteNonQueryAsync();
-							StatsdClient.DogStatsd.Increment("mysql.queries");
-							StatsdClient.DogStatsd.Increment("mysql.insert");
-							await conn.CloseAsync();
-							return true;
+							var resp = await command.ExecuteScalarAsync();
+							DogStatsd.Increment("mysql.queries");
+							if (resp == null)
+							{
+								DogStatsd.Increment("mysql.insert");
+								await conn.CloseAsync();
+								return new SqlResult
+								{
+									Successful = true
+								};
+							}
+							else
+							{
+								await conn.CloseAsync();
+								return new SqlResult
+								{
+									Data = Convert.ToString(resp),
+									Successful = true
+								};
+							}
 						}
 						catch (Exception ex)
 						{
-							await logger.AddToLogsAsync(new LogMessage("SQL-Ins", "Error with SQL Command", Discord.LogSeverity.Error, ex));
-							return false;
+							await logger.AddToLogsAsync(new Models.LogMessage("SQLSngl", "Error with SQL Command", Discord.LogSeverity.Error, ex));
+							await conn.CloseAsync();
+							return new SqlResult
+							{
+								Error = "Error with SQL Command",
+								Successful = false,
+								Exception = ex
+							};
 						}
 					}
 					else
 					{
-						return false;
+						await conn.CloseAsync();
+						return new SqlResult
+						{
+							Error = "Couldn't open connection",
+							Successful = false
+						};
 					}
 				}
 			}
-			return false;
-        }
-
-        public async Task<string> GetSingleAsync(MySqlCommand command)
-        {
-			if(CanConnect)
+			return new SqlResult
 			{
-				using (var conn = new MySqlConnection(cs))
-				{
-					await conn.OpenAsync();
-					if (conn.State == ConnectionState.Open)
-					{
-						command.Connection = conn;
-						try
-						{
-							var result = Convert.ToString(await command.ExecuteScalarAsync());
-							StatsdClient.DogStatsd.Increment("mysql.queries");
-							StatsdClient.DogStatsd.Increment("mysql.rows_ret");
-							await conn.CloseAsync();
-							return result;
-						}
-						catch (Exception ex)
-						{
-							await logger.AddToLogsAsync(new LogMessage("SQL-Get", "Error with SQL Command", Discord.LogSeverity.Error, ex));
-						}
-					}
-					return null;
-				}
-			}
-			return null;
-		}
-		public async Task<string> GetSingleAsync(string table, string search, string wherecolumn = null, string whereVal = null)
-		{
-			if (CanConnect)
-			{
-				using (var conn = new MySqlConnection(cs))
-				{
-					await conn.OpenAsync();
-					if (conn.State == ConnectionState.Open)
-					{
-						MySqlCommand command;
-						if (wherecolumn == null && whereVal == null)
-						{
-							command = new MySqlCommand($"SELECT @search FROM {table}");
-							command.Parameters.AddWithValue("@search", search);
-						}
-						else
-						{
-							command = new MySqlCommand($"SELECT {search} FROM `{table}` WHERE {wherecolumn} = {whereVal}");
-						}
-						command.Connection = conn;
-
-						try
-						{
-							var result = Convert.ToString(await command.ExecuteScalarAsync());
-							StatsdClient.DogStatsd.Increment("mysql.queries");
-							StatsdClient.DogStatsd.Increment("mysql.rows_ret");
-							await conn.CloseAsync();
-							return result;
-						}
-						catch (Exception ex)
-						{
-							await logger.AddToLogsAsync(new LogMessage("SQL-Get", "Error with SQL Command", Discord.LogSeverity.Error, ex));
-						}
-					}
-					return null;
-				}
-			}
-			return null;
+				Error = "Database not available.",
+				Successful = false
+			};
 		}
 
 		public async Task<SkuldUser> GetUserAsync(ulong id)
@@ -161,24 +130,22 @@ namespace Skuld.Services
 				using (var conn = new MySqlConnection(cs))
 				{
 					await conn.OpenAsync();
-					if (conn.State == ConnectionState.Open)
+					if (conn.State == System.Data.ConnectionState.Open)
 					{
 						command.Connection = conn;
 
-						StatsdClient.DogStatsd.Increment("mysql.queries");
+						DogStatsd.Increment("mysql.queries");
 
 						var reader = await command.ExecuteReaderAsync();
 
 						int rows = 0;
 
-						rows = reader.Depth + 1;
-
-						StatsdClient.DogStatsd.Increment("mysql.rows_ret", rows);
-
 						if (reader.HasRows)
 						{
 							while (await reader.ReadAsync())
 							{
+								rows++;
+
 								user.ID = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["ID"]));
 
 								user.Money = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["money"]));
@@ -204,6 +171,8 @@ namespace Skuld.Services
 								user.Glares = Tools.Tools.ParseUInt32OrDefault(Convert.ToString(reader["glares"]));
 							}
 
+							DogStatsd.Increment("mysql.rows_ret", rows);
+
 							await conn.CloseAsync();
 						}
 						else
@@ -219,7 +188,7 @@ namespace Skuld.Services
 				using (var conn = new MySqlConnection(cs))
 				{
 					await conn.OpenAsync();
-					if (conn.State == ConnectionState.Open)
+					if (conn.State == System.Data.ConnectionState.Open)
 					{
 						command.Connection = conn;
 
@@ -262,24 +231,22 @@ namespace Skuld.Services
 				using (var conn = new MySqlConnection(cs))
 				{
 					await conn.OpenAsync();
-					if (conn.State == ConnectionState.Open)
+					if (conn.State == System.Data.ConnectionState.Open)
 					{
 						command.Connection = conn;
 
-						StatsdClient.DogStatsd.Increment("mysql.queries");
+						DogStatsd.Increment("mysql.queries");
 
 						var reader = await command.ExecuteReaderAsync();
 
 						int rows = 0;
 
-						rows = reader.Depth + 1;
-
-						StatsdClient.DogStatsd.Increment("mysql.rows_ret", rows);
-
 						if (reader.HasRows)
 						{
 							while (await reader.ReadAsync())
 							{
+								rows++;
+
 								guild.ID = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["ID"]));
 
 								guild.Name = Convert.ToString(reader["name"]);
@@ -309,6 +276,8 @@ namespace Skuld.Services
 								guild.UserLeaveChannel = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["userleavechan"]));
 							}
 
+							DogStatsd.Increment("mysql.rows_ret", rows);
+
 							await conn.CloseAsync();
 						}
 					}
@@ -324,7 +293,7 @@ namespace Skuld.Services
 				using (var conn = new MySqlConnection(cs))
 				{
 					await conn.OpenAsync();
-					if (conn.State == ConnectionState.Open)
+					if (conn.State == System.Data.ConnectionState.Open)
 					{
 						command.Connection = conn;
 
@@ -370,11 +339,11 @@ namespace Skuld.Services
 				using (var conn = new MySqlConnection(cs))
 				{
 					await conn.OpenAsync();
-					if (conn.State == ConnectionState.Open)
+					if (conn.State == System.Data.ConnectionState.Open)
 					{
 						command.Connection = conn;
 
-						StatsdClient.DogStatsd.Increment("mysql.queries");
+						DogStatsd.Increment("mysql.queries");
 
 						var reader = await command.ExecuteReaderAsync();
 
@@ -382,7 +351,7 @@ namespace Skuld.Services
 
 						rows = reader.Depth + 1;
 
-						StatsdClient.DogStatsd.Increment("mysql.rows_ret", rows);
+						DogStatsd.Increment("mysql.rows_ret", rows);
 
 						if (reader.HasRows)
 						{
@@ -391,8 +360,6 @@ namespace Skuld.Services
 								featSetts.Pinning = Convert.ToBoolean(reader["pinning"]);
 
 								featSetts.Experience = Convert.ToBoolean(reader["experience"]);
-
-								featSetts.UserJoinLeave = Convert.ToBoolean(reader["userjoinleave"]);
 							}
 
 							await conn.CloseAsync();
@@ -419,24 +386,21 @@ namespace Skuld.Services
 				using (var conn = new MySqlConnection(cs))
 				{
 					await conn.OpenAsync();
-					if (conn.State == ConnectionState.Open)
+					if (conn.State == System.Data.ConnectionState.Open)
 					{
 						command.Connection = conn;
 
-						StatsdClient.DogStatsd.Increment("mysql.queries");
+						DogStatsd.Increment("mysql.queries");
 
 						var reader = await command.ExecuteReaderAsync();
 
 						int rows = 0;
 
-						rows = reader.Depth + 1;
-
-						StatsdClient.DogStatsd.Increment("mysql.rows_ret", rows);
-
 						if (reader.HasRows)
 						{
 							while (await reader.ReadAsync())
 							{
+								rows++;
 								pasta.Name = reader["pastaname"].ToString();
 								pasta.Content = reader["content"].ToString();
 								pasta.OwnerID = Convert.ToUInt64(reader["ownerid"].ToString());
@@ -444,6 +408,8 @@ namespace Skuld.Services
 								pasta.Upvotes = Convert.ToUInt32(reader["upvotes"].ToString());
 								pasta.Downvotes = Convert.ToUInt32(reader["downvotes"].ToString());
 							}
+
+							DogStatsd.Increment("mysql.rows_ret", rows);
 
 							await conn.CloseAsync();
 						}
@@ -468,30 +434,29 @@ namespace Skuld.Services
 				using (var conn = new MySqlConnection(cs))
 				{
 					await conn.OpenAsync();
-					if (conn.State == ConnectionState.Open)
+					if (conn.State == System.Data.ConnectionState.Open)
 					{
 						command.Connection = conn;
 
-						StatsdClient.DogStatsd.Increment("mysql.queries");
+						DogStatsd.Increment("mysql.queries");
 
 						var reader = await command.ExecuteReaderAsync();
 
 						int rows = 0;
 
-						rows = reader.Depth + 1;
-
-						StatsdClient.DogStatsd.Increment("mysql.rows_ret", rows);
-
 						if (reader.HasRows)
 						{
 							while (await reader.ReadAsync())
 							{
+								rows++;
+
 								cmd.GuildID = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["GuildID"]));
 
 								cmd.Content = Convert.ToString(reader["Content"]);
 
 								cmd.CommandName = Convert.ToString(reader["CommandName"]);
 							}
+							DogStatsd.Increment("mysql.rows_ret", rows);
 
 							await conn.CloseAsync();
 						}
@@ -507,7 +472,7 @@ namespace Skuld.Services
 			return null;
 		}
 
-		public async Task<SqlError> InsertAdvancedSettingsAsync(bool feature, SocketGuild guild)
+		public async Task<SqlResult> InsertAdvancedSettingsAsync(bool feature, IGuild guild)
 		{
 			if(CanConnect)
 			{
@@ -522,11 +487,15 @@ namespace Skuld.Services
 					command.CommandText += "`guildfeaturemodules` (`ID`,`Accounts`, `Actions`,`Admin`,`Fun`,`Help`,`Information`,`Search`,`Stats`) VALUES (@guildid,1,1,1,1,1,1,1,1);";
 					command.Parameters.AddWithValue("@guildid", guild.Id);
 				}
-				return new SqlError(await NonQueryAsync(command));
+				return await SingleQueryAsync(command);
 			}
-			return null;
-        }
-        public async Task<SqlError> InsertUserAsync(SocketUser user)
+			return new SqlResult
+			{
+				Error = "Database not available.",
+				Successful = false
+			};
+		}
+        public async Task<SqlResult> InsertUserAsync(IUser user)
 		{
 			if(CanConnect)
 			{
@@ -535,38 +504,142 @@ namespace Skuld.Services
 					var command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `description`, `language`) VALUES (@userid , \"I have no description\", @locale);");
 					command.Parameters.AddWithValue("@userid", user.Id);
 					command.Parameters.AddWithValue("@locale", local.defaultLocale);
-					return new SqlError(await NonQueryAsync(command));
+					return await SingleQueryAsync(command);
 				}
-				else { return new SqlError(false, "Robots are not supported."); }
-			}
-			return null;
-        }
-        public async Task<SqlError> ModifyUserAsync(SocketUser user, string column, string value)
-        {
-			if(CanConnect)
-			{
-				if (!user.IsBot)
+				else
 				{
-					return new SqlError(await NonQueryAsync(new MySqlCommand($"UPDATE `accounts` SET `{column}`='{value}' WHERE ID='{user.Id}'")));
+					return new SqlResult
+					{
+						Error = "Robots are not supported.",
+						Successful = false
+					};
 				}
-				else { return new SqlError(false, "Robots are not supported."); }
 			}
-			return null;
-        }
-
-		public async Task DropGuildAsync(SocketGuild guild)
+			return new SqlResult
+			{
+				Error = "Database not available.",
+				Successful = false
+			};
+		}
+		public async Task<SqlResult> InsertCustomCommand(IGuild guild, string command, string content)
 		{
 			if (CanConnect)
-			{ await NonQueryAsync(new MySqlCommand($"DELETE FROM `guild` WHERE `ID` = {guild.Id}; DELETE FROM `guildcommandmodules` WHERE `ID` = {guild.Id}; DELETE FROM `guildfeaturemodules` WHERE `ID` = {guild.Id}; DELETE FROM `customcommand` WHERE `GuildID` = {guild.Id};")); }
-			return;
+			{
+				var cmd = new MySqlCommand("INSERT INTO `customcommand` ( `Content`, `GuildID`, `CommandName` ) VALUES ( @newcontent , @guildID , @commandName ) ;");
+				cmd.Parameters.AddWithValue("@newcontent", content);
+				cmd.Parameters.AddWithValue("@guildID", guild.Id);
+				cmd.Parameters.AddWithValue("@commandName", command);
+				return await SingleQueryAsync(cmd);
+			}
+			return new SqlResult
+			{
+				Error = "Database not available.",
+				Successful = false
+			};
 		}
-        public async Task DropUserAsync(SocketUser user)
+		public async Task<IReadOnlyList<SqlResult>> InsertGuildAsync(IGuild guild)
+		{
+			if (CanConnect)
+			{
+				List<SqlResult> results = new List<SqlResult>();
+
+				var gcmd = new MySqlCommand("INSERT IGNORE INTO `guild` (`ID`,`name`,`prefix`) VALUES ");
+				gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Bot.Configuration.Discord.Prefix}\" )";
+
+				results.Add(await SingleQueryAsync(gcmd));
+				results.Add(await InsertAdvancedSettingsAsync(false, guild));
+				results.Add(await InsertAdvancedSettingsAsync(true, guild));
+
+				await PopulateGuildUsersAsync(guild);
+
+				return results;
+			}
+			return new List<SqlResult>
+			{
+				new SqlResult
+				{
+					Error = "Database not available.",
+					Successful = false
+				}
+			};
+		}
+		public async Task<SqlResult> InsertPastaAsync(IUser user, string pastaname, string content)
+		{
+			if (CanConnect)
+			{
+				content = content.Replace("\'", "\\\'");
+				content = content.Replace("\"", "\\\"");
+
+				var command = new MySqlCommand("INSERT INTO pasta (content,ownerid,created,pastaname) VALUES ( @content , @ownerid , @created , @pastatitle )");
+				command.Parameters.AddWithValue("@content", content);
+				command.Parameters.AddWithValue("@ownerid", user.Id);
+				command.Parameters.AddWithValue("@created", DateTime.UtcNow);
+				command.Parameters.AddWithValue("@pastatitle", pastaname);
+
+				return await SingleQueryAsync(command);
+			}
+			return new SqlResult
+			{
+				Error = "Database not available.",
+				Successful = false
+			};
+		}
+
+		public async Task<SqlResult> DropGuildAsync(IGuild guild)
+		{
+			if (CanConnect)
+			{
+				return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `guild` WHERE `ID` = {guild.Id}; DELETE FROM `guildcommandmodules` WHERE `ID` = {guild.Id}; DELETE FROM `guildfeaturemodules` WHERE `ID` = {guild.Id}; DELETE FROM `customcommand` WHERE `GuildID` = {guild.Id};"));
+			}
+			return new SqlResult
+			{
+				Error = "Database not available.",
+				Successful = false
+			};
+		}
+        public async Task<SqlResult> DropUserAsync(IUser user)
         {
 			if (CanConnect)
-			{ await NonQueryAsync(new MySqlCommand($"DELETE FROM `accounts` WHERE `ID` = {user.Id}; DELETE FROM `commandusage` WHERE `UserID` = {user.Id}")); }
-			return;
-        }
-        public async Task UpdateUserAsync(SkuldUser user)
+			{
+				return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `accounts` WHERE `ID` = {user.Id}; DELETE FROM `commandusage` WHERE `UserID` = {user.Id}"));
+			}
+			return new SqlResult
+			{
+				Error = "Database not available.",
+				Successful = false
+			};
+		}
+		public async Task<SqlResult> DropCustomCommand(IGuild guild, string command)
+		{
+			if (CanConnect)
+			{
+				var cmd = new MySqlCommand("DELETE FROM `customcommand` WHERE `GuildID` = @guildID AND `CommandName` = @commandName ;");
+				cmd.Parameters.AddWithValue("@guildID", guild.Id);
+				cmd.Parameters.AddWithValue("@commandName", command);
+				return await SingleQueryAsync(cmd);
+			}
+			return new SqlResult
+			{
+				Error = "Database not available.",
+				Successful = false
+			};
+		}
+		public async Task<SqlResult> DropPastaAsync(string title)
+		{
+			if (CanConnect)
+			{
+				var cmd = new MySqlCommand("DELETE FROM `pasta` WHERE pastaname = @pastaname;");
+				cmd.Parameters.AddWithValue("@pastaname", title);
+				return await SingleQueryAsync(cmd);
+			}
+			return new SqlResult
+			{
+				Error = "Database not available.",
+				Successful = false
+			};
+		}
+
+        public async Task<SqlResult> UpdateUserAsync(SkuldUser user)
         {
 			if (CanConnect)
 			{
@@ -591,11 +664,15 @@ namespace Skuld.Services
 				command.Parameters.AddWithValue("@glares", user.Glares);
 				command.Parameters.AddWithValue("@userID", user.ID);
 
-				await NonQueryAsync(command);
+				return await SingleQueryAsync(command);
 			}
-			return;
-        }
-        public async Task UpdateGuildAsync(SkuldGuild guild)
+			return new SqlResult
+			{
+				Error = "Database not available.",
+				Successful = false
+			};
+		}
+        public async Task<SqlResult> UpdateGuildAsync(SkuldGuild guild)
         {
 			if(CanConnect)
 			{
@@ -637,10 +714,103 @@ namespace Skuld.Services
 				command.Parameters.AddWithValue("@xp", guild.GuildSettings.Features.Experience);
 				command.Parameters.AddWithValue("@guildID", guild.ID);
 
-				await NonQueryAsync(command);
+				return await SingleQueryAsync(command);
 			}
-			return;
-        }
+			return new SqlResult
+			{
+				Error = "Database not available.",
+				Successful = false
+			};
+		}
+		public async Task<SqlResult> UpdateUserUsageAsync(SkuldUser user, string command)
+		{
+			if(CanConnect)
+			{
+				var cmd = new MySqlCommand("SELECT UserUsage from commandusage WHERE UserID = @userID AND Command = @command");
+				cmd.Parameters.AddWithValue("@userID", user.ID);
+				cmd.Parameters.AddWithValue("@command", command);
+				var resp = await SingleQueryAsync(cmd);
+
+				if(resp.Successful)
+				{
+					if (!String.IsNullOrEmpty(Convert.ToString(resp.Data)))
+					{
+						var cmdusg = Convert.ToInt32(resp);
+						cmdusg = cmdusg + 1;
+						cmd = new MySqlCommand("UPDATE commandusage SET UserUsage = @userusg WHERE UserID = @userid AND Command = @command");
+						cmd.Parameters.AddWithValue("@userusg", cmdusg);
+						cmd.Parameters.AddWithValue("@userid", user.ID);
+						cmd.Parameters.AddWithValue("@command", command);
+						return await SingleQueryAsync(cmd);
+					}
+					else
+					{
+						cmd = new MySqlCommand("INSERT INTO commandusage (`UserID`, `UserUsage`, `Command`) VALUES (@userid , @userusg , @command)");
+						cmd.Parameters.AddWithValue("@userusg", 1);
+						cmd.Parameters.AddWithValue("@userid", user.ID);
+						cmd.Parameters.AddWithValue("@command", command);
+						return await SingleQueryAsync(cmd);
+					}
+				}
+				else
+				{
+					return resp;
+				}
+			}
+			return new SqlResult
+			{
+				Error = "Database not available.",
+				Successful = false
+			};
+		}
+		public async Task<SqlResult> UpdateCustomCommand(IGuild guild, string command, string content)
+		{
+			if (CanConnect)
+			{
+				var cmd = new MySqlCommand("UPDATE `customcommand` SET `Content` = @newcontent WHERE `GuildID` = @guildID AND `CommandName` = @commandName ;");
+				cmd.Parameters.AddWithValue("@newcontent", content);
+				cmd.Parameters.AddWithValue("@guildID", guild.Id);
+				cmd.Parameters.AddWithValue("@commandName", command);
+				return await SingleQueryAsync(cmd);
+			}
+			return new SqlResult
+			{
+				Error = "Database not available.",
+				Successful = false
+			};
+		}
+		public async Task<SqlResult> UpdatePastaAsync(Pasta pasta, IUser user = null)
+		{
+			if (CanConnect)
+			{
+				if(user == null)
+				{
+					var command = new MySqlCommand("UPDATE pasta SET content = @content, upvotes = @upvotes, downvotes = @downvotes WHERE pastaname = @title");
+					command.Parameters.AddWithValue("@content", pasta.Content);
+					command.Parameters.AddWithValue("@downvotes", pasta.Downvotes);
+					command.Parameters.AddWithValue("@upvotes", pasta.Upvotes);
+					command.Parameters.AddWithValue("@title", pasta.Name);
+
+					return await SingleQueryAsync(command);
+				}
+				else
+				{
+					var command = new MySqlCommand("UPDATE pasta SET content = @content, upvotes = @upvotes, downvotes = @downvotes, ownerID = @ownerid WHERE pastaname = @title");
+					command.Parameters.AddWithValue("@content", pasta.Content);
+					command.Parameters.AddWithValue("@downvotes", pasta.Downvotes);
+					command.Parameters.AddWithValue("@upvotes", pasta.Upvotes);
+					command.Parameters.AddWithValue("@ownerid", user.Id);
+					command.Parameters.AddWithValue("@title", pasta.Name);
+
+					return await SingleQueryAsync(command);
+				}
+			}
+			return new SqlResult
+			{
+				Error = "Database not available.",
+				Successful = false
+			};
+		}
 
 		public async Task<IReadOnlyList<Pasta>> GetAllPastasAsync()
 		{
@@ -651,24 +821,22 @@ namespace Skuld.Services
 				using (var conn = new MySqlConnection(cs))
 				{
 					await conn.OpenAsync();
-					if (conn.State == ConnectionState.Open)
+					if (conn.State == System.Data.ConnectionState.Open)
 					{
 						command.Connection = conn;
 
-						StatsdClient.DogStatsd.Increment("mysql.queries");
+						DogStatsd.Increment("mysql.queries");
 
 						var reader = await command.ExecuteReaderAsync();
 
 						int rows = 0;
 
-						rows = reader.Depth + 1;
-
-						StatsdClient.DogStatsd.Increment("mysql.rows_ret", rows);
-
 						if (reader.HasRows)
 						{
 							while (await reader.ReadAsync())
 							{
+								rows++;
+
 								var pasta = new Pasta
 								{
 									ID = Tools.Tools.ParseUInt32OrDefault(Convert.ToString(reader["ID"])),
@@ -691,6 +859,8 @@ namespace Skuld.Services
 								pasta = null;
 							}
 
+							DogStatsd.Increment("mysql.rows_ret", rows);
+
 							await conn.CloseAsync();
 						}
 						else
@@ -704,5 +874,111 @@ namespace Skuld.Services
 			}
 			return null;
 		}
-    }
+
+		public async Task<IReadOnlyList<SqlResult>> PopulateGuildUsersAsync(IGuild guild)
+		{
+			if (CanConnect)
+			{
+				var results = new List<SqlResult>();
+				await guild.DownloadUsersAsync();
+				foreach (var user in await guild.GetUsersAsync())
+				{
+					results.Add(await InsertUserAsync(user));
+					DogStatsd.Increment("mysql.insert");
+				}
+				return results;
+			}
+			return new List<SqlResult>
+			{
+				new SqlResult
+				{
+					Error = "Database not available.",
+					Successful = false
+				}
+			};
+		}
+		public async Task<IReadOnlyList<SqlResult>> CheckGuildUsersAsync(IGuild guild)
+		{
+			if (CanConnect)
+			{
+				var results = new List<SqlResult>();
+				await guild.DownloadUsersAsync();
+				foreach (var user in await guild.GetUsersAsync())
+				{
+					var discord = client.GetUser(user.Id);
+					var db = await GetUserAsync(user.Id);
+					if (discord == null && db != null)
+					{
+						results.Add(await DropUserAsync(user));
+					}
+					else if (discord != null && db == null)
+					{
+						results.Add(await InsertUserAsync(discord));
+					}
+				}
+				return results;
+			}
+			return new List<SqlResult>
+			{
+				new SqlResult
+				{
+					Error = "Database not available.",
+					Successful = false
+				}
+			};
+		}
+		public async Task<IReadOnlyList<SqlResult>> RebuildGuildAsync(IGuild guild)
+		{
+			if (CanConnect)
+			{
+				var results = new List<SqlResult>();
+				var gcmd = new MySqlCommand("INSERT IGNORE INTO `guild` (`ID`,`name`,`prefix`) VALUES ");
+				gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Bot.Configuration.Discord.Prefix}\" )";
+				results.Add(await SingleQueryAsync(gcmd));
+
+				//Configures Modules
+				gcmd = new MySqlCommand("INSERT IGNORE INTO `guildcommandmodules` " +
+					"(`ID`,`Accounts`,`Actions`,`Admin`,`Fun`,`Help`,`Information`,`Search`,`Stats`) " +
+					$"VALUES ( {guild.Id} , 1, 1, 1, 1, 1, 1, 1, 1 )");
+				results.Add(await SingleQueryAsync(gcmd));
+
+				//Configures Settings
+				gcmd = new MySqlCommand("INSERT IGNORE INTO `guildfeaturemodules` " + "(`ID`,`Starboard`,`Pinning`,`Experience`,`UserJoinLeave`,`UserModification`,`UserBanEvents`,`GuildModification`,`GuildChannelModification`,`GuildRoleModification`) " +
+					$"VALUES ( {guild.Id} , 0, 0, 0, 0, 0, 0, 0, 0, 0 )");
+				results.Add(await SingleQueryAsync(gcmd));
+
+				results.AddRange(await CheckGuildUsersAsync(guild));
+
+				return results;
+			}
+			return new List<SqlResult>
+			{
+				new SqlResult
+				{
+					Error = "Database not available.",
+					Successful = false
+				}
+			};
+		}
+		public async Task<IReadOnlyList<SqlResult>> PopulateGuildsAsync()
+		{
+			if(CanConnect)
+			{
+				var results = new List<SqlResult>();
+				foreach (var guild in client.Guilds)
+				{
+					results.AddRange(await CheckGuildUsersAsync(guild));
+				}
+				return results;
+			}
+			return new List<SqlResult>
+			{
+				new SqlResult
+				{
+					Error = "Database not available.",
+					Successful = false
+				}
+			};
+		}
+	}
 }

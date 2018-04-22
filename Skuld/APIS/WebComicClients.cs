@@ -113,8 +113,7 @@ namespace Skuld.APIS
 				return await GetXKCDComicAsync(random.Next(0, XKCDLastPage.Value));
 			}
 		}
-
-		int count = 0;
+		
 		public async Task<XKCDComic> GetXKCDComicAsync(int comicid)
         {
             if (XKCDLastPage.HasValue)

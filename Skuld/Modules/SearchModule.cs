@@ -32,13 +32,15 @@ namespace Skuld.Modules
 		readonly YoutubeClient youtube;
 		readonly LoggingService logger;
 		readonly Random random;
+		readonly ImgurClient imgurClient;
 
 		public Search(TwitchService twi,
 			MessageService msg,
 			SocialAPIS soc,
 			YoutubeClient yout,
 			LoggingService log,
-			Random ran) //depinj
+			Random ran,
+			ImgurClient imgur) //depinj
 		{
 			twitch = twi;
 			messageService = msg;
@@ -46,6 +48,7 @@ namespace Skuld.Modules
 			youtube = yout;
 			logger = log;
 			random = ran;
+			imgurClient = imgur;
 		}
 
         /*Commented out due to potentiality of coming back to it.
@@ -153,7 +156,7 @@ namespace Skuld.Modules
             }
         }*/
 
-        [Command("twitch", RunMode = RunMode.Async), Summary("Finds a twitch user")]
+        [Command("twitch"), Summary("Finds a twitch user")]
         public async Task TwitchSearch([Remainder]string twitchStreamer)
         {
 			var twicli = twitch.Client;
@@ -201,7 +204,7 @@ namespace Skuld.Modules
             await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
         }
 		
-		[Command("instagram", RunMode = RunMode.Async), Alias("insta"), Ratelimit(20, 1, Measure.Minutes)]
+		[Command("instagram"), Alias("insta"), Ratelimit(20, 1, Measure.Minutes)]
 		public async Task Instagram(string usr, string option = null)
 		{
 			if (option == null)
@@ -258,7 +261,7 @@ namespace Skuld.Modules
 		}
 
 		//Start Search Platforms
-		[Command("search", RunMode = RunMode.Async), Summary("Use \"g\" as a short cut for google,\n\"yt\" for youtube,\nor search for images on imgur"), Alias("s")]
+		[Command("search"), Summary("Use \"g\" as a short cut for google,\n\"yt\" for youtube,\nor search for images on imgur"), Alias("s")]
         public async Task GetSearch(string platform, [Remainder]string query)
         {
             platform = platform.ToLowerInvariant();
@@ -280,9 +283,9 @@ namespace Skuld.Modules
         {
             try
             {
-                var css = new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer() { ApiKey = Bot.Configuration.GoogleAPI, ApplicationName = "Skuld" });
+                var css = new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer() { ApiKey = Bot.Configuration.APIS.GoogleAPI, ApplicationName = "Skuld" });
                 var listRequest = css.Cse.List(query);
-                listRequest.Cx = Bot.Configuration.GoogleCx;
+                listRequest.Cx = Bot.Configuration.APIS.GoogleCx;
                 listRequest.Safe = CseResource.ListRequest.SafeEnum.High;
                 var search = await listRequest.ExecuteAsync();
                 var items = search.Items;
@@ -363,8 +366,7 @@ namespace Skuld.Modules
         {
             try
             {
-                var client = new ImgurClient(Bot.Configuration.ImgurClientID, Bot.Configuration.ImgurClientSecret);
-                var endpoint = new GalleryEndpoint(client);
+                var endpoint = new GalleryEndpoint(imgurClient);
                 var images = await endpoint.SearchGalleryAsync(query);
                 var albm = images.ElementAtOrDefault(random.Next(0,images.Count()));
                 var album = (IGalleryAlbum)albm;
@@ -404,12 +406,12 @@ namespace Skuld.Modules
             if (url != "https://lmgtfy.com/")
                 await messageService.SendChannelAsync(Context.Channel, url);
             else
-            { await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Author = new EmbedAuthorBuilder() { Name = "Error with command" }, Color = new Color(255, 0, 0), Description = $"Ensure your parameters are correct, example: `{Bot.Configuration.Prefix}lmgtfy g How to use lmgtfy`" }.Build());
+            { await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Author = new EmbedAuthorBuilder() { Name = "Error with command" }, Color = new Color(255, 0, 0), Description = $"Ensure your parameters are correct, example: `{Bot.Configuration.Discord.Prefix}lmgtfy g How to use lmgtfy`" }.Build());
                 StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
             }
         }
 
-		[Command("urban", RunMode = RunMode.Async), Summary("Gets a thing from urban dictionary if empty, it gets a random thing")]
+		[Command("urban"), Summary("Gets a thing from urban dictionary if empty, it gets a random thing")]
 		public async Task Urban([Remainder]string phrase = null)
 		{
 			if(phrase == null)
@@ -418,16 +420,16 @@ namespace Skuld.Modules
 				await Geturban(new Uri($"http://api.urbandictionary.com/v0/define?term={phrase}")).ConfigureAwait(false);
 		}
 
-        [Command("osu!", RunMode = RunMode.Async), Summary("Get a person's Osu! Sig")]
+        [Command("osu!"), Summary("Get a person's Osu! Sig")]
         public async Task OsuSig([Remainder]string User) => await SendSigAsync(0, User);
 
-        [Command("osu!taiko", RunMode = RunMode.Async), Summary("Gets a person's Osu!Taiko Sig")]
+        [Command("osu!taiko"), Summary("Gets a person's Osu!Taiko Sig")]
         public async Task TaikoSig([Remainder]string User) => await SendSigAsync(1, User);
 
-        [Command("osu!ctb", RunMode = RunMode.Async), Summary("Gets a person's Osu!CTB Sig")]
+        [Command("osu!ctb"), Summary("Gets a person's Osu!CTB Sig")]
         public async Task CTBSig([Remainder]string User) => await SendSigAsync(2, User);
 
-        [Command("osu!mania", RunMode = RunMode.Async), Summary("Gets a person's Osu!Mania Sig")]
+        [Command("osu!mania"), Summary("Gets a person's Osu!Mania Sig")]
         public async Task ManiaSig([Remainder]string User) => await SendSigAsync(3, User);
 
         private async Task SendSigAsync(int mode, string User)
@@ -522,7 +524,7 @@ namespace Skuld.Modules
             await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
         }
 
-        [Command("wikipedia", RunMode = RunMode.Async), Summary("Gets wikipedia information, supports all languages that wikipedia offers"), Alias("wiki")]
+        [Command("wikipedia"), Summary("Gets wikipedia information, supports all languages that wikipedia offers"), Alias("wiki")]
         public async Task Wiki(string langcode, [Remainder]string query)
         {
             var jsonresp = JObject.Parse((await WebHandler.ReturnStringAsync(new Uri($"https://{langcode}.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles={query}"))));
@@ -547,7 +549,7 @@ namespace Skuld.Modules
             await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
         }
 
-        [Command("gif", RunMode = RunMode.Async), Summary("Gets a gif")]
+        [Command("gif"), Summary("Gets a gif")]
         public async Task Gifcommand([Remainder]string query)
         {
             var embed = new EmbedBuilder()
@@ -580,10 +582,10 @@ namespace Skuld.Modules
             }
         }
 
-        [Command("define", RunMode = RunMode.Async), Summary("Defines a word")]
+        [Command("define"), Summary("Defines a word")]
         public async Task Define([Remainder]string word)
         {
-            var stringifiedxml = await WebHandler.ReturnStringAsync(new Uri($"http://www.stands4.com/services/v2/defs.php?uid={Bot.Configuration.STANDSUid}&tokenid={Bot.Configuration.STANDSToken}&word={word}"));
+            var stringifiedxml = await WebHandler.ReturnStringAsync(new Uri($"http://www.stands4.com/services/v2/defs.php?uid={Bot.Configuration.APIS.STANDSUid}&tokenid={Bot.Configuration.APIS.STANDSToken}&word={word}"));
             var xml = new XmlDocument();
             xml.LoadXml(stringifiedxml);
             XObject xNode = XDocument.Parse(xml.InnerXml);
@@ -605,7 +607,7 @@ namespace Skuld.Modules
             await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
         }
 
-        [Command("reddit", RunMode = RunMode.Async), Summary("Gets a subreddit")]
+        [Command("reddit"), Summary("Gets a subreddit")]
         public async Task SubReddit(string subreddit, int amount = 10)
         {
             var subReddit = await social.GetSubRedditAsync(subreddit, amount);

@@ -34,7 +34,7 @@ namespace Skuld.Services
 		{
 			try
 			{
-				await client.LoginAsync(TokenType.Bot, config.Token);
+				await client.LoginAsync(TokenType.Bot, config.Discord.Token);
 				await client.StartAsync();
 
 				Parallel.Invoke(() => SendDataToDataDog());
@@ -100,7 +100,7 @@ namespace Skuld.Services
 			var webclient = (HttpWebRequest)WebRequest.Create(new Uri($"https://skuld.systemexit.co.uk/tools/updateStats.php"));
 			webclient.ContentType = "application/json";
 			webclient.Method = "POST";
-			webclient.Headers.Add(HttpRequestHeader.Authorization, config.SysExToken);
+			webclient.Headers.Add(HttpRequestHeader.Authorization, config.BotListing.SysExToken);
 			using (var swriter = new StreamWriter(await webclient.GetRequestStreamAsync()))
 			{
 				swriter.Write(Newtonsoft.Json.JsonConvert.SerializeObject(botStats));
@@ -126,13 +126,13 @@ namespace Skuld.Services
 			using (var webclient = new HttpClient())
 			using (var content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(bstats), Encoding.UTF8, "application/json"))
 			{
-				webclient.DefaultRequestHeaders.Add("Authorization", config.DBotsOrgKey);
+				webclient.DefaultRequestHeaders.Add("Authorization", config.BotListing.DBotsOrgKey);
 				await webclient.PostAsync(new Uri($"https://discordbots.org/api/bots/{client.CurrentUser.Id}/stats"), content);
 			}
 			using (var webclient = new HttpClient())
 			using (var content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(bstats), Encoding.UTF8, "application/json"))
 			{
-				webclient.DefaultRequestHeaders.Add("Authorization", config.DiscordPWKey);
+				webclient.DefaultRequestHeaders.Add("Authorization", config.BotListing.DiscordPWKey);
 				await webclient.PostAsync(new Uri($"https://bots.discord.pw/api/bots/{client.CurrentUser.Id}/stats"), content);
 			}
 		}
