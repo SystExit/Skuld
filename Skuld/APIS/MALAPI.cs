@@ -15,9 +15,9 @@ namespace Skuld.APIS
 		{
 			string url = "";
             if (!isAnime)
-            { url = $"https://myanimelist.net/api/manga/search.xml?q={Search}"; }
+				url = $"https://myanimelist.net/api/manga/search.xml?q={Search}";
             else
-            { url = $"https://myanimelist.net/api/anime/search.xml?q={Search}"; }
+				url = $"https://myanimelist.net/api/anime/search.xml?q={Search}";
 			Search = Search.Replace(" ", "+");
 			var byteArray = new UTF8Encoding().GetBytes($"{Bot.Configuration.MALUName}:{Bot.Configuration.MALPassword}");
 			return await WebHandler.ReturnStringAsync(new Uri(url), byteArray);

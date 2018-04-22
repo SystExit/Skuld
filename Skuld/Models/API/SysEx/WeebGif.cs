@@ -9,20 +9,40 @@ namespace Skuld.Models.API.SysEx
 		public string URL { get; set; }
 
 		[JsonProperty(PropertyName = "type")]
-		public Type GifType { get; set; }		
+		public GifType GifType { get; set; }		
     }
-	public enum Type
+	public enum GifType
 	{
 		Adore,
+		Amazed,
+		Approve,
+		Blush,
+		Bored,
+		Cuddle,
+		Dance,
+		Disgust,
+		Disapprove,
+		Feels,
 		Glare,
 		Grope,
+		Happy,
 		Hug,
 		Kill,
 		Kiss,
+		Lewd,
+		Mad,
+		Moe,
+		Nani,
+		Nope,
 		Pet,
 		Punch,
+		Sad,
+		Shock,
 		Shrug,
 		Slap,
-		Stab
+		Smug,
+		Stab,
+		Triggered,
+		Unamused
 	}
 }

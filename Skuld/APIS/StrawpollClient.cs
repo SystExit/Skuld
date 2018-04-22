@@ -4,12 +4,19 @@ using System.Net.Http;
 using Newtonsoft.Json;
 using System.Text;
 using Skuld.Models.API.Strawpoll;
+using Skuld.Services;
 
 namespace Skuld.APIS
 {
-    public class StrawpollClient
+    public class Strawpoll
     {
-        public static async Task<RecievePoll> SendPoll(string title, string[] polloptions)
+		readonly LoggingService logger;
+		public Strawpoll(LoggingService log)//depinj
+		{
+			logger = log;
+		}
+
+        public async Task<RecievePoll> SendPoll(string title, string[] polloptions)
         {
             try
             {
@@ -20,11 +27,11 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                await Bot.Logger.AddToLogs(new Models.LogMessage("StrwPoll", "Error: " + ex.Message, Discord.LogSeverity.Error, ex));
+                await logger.AddToLogsAsync(new Models.LogMessage("StrwPoll", "Error: " + ex.Message, Discord.LogSeverity.Error, ex));
             }
             return null;
         }
-        public static async Task<RecievePoll> GetPoll(int pollid)
+        public async Task<RecievePoll> GetPoll(int pollid)
         {
             try
             {
@@ -33,11 +40,11 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                await Bot.Logger.AddToLogs(new Models.LogMessage("StrwPoll", "Error: " + ex.Message, Discord.LogSeverity.Error, ex));
+                await logger.AddToLogsAsync(new Models.LogMessage("StrwPoll", "Error: " + ex.Message, Discord.LogSeverity.Error, ex));
             }
             return null;
         }
-        public static async Task<RecievePoll> GetPoll(string url)
+        public async Task<RecievePoll> GetPoll(string url)
         {
             try
             {
@@ -59,7 +66,7 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                await Bot.Logger.AddToLogs(new Models.LogMessage("StrwPoll", "Error: " + ex.Message, Discord.LogSeverity.Error, ex));
+                await logger.AddToLogsAsync(new Models.LogMessage("StrwPoll", "Error: " + ex.Message, Discord.LogSeverity.Error, ex));
             }
             return null;
         }

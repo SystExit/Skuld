@@ -8,6 +8,8 @@ namespace Skuld.Tools
 {
     public class Tools
     {
+		static readonly Random random = new Random();
+
         private static readonly string[] _validExtensions = { ".jpg", ".bmp", ".gif", ".png" };
         public static bool IsImageExtension(string url)
         {
@@ -24,7 +26,7 @@ namespace Skuld.Tools
         public static Color RandomColor()
         {
             var bytes = new byte[3];
-            Bot.random.NextBytes(bytes);
+            random.NextBytes(bytes);
             return new Color(bytes[0], bytes[1], bytes[2]);
         }
 

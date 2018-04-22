@@ -2,13 +2,23 @@
 using System.Threading.Tasks;
 using Skuld.Models.API.Pokemon;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System.IO;
+using Skuld.Services;
 
 namespace Skuld.APIS
 {
     public class PokeSharpClient
     {
+		static Random random;
+		static LoggingService logger;
+
+		public PokeSharpClient(Random rnd,
+			LoggingService log) //depinject
+		{
+			random = rnd;
+			logger = log;
+		}
+
         public static int? HighestPokeID = GetHighestPokemon().Result;
         private static async Task<int> GetHighestPokemon()
         {
@@ -53,11 +63,11 @@ namespace Skuld.APIS
                 {
                     if(HighestPokeID.HasValue && HighestPokeID > 0)
                     {
-                        var random = Bot.random.Next(0, HighestPokeID.Value);
+                        var rand = random.Next(0, HighestPokeID.Value);
                         if (!Directory.Exists(AppContext.BaseDirectory + "/skuld/storage/pokemon/"))
                             Directory.CreateDirectory(AppContext.BaseDirectory + "/skuld/storage/pokemon/");
-                        string pokejson = AppContext.BaseDirectory + $"/skuld/storage/pokemon/{random}.json";
-                        var result = await WebHandler.ReturnStringAsync(new Uri($"https://pokeapi.co/api/v2/pokemon/{random}/"));
+                        string pokejson = AppContext.BaseDirectory + $"/skuld/storage/pokemon/{rand}.json";
+                        var result = await WebHandler.ReturnStringAsync(new Uri($"https://pokeapi.co/api/v2/pokemon/{rand}/"));
                         if (!String.IsNullOrEmpty(result))
                         {
                             File.WriteAllText(pokejson, result);
@@ -75,7 +85,7 @@ namespace Skuld.APIS
             }
             catch(Exception ex)
             {
-                await Bot.Logger.AddToLogs(new Models.LogMessage("PokeAPI-G", "Error", Discord.LogSeverity.Error, ex));
+                await logger.AddToLogsAsync(new Models.LogMessage("PokeAPI-G", "Error", Discord.LogSeverity.Error, ex));
                 return null;
             }
         }

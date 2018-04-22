@@ -3,7 +3,7 @@ using System.Linq;
 using System.Text;
 using System;
 
-namespace Skuld.Tools
+namespace Skuld.Utilities
 {
     public class ConsoleUtils
     {

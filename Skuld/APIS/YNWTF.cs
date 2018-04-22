@@ -6,7 +6,7 @@ namespace Skuld.APIS
 {
     public class YNWTF
     {
-        public static async Task<Models.API.YNWTF> AskYNWTF()
+        public async Task<Models.API.YNWTF> AskYNWTF()
             => JsonConvert.DeserializeObject<Models.API.YNWTF>((await WebHandler.ReturnStringAsync(new Uri($"https://yesno.wtf/api"))));
     }
 }

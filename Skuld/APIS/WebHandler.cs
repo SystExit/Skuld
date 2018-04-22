@@ -12,13 +12,15 @@ namespace Skuld.APIS
 {
 	public class WebHandler
 	{
-		static HttpWebRequest client;
-		static string UAGENT = "Skuld/" + Assembly.GetEntryAssembly().GetName().Version + " (https://github.com/exsersewo/Skuld)";
+		static string UAGENT = "Mozilla/5.0 (compatible; SkuldBot/" + Assembly.GetEntryAssembly().GetName().Version.ToString().Substring(0, 3) + "; +https://github.com/exsersewo/Skuld/)";
 
 		public static async Task<string> ReturnStringAsync(Uri url)
 		{
-			client = (HttpWebRequest)WebRequest.Create(url);
+			HttpWebRequest client = (HttpWebRequest)WebRequest.Create(url);
 			client.UserAgent = UAGENT;
+			client.KeepAlive = false;
+			client.Timeout = 20000;
+			client.ProtocolVersion = HttpVersion.Version10;
 
 			var resp = (HttpWebResponse)(await client.GetResponseAsync());
 			if (resp.StatusCode == HttpStatusCode.OK)
@@ -37,9 +39,13 @@ namespace Skuld.APIS
 			}
 		}
         public static async Task<string> ReturnStringAsync(Uri url, byte[] headers)
-        {
-			client.Headers.Add("Basic", Convert.ToBase64String(headers));
+		{
+			HttpWebRequest client = (HttpWebRequest)WebRequest.Create(url);
+			client.Headers.Add("Authorization", "Basic " + Convert.ToBase64String(headers));
 			client.UserAgent = UAGENT;
+			client.KeepAlive = false;
+			client.Timeout = 20000;
+			client.ProtocolVersion = HttpVersion.Version10;
 
 			var resp = (HttpWebResponse)(await client.GetResponseAsync());
 			if (resp.StatusCode == HttpStatusCode.OK)
@@ -62,6 +68,10 @@ namespace Skuld.APIS
 			var request = (HttpWebRequest)WebRequest.Create(url);
 			request.UserAgent = UAGENT;
 			request.AllowAutoRedirect = true;
+			request.KeepAlive = false;
+			request.Timeout = 20000;
+			request.ProtocolVersion = HttpVersion.Version10;
+
 			var response = (HttpWebResponse)await request.GetResponseAsync();
 			var doc = new HtmlDocument();
 			if (response.StatusCode == HttpStatusCode.OK)
@@ -70,9 +80,9 @@ namespace Skuld.APIS
 				request.Abort();
 			}
 			if (doc != null)
-			{ return doc; }
+				return doc;
 			else
-			{ return null; }
+				return null;
 		}
 		public static async Task<string> DownloadFileAsync(Uri url, string filepath)
 		{
@@ -91,7 +101,10 @@ namespace Skuld.APIS
 				client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
                 using (HttpResponseMessage resp = await client.PostAsync(url, content))
                 {
-                    return await resp.Content.ReadAsStringAsync();
+					if (resp.IsSuccessStatusCode)
+						return await resp.Content.ReadAsStringAsync();
+					else
+						return null;
                 }
             }
         }
@@ -103,14 +116,10 @@ namespace Skuld.APIS
 				client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
                 using (HttpResponseMessage resp = await client.PostAsync(url, content))
                 {
-                    if (resp.IsSuccessStatusCode)
-                    {
-                        return await resp.Content.ReadAsStreamAsync();
-                    }
-                    else
-                    {
-                        return null;
-                    }
+                    if (resp.IsSuccessStatusCode)                    
+                        return await resp.Content.ReadAsStreamAsync();                    
+                    else                    
+                        return null;                    
                 }
             }
         }
@@ -122,14 +131,10 @@ namespace Skuld.APIS
                 client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
                 using (HttpResponseMessage resp = await client.PostAsync(url, content))
                 {
-                    if (resp.IsSuccessStatusCode)
-                    {
-                        return await resp.Content.ReadAsByteArrayAsync();
-                    }
-                    else
-                    {
-                        return null;
-                    }
+                    if (resp.IsSuccessStatusCode)                    
+                        return await resp.Content.ReadAsByteArrayAsync();                    
+                    else                    
+                        return null;                    
                 }
             }
 		}

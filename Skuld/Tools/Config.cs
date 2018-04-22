@@ -1,7 +1,6 @@
 ﻿using System;
 using Newtonsoft.Json;
 using System.IO;
-using System.Collections.Generic;
 
 namespace Skuld.Tools
 {
@@ -51,6 +50,7 @@ namespace Skuld.Tools
         //Bot Listing Tokens
         public string DBotsOrgKey { get; set; }
         public string DiscordPWKey { get; set; }
+		public string SysExToken { get; set; }
         //End Region
 
         //Module Management
@@ -110,12 +110,10 @@ namespace Skuld.Tools
             StatsModuleEnabled = true;
         }
 
-        public void Save(string dir = "skuld/storage/configuration.json") { File.WriteAllText(Path.Combine(appdir, dir), JsonConvert.SerializeObject(this, Formatting.Indented)); }
+        public void Save(string dir = "skuld/storage/configuration.json") 
+			=> File.WriteAllText(Path.Combine(appdir, dir), JsonConvert.SerializeObject(this, Formatting.Indented));
 
         public static Config Load(string dir = "skuld/storage/configuration.json")
-        {
-            Bot.EnsureConfigExists();
-            return JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(appdir, dir)));
-        }
+            => JsonConvert.DeserializeObject<Config>(File.ReadAllText(Path.Combine(appdir, dir)));
     }
 }

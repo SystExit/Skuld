@@ -2,9 +2,9 @@
 
 namespace Skuld.Models.API.Social.Instagram
 {
-    public class RootNode
+    public class WindowRoot
     {
 		[JsonProperty(PropertyName = "entry_data")]
-		public EntryData EntryData { get; set; }
+		public InstagramUser User { get; set; }
 	}
 }

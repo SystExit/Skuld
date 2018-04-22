@@ -1,28 +1,34 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using System.Linq;
-using Skuld.Tools;
 using PokeSharp.Models;
 using PokeSharp.Deserializer;
+using Skuld.Services;
+using System;
 
 namespace Skuld.Modules
 {
-    public class Search : ModuleBase
+	[Group, Name("Search")]
+    public class Pokemon : ModuleBase<ShardedCommandContext>
     {
+		readonly MessageService messageService;
+		readonly Random random;
+
+		public Pokemon(Random ran,
+			MessageService msg) //depinj
+		{
+			random = ran;
+			messageService = msg;
+		}
+
         [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
-        public async Task Getpokemon(string pokemon, string group) =>
-            await SendPokemonAsync(await PokeSharpClient.GetPocketMonster(pokemon.ToLowerInvariant()), group).ConfigureAwait(false);
+        public async Task Getpokemon(string pokemon, string group=null) =>
+            await SendPokemonAsync(await PokeSharpClient.GetPocketMonster(pokemon.ToLowerInvariant()), group??"default").ConfigureAwait(false);
         [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
-        public async Task Getpokemon(string pokemon) =>
-            await SendPokemonAsync(await PokeSharpClient.GetPocketMonster(pokemon.ToLowerInvariant()), "default").ConfigureAwait(false);
-        [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
-        public async Task Getpokemon(int pokemonid, string group) =>
-            await SendPokemonAsync(await PokeSharpClient.GetPocketMonster(pokemonid), group).ConfigureAwait(false);
-        [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
-        public async Task Getpokemon(int pokemonid) =>
-            await SendPokemonAsync(await PokeSharpClient.GetPocketMonster(pokemonid), "default").ConfigureAwait(false);
+        public async Task Getpokemon(int pokemonid, string group=null) =>
+            await SendPokemonAsync(await PokeSharpClient.GetPocketMonster(pokemonid), group??"default").ConfigureAwait(false);
+
         public async Task SendPokemonAsync(PocketMonster pokemon, string group)
         {
             EmbedBuilder embed;
@@ -34,51 +40,40 @@ namespace Skuld.Modules
                     Title = "Command Error!",
                     Description = "This pokemon doesn't exist. Please try again.\nIf it is a Generation 7, pokeapi.co hasn't updated for it yet."
                 };
-                StatsdClient.DogStatsd.Increment("commands.errors.generic");
+                StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
             }
             else
             {
-                var rnd = Bot.random;
                 group = group.ToLower();
                 string sprite = null;
                 //if it equals 8 out of a random integer between 1 and 8192 then give shiny
-                if (rnd.Next(1, 8193) == 8)
-                { sprite = pokemon.Sprites.FrontShiny; }
+                if (random.Next(1, 8193) == 8)
+					sprite = pokemon.Sprites.FrontShiny;
                 else
-                { sprite = pokemon.Sprites.Front; }
+					sprite = pokemon.Sprites.Front;
                 embed = new EmbedBuilder();
                 var auth = new EmbedAuthorBuilder();
                 embed.Color = Tools.Tools.RandomColor();
                 if (group == "stat" || group == "stats")
                 {
-                    foreach (var stat in pokemon.Stats)
-                    {
-                        embed.AddField(stat.Stat.Name, "Base Stat: " + stat.BaseStat, inline: true);
-                    }
+                    foreach (var stat in pokemon.Stats)                    
+                        embed.AddField(stat.Stat.Name, "Base Stat: " + stat.BaseStat, inline: true);                    
                 }
                 if (group == "abilities" || group == "ability")
                 {
-                    foreach (var ability in pokemon.Abilities)
-                    {
-                        embed.AddField(ability.Ability.Name, "Slot: " + ability.Slot, inline: true);
-                    }
+                    foreach (var ability in pokemon.Abilities)                    
+                        embed.AddField(ability.Ability.Name, "Slot: " + ability.Slot, inline: true);                    
                 }
                 if (group == "helditems" || group == "hitems" || group == "hitem" || group == "items")
                 {
                     if (pokemon.HeldItems.Length > 0)
                     {
-                        foreach (var hitem in pokemon.HeldItems)
-                        {
-                            foreach (var game in hitem.VersionDetails)
-                            {
+                        foreach (var hitem in pokemon.HeldItems)                        
+                            foreach (var game in hitem.VersionDetails)                            
                                 embed.AddField("Item", hitem.Item.Name + "\n**Game**\n" + game.Version.Name + "\n**Rarity**\n" + game.Rarity, inline: true);
-                            }
-                        }
                     }
-                    else
-                    {
-                        embed.Description = "This pokemon doesn't hold any items in the wild";
-                    }
+                    else                    
+                        embed.Description = "This pokemon doesn't hold any items in the wild";                    
                 }
                 if (group == "default")
                 {
@@ -116,7 +111,7 @@ namespace Skuld.Modules
                 embed.Author = auth;
                 embed.ThumbnailUrl = sprite;
             }
-            await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
+            await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
         }
     }
 }

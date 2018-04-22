@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Discord.Commands;
-using Skuld.Tools;
+using Skuld.Utilities;
 using Discord;
 using System;
 using System.Collections.Generic;
@@ -9,27 +9,58 @@ using System.Linq;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Discord.WebSocket;
-using System.Diagnostics;
-using System.IO;
+using Skuld.Services;
+using StatsdClient;
 
-namespace Skuld.Commands
+namespace Skuld.Modules
 {
     [RequireOwner, Group, Name("Owner")]
-    public class Owner : ModuleBase
+    public class Owner : ModuleBase<ShardedCommandContext>
     {
-        [Command("stop", RunMode = RunMode.Async)]
-        public async Task Stop() { await MessageHandler.SendChannelAsync(Context.Channel, "Stopping!");  await Bot.StopBot("StopCmd").ConfigureAwait(false); }
+		readonly MessageService messageService;
+		readonly Random random;
+		readonly DatabaseService database;
+		readonly LoggingService logger;
+		readonly BotService botService;
+
+		public Owner(MessageService msg,
+			BotService bot,
+			DatabaseService db,
+			LoggingService log,
+			Random ran) //depinj
+		{
+			messageService = msg;
+			botService = bot;
+			database = db;
+			logger = log;
+			random = ran;
+		}
+        
+			
+		[Command("stop", RunMode = RunMode.Async)]
+        public async Task Stop()
+		{
+			await messageService.SendChannelAsync(Context.Channel, "Stopping!");
+			await botService.StopBot("StopCmd").ConfigureAwait(false);
+		}
 
         [Command("populate", RunMode = RunMode.Async)]
-        public async Task Populate() { await MessageHandler.SendChannelAsync(Context.Channel, "Starting to populate guilds and users o7!"); await Events.DiscordEvents.PopulateGuilds().ConfigureAwait(false); }
+        public async Task Populate()
+		{
+			await messageService.SendChannelAsync(Context.Channel, "Starting to populate guilds and users o7!");
+			if (database.CanConnect)
+			{
+				await PopGuildsAsync();
+			}
+		}
 
         [Command("shardrestart", RunMode = RunMode.Async), Summary("Restarts shard")]
         public async Task ReShard(int shard)
         {
 
-            await Bot.bot.GetShard(shard).StopAsync().ConfigureAwait(false);
+            await Context.Client.GetShard(shard).StopAsync().ConfigureAwait(false);
             await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-            await Bot.bot.GetShard(shard).StartAsync().ConfigureAwait(false);
+            await Context.Client.GetShard(shard).StartAsync().ConfigureAwait(false);
         }
 
         [Command("setgame", RunMode = RunMode.Async), Summary("Set Game")]
@@ -37,12 +68,12 @@ namespace Skuld.Commands
         {
             try
             {
-                await Bot.bot.SetGameAsync(title);
+                await Context.Client.SetGameAsync(title);
                 await Context.Message.DeleteAsync();
             }
             catch
             {
-                await MessageHandler.SendChannelAsync(Context.Channel, $":nauseated_face: Something went wrong. Try again.");
+                await messageService.SendChannelAsync(Context.Channel, $":nauseated_face: Something went wrong. Try again.");
             }
         }
         [Command("resetgame", RunMode = RunMode.Async), Summary("Reset Game")]
@@ -50,12 +81,12 @@ namespace Skuld.Commands
         {
             try
             {
-                await Bot.bot.SetGameAsync($"{Bot.Prefix}help | {Bot.random.Next(0, Bot.bot.Shards.Count) + 1}/{Bot.bot.Shards.Count}");
+                await Context.Client.SetGameAsync($"{messageService.config.Prefix}help | {random.Next(0, Context.Client.Shards.Count) + 1}/{Context.Client.Shards.Count}");
                 await Context.Message.DeleteAsync();
             }
             catch
             {
-                await MessageHandler.SendChannelAsync(Context.Channel, $":nauseated_face: Something went wrong. Try again.");
+                await messageService.SendChannelAsync(Context.Channel, $":nauseated_face: Something went wrong. Try again.");
             }
         }
 
@@ -66,28 +97,24 @@ namespace Skuld.Commands
             {
                 new string[] { "Shard", "State", "Latency", "Guilds" }
             };
-            foreach (var item in Bot.bot.Shards)
+            foreach (var item in Context.Client.Shards)
             {
                 lines.Add(new string[] { item.ShardId.ToString(), item.ConnectionState.ToString(), item.Latency.ToString(), item.Guilds.Count.ToString() });
             }
 
-            await MessageHandler.SendChannelAsync(Context.Channel, "```"+ ConsoleUtils.PrettyLines(lines, 2) + "```");
+            await messageService.SendChannelAsync(Context.Channel, "```"+ ConsoleUtils.PrettyLines(lines, 2) + "```");
         }
-
         [Command("getshard", RunMode = RunMode.Async), Summary("Gets all information about specific shard")]
-        public async Task ShardGet(int shardid)
+        public async Task ShardGet(int shardid = -1)
         {
-            await ShardInfo(shardid).ConfigureAwait(false);
-        }
-
-        [Command("getshard", RunMode = RunMode.Async), Summary("Gets all information about current shard")]
-        public async Task CurrShard()
-        {
-            await ShardInfo(Bot.bot.GetShardIdFor(Context.Guild)).ConfigureAwait(false);
+			if(shardid>-1)
+				await ShardInfo(shardid).ConfigureAwait(false);
+			else
+				await ShardInfo(Context.Client.GetShardIdFor(Context.Guild)).ConfigureAwait(false);
         }
         public async Task ShardInfo(int shardid)
         {
-            var shard = Bot.bot.GetShard(shardid);
+            var shard = Context.Client.GetShard(shardid);
             var embed = new EmbedBuilder
             {
                 Color = Tools.Tools.RandomColor(),
@@ -103,41 +130,17 @@ namespace Skuld.Commands
                 Timestamp = DateTime.Now
             };
 
-            embed.AddField("Guilds", shard.Guilds.Count.ToString(), inline: true);
-            embed.AddField(x =>
-            {
-                x.IsInline = true;
-                x.Name = "Status";
-                if (!String.IsNullOrEmpty(Convert.ToString(shard.ConnectionState)))
-                {
-                    x.Value = Convert.ToString(shard.ConnectionState);
-                }
-                else
-                {
-                    x.Value = Convert.ToString(shard.ConnectionState);
-                }
-            });
-            embed.AddField(x =>
-            {
-                x.IsInline = true;
-                x.Name = "Latency";
-                if (!String.IsNullOrEmpty(Convert.ToString(shard.Latency)))
-                {
-                    x.Value = Convert.ToString(shard.Latency) + "ms";
-                }
-                else
-                {
-                    x.Value = "Connected?";
-                }
-            });
-            await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
+            embed.AddField("Guilds", shard.Guilds.Count.ToString(), true);
+            embed.AddField("Status", shard.ConnectionState, true);
+            embed.AddField("Latencty", shard.Latency+"ms", true);
+            await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
         }
-
         [Command("shard", RunMode = RunMode.Async), Summary("Gets the shard the guild is on")]
-        public async Task ShardGet() => await MessageHandler.SendChannelAsync(Context.Channel, $"{Context.User.Mention} the server: `{Context.Guild.Name}` is on `{Bot.bot.GetShardIdFor(Context.Guild)}`");        
+        public async Task ShardGet() => 
+			await messageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} the server: `{Context.Guild.Name}` is on `{Context.Client.GetShardIdFor(Context.Guild)}`");        
 
         [Command("name", RunMode = RunMode.Async), Summary("Name")]
-        public async Task Name([Remainder]string name) => await Bot.bot.CurrentUser.ModifyAsync(x => x.Username = name);
+        public async Task Name([Remainder]string name) => await Context.Client.CurrentUser.ModifyAsync(x => x.Username = name);
 
         [Command("status", RunMode = RunMode.Async), Summary("Status")]
         public async Task Status(string status)
@@ -155,25 +158,26 @@ namespace Skuld.Commands
             if (status.ToLower() == "invisible")
             { await SetStatus(UserStatus.Invisible); }
         }
-        public async Task SetStatus(UserStatus status) { await Bot.bot.SetStatusAsync(status); }
+        public async Task SetStatus(UserStatus status) =>
+			await Context.Client.SetStatusAsync(status);
 
         [Command("moneyadd", RunMode = RunMode.Async), Summary("Gives money to people")]
         public async Task GiveMoney(IGuildUser user, ulong amount)
         {
-            if(!String.IsNullOrEmpty(Bot.Configuration.SqlDBHost))
+            if(database.CanConnect)
             {
-                var suser = await Bot.Database.GetUserAsync(user.Id);
+                var suser = await database.GetUserAsync(user.Id);
                 if (suser!=null)
                 {
                     ulong newmoney = suser.Money + amount;
 
-                    await Bot.Database.ModifyUserAsync(user as SocketUser, "money", Convert.ToString(newmoney));
+                    await database.ModifyUserAsync(user as SocketUser, "money", Convert.ToString(newmoney));
 
-                    await MessageHandler.SendChannelAsync(Context.Channel, $"User {user.Username} now has: {Bot.Configuration.MoneySymbol + newmoney}");
+                    await messageService.SendChannelAsync(Context.Channel, $"User {user.Username} now has: {Bot.Configuration.MoneySymbol + newmoney}");
                 }
                 else
                 {
-                    await Bot.Database.InsertUserAsync(user as SocketUser);
+                    await database.InsertUserAsync(user as SocketUser);
                     await GiveMoney(user, amount).ConfigureAwait(false);
                 }
             }
@@ -182,17 +186,16 @@ namespace Skuld.Commands
         [Command("leave", RunMode = RunMode.Async), Summary("Leaves a server by id")]
         public async Task LeaveServer(ulong id)
         {
-            var client = Bot.bot;
-            var guild = client.GetGuild(id);
+            var guild = Context.Client.GetGuild(id);
             await guild.LeaveAsync().ContinueWith(async x =>
             {
-                if (client.GetGuild(id) == null)
+                if (Context.Client.GetGuild(id) == null)
                 {
-                    await MessageHandler.SendChannelAsync(Context.Channel,$"Left guild **{guild.Name}**");
+                    await messageService.SendChannelAsync(Context.Channel,$"Left guild **{guild.Name}**");
                 }
                 else
                 {
-                    await MessageHandler.SendChannelAsync(Context.Channel, $"Hmm, I haven't left **{guild.Name}**");
+                    await messageService.SendChannelAsync(Context.Channel, $"Hmm, I haven't left **{guild.Name}**");
                 }
             });
         }
@@ -200,21 +203,45 @@ namespace Skuld.Commands
         [Command("syncguilds", RunMode = RunMode.Async), Summary("Syncs Guilds")]
         public async Task SyncGuilds()
         {
-            foreach(var guild in Bot.bot.Guilds)
+            foreach(var guild in Context.Client.Guilds)
             {
                 var cmd = new MySqlCommand($"UPDATE guild SET Name = \"{guild.Name.Replace("\"","\\").Replace("\'","\\")}\" WHERE ID = {guild.Id}");
-                await Bot.Database.NonQueryAsync(cmd);
+                await database.NonQueryAsync(cmd);
             }
-            await MessageHandler.SendChannelAsync(Context.Channel, $"Synced the guilds");
-        }
+            await messageService.SendChannelAsync(Context.Channel, $"Synced the guilds");
+		}
+		[Command("rebuildguilds", RunMode = RunMode.Async)]
+		public async Task RebuildGuilds()
+		{
+			foreach (var guild in Context.Client.Guilds)
+			{
+				var gcmd = new MySqlCommand("INSERT IGNORE INTO `guild` (`ID`,`name`,`prefix`) VALUES ");
+				gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Bot.Configuration.Prefix}\" )";
+				await database.NonQueryAsync(gcmd);
 
-        [Command("eval", RunMode = RunMode.Async), Summary("no")]
+				//Configures Modules
+				gcmd = new MySqlCommand("INSERT IGNORE INTO `guildcommandmodules` " +
+					"(`ID`,`Accounts`,`Actions`,`Admin`,`Fun`,`Help`,`Information`,`Search`,`Stats`) " +
+					$"VALUES ( {guild.Id} , 1, 1, 1, 1, 1, 1, 1, 1 )");
+				await database.NonQueryAsync(gcmd);
+
+				//Configures Settings
+				gcmd = new MySqlCommand("INSERT IGNORE INTO `guildfeaturemodules` " + "(`ID`,`Starboard`,`Pinning`,`Experience`,`UserJoinLeave`,`UserModification`,`UserBanEvents`,`GuildModification`,`GuildChannelModification`,`GuildRoleModification`) " +
+					$"VALUES ( {guild.Id} , 0, 0, 0, 0, 0, 0, 0, 0, 0 )");
+				await database.NonQueryAsync(gcmd);
+
+				await logger.AddToLogsAsync(new Models.LogMessage("IsrtGld", $"Inserted {guild.Name}!", LogSeverity.Info));
+				await PopGuildsAsync();
+			}
+		}
+
+		[Command("eval", RunMode = RunMode.Async), Summary("no")]
         public async Task EvalStuff([Remainder]string code)
         {
             try
             {
-                if (code.ToLowerInvariant().Contains("token") || code.ToLowerInvariant().Contains("config"))
-                    await MessageHandler.SendChannelAsync(Context.Channel, "Nope.");
+				if (code.ToLowerInvariant().Contains("token") || code.ToLowerInvariant().Contains("config"))
+				{ await messageService.SendChannelAsync(Context.Channel, "Nope."); return; }
 
                 if (code.StartsWith("```cs", StringComparison.Ordinal)&&code.EndsWith("```", StringComparison.Ordinal))
                 {
@@ -247,10 +274,10 @@ namespace Skuld.Commands
                 embed.Color = Tools.Tools.RandomColor();
                 embed.Description = $"{result}";
                 if (result != null)
-                    await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
+                    await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
                 else
                 {
-                    await MessageHandler.SendChannelAsync(Context.Channel, "Result is empty or null");
+                    await messageService.SendChannelAsync(Context.Channel, "Result is empty or null");
                 }                
             }
 #pragma warning disable CS0168 // Variable is declared but never used
@@ -267,63 +294,53 @@ namespace Skuld.Commands
                     Color = new Color(255, 0, 0),
                     Description = $"{ex.Message}"
                 };
-                await Bot.Logger.AddToLogs(new Models.LogMessage("EvalCMD", "Error with eval command " + ex.Message, LogSeverity.Error, ex));
-                await MessageHandler.SendChannelAsync(Context.Channel, "", embed.Build());
+                await logger.AddToLogsAsync(new Models.LogMessage("EvalCMD", "Error with eval command " + ex.Message, LogSeverity.Error, ex));
+                await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
             }
         }
 
         [Command("pubstats", RunMode = RunMode.Async), Summary("no")]
         public async Task PubStats()
         {
-            await MessageHandler.SendChannelAsync(Context.Channel, "Ok, publishing stats to the Discord Bot lists.");
+            await messageService.SendChannelAsync(Context.Channel, "Ok, publishing stats to the Discord Bot lists.");
             string list = "";
-            int shardcount = Bot.bot.Shards.Count;
-            foreach(var shard in Bot.bot.Shards)
-            {
-                await Bot.PublishStats(shard.ShardId);
+            int shardcount = Context.Client.Shards.Count;
+			await botService.UpdateStats();
+            foreach(var shard in Context.Client.Shards)
+            {                
                 list += $"I sent ShardID: {shard.ShardId} Guilds: {shard.Guilds.Count} Shards: {shardcount}\n";
             }
-            await MessageHandler.SendChannelAsync(Context.Channel, list);
+            await messageService.SendChannelAsync(Context.Channel, list);
         }
 
-        [Command("rebuildguilds", RunMode = RunMode.Async)]
-        public async Task RebuildGuilds()
-        {
-            foreach(var guild in  Bot.bot.Guilds)
-            {
-                var gcmd = new MySqlCommand("INSERT IGNORE INTO `guild` (`ID`,`name`,`prefix`) VALUES ");
-                gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Bot.Configuration.Prefix}\" )";
-                await Bot.Database.NonQueryAsync(gcmd);
-
-                //Configures Modules
-                gcmd = new MySqlCommand("INSERT IGNORE INTO `guildcommandmodules` " +
-                    "(`ID`,`Accounts`,`Actions`,`Admin`,`Fun`,`Help`,`Information`,`Search`,`Stats`) " +
-                    $"VALUES ( {guild.Id} , 1, 1, 1, 1, 1, 1, 1, 1 )");
-                await Bot.Database.NonQueryAsync(gcmd);
-
-                //Configures Settings
-                gcmd = new MySqlCommand("INSERT IGNORE INTO `guildfeaturemodules` " +                            "(`ID`,`Starboard`,`Pinning`,`Experience`,`UserJoinLeave`,`UserModification`,`UserBanEvents`,`GuildModification`,`GuildChannelModification`,`GuildRoleModification`) " +
-                    $"VALUES ( {guild.Id} , 0, 0, 0, 0, 0, 0, 0, 0, 0 )");
-                await Bot.Database.NonQueryAsync(gcmd);
-
-                await Bot.Logger.AddToLogs(new Models.LogMessage("IsrtGld", $"Inserted {guild.Name}!", LogSeverity.Info));
-                await Events.DiscordEvents.PopulateEntireGuildUsers(guild);
-            }
-        }
-
-		[Command("test")]
-		public async Task Test()
+		async Task PopGuildsAsync()
 		{
-			await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Glare)));
-			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Grope)));
-			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Hug)));
-			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Kill)));
-			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Kiss)));
-			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Pet)));
-			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Punch)));
-			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Shrug)));
-			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Slap)));
-			//await MessageHandler.SendChannelAsync(Context.Channel, (await APIS.SysExClient.GetWeebGifAsync(Models.API.SysEx.Type.Stab)));
+			foreach (var guild in Context.Client.Guilds)
+			{
+				if (await database.GetGuildAsync(guild.Id) != null)
+				{
+					var gcmd = new MySqlCommand("INSERT IGNORE INTO `guild` (`ID`,`name`,`prefix`) VALUES ");
+					gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Bot.Configuration.Prefix}\" )";
+					await database.NonQueryAsync(gcmd);
+
+					//Configures Modules
+					gcmd = new MySqlCommand($"INSERT IGNORE INTO `guildcommandmodules` (`ID`,`Accounts`,`Actions`,`Admin`,`Fun`,`Help`,`Information`,`Search`,`Stats`) VALUES ( {guild.Id} , 1, 1, 1, 1, 1, 1, 1, 1 )");
+					await database.NonQueryAsync(gcmd);
+
+					//Configures Settings
+					gcmd = new MySqlCommand($"INSERT IGNORE INTO `guildfeaturemodules` (`ID`,`Experience`,`UserJoinLeave`) VALUES ( {guild.Id} , 0, 0)");
+					await database.NonQueryAsync(gcmd);
+
+					DogStatsd.Increment("mysql.insert", 3);
+
+					await guild.DownloadUsersAsync();
+					foreach (var user in guild.Users)
+					{
+						await database.InsertUserAsync(user);
+						DogStatsd.Increment("mysql.insert");
+					}
+				}
+			}
 		}
     }
 

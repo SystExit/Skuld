@@ -1,7 +1,7 @@
 ﻿using System;
 using Discord;
 
-namespace Skuld.Tools
+namespace Skuld.Utilities
 {
     public class EmbedToText
     {
