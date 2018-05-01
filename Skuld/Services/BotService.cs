@@ -19,12 +19,14 @@ namespace Skuld.Services
 		LoggingService logger;
 		Config config;
 		MessageService messageService;
+		TwitchService twitch;
 
-		public BotService(DiscordShardedClient cli, LoggingService log, MessageService message)
+		public BotService(DiscordShardedClient cli, LoggingService log, MessageService message, TwitchService twi)
 		{
 			client = cli;
 			logger = log;
 			messageService = message;
+			twitch = twi;
 		}
 		
 		public void AddConfg(Config conf)
@@ -34,6 +36,8 @@ namespace Skuld.Services
 		{
 			try
 			{
+				await twitch.LoginAsync(config.APIS.TwitchToken);
+
 				await client.LoginAsync(TokenType.Bot, config.Discord.Token);
 				await client.StartAsync();
 
@@ -72,7 +76,7 @@ namespace Skuld.Services
 			{
 				int users = 0;
 				foreach (var guild in client.Guilds)
-				{ users += guild.MemberCount; }
+				{ users += guild.MemberCount; Task.Delay(500); }
 				DogStatsd.Gauge("shards.count", client.Shards.Count);
 				DogStatsd.Gauge("shards.connected", client.Shards.Count(x => x.ConnectionState == ConnectionState.Connected));
 				DogStatsd.Gauge("shards.disconnected", client.Shards.Count(x => x.ConnectionState == ConnectionState.Disconnected));

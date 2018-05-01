@@ -353,6 +353,6 @@ namespace Skuld.Modules
             await database.InsertUserAsync(user);
         }
         private async Task SendAsync(string message, string image)
-            => await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder() { Description = message, Color = Tools.Tools.RandomColor(), ImageUrl = image }.Build());
+            => await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Description = message, Color = Tools.Tools.RandomColor(), ImageUrl = image }.Build());
     }
 }

@@ -10,6 +10,7 @@ using Microsoft.CodeAnalysis.Scripting;
 using Discord.WebSocket;
 using Skuld.Services;
 using Skuld.Tools;
+using System.Threading;
 
 namespace Skuld.Modules
 {
@@ -40,42 +41,6 @@ namespace Skuld.Modules
 		{
 			await messageService.SendChannelAsync(Context.Channel, "Stopping!");
 			await botService.StopBotAsync("StopCmd").ConfigureAwait(false);
-		}
-
-        [Command("populate"), RequireDatabase]
-        public async Task Populate()
-		{
-			await messageService.SendChannelAsync(Context.Channel, "Starting to populate guilds and users o7!");
-			var resp = await database.PopulateGuildsAsync();
-			if(resp.Where(x=>x.Error.ToLowerInvariant().Contains("robot")==false).All(x=>x.Successful==true))
-			{
-				await messageService.SendChannelAsync(Context.Channel, "All populated ok!");
-			}
-			else
-			{
-				var badeggs = resp.Where(x => x.Successful != true);
-				string msg = "";
-				string bigmsg = "";
-				foreach(var badegg in badeggs)
-				{
-					if(!badegg.Error.ToLowerInvariant().Contains("robot"))
-					{
-						msg += $"{badegg.Error}\n\n";
-						bigmsg += $"===={badegg.Error}====\n{badegg.Exception}\n";
-					}
-				}
-				if(msg.Length>0)
-				{
-					if (msg.Length > 2000)
-					{
-						await logger.AddToLogsAsync(new Models.LogMessage("popcmd", "Error populating guild.", LogSeverity.Error, new Exception(bigmsg)));
-					}
-					else
-					{
-						await messageService.SendDMsAsync(Context.Channel, await Context.User.GetOrCreateDMChannelAsync(), msg);
-					}
-				}
-			}
 		}
 
         [Command("shardrestart"), Summary("Restarts shard")]
@@ -112,6 +77,16 @@ namespace Skuld.Modules
                 await messageService.SendChannelAsync(Context.Channel, $":nauseated_face: Something went wrong. Try again.");
             }
         }
+		[Command("setstream"), Summary("Sets stream")]
+		public async Task Stream(string streamer, [Remainder]string title)
+		{
+			await Context.Client.SetGameAsync(title, "https://twitch.tv/" + streamer, ActivityType.Streaming);
+		}
+		[Command("setactivity"), Summary("Sets activity")]
+		public async Task ActivityAsync(ActivityType activityType, [Remainder]string status)
+		{
+			await Context.Client.SetGameAsync(status, null, activityType);
+		}
 
         [Command("dumpshards"), Summary("Shard Info"), Alias("dumpshard")]
         public async Task Shard()
@@ -219,41 +194,7 @@ namespace Skuld.Modules
                 }
             });
         }
-
-        [Command("syncguilds"), Summary("Syncs Guilds")]
-        public async Task SyncGuilds()
-        {
-            foreach(var guild in Context.Client.Guilds)
-            {
-				var gld = await database.GetGuildAsync(guild.Id);
-				gld.Name = guild.Name.Replace("\"","\\").Replace("\'","\\");
-                await database.UpdateGuildAsync(gld);
-            }
-            await messageService.SendChannelAsync(Context.Channel, $"Synced the guilds");
-		}
-		[Command("rebuildguilds")]
-		public async Task RebuildGuilds()
-		{
-			foreach (var guild in Context.Client.Guilds)
-			{
-				var resp = await database.RebuildGuildAsync(guild);
-				if(resp.All(x=>x.Successful==true))
-				{
-					await logger.AddToLogsAsync(new Models.LogMessage("IsrtGld", $"Rebuilt {guild.Name}!", LogSeverity.Info));
-				}
-				else
-				{
-					string msg = "";
-					foreach(var res in resp)
-					{
-						msg += $"===={res.Error}====\n{res.Exception}\n";
-					}
-					var exep = new Exception(msg);
-					await logger.AddToLogsAsync(new Models.LogMessage("IsrtGld", $"Failed Rebuilding {guild.Name}!", LogSeverity.Error,exep));
-				}
-			}
-		}
-
+		
 		[Command("eval"), Summary("no")]
         public async Task EvalStuff([Remainder]string code)
         {
@@ -335,6 +276,29 @@ namespace Skuld.Modules
             }
             await messageService.SendChannelAsync(Context.Channel, list);
         }
+
+		[Command("rebuildguilds")]
+		public async Task RebuildGuilds()
+		{
+			string message = "";
+			int count = 0;
+			Thread thd = new Thread(async () =>
+			{
+				foreach(var guild in Context.Client.Guilds)
+				{
+					count++;
+					await database.InsertGuildAsync(guild);
+					Thread.Sleep(2000);
+					message += count + ". Inserted\n";
+				}
+			})
+			{
+				IsBackground = true
+			};
+			thd.Start();
+			if(message != "")
+			await messageService.SendChannelAsync(Context.Channel, message);
+		}
     }
 
     public class Globals

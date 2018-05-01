@@ -94,7 +94,7 @@ namespace Skuld.Tools
 
 		public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
 		{
-			var dbserv = services.GetRequiredService<DatabaseService>();
+			var dbserv = Bot.services.GetRequiredService<DatabaseService>();
 
 			if(dbserv!=null)
 			{

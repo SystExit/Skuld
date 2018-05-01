@@ -71,18 +71,35 @@ namespace Skuld.APIS
 		public static async Task<HtmlDocument> ScrapeUrlAsync(Uri url)
 		{
 			var request = CreateWebRequest(url);
+			request.Timeout = 2000;
+			request.UserAgent = UAGENT;
 
-			var response = (HttpWebResponse)await request.GetResponseAsync();
-			var doc = new HtmlDocument();
-			if (response.StatusCode == HttpStatusCode.OK)
+			try
 			{
-				doc.Load(response.GetResponseStream(), Encoding.UTF8);
-				request.Abort();
+				var response = (HttpWebResponse)await request.GetResponseAsync();
+				var doc = new HtmlDocument();
+				if (response.StatusCode == HttpStatusCode.OK)
+				{
+					doc.Load(response.GetResponseStream(), Encoding.UTF8);
+					request.Abort();
+				}
+				if (doc != null)
+					return doc;
+				else
+					return null;
 			}
-			if (doc != null)
-				return doc;
-			else
+			catch(WebException ex)
+			{
+				if(ex.Status == WebExceptionStatus.Timeout)
+				{
+					return null;
+				}
+				throw;
+			}
+			catch
+			{
 				return null;
+			}
 		}
 		public static async Task<string> DownloadFileAsync(Uri url, string filepath)
 		{

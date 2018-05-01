@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using Skuld.Tools;
 using Discord;
 using StatsdClient;
+using System.Threading;
 
 namespace Skuld.Services
 {
@@ -38,8 +39,10 @@ namespace Skuld.Services
 				try
 				{
 					await conn.OpenAsync();
-					canconnect = true;
-					await conn.CloseAsync();
+					if (conn.State == System.Data.ConnectionState.Open)
+						canconnect = true;
+					else
+						canconnect = false;
 				}
 				catch
 				{
@@ -47,10 +50,7 @@ namespace Skuld.Services
 				}
 				finally
 				{
-					if(conn.State == System.Data.ConnectionState.Open)
-					{
-						await conn.CloseAsync();
-					}
+					await conn.CloseAsync();
 				}
 			}
 			CanConnect = canconnect;
@@ -192,24 +192,24 @@ namespace Skuld.Services
 					{
 						command.Connection = conn;
 
-						StatsdClient.DogStatsd.Increment("mysql.queries");
+						DogStatsd.Increment("mysql.queries");
 
 						var reader = await command.ExecuteReaderAsync();
 
 						int rows = 0;
 
-						rows = reader.Depth + 1;
-
-						StatsdClient.DogStatsd.Increment("mysql.rows_ret", rows);
 
 						if (reader.HasRows)
 						{
 							while (await reader.ReadAsync())
 							{
+								rows++;
+
 								user.FavCmd = Convert.ToString(reader["command"]);
 
 								user.FavCmdUsg = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["UserUsage"]));
 							}
+							DogStatsd.Increment("mysql.rows_ret", rows);
 
 							await conn.CloseAsync();
 						}
@@ -220,161 +220,7 @@ namespace Skuld.Services
 			}
 			return null;
         }
-        public async Task<SkuldGuild> GetGuildAsync(ulong id)
-        {
-			if(CanConnect)
-			{
-				var guild = new SkuldGuild();
-				var command = new MySqlCommand("SELECT * FROM `guild` WHERE ID = @guildid");
-				command.Parameters.AddWithValue("@guildid", id);
 
-				using (var conn = new MySqlConnection(cs))
-				{
-					await conn.OpenAsync();
-					if (conn.State == System.Data.ConnectionState.Open)
-					{
-						command.Connection = conn;
-
-						DogStatsd.Increment("mysql.queries");
-
-						var reader = await command.ExecuteReaderAsync();
-
-						int rows = 0;
-
-						if (reader.HasRows)
-						{
-							while (await reader.ReadAsync())
-							{
-								rows++;
-
-								guild.ID = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["ID"]));
-
-								guild.Name = Convert.ToString(reader["name"]);
-
-								guild.JoinMessage = Convert.ToString(reader["joinmessage"]);
-
-								guild.LeaveMessage = Convert.ToString(reader["leavemessage"]);
-
-								guild.AutoJoinRole = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["autojoinrole"]));
-
-								guild.Prefix = Convert.ToString(reader["prefix"]);
-
-								guild.Language = Convert.ToString(reader["language"]);
-
-								//guild.JoinableRoles = Convert.ToString(reader["joinableroles"]).Split(',');
-
-								guild.TwitchNotifChannel = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["twitchnotifchannel"]));
-
-								guild.TwitterLogChannel = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["twitterlogchannel"]));
-
-								guild.MutedRole = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["mutedrole"]));
-
-								guild.AuditChannel = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["auditchannel"]));
-
-								guild.UserJoinChannel = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["userjoinchan"]));
-
-								guild.UserLeaveChannel = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["userleavechan"]));
-							}
-
-							DogStatsd.Increment("mysql.rows_ret", rows);
-
-							await conn.CloseAsync();
-						}
-					}
-				}
-
-				var guildSetts = new GuildSettings();
-				var comSetts = new GuildCommandModules();
-				var featSetts = new GuildFeatureModules();
-
-				command = new MySqlCommand("SELECT * FROM `guildcommandmodules` WHERE ID = @guildid");
-				command.Parameters.AddWithValue("@guildid", id);
-
-				using (var conn = new MySqlConnection(cs))
-				{
-					await conn.OpenAsync();
-					if (conn.State == System.Data.ConnectionState.Open)
-					{
-						command.Connection = conn;
-
-						StatsdClient.DogStatsd.Increment("mysql.queries");
-
-						var reader = await command.ExecuteReaderAsync();
-
-						int rows = 0;
-
-						rows = reader.Depth + 1;
-
-						StatsdClient.DogStatsd.Increment("mysql.rows_ret", rows);
-
-						if (reader.HasRows)
-						{
-							while (await reader.ReadAsync())
-							{
-								comSetts.AccountsEnabled = Convert.ToBoolean(reader["accounts"]);
-
-								comSetts.ActionsEnabled = Convert.ToBoolean(reader["actions"]);
-
-								comSetts.AdminEnabled = Convert.ToBoolean(reader["admin"]);
-
-								comSetts.FunEnabled = Convert.ToBoolean(reader["fun"]);
-
-								comSetts.HelpEnabled = Convert.ToBoolean(reader["help"]);
-
-								comSetts.InformationEnabled = Convert.ToBoolean(reader["information"]);
-
-								comSetts.SearchEnabled = Convert.ToBoolean(reader["search"]);
-
-								comSetts.StatsEnabled = Convert.ToBoolean(reader["stats"]);
-							}
-
-							await conn.CloseAsync();
-						}
-					}
-				}
-
-				command = new MySqlCommand("SELECT * FROM `guildfeaturemodules` WHERE ID = @guildid");
-				command.Parameters.AddWithValue("@guildid", id);
-
-				using (var conn = new MySqlConnection(cs))
-				{
-					await conn.OpenAsync();
-					if (conn.State == System.Data.ConnectionState.Open)
-					{
-						command.Connection = conn;
-
-						DogStatsd.Increment("mysql.queries");
-
-						var reader = await command.ExecuteReaderAsync();
-
-						int rows = 0;
-
-						rows = reader.Depth + 1;
-
-						DogStatsd.Increment("mysql.rows_ret", rows);
-
-						if (reader.HasRows)
-						{
-							while (await reader.ReadAsync())
-							{
-								featSetts.Pinning = Convert.ToBoolean(reader["pinning"]);
-
-								featSetts.Experience = Convert.ToBoolean(reader["experience"]);
-							}
-
-							await conn.CloseAsync();
-						}
-					}
-				}
-
-				guildSetts.Modules = comSetts;
-				guildSetts.Features = featSetts;
-				guild.GuildSettings = guildSetts;
-
-				return guild;
-			}
-			return null;
-        }
         public async Task<Pasta> GetPastaAsync(string name)
 		{
 			if(CanConnect)
@@ -415,11 +261,76 @@ namespace Skuld.Services
 						}
 					}
 				}
-
-				return pasta;
+				if (!String.IsNullOrEmpty(pasta.Name))
+					return pasta;
+				else
+					return null;
 			}
 			return null;
-        }
+		}
+		public async Task<IReadOnlyList<Pasta>> GetAllPastasAsync()
+		{
+			if (CanConnect)
+			{
+				var command = new MySqlCommand("SELECT * FROM `pasta`;");
+				var allpasta = new List<Pasta>();
+				using (var conn = new MySqlConnection(cs))
+				{
+					await conn.OpenAsync();
+					if (conn.State == System.Data.ConnectionState.Open)
+					{
+						command.Connection = conn;
+
+						DogStatsd.Increment("mysql.queries");
+
+						var reader = await command.ExecuteReaderAsync();
+
+						int rows = 0;
+
+						if (reader.HasRows)
+						{
+							while (await reader.ReadAsync())
+							{
+								rows++;
+
+								var pasta = new Pasta
+								{
+									ID = Tools.Tools.ParseUInt32OrDefault(Convert.ToString(reader["ID"])),
+
+									OwnerID = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["OwnerID"])),
+
+									Name = Convert.ToString(reader["PastaName"]),
+
+									Created = Convert.ToString(reader["Created"]),
+
+									Content = Convert.ToString(reader["Content"]),
+
+									Downvotes = Tools.Tools.ParseUInt32OrDefault(Convert.ToString(reader["Downvotes"])),
+
+									Upvotes = Tools.Tools.ParseUInt32OrDefault(Convert.ToString(reader["Upvotes"]))
+								};
+
+								allpasta.Add(pasta);
+
+								pasta = null;
+							}
+
+							DogStatsd.Increment("mysql.rows_ret", rows);
+
+							await conn.CloseAsync();
+						}
+						else
+						{
+							await conn.CloseAsync();
+							return null;
+						}
+					}
+				}
+				return allpasta;
+			}
+			return null;
+		}
+
 		public async Task<CustomCommand> GetCustomCommandAsync(ulong GuildID, string Command)
 		{
 			if(CanConnect)
@@ -472,6 +383,193 @@ namespace Skuld.Services
 			return null;
 		}
 
+		public async Task<SkuldGuild> GetGuildAsync(ulong id)
+		{
+			if (CanConnect)
+			{
+				var guild = await GetBaseGuildAsync(id);
+				if(guild != null)
+				{
+
+					var guildSetts = new GuildSettings();
+
+					var comSetts = await GetGuildCommandModulesAsync(id);
+					var featSetts = await GetFeatureModulesAsync(id);
+
+					guildSetts.Modules = comSetts;
+					guildSetts.Features = featSetts;
+					guild.GuildSettings = guildSetts;
+
+					return guild;
+				}
+			}
+			return null;
+		}
+		async Task<SkuldGuild> GetBaseGuildAsync(ulong id)
+		{
+			if (CanConnect)
+			{
+				try
+				{
+					var guild = new SkuldGuild();
+					var command = new MySqlCommand("SELECT * FROM `guild` WHERE ID = @guildid");
+					command.Parameters.AddWithValue("@guildid", id);
+
+					using (var conn = new MySqlConnection(cs))
+					{
+						await conn.OpenAsync();
+						if (conn.State == System.Data.ConnectionState.Open)
+						{
+							command.Connection = conn;
+
+							DogStatsd.Increment("mysql.queries");
+
+							var reader = await command.ExecuteReaderAsync();
+
+							int rows = 0;
+
+							if (reader.HasRows)
+							{
+								while (await reader.ReadAsync())
+								{
+									rows++;
+
+									guild.ID = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["ID"]));
+
+									guild.Name = Convert.ToString(reader["name"]);
+
+									guild.JoinMessage = Convert.ToString(reader["joinmessage"]);
+
+									guild.LeaveMessage = Convert.ToString(reader["leavemessage"]);
+
+									guild.AutoJoinRole = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["autojoinrole"]));
+
+									guild.Prefix = Convert.ToString(reader["prefix"]);
+
+									guild.Language = Convert.ToString(reader["language"]);
+
+									//guild.JoinableRoles = Convert.ToString(reader["joinableroles"]).Split(',');
+
+									guild.TwitchNotifChannel = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["twitchnotifchannel"]));
+
+									guild.TwitterLogChannel = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["twitterlogchannel"]));
+
+									guild.MutedRole = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["mutedrole"]));
+
+									guild.AuditChannel = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["auditchannel"]));
+
+									guild.UserJoinChannel = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["userjoinchan"]));
+
+									guild.UserLeaveChannel = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["userleavechan"]));
+								}
+
+								DogStatsd.Increment("mysql.rows_ret", rows);
+
+								await conn.CloseAsync();
+
+								guild.GuildSettings = new GuildSettings();
+							}
+						}
+					}
+					if(guild.ID != 0)
+						return guild;
+				}
+				catch(Exception ex)
+				{
+					await logger.AddToLogsAsync(new Models.LogMessage("DBService", ex.Message, LogSeverity.Error, ex));
+				}				
+			}
+			return null;
+		}
+		async Task<GuildCommandModules> GetGuildCommandModulesAsync(ulong id)
+		{
+			var comSetts = new GuildCommandModules();
+
+			var command = new MySqlCommand("SELECT * FROM `guildcommandmodules` WHERE ID = @guildid");
+			command.Parameters.AddWithValue("@guildid", id);
+
+			using (var conn = new MySqlConnection(cs))
+			{
+				await conn.OpenAsync();
+				if (conn.State == System.Data.ConnectionState.Open)
+				{
+					command.Connection = conn;
+
+					DogStatsd.Increment("mysql.queries");
+
+					var reader = await command.ExecuteReaderAsync();
+
+					int rows = 0;
+
+					if (reader.HasRows)
+					{
+						while (await reader.ReadAsync())
+						{
+							rows++;
+							comSetts.AccountsEnabled = Convert.ToBoolean(reader["accounts"]);
+
+							comSetts.ActionsEnabled = Convert.ToBoolean(reader["actions"]);
+
+							comSetts.AdminEnabled = Convert.ToBoolean(reader["admin"]);
+
+							comSetts.FunEnabled = Convert.ToBoolean(reader["fun"]);
+
+							comSetts.HelpEnabled = Convert.ToBoolean(reader["help"]);
+
+							comSetts.InformationEnabled = Convert.ToBoolean(reader["information"]);
+
+							comSetts.SearchEnabled = Convert.ToBoolean(reader["search"]);
+
+							comSetts.StatsEnabled = Convert.ToBoolean(reader["stats"]);
+						}
+						DogStatsd.Increment("mysql.rows_ret", rows);
+
+						await conn.CloseAsync();
+					}
+				}
+			}
+
+			return comSetts;
+		}
+		async Task<GuildFeatureModules> GetFeatureModulesAsync(ulong id)
+		{
+			var featSetts = new GuildFeatureModules();
+
+			var command = new MySqlCommand("SELECT * FROM `guildfeaturemodules` WHERE ID = @guildid");
+			command.Parameters.AddWithValue("@guildid", id);
+
+			using (var conn = new MySqlConnection(cs))
+			{
+				await conn.OpenAsync();
+				if (conn.State == System.Data.ConnectionState.Open)
+				{
+					command.Connection = conn;
+
+					DogStatsd.Increment("mysql.queries");
+
+					var reader = await command.ExecuteReaderAsync();
+
+					int rows = 0;
+
+					if (reader.HasRows)
+					{
+						while (await reader.ReadAsync())
+						{
+							rows++;
+
+							featSetts.Pinning = Convert.ToBoolean(reader["pinning"]);
+
+							featSetts.Experience = Convert.ToBoolean(reader["experience"]);
+						}
+						DogStatsd.Increment("mysql.rows_ret", rows);
+
+						await conn.CloseAsync();
+					}
+				}
+			}
+			return featSetts;
+		}
+
 		public async Task<SqlResult> InsertAdvancedSettingsAsync(bool feature, IGuild guild)
 		{
 			if(CanConnect)
@@ -484,7 +582,7 @@ namespace Skuld.Services
 				}
 				else
 				{
-					command.CommandText += "`guildfeaturemodules` (`ID`,`Accounts`, `Actions`,`Admin`,`Fun`,`Help`,`Information`,`Search`,`Stats`) VALUES (@guildid,1,1,1,1,1,1,1,1);";
+					command.CommandText += "`guildcommandmodules` (`ID`,`Accounts`, `Actions`,`Admin`,`Fun`,`Help`,`Information`,`Search`,`Stats`) VALUES (@guildid,1,1,1,1,1,1,1,1);";
 					command.Parameters.AddWithValue("@guildid", guild.Id);
 				}
 				return await SingleQueryAsync(command);
@@ -549,8 +647,6 @@ namespace Skuld.Services
 				results.Add(await SingleQueryAsync(gcmd));
 				results.Add(await InsertAdvancedSettingsAsync(false, guild));
 				results.Add(await InsertAdvancedSettingsAsync(true, guild));
-
-				await PopulateGuildUsersAsync(guild);
 
 				return results;
 			}
@@ -672,56 +768,6 @@ namespace Skuld.Services
 				Successful = false
 			};
 		}
-        public async Task<SqlResult> UpdateGuildAsync(SkuldGuild guild)
-        {
-			if(CanConnect)
-			{
-				var command = new MySqlCommand("UPDATE `guild` " +
-					"SET `Name` = @name, `JoinMessage` = @jmsg, " +
-					"`LeaveMessage` = @lmsg, `AutoJoinRole` = @ajr, " +
-					"`Prefix` = @prefix, `Language` = @language, " +
-					"`TwitchNotifChannel` = @twitchchan, `TwitterLogChannel` = @twitchan, " +
-					"`MutedRole` = @mutedr, `UserJoinChan` = @ujc, `UserLeaveChan` = @ulc " +
-					"WHERE ID = @guildID; UPDATE `guildcommandmodules` " +
-					"SET `Accounts` = @accounts, `Actions` = @actions, " +
-					"`Admin` = @admin, `Fun` = @fun, " +
-					"`Help` = @help, `Information` = @info, " +
-					"`Search` = @search, `Stats` = @stats " +
-					"WHERE ID = @guildID; UPDATE `guildfeaturemodules` " +
-					"SET `Pinning` = @pin, `Experience` = @xp " +
-					"WHERE ID = @guildID");
-
-				command.Parameters.AddWithValue("@name", guild.Name);
-				command.Parameters.AddWithValue("@jmsg", guild.JoinMessage);
-				command.Parameters.AddWithValue("@lmsg", guild.LeaveMessage);
-				command.Parameters.AddWithValue("@ajr", guild.AutoJoinRole);
-				command.Parameters.AddWithValue("@prefix", guild.Prefix);
-				command.Parameters.AddWithValue("@language", guild.Language);
-				command.Parameters.AddWithValue("@twitchchan", guild.TwitchNotifChannel);
-				command.Parameters.AddWithValue("@twitchan", guild.TwitterLogChannel);
-				command.Parameters.AddWithValue("@mutedr", guild.MutedRole);
-				command.Parameters.AddWithValue("@ujc", guild.UserJoinChannel);
-				command.Parameters.AddWithValue("@ulc", guild.UserLeaveChannel);
-				command.Parameters.AddWithValue("@accounts", guild.GuildSettings.Modules.AccountsEnabled);
-				command.Parameters.AddWithValue("@actions", guild.GuildSettings.Modules.ActionsEnabled);
-				command.Parameters.AddWithValue("@admin", guild.GuildSettings.Modules.AdminEnabled);
-				command.Parameters.AddWithValue("@fun", guild.GuildSettings.Modules.FunEnabled);
-				command.Parameters.AddWithValue("@help", guild.GuildSettings.Modules.HelpEnabled);
-				command.Parameters.AddWithValue("@info", guild.GuildSettings.Modules.InformationEnabled);
-				command.Parameters.AddWithValue("@search", guild.GuildSettings.Modules.SearchEnabled);
-				command.Parameters.AddWithValue("@stats", guild.GuildSettings.Modules.StatsEnabled);
-				command.Parameters.AddWithValue("@pin", guild.GuildSettings.Features.Pinning);
-				command.Parameters.AddWithValue("@xp", guild.GuildSettings.Features.Experience);
-				command.Parameters.AddWithValue("@guildID", guild.ID);
-
-				return await SingleQueryAsync(command);
-			}
-			return new SqlResult
-			{
-				Error = "Database not available.",
-				Successful = false
-			};
-		}
 		public async Task<SqlResult> UpdateUserUsageAsync(SkuldUser user, string command)
 		{
 			if(CanConnect)
@@ -735,7 +781,7 @@ namespace Skuld.Services
 				{
 					if (!String.IsNullOrEmpty(Convert.ToString(resp.Data)))
 					{
-						var cmdusg = Convert.ToInt32(resp);
+						var cmdusg = Convert.ToInt32(resp.Data);
 						cmdusg = cmdusg + 1;
 						cmd = new MySqlCommand("UPDATE commandusage SET UserUsage = @userusg WHERE UserID = @userid AND Command = @command");
 						cmd.Parameters.AddWithValue("@userusg", cmdusg);
@@ -763,6 +809,7 @@ namespace Skuld.Services
 				Successful = false
 			};
 		}
+
 		public async Task<SqlResult> UpdateCustomCommand(IGuild guild, string command, string content)
 		{
 			if (CanConnect)
@@ -779,6 +826,7 @@ namespace Skuld.Services
 				Successful = false
 			};
 		}
+
 		public async Task<SqlResult> UpdatePastaAsync(Pasta pasta, IUser user = null)
 		{
 			if (CanConnect)
@@ -812,80 +860,17 @@ namespace Skuld.Services
 			};
 		}
 
-		public async Task<IReadOnlyList<Pasta>> GetAllPastasAsync()
-		{
-			if(CanConnect)
-			{
-				var command = new MySqlCommand("SELECT * FROM `pasta`;");
-				var allpasta = new List<Pasta>();
-				using (var conn = new MySqlConnection(cs))
-				{
-					await conn.OpenAsync();
-					if (conn.State == System.Data.ConnectionState.Open)
-					{
-						command.Connection = conn;
-
-						DogStatsd.Increment("mysql.queries");
-
-						var reader = await command.ExecuteReaderAsync();
-
-						int rows = 0;
-
-						if (reader.HasRows)
-						{
-							while (await reader.ReadAsync())
-							{
-								rows++;
-
-								var pasta = new Pasta
-								{
-									ID = Tools.Tools.ParseUInt32OrDefault(Convert.ToString(reader["ID"])),
-
-									OwnerID = Tools.Tools.ParseUInt64OrDefault(Convert.ToString(reader["OwnerID"])),
-
-									Name = Convert.ToString(reader["PastaName"]),
-
-									Created = Convert.ToString(reader["Created"]),
-
-									Content = Convert.ToString(reader["Content"]),
-
-									Downvotes = Tools.Tools.ParseUInt32OrDefault(Convert.ToString(reader["Downvotes"])),
-
-									Upvotes = Tools.Tools.ParseUInt32OrDefault(Convert.ToString(reader["Upvotes"]))
-								};
-
-								allpasta.Add(pasta);
-
-								pasta = null;
-							}
-
-							DogStatsd.Increment("mysql.rows_ret", rows);
-
-							await conn.CloseAsync();
-						}
-						else
-						{
-							await conn.CloseAsync();
-							return null;
-						}
-					}
-				}
-				return allpasta;
-			}
-			return null;
-		}
-
-		public async Task<IReadOnlyList<SqlResult>> PopulateGuildUsersAsync(IGuild guild)
+		public async Task<IReadOnlyList<SqlResult>> UpdateGuildAsync(SkuldGuild guild)
 		{
 			if (CanConnect)
 			{
-				var results = new List<SqlResult>();
-				await guild.DownloadUsersAsync();
-				foreach (var user in await guild.GetUsersAsync())
+				var results = new List<SqlResult>
 				{
-					results.Add(await InsertUserAsync(user));
-					DogStatsd.Increment("mysql.insert");
-				}
+					await UpdateBaseGuildAsync(guild),
+					await UpdateFeaturesAsnyc(guild.ID, guild.GuildSettings.Features),
+					await UpdateCommandModulesAsync(guild.ID, guild.GuildSettings.Modules)
+				};
+
 				return results;
 			}
 			return new List<SqlResult>
@@ -897,6 +882,89 @@ namespace Skuld.Services
 				}
 			};
 		}
+		async Task<SqlResult> UpdateBaseGuildAsync(SkuldGuild guild)
+		{
+			if(CanConnect)
+			{
+				var command = new MySqlCommand("UPDATE `guild` " +
+					"SET `Name` = @name, `JoinMessage` = @jmsg, " +
+					"`LeaveMessage` = @lmsg, `AutoJoinRole` = @ajr, " +
+					"`Prefix` = @prefix, `Language` = @language, " +
+					"`TwitchNotifChannel` = @twitchchan, `TwitterLogChannel` = @twitchan, " +
+					"`MutedRole` = @mutedr, `UserJoinChan` = @ujc, `UserLeaveChan` = @ulc " +
+					"WHERE ID = @guildID;");
+
+				command.Parameters.AddWithValue("@name", guild.Name);
+				command.Parameters.AddWithValue("@jmsg", guild.JoinMessage);
+				command.Parameters.AddWithValue("@lmsg", guild.LeaveMessage);
+				command.Parameters.AddWithValue("@ajr", guild.AutoJoinRole);
+				command.Parameters.AddWithValue("@prefix", guild.Prefix);
+				command.Parameters.AddWithValue("@language", guild.Language);
+				command.Parameters.AddWithValue("@twitchchan", guild.TwitchNotifChannel);
+				command.Parameters.AddWithValue("@twitchan", guild.TwitterLogChannel);
+				command.Parameters.AddWithValue("@mutedr", guild.MutedRole);
+				command.Parameters.AddWithValue("@ujc", guild.UserJoinChannel);
+				command.Parameters.AddWithValue("@ulc", guild.UserLeaveChannel);
+				command.Parameters.AddWithValue("@guildID", guild.ID);
+
+				return await SingleQueryAsync(command);
+			}
+			return new SqlResult
+			{
+				Error = "Database not available.",
+				Successful = false
+			};
+		}
+		async Task<SqlResult> UpdateCommandModulesAsync(ulong id, GuildCommandModules modules)
+		{
+			if (CanConnect)
+			{
+				var command = new MySqlCommand("UPDATE `guildcommandmodules` " +
+						"SET `Accounts` = @accounts, `Actions` = @actions, " +
+						"`Admin` = @admin, `Fun` = @fun, " +
+						"`Help` = @help, `Information` = @info, " +
+						"`Search` = @search, `Stats` = @stats " +
+						"WHERE ID = @guildID;");
+
+				command.Parameters.AddWithValue("@accounts", modules.AccountsEnabled);
+				command.Parameters.AddWithValue("@actions", modules.ActionsEnabled);
+				command.Parameters.AddWithValue("@admin", modules.AdminEnabled);
+				command.Parameters.AddWithValue("@fun", modules.FunEnabled);
+				command.Parameters.AddWithValue("@help", modules.HelpEnabled);
+				command.Parameters.AddWithValue("@info", modules.InformationEnabled);
+				command.Parameters.AddWithValue("@search", modules.SearchEnabled);
+				command.Parameters.AddWithValue("@stats", modules.StatsEnabled);
+				command.Parameters.AddWithValue("@guildID", id);
+
+				return await SingleQueryAsync(command);
+			}
+			return new SqlResult
+			{
+				Error = "Database not available.",
+				Successful = false
+			};
+		}
+		async Task<SqlResult> UpdateFeaturesAsnyc(ulong id, GuildFeatureModules features)
+		{
+			if (CanConnect)
+			{
+				var command = new MySqlCommand(" UPDATE `guildfeaturemodules` " +
+					"SET `Pinning` = @pin, `Experience` = @xp " +
+					"WHERE ID = @guildID");
+
+				command.Parameters.AddWithValue("@pin", features.Pinning);
+				command.Parameters.AddWithValue("@xp", features.Experience);
+				command.Parameters.AddWithValue("@guildID", id);
+
+				return await SingleQueryAsync(command);
+			}
+			return new SqlResult
+			{
+				Error = "Database not available.",
+				Successful = false
+			};
+		}
+		
 		public async Task<IReadOnlyList<SqlResult>> CheckGuildUsersAsync(IGuild guild)
 		{
 			if (CanConnect)

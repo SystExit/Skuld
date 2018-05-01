@@ -88,7 +88,7 @@ namespace Skuld.Modules
                 }
 				sguild.MutedRole = role.Id;
 				var resp = await database.UpdateGuildAsync(sguild);
-				if(resp.Successful)
+				if(resp.All(x=>x.Successful))
 				{
 					await user.AddRoleAsync(role);
 					await messageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} just muted **{usertomute.Username}**");
@@ -96,7 +96,10 @@ namespace Skuld.Modules
 				else
 				{
 					await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
-					await logger.AddToLogsAsync(new Models.LogMessage("MuteCMD", resp.Error, LogSeverity.Error, resp.Exception));
+					string msg = "";
+					foreach (var res in resp)
+						msg += res.Exception + "\n";
+					await logger.AddToLogsAsync(new Models.LogMessage("MuteCMD", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
 				}
             }
             else
@@ -169,75 +172,137 @@ namespace Skuld.Modules
 		[RequireBotAndUserPermission(GuildPermission.KickMembers)]
 		public async Task Kick(IGuildUser user, [Remainder]string reason = null)
 		{
-			var msg = $"You have been kicked from **{Context.Guild.Name}** by: {Context.User.Username}#{Context.User.Discriminator}";
-			if (reason == null)
+			try
 			{
-				try
+				var msg = $"You have been kicked from **{Context.Guild.Name}** by: {Context.User.Username}#{Context.User.Discriminator}";
+				var guild = Context.Guild as IGuild;
+				if (reason == null)
 				{
-					var dmchan = await user.GetOrCreateDMChannelAsync();
-					await dmchan.SendMessageAsync(msg);
-				}
-				catch
-				{ /*Can be Ignored lol*/ }
-				await user.KickAsync($"Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}").ContinueWith(async x =>
-				{
-					if (x.IsCompleted)
+					await user.KickAsync($"Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+					if (await guild.GetUserAsync(user.Id) == null)
 					{
-						await messageService.SendChannelAsync(Context.Channel, $"Successfully kicked: `{user.Username}`\tResponsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+						await messageService.SendChannelAsync(Context.Channel, $"Successfully kicked: `{user.Username}`\tResponsible Moderator:  {Context.User.Username}#{Context.User.Discriminator}");
+						try
+						{
+							var dmchan = await user.GetOrCreateDMChannelAsync();
+							await dmchan.SendMessageAsync(msg);
+						}
+						catch
+						{ /*Can be Ignored lol*/ }
 					}
-				});
+				}
+				else
+				{
+					msg += $" with reason:```\n{reason}```";
+					await user.KickAsync(reason + $" Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+					if (await guild.GetUserAsync(user.Id) == null)
+					{
+						await messageService.SendChannelAsync(Context.Channel, $"Successfully kicked: `{user}`\tResponsible Moderator:  {Context.User.Username}#{Context.User.Discriminator}\nReason: " + reason);
+						try
+						{
+							var dmchan = await user.GetOrCreateDMChannelAsync();
+							await dmchan.SendMessageAsync(msg);
+						}
+						catch
+						{ /*Can be Ignored lol*/ }
+					}
+				}
 			}
-			else
+			catch
 			{
-				msg += $" with reason:```\n{reason}```";
-				try
-				{
-					var dmchan = await user.GetOrCreateDMChannelAsync();
-					await dmchan.SendMessageAsync(msg);
-				}
-				catch
-				{ /*Can be Ignored lol*/ }
-				await user.KickAsync(reason+$" Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}").ContinueWith(async x =>
-				{
-					if (x.IsCompleted)
-					{
-						await messageService.SendChannelAsync(Context.Channel, $"Successfully kicked: `{user}`\tResponsible Moderator: {Context.User}\nReason: " + reason);
-					}
-				});
+				await messageService.SendChannelAsync(Context.Channel, $"Couldn't kick {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?");
 			}
 		}
-
+		
+		[Command("ban"), Summary("Bans a user"), Alias("naenae")]
+		[RequireBotAndUserPermission(GuildPermission.BanMembers)]
+		public async Task Ban(IGuildUser user, [Remainder]string reason = null)
+		{
+			try
+			{
+				var msg = $"You have been banned from **{Context.Guild}** by: {Context.User.Username}#{Context.User.Discriminator}";
+				var guild = Context.Guild as IGuild;
+				if (reason == null)
+				{
+					await Context.Guild.AddBanAsync(user, 7, $"Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+					if (await guild.GetUserAsync(user.Id) == null)
+					{
+						await messageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+						try
+						{
+							var dmchan = await user.GetOrCreateDMChannelAsync();
+							await dmchan.SendMessageAsync(msg);
+						}
+						catch { }
+					}
+				}
+				else
+				{
+					msg += $" with reason:```\n{reason}```";
+					await Context.Guild.AddBanAsync(user, 7, reason + $" Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+					if (await guild.GetUserAsync(user.Id) == null)
+					{
+						await messageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}\nReason given: {reason}");
+						try
+						{
+							var dmchan = await user.GetOrCreateDMChannelAsync();
+							await dmchan.SendMessageAsync(msg);
+						}
+						catch { }
+					}
+				}
+			}
+			catch
+			{
+				await messageService.SendChannelAsync(Context.Channel, $"Couldn't ban {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?");
+			}
+		}
+		
 		[Command("ban"), Summary("Bans a user"), Alias("naenae")]
 		[RequireBotAndUserPermission(GuildPermission.BanMembers)]
 		public async Task Ban(IGuildUser user, int daystoprune = 7, [Remainder]string reason = null)
 		{
-			var msg = $"You have been banned from **{Context.Guild}** by: {Context.User.Username}#{Context.User.Discriminator}";
-			if (reason == null)
+			try
 			{
-				try
+				var msg = $"You have been banned from **{Context.Guild}** by: {Context.User.Username}#{Context.User.Discriminator}";
+				var guild = Context.Guild as IGuild;
+				if (reason == null)
 				{
-					var dmchan = await user.GetOrCreateDMChannelAsync();
-					await dmchan.SendMessageAsync(msg);
+					await Context.Guild.AddBanAsync(user, daystoprune, $"Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+					if (await guild.GetUserAsync(user.Id) == null)
+					{
+						await messageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+						try
+						{
+							var dmchan = await user.GetOrCreateDMChannelAsync();
+							await dmchan.SendMessageAsync(msg);
+						}
+						catch { }
+					}
 				}
-				catch { }
-				await Context.Guild.AddBanAsync(user, daystoprune, $"Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
-				await messageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+				else
+				{
+					msg += $" with reason:```\n{reason}```";
+					await Context.Guild.AddBanAsync(user, daystoprune, reason + $" Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+					if (await guild.GetUserAsync(user.Id) == null)
+					{
+						await messageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}\nReason given: {reason}");
+						try
+						{
+							var dmchan = await user.GetOrCreateDMChannelAsync();
+							await dmchan.SendMessageAsync(msg);
+						}
+						catch { }
+					}
+				}
 			}
-			else
+			catch
 			{
-				msg += $" with reason:```\n{reason}```";
-				try
-				{
-					var dmchan = await user.GetOrCreateDMChannelAsync();
-					await dmchan.SendMessageAsync(msg);
-				}
-				catch { }
-				await Context.Guild.AddBanAsync(user, daystoprune, reason + $" Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
-				await messageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator:{Context.User.Username}#{Context.User.Discriminator}\nReason given: {reason}");
+				await messageService.SendChannelAsync(Context.Channel, $"Couldn't ban {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?");
 			}
 		}
 
-        [Command("hackban"), Summary("Hackbans a set of userids Must be in this format hackban [id1],[id2],[id3]")]
+		[Command("hackban"), Summary("Hackbans a set of userids Must be in this format hackban [id1],[id2],[id3]")]
 		[RequireBotAndUserPermission(GuildPermission.BanMembers)]
         public async Task HackBan(params string[] ids)
         {
@@ -286,14 +351,16 @@ namespace Skuld.Modules
 				{
 					sguild.AutoJoinRole = 0;
 					var resp = await database.UpdateGuildAsync(sguild);
-					if (resp.Successful)
+					if (resp.All(x=>x.Successful))
 					{
 						await messageService.SendChannelAsync(Context.Channel, $"Successfully removed the member join role");
 					}
 					else
 					{
-
-						await logger.AddToLogsAsync(new Models.LogMessage("AJClCmd", resp.Error, LogSeverity.Error, resp.Exception));
+						string msg = "";
+						foreach (var res in resp)
+							msg += res.Exception + "\n";
+						await logger.AddToLogsAsync(new Models.LogMessage("AJClCmd", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
 					}
 				}
 			}
@@ -301,14 +368,16 @@ namespace Skuld.Modules
 			{
 				sguild.AutoJoinRole = role.Id;
 				var resp = await database.UpdateGuildAsync(sguild);
-				if (resp.Successful)
+				if (resp.All(x=>x.Successful))
 				{
 					await messageService.SendChannelAsync(Context.Channel, $"Successfully set **{role.Name}** as the member join role");
 				}
 				else
 				{
-
-					await logger.AddToLogsAsync(new Models.LogMessage("AJClCmd", resp.Error, LogSeverity.Error, resp.Exception));
+					string msg = "";
+					foreach (var res in resp)
+						msg += res.Exception + "\n";
+					await logger.AddToLogsAsync(new Models.LogMessage("AJClCmd", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
 				}
 			}
         }
@@ -341,7 +410,7 @@ namespace Skuld.Modules
 				var resp = await database.UpdateGuildAsync(sguild);
 				sguild = await database.GetGuildAsync(sguild.ID);
 
-				if(resp.Successful)
+				if(resp.All(x=>x.Successful))
 				{
 					if (sguild.Prefix != oldprefix)
 					{
@@ -363,7 +432,7 @@ namespace Skuld.Modules
 
 				var resp = await database.UpdateGuildAsync(sguild);
 
-				if(resp.Successful)
+				if(resp.All(x=>x.Successful))
 				{
 					await messageService.SendChannelAsync(Context.Channel, $"Successfully reset the Guild's prefix");
 				}
@@ -383,7 +452,7 @@ namespace Skuld.Modules
 			sguild.UserJoinChannel = Context.Channel.Id;
 			sguild.JoinMessage = welcome;
 			var resp = await database.UpdateGuildAsync(sguild);
-			if(resp.Successful)
+			if(resp.All(x=>x.Successful))
 			{
 				await messageService.SendChannelAsync(Context.Channel, $"Set Welcome message!");
 			}
@@ -402,7 +471,7 @@ namespace Skuld.Modules
 			sguild.UserJoinChannel = channel.Id;
 			sguild.JoinMessage = welcome;
 			var resp = await database.UpdateGuildAsync(sguild);
-			if (resp.Successful)
+			if (resp.All(x=>x.Successful))
 			{
 				await messageService.SendChannelAsync(Context.Channel, $"Set Welcome message!");
 			}
@@ -413,7 +482,7 @@ namespace Skuld.Modules
 		}
 
         //Deletes
-        [Command("unsetwelcome"), Summary("Clears the welcome message"), RequireDatabase]
+        [Command("unsetwelcome"), Summary("Clears the welcome message"), Alias("clearwelcome"), RequireDatabase]
 		[RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetWelcome()
         {
@@ -421,7 +490,7 @@ namespace Skuld.Modules
 			sguild.UserJoinChannel = 0;
 			sguild.JoinMessage = "";
 			var resp = await database.UpdateGuildAsync(sguild);
-			if (resp.Successful)
+			if (resp.All(x=>x.Successful))
 			{
 				await messageService.SendChannelAsync(Context.Channel, $"Cleared Welcome message!");
 			}
@@ -432,15 +501,16 @@ namespace Skuld.Modules
 		}
 
         //Set Channel
-        [Command("setleave"), Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
+        [Command("setleave"), RequireDatabase]
+		[Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
 		[RequireUserPermission(GuildPermission.Administrator)]
-        public async Task SetLeave(ITextChannel channel, [Remainder]string leave)
+		public async Task SetLeave(ITextChannel channel, [Remainder]string leave)
 		{
 			var sguild = await database.GetGuildAsync(Context.Guild.Id);
 			sguild.UserLeaveChannel = channel.Id;
 			sguild.LeaveMessage = leave;
 			var resp = await database.UpdateGuildAsync(sguild);
-			if (resp.Successful)
+			if (resp.All(x=>x.Successful))
 			{
 				await messageService.SendChannelAsync(Context.Channel, $"Set Leave message!");
 			}
@@ -451,17 +521,18 @@ namespace Skuld.Modules
 		}
 
         //Current Channel
-        [Command("setleave"), Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
+        [Command("setleave"), Alias("clearleave"), RequireDatabase]
+		[Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
 		[RequireUserPermission(GuildPermission.Administrator)]
-        public async Task SetLeave([Remainder]string leave)
+		public async Task SetLeave([Remainder]string leave)
 		{
 			var sguild = await database.GetGuildAsync(Context.Guild.Id);
 			sguild.UserLeaveChannel = Context.Channel.Id;
 			sguild.LeaveMessage = leave;
 			var resp = await database.UpdateGuildAsync(sguild);
-			if (resp.Successful)
+			if (resp.All(x=>x.Successful))
 			{
-				await messageService.SendChannelAsync(Context.Channel, $"Set Leave message!");
+				await messageService.SendChannelAsync(Context.Channel, $"Cleared Leave message!");
 			}
 			else
 			{
@@ -478,7 +549,7 @@ namespace Skuld.Modules
 			sguild.UserLeaveChannel = 0;
 			sguild.LeaveMessage = "";
 			var resp = await database.UpdateGuildAsync(sguild);
-			if (resp.Successful)
+			if (resp.All(x=>x.Successful))
 			{
 				await messageService.SendChannelAsync(Context.Channel, $"Set Leave message!");
 			}

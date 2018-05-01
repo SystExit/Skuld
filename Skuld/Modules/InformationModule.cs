@@ -64,38 +64,32 @@ namespace Skuld.Modules
             { embed.AddField("Server Avatar", "Doesn't exist", inline: true); }
             embed.AddField("Default Notifications", guild.DefaultMessageNotifications.ToString(),inline: true);
             embed.AddField("Created", guild.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + "\t`DD/MM/YYYY`");
-            embed.AddField("Emojis", guild.Emotes.Count + Environment.NewLine + $"Use `{messageService.config.Prefix}server emojis` to view all of the emojis");
-            embed.AddField("Roles", guild.Roles.Count() + Environment.NewLine + $"Use `{messageService.config.Prefix}server roles` to view all of the roles");
+            embed.AddField("Emojis", guild.Emotes.Count + Environment.NewLine + $"Use `{messageService.config.Prefix}server-emojis` to view all of the emojis");
+            embed.AddField("Roles", guild.Roles.Count() + Environment.NewLine + $"Use `{messageService.config.Prefix}server-roles` to view all of the roles");
             await messageService.SendChannelAsync((ITextChannel)Context.Channel,"", embed.Build());
         }
-        [Command("server emojis"), Alias("server emoji")]
+        [Command("server-emojis"), Alias("server emoji")]
         public async Task ServerEmoji()
         {
             var guild = Context.Guild;
             string message = null;
             var num = 0;
-            message += $"Emojis of __**{guild.Name}**__" + Environment.NewLine;
-            if (guild.Emotes.Count == 0)
-            { message += "Server contains no emotes"; }
-            else
+            message += $"Emojis of __**{guild.Name}**__ ({guild.Emotes.Count})\n" + Environment.NewLine;
+            if (guild.Emotes.Count != 0)
             {
                 foreach (var emoji in guild.Emotes)
                 {
                     num++;
-                    if (emoji.Id == guild.Emotes.Last().Id)
-                    { message += $"{emoji.Name} <:{emoji.Name}:{emoji.Id}>"; }
+                    if (num % 5 != 0 || num == 0)
+                        message += $"{emoji.Name} <:{emoji.Name}:{emoji.Id}> | ";
                     else
-                    {
-                        if (num % 5 != 0)
-                            message += $"{emoji.Name} <:{emoji.Name}:{emoji.Id}> | ";
-                        else
-                            message += $"{emoji.Name} <:{emoji.Name}:{emoji.Id}>\n";
-                    }
+                        message += $"{emoji.Name} <:{emoji.Name}:{emoji.Id}>\n";
                 }
+				message = message.Substring(0, message.Length - 2);
             }
             await messageService.SendChannelAsync(Context.Channel,message);
         }
-        [Command("server roles"), Alias("server role")]
+        [Command("server-roles"), Alias("server role")]
         public async Task ServerRoles()
         {
             var guild = Context.Guild;
@@ -110,10 +104,8 @@ namespace Skuld.Modules
                 { serverroles += thing + ", "; }
             }
             string message = null;
-            message += $"Roles of __**{guild.Name}**__" + Environment.NewLine;
-            if (roles.Count == 0)
-            { message += "Server contains no roles"; }
-            else
+            message += $"Roles of __**{guild.Name}**__ ({roles.Count})\n" + Environment.NewLine;
+            if (roles.Count != 0)
             { message += "`" + serverroles + "`"; }
             await messageService.SendChannelAsync(Context.Channel,message);
         }
@@ -124,7 +116,7 @@ namespace Skuld.Modules
                 "P.S. from the Dev:\n" +
                 "By using this command and all others, past-present-future, you consent to having your User Data be stored for proper functionality of the commands. This also applies to the server information if you are a server admin/moderator");
 		        
-        [Command("id guild"), Summary("Get ID of Guild")]
+        [Command("id-guild"), Summary("Get ID of Guild")]
         public async Task GuildID() => 
 			await messageService.SendChannelAsync(Context.Channel, $"The ID of **{Context.Guild.Name}** is `{Context.Guild.Id}`");
 
@@ -358,7 +350,7 @@ namespace Skuld.Modules
 			var guild = Context.Guild;
 			var userroles = user.RoleIds;
 			var roles = userroles.Select(query => guild.GetRole(query).Name).Aggregate((current, next) => current.TrimStart('@') + ", " + next);
-			await messageService.SendChannelAsync(Context.Channel, $"Roles of __**{user.Username}({user.Nickname})#{user.Discriminator}**__\n\n`" + (roles ?? "No roles") + "`");
+			await messageService.SendChannelAsync(Context.Channel, $"Roles of __**{user.Username}#{user.Discriminator} ({user.Nickname})**__ ({userroles.Count})\n\n`" + (roles ?? "No roles") + "`");
         }
 
         [Command("epoch"), Summary("Gets a DateTime DD/MM/YYYY HH:MM:SS (24 Hour) or the current time in POSIX/Unix Epoch time")]
@@ -386,16 +378,13 @@ namespace Skuld.Modules
         [Command("isup"), Summary("Check if a website is online"), Alias("downforeveryone", "isitonline")]
         public async Task IsUp(string website)
         {
-            var doc = await WebHandler.ScrapeUrlAsync(new Uri("http://downforeveryoneorjustme.com/" + website));
-            string response = null;
-            var container = doc.GetElementbyId("domain-main-content");
-            var isup = container.ChildNodes.FindFirst("p");
-            if (isup.InnerHtml.ToLowerInvariant().Contains("not"))
-            { response = $"The website: `{website}` is down or not replying."; }
-            else
-            { response = $"The website: `{website}` is working and replying as intended."; }
-            response = response + "\n\n`Source:` <http://downforeveryoneorjustme.com/" + website + ">";
-            await messageService.SendChannelAsync(Context.Channel, response);
+			if (!website.StartsWith("http"))
+				website = "http://" + website;
+            var res = await WebHandler.ScrapeUrlAsync(new Uri(website));
+			if(res!=null)
+				await messageService.SendChannelAsync(Context.Channel, $"The website: `{website}` is working and replying as intended.");
+			else
+				await messageService.SendChannelAsync(Context.Channel, $"The website: `{website}` is down or not replying.");
         }
         [Command("time"), Summary("Converts a time to a set of times")]
         public async Task ConvertTime(string primarytimezone, string time, [Remainder]string timezones)

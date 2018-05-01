@@ -27,7 +27,7 @@ namespace Skuld.Modules
 			messageService = msgSrv;
 		}
 
-        [Command("money",RunMode = RunMode.Async), Summary("Gets a user's money"), RequireDatabase]
+        [Command("money", RunMode = RunMode.Async), Summary("Gets a user's money"), RequireDatabase]
         public async Task GetMoney([Remainder]IUser user = null)
         {
 			if (user == null)
@@ -210,7 +210,7 @@ namespace Skuld.Modules
                 suser.Daily = Convert.ToString(DateTime.UtcNow);
                 suser.Money += Bot.Configuration.Utils.DailyAmount;
                 await database.UpdateUserAsync(suser);
-                await messageService.SendChannelAsync(Context.Channel, $"You got your daily of: `{Bot.Configuration.Utils.MoneySymbol + Bot.Configuration.Utils.DailyAmount}`, you now have: {Bot.Configuration.Utils.MoneySymbol}{(suser.Money)}");
+                await messageService.SendChannelAsync(Context.Channel, $"You got your daily of: `{Bot.Configuration.Utils.MoneySymbol + Bot.Configuration.Utils.DailyAmount}`, you now have: {Bot.Configuration.Utils.MoneySymbol}{(suser.Money.ToString("N0"))}");
             }
             else
             {
@@ -280,7 +280,7 @@ namespace Skuld.Modules
 									csuser.Daily = Convert.ToString(DateTime.UtcNow);
 									await database.UpdateUserAsync(csuser);
 
-									await messageService.SendChannelAsync(Context.Channel, $"Yo, you just gave {user.Username} {Bot.Configuration.Utils.MoneySymbol}{Bot.Configuration.Utils.DailyAmount}! They now have {Bot.Configuration.Utils.MoneySymbol}{suser.Money + Bot.Configuration.Utils.DailyAmount}");
+									await messageService.SendChannelAsync(Context.Channel, $"Yo, you just gave {user.Username} {Bot.Configuration.Utils.MoneySymbol}{Bot.Configuration.Utils.DailyAmount}! They now have {Bot.Configuration.Utils.MoneySymbol}{suser.Money.ToString("N0")}");
 								}
 								else
 								{

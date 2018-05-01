@@ -19,6 +19,14 @@ namespace Skuld.Utilities
 			return null;
 		}
 
+		public static string GetPrefixFromCommand(SkuldGuild guild, string command, Tools.Config config)
+		{
+			if(guild != null) if (command.StartsWith(guild.Prefix)) return guild.Prefix;
+			if (command.StartsWith(config.Discord.Prefix)) return config.Discord.Prefix;
+			if (command.StartsWith(config.Discord.AltPrefix)) return config.Discord.AltPrefix;
+			return null;
+		}
+
 		public static string GetCommandName(string prefix, int argpos, SocketMessage message)
 		{
 			string cmdname = message.Content;
@@ -36,9 +44,10 @@ namespace Skuld.Utilities
 			return true;
 		}
 
-		public static bool CheckForPrefixReset(ShardedCommandContext ShardCon, DiscordShardedClient client)
+		public static bool IsPrefixReset(ShardedCommandContext ShardCon, DiscordShardedClient client)
 		{
-			if (ShardCon.Message.Content.Contains($"{client.CurrentUser.Username}.resetprefix")) return true;
+			if (ShardCon.Message.Content.Contains($"{Bot.Configuration.Discord.Prefix}resetprefix")) return true;
+			if (ShardCon.Message.Content.Contains($"{Bot.Configuration.Discord.AltPrefix}resetprefix")) return true;
 			return false;
 		}
 	}

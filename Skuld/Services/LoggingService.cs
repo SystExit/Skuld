@@ -102,7 +102,26 @@ namespace Skuld.Services
                 { }
             }
 
-            if (Console)
+			switch(message.Severity)
+			{
+				case LogSeverity.Info:
+					DogStatsd.Event(message.Source, $"{String.Format("{0:dd/MM/yyyy HH:mm:ss}", message.TimeStamp)} [{message.Severity}] {message.Message}", "info");
+					break;
+
+				case LogSeverity.Warning:
+					DogStatsd.Event(message.Source, $"{String.Format("{0:dd/MM/yyyy HH:mm:ss}", message.TimeStamp)} [{message.Severity}] {message.Message}", "warning");
+					break;
+
+				case LogSeverity.Critical:
+					DogStatsd.Event(message.Source, $"{String.Format("{0:dd/MM/yyyy HH:mm:ss}", message.TimeStamp)} [{message.Severity}] {message.Message}\n{message.Exception}", "critical");
+					break;
+
+				case LogSeverity.Error:
+					DogStatsd.Event(message.Source, $"{String.Format("{0:dd/MM/yyyy HH:mm:ss}", message.TimeStamp)} [{message.Severity}] {message.Message}\n{message.Exception}", "error");
+					break;
+			}
+
+			if (Console)
             {
                 System.Console.ForegroundColor = Tools.Tools.ColorBasedOnSeverity(message.Severity);
                 var consolelines = new List<string[]>();
@@ -230,7 +249,6 @@ namespace Skuld.Services
 		//Start Users
 		async Task Bot_UserJoined(SocketGuildUser arg)
 		{
-			DogStatsd.Increment("total.users");
 			await AddToLogsAsync(new Models.LogMessage("UsrJoin", $"User {arg.Username} joined {arg.Guild.Name}", LogSeverity.Info));
 			if (database.CanConnect)
 			{
@@ -244,7 +262,7 @@ namespace Skuld.Services
 					await arg.AddRoleAsync(joinrole);
 					await AddToLogsAsync(new Models.LogMessage("UsrJoin", $"Gave user {arg.Username}, the automatic role as per request of {arg.Guild.Name}.", LogSeverity.Info));
 				}
-				if (guild != null && guild.UserJoinChannel!=0 && String.IsNullOrEmpty(guild.JoinMessage))
+				if (guild != null && guild.UserJoinChannel !=0 && !String.IsNullOrEmpty(guild.JoinMessage))
 				{
 					var channel = arg.Guild.GetTextChannel(guild.UserJoinChannel);
 					var welcomemessage = guild.JoinMessage;
@@ -268,7 +286,6 @@ namespace Skuld.Services
 		}
 		async Task Bot_UserLeft(SocketGuildUser arg)
 		{
-			DogStatsd.Decrement("total.users");
 			await AddToLogsAsync(new Models.LogMessage("UsrLeft", $"User {arg.Username} just left {arg.Guild.Name}", LogSeverity.Info));
 			if (database.CanConnect)
 			{
@@ -319,7 +336,7 @@ namespace Skuld.Services
 			DogStatsd.Increment("guilds.joined");
 			Thread thd = new Thread(async () =>
 			{
-				await database.CheckGuildUsersAsync(arg);
+				await database.InsertGuildAsync(arg);
 			})
 			{
 				IsBackground = true

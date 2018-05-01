@@ -25,7 +25,26 @@ namespace Skuld
         static string Prefix;
         public static Config Configuration;
         /*END VARS*/
-		static void Main() => CreateAsync().GetAwaiter().GetResult();
+		static void Main()
+		{
+			try
+			{
+				CreateAsync().GetAwaiter().GetResult();
+
+				services.GetRequiredService<BotService>().StartAsync().GetAwaiter().GetResult();
+
+				Console.ReadLine();
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine(ex);
+				Console.ReadLine();
+			}
+			finally
+			{
+				Console.ReadLine();
+			}
+		}
 
         public static async Task CreateAsync()
         {
@@ -37,9 +56,6 @@ namespace Skuld
 				await InstallServicesAsync().ConfigureAwait(false);
 
 				await services.GetRequiredService<LoggingService>().AddToLogsAsync(new Models.LogMessage("FrameWk", $"Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", LogSeverity.Info));
-                DogStatsd.Event("FrameWork", $"Configured and Loaded: {Assembly.GetEntryAssembly().GetName().Name} v{Assembly.GetEntryAssembly().GetName().Version}", "info", hostname: "Skuld");
-
-				await services.GetRequiredService<BotService>().StartAsync();
 			}
             catch (Exception ex)
 			{
@@ -56,7 +72,7 @@ namespace Skuld
 			var cli = new DiscordShardedClient(new DiscordSocketConfig
 			{
 				MessageCacheSize = 1000,
-				DefaultRetryMode = RetryMode.RetryTimeouts,
+				DefaultRetryMode = RetryMode.AlwaysRetry,
 				LogLevel = LogSeverity.Verbose,
 				TotalShards = Configuration.Discord.Shards
 			});
@@ -109,6 +125,12 @@ namespace Skuld
 			services.GetRequiredService<Strawpoll>();
 			await services.GetRequiredService<WebComicClients>().GetXKCDLastPageAsync();
 			services.GetRequiredService<Locale>();
+
+			services.GetRequiredService<TwitchService>().CreateClient(new NTwitch.Rest.TwitchRestConfig
+			{
+				ClientId = Configuration.APIS.TwitchClientID,
+				LogLevel = NTwitch.LogSeverity.Verbose
+			});
 			
 			var db = services.GetRequiredService<DatabaseService>();
 			await db.CheckConnectionAsync();
