@@ -76,7 +76,10 @@ namespace Skuld.Services
 			{
 				int users = 0;
 				foreach (var guild in client.Guilds)
-				{ users += guild.MemberCount; Task.Delay(500); }
+				{
+					users += guild.MemberCount;
+					Task.Delay(500);
+				}
 				DogStatsd.Gauge("shards.count", client.Shards.Count);
 				DogStatsd.Gauge("shards.connected", client.Shards.Count(x => x.ConnectionState == ConnectionState.Connected));
 				DogStatsd.Gauge("shards.disconnected", client.Shards.Count(x => x.ConnectionState == ConnectionState.Disconnected));

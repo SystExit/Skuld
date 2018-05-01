@@ -117,7 +117,6 @@ namespace Skuld.Services
 						DogStatsd.Increment("commands.total.threads", 1, 1, new[] { $"module:{cmd.Module.Name.ToLowerInvariant()}", $"cmd:{cmd.Name.ToLowerInvariant()}" });
 						await DispatchCommandAsync(context, cmd);
 						DogStatsd.Decrement("commands.total.threads", 1, 1, new[] { $"module:{cmd.Module.Name.ToLowerInvariant()}", $"cmd:{cmd.Name.ToLowerInvariant()}" });
-
 					})
 				{
 					IsBackground = true
@@ -472,13 +471,21 @@ namespace Skuld.Services
 		{
 			var suser = await database.GetUserAsync(user.Id);
 			if (suser != null) await database.UpdateUserUsageAsync(suser, command.Name ?? command.Module.Name);
-			else { await database.InsertUserAsync(user); await InsertCommand(command, user); }
+			else
+			{
+				await database.InsertUserAsync(user);
+				await InsertCommand(command, user);
+			}
 		}
 		private async Task InsertCommand(CustomCommand command, IUser user)
 		{
 			var suser = await database.GetUserAsync(user.Id);
 			if (suser != null) await database.UpdateUserUsageAsync(suser, command.CommandName);
-			else { await database.InsertUserAsync(user); await InsertCommand(command, user); }
+			else
+			{
+				await database.InsertUserAsync(user);
+				await InsertCommand(command, user);
+			}
 		}
 	}
 }
