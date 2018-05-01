@@ -115,7 +115,7 @@ namespace Skuld.Services
 					{
 						var cmd = cmds.FirstOrDefault().Command;
 						DogStatsd.Increment("commands.total.threads", 1, 1, new[] { $"module:{cmd.Module.Name.ToLowerInvariant()}", $"cmd:{cmd.Name.ToLowerInvariant()}" });
-						await DispatchCommandAsync(context, cmd);
+						await DispatchCommandAsync(context, cmd).ConfigureAwait(false);
 						DogStatsd.Decrement("commands.total.threads", 1, 1, new[] { $"module:{cmd.Module.Name.ToLowerInvariant()}", $"cmd:{cmd.Name.ToLowerInvariant()}" });
 					})
 				{
@@ -125,10 +125,7 @@ namespace Skuld.Services
 			}
 			catch(Exception ex)
 			{
-				//if (!ex.Message == "You are being rate limited.")
 				await logger.AddToLogsAsync(new Models.LogMessage("CmdDisp", ex.Message, LogSeverity.Error, ex));
-				//else
-					//return;
 			}
 		}
 
@@ -193,21 +190,22 @@ namespace Skuld.Services
 		bool ModuleDisabled(GuildCommandModules cmdmods, CommandInfo command)
 		{
 			if (!cmdmods.AccountsEnabled && command.Module.Name.ToLowerInvariant() == "accounts")
-				return true;
+			{ return true; }
 			if (!cmdmods.ActionsEnabled && command.Module.Name.ToLowerInvariant() == "actions")
-				return true;
+			{ return true; }
 			if (!cmdmods.AdminEnabled && command.Module.Name.ToLowerInvariant() == "admin")
-				return true;
+			{ return true; }
 			if (!cmdmods.FunEnabled && command.Module.Name.ToLowerInvariant() == "fun")
-				return true;
+			{ return true; }
 			if (!cmdmods.HelpEnabled && command.Module.Name.ToLowerInvariant() == "help")
-				return true;
+			{ return true; }
 			if (!cmdmods.InformationEnabled && command.Module.Name.ToLowerInvariant() == "information")
-				return true;
+			{ return true; }
 			if (!cmdmods.SearchEnabled && command.Module.Name.ToLowerInvariant() == "search")
-				return true;
+			{ return true; }
 			if (!cmdmods.StatsEnabled && command.Module.Name.ToLowerInvariant() == "stats")
-				return true;
+			{ return true; }
+
 			return false;
 		}
 
@@ -215,12 +213,12 @@ namespace Skuld.Services
 		{
 			var stopwatch = new Stopwatch();
 			stopwatch.Start();
-			await SendChannelAsync(context.Channel, command.Content);
+			await SendChannelAsync(context.Channel, command.Content).ConfigureAwait(false);
 			stopwatch.Stop();
 
 			DogStatsd.Histogram("commands.latency", stopwatch.ElapsedMilliseconds(), 0.5, new[] { $"module:custom", $"cmd:{command.CommandName.ToLowerInvariant()}" });
 
-			await InsertCommand(command, context.User);
+			await InsertCommand(command, context.User).ConfigureAwait(false);
 
 			DogStatsd.Increment("commands.processed", 1, 1, new[] { $"module:custom", $"cmd:{command.CommandName.ToLowerInvariant()}" });
 		}
@@ -234,7 +232,7 @@ namespace Skuld.Services
 			if (result.IsSuccess)
 			{
 				DogStatsd.Histogram("commands.latency", watch.ElapsedMilliseconds(), 0.5, new[] { $"module:{command.Module.Name.ToLowerInvariant()}", $"cmd:{command.Name.ToLowerInvariant()}" });
-				await InsertCommand(command, context.User);
+				await InsertCommand(command, context.User).ConfigureAwait(false);
 				DogStatsd.Increment("commands.processed", 1, 1, new[] { $"module:{command.Module.Name.ToLowerInvariant()}", $"cmd:{command.Name.ToLowerInvariant()}" });
 			}
 
@@ -244,14 +242,14 @@ namespace Skuld.Services
 				if (result.ErrorReason.Contains("few parameters"))
 				{
 					var cmdembed = Tools.Tools.GetCommandHelp(commandService, context, command.Name);
-					await SendChannelAsync(context.Channel, "You seem to be missing a parameter or 2, here's the help", cmdembed);
+					await SendChannelAsync(context.Channel, "You seem to be missing a parameter or 2, here's the help", cmdembed).ConfigureAwait(false);
 					displayerror = false;
 				}
 
 				if (result.Error != CommandError.UnknownCommand && !result.ErrorReason.Contains("Timeout") && displayerror)
 				{
 					await logger.AddToLogsAsync(new Models.LogMessage("CmdHand", "Error with command, Error is: " + result, LogSeverity.Error));
-					await SendChannelAsync(context.Channel, "", new EmbedBuilder { Author = new EmbedAuthorBuilder { Name = "Error with the command" }, Description = Convert.ToString(result.ErrorReason), Color = new Color(255, 0, 0) }.Build());
+					await SendChannelAsync(context.Channel, "", new EmbedBuilder { Author = new EmbedAuthorBuilder { Name = "Error with the command" }, Description = Convert.ToString(result.ErrorReason), Color = new Color(255, 0, 0) }.Build()).ConfigureAwait(false);
 				}
 				DogStatsd.Increment("commands.errors");
 

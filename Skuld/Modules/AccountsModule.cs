@@ -4,7 +4,6 @@ using Discord.Commands;
 using Discord;
 using Skuld.Services;
 using Skuld.Tools;
-using MySql.Data.MySqlClient;
 #pragma warning disable GCop126 
 #pragma warning disable GCop646
 
@@ -31,14 +30,20 @@ namespace Skuld.Modules
         public async Task GetMoney([Remainder]IUser user = null)
         {
 			if (user == null)
+			{
 				user = Context.User;
+			}
 
             var usr = await database.GetUserAsync(user.Id);
 
             if (Context.User == user)
-            { await messageService.SendChannelAsync(Context.Channel, $"You have: {Bot.Configuration.Utils.MoneySymbol + usr.Money.ToString("N0")}"); }
+            {
+				await messageService.SendChannelAsync(Context.Channel, $"You have: {Bot.Configuration.Utils.MoneySymbol + usr.Money.ToString("N0")}");
+			}
             else
-            { await messageService.SendChannelAsync(Context.Channel, message: $"**{user.Username}** has: {Bot.Configuration.Utils.MoneySymbol + usr.Money.ToString("N0")}"); }
+            {
+				await messageService.SendChannelAsync(Context.Channel, message: $"**{user.Username}** has: {Bot.Configuration.Utils.MoneySymbol + usr.Money.ToString("N0")}");
+			}
         }
 
         [Command("profile"), Summary("Get a user's profile"), RequireDatabase]
@@ -96,7 +101,9 @@ namespace Skuld.Modules
         public async Task GetProfileExt([Remainder]IUser user = null)
         {
 			if (user == null)
+			{
 				user = Context.User;
+			}
             try
             {
                 var userLocal = await database.GetUserAsync(user.Id);

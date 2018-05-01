@@ -80,10 +80,10 @@ namespace Skuld.Modules
                 foreach (var emoji in guild.Emotes)
                 {
                     num++;
-                    if (num % 5 != 0 || num == 0)
-                        message += $"{emoji.Name} <:{emoji.Name}:{emoji.Id}> | ";
-                    else
-                        message += $"{emoji.Name} <:{emoji.Name}:{emoji.Id}>\n";
+					if (num % 5 != 0 || num == 0)
+					{ message += $"{emoji.Name} <:{emoji.Name}:{emoji.Id}> | "; }
+					else
+					{ message += $"{emoji.Name} <:{emoji.Name}:{emoji.Id}>\n"; }
                 }
 				message = message.Substring(0, message.Length - 2);
             }
@@ -379,12 +379,14 @@ namespace Skuld.Modules
         public async Task IsUp(string website)
         {
 			if (!website.StartsWith("http"))
-				website = "http://" + website;
+			{ website = "http://" + website; }
+
             var res = await WebHandler.ScrapeUrlAsync(new Uri(website));
-			if(res!=null)
-				await messageService.SendChannelAsync(Context.Channel, $"The website: `{website}` is working and replying as intended.");
+
+			if (res != null)
+			{ await messageService.SendChannelAsync(Context.Channel, $"The website: `{website}` is working and replying as intended."); }
 			else
-				await messageService.SendChannelAsync(Context.Channel, $"The website: `{website}` is down or not replying.");
+			{ await messageService.SendChannelAsync(Context.Channel, $"The website: `{website}` is down or not replying."); }
         }
         [Command("time"), Summary("Converts a time to a set of times")]
         public async Task ConvertTime(string primarytimezone, string time, [Remainder]string timezones)

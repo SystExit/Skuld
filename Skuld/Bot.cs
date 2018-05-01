@@ -104,7 +104,7 @@ namespace Skuld
 					Prefix = Configuration.Discord.Prefix,
 					AltPrefix = Configuration.Discord.AltPrefix
 				})
-				.AddSingleton(new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer() { ApiKey = Configuration.APIS.GoogleAPI, ApplicationName = "Skuld" }))
+				.AddSingleton(new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer { ApiKey = Configuration.APIS.GoogleAPI, ApplicationName = "Skuld" }))
 				.BuildServiceProvider();
 
 			await InitializeServicesAsync();

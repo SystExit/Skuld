@@ -44,7 +44,7 @@ namespace Skuld.Modules
             
             if (lines.Length > 2000)
             {
-                var paddedlines = lines.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+                var paddedlines = lines.Split(new [] { Environment.NewLine }, StringSplitOptions.None);
                 var pagesold = new List<string>();
                 int prev = 0;
                 for (int x = 1; x <= lines.Length; x++)
@@ -98,7 +98,9 @@ namespace Skuld.Modules
 					await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
 					string msg = "";
 					foreach (var res in resp)
+					{
 						msg += res.Exception + "\n";
+					}
 					await logger.AddToLogsAsync(new Models.LogMessage("MuteCMD", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
 				}
             }
@@ -123,7 +125,7 @@ namespace Skuld.Modules
 			if (sguild.MutedRole == 0)
 			{
 				await messageService.SendChannelAsync(Context.Channel, "Role doesn't exist, so I cannot unmute");
-				DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
+				DogStatsd.Increment("commands.errors",1,1, new []{ "generic" });
 			}
 			else
 			{
@@ -140,7 +142,7 @@ namespace Skuld.Modules
 			if (amount < 0)
 			{
 				await messageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} Your amount `{amount}` is under 0.");
-				StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "unm-precon" });
+				StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new [] { "unm-precon" });
 				return;
 			}
 			await Context.Message.DeleteAsync();
@@ -316,7 +318,7 @@ namespace Skuld.Modules
 			else
 			{
 				await messageService.SendChannelAsync(Context.Channel, $"Couldn't parse list of ID's.");
-				DogStatsd.Increment("commands.errors",1,1,new string[] { "parse-fail" });
+				DogStatsd.Increment("commands.errors",1,1,new [] { "parse-fail" });
 			}
 		}
 		

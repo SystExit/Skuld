@@ -40,9 +40,9 @@ namespace Skuld.Services
 				{
 					await conn.OpenAsync();
 					if (conn.State == System.Data.ConnectionState.Open)
-						canconnect = true;
+					{ canconnect = true; }
 					else
-						canconnect = false;
+					{ canconnect = false; }
 				}
 				catch
 				{
@@ -262,9 +262,7 @@ namespace Skuld.Services
 					}
 				}
 				if (!String.IsNullOrEmpty(pasta.Name))
-					return pasta;
-				else
-					return null;
+				{ return pasta; }
 			}
 			return null;
 		}
@@ -387,14 +385,14 @@ namespace Skuld.Services
 		{
 			if (CanConnect)
 			{
-				var guild = await GetBaseGuildAsync(id);
+				var guild = await GetBaseGuildAsync(id).ConfigureAwait(false);
 				if(guild != null)
 				{
 
 					var guildSetts = new GuildSettings();
 
-					var comSetts = await GetGuildCommandModulesAsync(id);
-					var featSetts = await GetFeatureModulesAsync(id);
+					var comSetts = await GetGuildCommandModulesAsync(id).ConfigureAwait(false);
+					var featSetts = await GetFeatureModulesAsync(id).ConfigureAwait(false);
 
 					guildSetts.Modules = comSetts;
 					guildSetts.Features = featSetts;
@@ -471,8 +469,8 @@ namespace Skuld.Services
 							}
 						}
 					}
-					if(guild.ID != 0)
-						return guild;
+					if (guild.ID != 0)
+					{ return guild; }
 				}
 				catch(Exception ex)
 				{
@@ -602,7 +600,7 @@ namespace Skuld.Services
 					var command = new MySqlCommand("INSERT IGNORE INTO `accounts` (`ID`, `description`, `language`) VALUES (@userid , \"I have no description\", @locale);");
 					command.Parameters.AddWithValue("@userid", user.Id);
 					command.Parameters.AddWithValue("@locale", local.defaultLocale);
-					return await SingleQueryAsync(command);
+					return await SingleQueryAsync(command).ConfigureAwait(false);
 				}
 				else
 				{
@@ -627,7 +625,7 @@ namespace Skuld.Services
 				cmd.Parameters.AddWithValue("@newcontent", content);
 				cmd.Parameters.AddWithValue("@guildID", guild.Id);
 				cmd.Parameters.AddWithValue("@commandName", command);
-				return await SingleQueryAsync(cmd);
+				return await SingleQueryAsync(cmd).ConfigureAwait(false);
 			}
 			return new SqlResult
 			{
@@ -644,9 +642,9 @@ namespace Skuld.Services
 				var gcmd = new MySqlCommand("INSERT IGNORE INTO `guild` (`ID`,`name`,`prefix`) VALUES ");
 				gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Bot.Configuration.Discord.Prefix}\" )";
 
-				results.Add(await SingleQueryAsync(gcmd));
-				results.Add(await InsertAdvancedSettingsAsync(false, guild));
-				results.Add(await InsertAdvancedSettingsAsync(true, guild));
+				results.Add(await SingleQueryAsync(gcmd).ConfigureAwait(false));
+				results.Add(await InsertAdvancedSettingsAsync(false, guild).ConfigureAwait(false));
+				results.Add(await InsertAdvancedSettingsAsync(true, guild).ConfigureAwait(false));
 
 				return results;
 			}
@@ -685,7 +683,7 @@ namespace Skuld.Services
 		{
 			if (CanConnect)
 			{
-				return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `guild` WHERE `ID` = {guild.Id}; DELETE FROM `guildcommandmodules` WHERE `ID` = {guild.Id}; DELETE FROM `guildfeaturemodules` WHERE `ID` = {guild.Id}; DELETE FROM `customcommand` WHERE `GuildID` = {guild.Id};"));
+				return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `guild` WHERE `ID` = {guild.Id}; DELETE FROM `guildcommandmodules` WHERE `ID` = {guild.Id}; DELETE FROM `guildfeaturemodules` WHERE `ID` = {guild.Id}; DELETE FROM `customcommand` WHERE `GuildID` = {guild.Id};").ConfigureAwait(false));
 			}
 			return new SqlResult
 			{
@@ -697,7 +695,7 @@ namespace Skuld.Services
         {
 			if (CanConnect)
 			{
-				return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `accounts` WHERE `ID` = {user.Id}; DELETE FROM `commandusage` WHERE `UserID` = {user.Id}"));
+				return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `accounts` WHERE `ID` = {user.Id}; DELETE FROM `commandusage` WHERE `UserID` = {user.Id}").ConfigureAwait(false));
 			}
 			return new SqlResult
 			{
@@ -775,7 +773,7 @@ namespace Skuld.Services
 				var cmd = new MySqlCommand("SELECT UserUsage from commandusage WHERE UserID = @userID AND Command = @command");
 				cmd.Parameters.AddWithValue("@userID", user.ID);
 				cmd.Parameters.AddWithValue("@command", command);
-				var resp = await SingleQueryAsync(cmd);
+				var resp = await SingleQueryAsync(cmd).ConfigureAwait(false);
 
 				if(resp.Successful)
 				{
@@ -787,7 +785,7 @@ namespace Skuld.Services
 						cmd.Parameters.AddWithValue("@userusg", cmdusg);
 						cmd.Parameters.AddWithValue("@userid", user.ID);
 						cmd.Parameters.AddWithValue("@command", command);
-						return await SingleQueryAsync(cmd);
+						return await SingleQueryAsync(cmd).ConfigureAwait(false);
 					}
 					else
 					{
@@ -795,7 +793,7 @@ namespace Skuld.Services
 						cmd.Parameters.AddWithValue("@userusg", 1);
 						cmd.Parameters.AddWithValue("@userid", user.ID);
 						cmd.Parameters.AddWithValue("@command", command);
-						return await SingleQueryAsync(cmd);
+						return await SingleQueryAsync(cmd).ConfigureAwait(false);
 					}
 				}
 				else
@@ -866,9 +864,9 @@ namespace Skuld.Services
 			{
 				var results = new List<SqlResult>
 				{
-					await UpdateBaseGuildAsync(guild),
-					await UpdateFeaturesAsnyc(guild.ID, guild.GuildSettings.Features),
-					await UpdateCommandModulesAsync(guild.ID, guild.GuildSettings.Modules)
+					await UpdateBaseGuildAsync(guild).ConfigureAwait(false),
+					await UpdateFeaturesAsnyc(guild.ID, guild.GuildSettings.Features).ConfigureAwait(false),
+					await UpdateCommandModulesAsync(guild.ID, guild.GuildSettings.Modules).ConfigureAwait(false)
 				};
 
 				return results;
@@ -907,7 +905,7 @@ namespace Skuld.Services
 				command.Parameters.AddWithValue("@ulc", guild.UserLeaveChannel);
 				command.Parameters.AddWithValue("@guildID", guild.ID);
 
-				return await SingleQueryAsync(command);
+				return await SingleQueryAsync(command).ConfigureAwait(false);
 			}
 			return new SqlResult
 			{
@@ -974,14 +972,14 @@ namespace Skuld.Services
 				foreach (var user in await guild.GetUsersAsync())
 				{
 					var discord = client.GetUser(user.Id);
-					var db = await GetUserAsync(user.Id);
+					var db = await GetUserAsync(user.Id).ConfigureAwait(false);
 					if (discord == null && db != null)
 					{
-						results.Add(await DropUserAsync(user));
+						results.Add(await DropUserAsync(user).ConfigureAwait(false));
 					}
 					else if (discord != null && db == null)
 					{
-						results.Add(await InsertUserAsync(discord));
+						results.Add(await InsertUserAsync(discord).ConfigureAwait(false));
 					}
 				}
 				return results;
@@ -1002,20 +1000,20 @@ namespace Skuld.Services
 				var results = new List<SqlResult>();
 				var gcmd = new MySqlCommand("INSERT IGNORE INTO `guild` (`ID`,`name`,`prefix`) VALUES ");
 				gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Bot.Configuration.Discord.Prefix}\" )";
-				results.Add(await SingleQueryAsync(gcmd));
+				results.Add(await SingleQueryAsync(gcmd).ConfigureAwait(false));
 
 				//Configures Modules
 				gcmd = new MySqlCommand("INSERT IGNORE INTO `guildcommandmodules` " +
 					"(`ID`,`Accounts`,`Actions`,`Admin`,`Fun`,`Help`,`Information`,`Search`,`Stats`) " +
 					$"VALUES ( {guild.Id} , 1, 1, 1, 1, 1, 1, 1, 1 )");
-				results.Add(await SingleQueryAsync(gcmd));
+				results.Add(await SingleQueryAsync(gcmd).ConfigureAwait(false));
 
 				//Configures Settings
 				gcmd = new MySqlCommand("INSERT IGNORE INTO `guildfeaturemodules` " + "(`ID`,`Starboard`,`Pinning`,`Experience`,`UserJoinLeave`,`UserModification`,`UserBanEvents`,`GuildModification`,`GuildChannelModification`,`GuildRoleModification`) " +
 					$"VALUES ( {guild.Id} , 0, 0, 0, 0, 0, 0, 0, 0, 0 )");
-				results.Add(await SingleQueryAsync(gcmd));
+				results.Add(await SingleQueryAsync(gcmd).ConfigureAwait(false));
 
-				results.AddRange(await CheckGuildUsersAsync(guild));
+				results.AddRange(await CheckGuildUsersAsync(guild).ConfigureAwait(false));
 
 				return results;
 			}
@@ -1035,7 +1033,7 @@ namespace Skuld.Services
 				var results = new List<SqlResult>();
 				foreach (var guild in client.Guilds)
 				{
-					results.AddRange(await CheckGuildUsersAsync(guild));
+					results.AddRange(await CheckGuildUsersAsync(guild).ConfigureAwait(false));
 				}
 				return results;
 			}

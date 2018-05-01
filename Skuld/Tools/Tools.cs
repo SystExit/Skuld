@@ -85,7 +85,8 @@ namespace Skuld.Tools
 		public static bool IsWebsite(string input)
 		{
 			if (input.Contains('.') || input.Contains("www.") || input.Contains("http://") || input.Contains("https://"))
-				return true;
+			{ return true; }
+
 			return false;
 		}
 
@@ -115,7 +116,7 @@ namespace Skuld.Tools
 					return null;
 				}
 
-				var embed = new EmbedBuilder()
+				var embed = new EmbedBuilder
 				{
 					Description = $"Here are some commands like **{command}**",
 					Color = RandomColor()

@@ -31,7 +31,9 @@ namespace Skuld.Modules
 
 				var guild = await database.GetGuildAsync(Context.Guild.Id);
 				if (guild != null)
+				{
 					prefix = guild.Prefix;
+				}
 
 				var embed = new EmbedBuilder
 				{

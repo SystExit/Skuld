@@ -17,8 +17,10 @@ namespace Skuld.APIS
 		public static HttpWebRequest CreateWebRequest(Uri uri, byte[] auth = null)
 		{
 			var returncli = (HttpWebRequest)WebRequest.Create(uri);
-			if(auth != null)
+			if (auth != null)
+			{
 				returncli.Headers.Add("Authorization", "Basic " + Convert.ToBase64String(auth));
+			}			
 			returncli.UserAgent = UAGENT;
 			returncli.AllowAutoRedirect = true;
 			returncli.KeepAlive = false;

@@ -13,7 +13,7 @@ namespace Skuld.Utilities
 		{			
 			if (database.CanConnect)
 			{
-				var cmd = await database.GetCustomCommandAsync(guild.Id, command);
+				var cmd = await database.GetCustomCommandAsync(guild.Id, command).ConfigureAwait(false);
 				if (cmd != null) return cmd;
 			}
 			return null;
@@ -21,18 +21,24 @@ namespace Skuld.Utilities
 
 		public static string GetPrefixFromCommand(SkuldGuild guild, string command, Tools.Config config)
 		{
-			if(guild != null) if (command.StartsWith(guild.Prefix)) return guild.Prefix;
+			if (guild != null) { if (command.StartsWith(guild.Prefix)) return guild.Prefix; }
+
 			if (command.StartsWith(config.Discord.Prefix)) return config.Discord.Prefix;
+
 			if (command.StartsWith(config.Discord.AltPrefix)) return config.Discord.AltPrefix;
+
 			return null;
 		}
 
 		public static string GetCommandName(string prefix, int argpos, SocketMessage message)
 		{
 			string cmdname = message.Content;
+
 			if (cmdname.StartsWith(prefix))
-				cmdname = cmdname.Remove(argpos, prefix.Length);
+			{ cmdname = cmdname.Remove(argpos, prefix.Length); }
+
 			var content = cmdname.Split(' ');
+
 			return content[0];
 		}
 

@@ -34,7 +34,8 @@ namespace Skuld.Modules
 		async Task CheckFillGifs()
 		{
 			if (actiongifs != null) return;
-			else actiongifs = await sysExClient.GetAllWeebActionGifsAsync();
+			else
+			{ actiongifs = await sysExClient.GetAllWeebActionGifsAsync(); }
 		}
 
 		WeebGif GetWeebActionFromType(GifType type)
@@ -343,7 +344,7 @@ namespace Skuld.Modules
                 }
                 else
                 {
-                    await SendAsync($"{contuser.Mention} glares at {guilduser.Mention}", gif.URL);
+                    await SendAsync($"{contuser.Mention} glares at {guilduser.Mention}", gif.URL).ConfigureAwait(false);
                 }
             }
         }

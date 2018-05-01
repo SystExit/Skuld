@@ -408,8 +408,8 @@ namespace Skuld.Modules
             if (url != "https://lmgtfy.com/")
                 await messageService.SendChannelAsync(Context.Channel, url);
             else
-            { await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Author = new EmbedAuthorBuilder() { Name = "Error with command" }, Color = new Color(255, 0, 0), Description = $"Ensure your parameters are correct, example: `{Bot.Configuration.Discord.Prefix}lmgtfy g How to use lmgtfy`" }.Build());
-                StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
+            { await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Author = new EmbedAuthorBuilder { Name = "Error with command" }, Color = new Color(255, 0, 0), Description = $"Ensure your parameters are correct, example: `{Bot.Configuration.Discord.Prefix}lmgtfy g How to use lmgtfy`" }.Build());
+                StatsdClient.DogStatsd.Increment("commands.errors",1,1, new[]{ "generic" });
             }
         }
 

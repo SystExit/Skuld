@@ -296,8 +296,8 @@ namespace Skuld.Modules
 				IsBackground = true
 			};
 			thd.Start();
-			if(message != "")
-			await messageService.SendChannelAsync(Context.Channel, message);
+			if (message != "")
+			{ await messageService.SendChannelAsync(Context.Channel, message); }
 		}
     }
 
