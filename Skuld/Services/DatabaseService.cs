@@ -848,7 +848,7 @@ namespace Skuld.Services
 					command.Parameters.AddWithValue("@ownerid", user.Id);
 					command.Parameters.AddWithValue("@title", pasta.Name);
 
-					return await SingleQueryAsync(command);
+					return await SingleQueryAsync(command).ConfigureAwait(false);
 				}
 			}
 			return new SqlResult
