@@ -61,16 +61,16 @@ namespace Skuld.Services
 				if (database.CanConnect)
 				{
 					var usr = await database.GetUserAsync(context.User.Id);
-					if (usr == null) await database.InsertUserAsync(context.User);
+					if (usr == null) await database.InsertUserAsync(context.User).ConfigureAwait(false);
 
 					if (context.Guild != null)
 					{
-						sguild = await database.GetGuildAsync(context.Guild.Id);
+						sguild = await database.GetGuildAsync(context.Guild.Id).ConfigureAwait(false);
 						if (sguild == null)
 						{
 							await database.InsertGuildAsync(context.Guild).ContinueWith(async x =>
 							{
-								sguild = await database.GetGuildAsync(context.Guild.Id);
+								sguild = await database.GetGuildAsync(context.Guild.Id).ConfigureAwait(false);
 							});
 						}
 					}

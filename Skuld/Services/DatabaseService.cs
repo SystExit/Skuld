@@ -583,7 +583,7 @@ namespace Skuld.Services
 					command.CommandText += "`guildcommandmodules` (`ID`,`Accounts`, `Actions`,`Admin`,`Fun`,`Help`,`Information`,`Search`,`Stats`) VALUES (@guildid,1,1,1,1,1,1,1,1);";
 					command.Parameters.AddWithValue("@guildid", guild.Id);
 				}
-				return await SingleQueryAsync(command);
+				return await SingleQueryAsync(command).ConfigureAwait(false);
 			}
 			return new SqlResult
 			{
@@ -683,7 +683,7 @@ namespace Skuld.Services
 		{
 			if (CanConnect)
 			{
-				return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `guild` WHERE `ID` = {guild.Id}; DELETE FROM `guildcommandmodules` WHERE `ID` = {guild.Id}; DELETE FROM `guildfeaturemodules` WHERE `ID` = {guild.Id}; DELETE FROM `customcommand` WHERE `GuildID` = {guild.Id};").ConfigureAwait(false));
+				return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `guild` WHERE `ID` = {guild.Id}; DELETE FROM `guildcommandmodules` WHERE `ID` = {guild.Id}; DELETE FROM `guildfeaturemodules` WHERE `ID` = {guild.Id}; DELETE FROM `customcommand` WHERE `GuildID` = {guild.Id};")).ConfigureAwait(false);
 			}
 			return new SqlResult
 			{
@@ -695,7 +695,7 @@ namespace Skuld.Services
         {
 			if (CanConnect)
 			{
-				return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `accounts` WHERE `ID` = {user.Id}; DELETE FROM `commandusage` WHERE `UserID` = {user.Id}").ConfigureAwait(false));
+				return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `accounts` WHERE `ID` = {user.Id}; DELETE FROM `commandusage` WHERE `UserID` = {user.Id}")).ConfigureAwait(false);
 			}
 			return new SqlResult
 			{
@@ -710,7 +710,7 @@ namespace Skuld.Services
 				var cmd = new MySqlCommand("DELETE FROM `customcommand` WHERE `GuildID` = @guildID AND `CommandName` = @commandName ;");
 				cmd.Parameters.AddWithValue("@guildID", guild.Id);
 				cmd.Parameters.AddWithValue("@commandName", command);
-				return await SingleQueryAsync(cmd);
+				return await SingleQueryAsync(cmd).ConfigureAwait(false);
 			}
 			return new SqlResult
 			{
@@ -724,7 +724,7 @@ namespace Skuld.Services
 			{
 				var cmd = new MySqlCommand("DELETE FROM `pasta` WHERE pastaname = @pastaname;");
 				cmd.Parameters.AddWithValue("@pastaname", title);
-				return await SingleQueryAsync(cmd);
+				return await SingleQueryAsync(cmd).ConfigureAwait(false);
 			}
 			return new SqlResult
 			{

@@ -43,7 +43,7 @@ namespace Skuld.Services
 
 				Parallel.Invoke(() => SendDataToDataDog());
 
-				//await UpdateStats();
+				await UpdateStats();
 
 				await Task.Delay(-1).ConfigureAwait(false);
 			}
@@ -101,7 +101,7 @@ namespace Skuld.Services
 					ShardCount = client.Shards.Count,
 					ShardID = x
 				});
-				await PublishStatsAsync(x);
+				await PublishStatsAsync(x).ConfigureAwait(false);
 			}
 
 			var webclient = (HttpWebRequest)WebRequest.Create(new Uri($"https://skuld.systemexit.co.uk/tools/updateStats.php"));

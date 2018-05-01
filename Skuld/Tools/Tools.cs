@@ -143,7 +143,9 @@ namespace Skuld.Tools
 			string summ = "Summary: " + cmd.Summary;
 			int totalparams = 0;
 			foreach (var com in Commands)
+			{
 				totalparams += com.Command.Parameters.Count;
+			}
 
 			if (totalparams > 0)
 			{
