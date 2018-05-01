@@ -3,6 +3,9 @@ using System.IO;
 using System.Text;
 using System;
 using System.Resources;
+using Discord.Commands;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace Skuld.Tools
 {
@@ -79,6 +82,14 @@ namespace Skuld.Tools
                 return s;
         }
 
+		public static bool IsWebsite(string input)
+		{
+			if (input.Contains('.') || input.Contains("www.") || input.Contains("http://") || input.Contains("https://"))
+			{ return true; }
+
+			return false;
+		}
+
         public static ConsoleColor ColorBasedOnSeverity(LogSeverity sev)
         {
             if (sev == LogSeverity.Critical)
@@ -93,5 +104,68 @@ namespace Skuld.Tools
                 return ConsoleColor.Cyan;
             return ConsoleColor.White;
         }
-    }
+
+		public static Embed GetCommandHelp(CommandService commandService, ICommandContext context, string command)
+		{
+			if (command.ToLower() != "pasta")
+			{
+				var result = commandService.Search(context, command);
+
+				if (!result.IsSuccess)
+				{
+					return null;
+				}
+
+				var embed = new EmbedBuilder
+				{
+					Description = $"Here are some commands like **{command}**",
+					Color = RandomColor()
+				};
+
+				var cmd = result.Commands.FirstOrDefault();
+
+				var summ = GetSummaryAsync(cmd.Command, result.Commands, command);
+
+				embed.AddField(x =>
+				{
+					x.Name = string.Join(", ", cmd.Command.Aliases);
+					x.Value = summ;
+					x.IsInline = false;
+				});
+
+				return embed.Build();
+			}
+			return null;
+		}
+
+		public static string GetSummaryAsync(CommandInfo cmd, IReadOnlyList<CommandMatch> Commands, string comm)
+		{
+			string summ = "Summary: " + cmd.Summary;
+			int totalparams = 0;
+			foreach (var com in Commands)
+			{
+				totalparams += com.Command.Parameters.Count;
+			}
+
+			if (totalparams > 0)
+			{
+				summ += "\nParameters:\n";
+
+				foreach (var param in cmd.Parameters)
+				{
+					if (param.IsOptional)
+					{
+						summ += $"**[Optional]** {param.Name} - {param.Type.Name}\n";
+					}
+					else
+					{
+						summ += $"**[Required]** {param.Name} - {param.Type.Name}\n";
+					}
+				}
+
+				return summ;
+			}
+			return summ + "\nParameters: None";
+		}
+	}
 }

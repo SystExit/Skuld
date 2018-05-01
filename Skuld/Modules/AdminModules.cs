@@ -8,7 +8,6 @@ using Discord;
 using MySql.Data.MySqlClient;
 using Discord.Addons.Interactive;
 using StatsdClient;
-using Discord.WebSocket;
 using Skuld.Services;
 
 namespace Skuld.Modules
@@ -29,11 +28,11 @@ namespace Skuld.Modules
 			messageService = message;
 		}
 
-        [Command("say", RunMode = RunMode.Async), Summary("Say something to a channel")]
+        [Command("say"), Summary("Say something to a channel")]
         public async Task Say(IMessageChannel channel, [Remainder]string message) =>
             await messageService.SendChannelAsync(channel, message);
 
-        [Command("roleids", RunMode = RunMode.Async), Summary("Gets all role ids")]
+        [Command("roleids"), Summary("Gets all role ids")]
         public async Task GetRoleIds()
         {
             string lines = "";
@@ -45,7 +44,7 @@ namespace Skuld.Modules
             
             if (lines.Length > 2000)
             {
-                var paddedlines = lines.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+                var paddedlines = lines.Split(new [] { Environment.NewLine }, StringSplitOptions.None);
                 var pagesold = new List<string>();
                 int prev = 0;
                 for (int x = 1; x <= lines.Length; x++)
@@ -70,7 +69,7 @@ namespace Skuld.Modules
 				await messageService.SendChannelAsync(Context.Channel, "```cs\n" + lines + "```");
         }
 
-        [Command("mute", RunMode = RunMode.Async), Summary("Mutes a user")]
+        [Command("mute"), Summary("Mutes a user")]
 		[RequireBotAndUserPermission(GuildPermission.ManageRoles)]
         public async Task Mute(IUser usertomute)
         {
@@ -78,63 +77,72 @@ namespace Skuld.Modules
             var roles = guild.Roles;
             var user = usertomute as IGuildUser;
             var channels = guild.TextChannels;
-            var cmd = new MySqlCommand("SELECT MutedRole from guild WHERE ID = @guildid");
-            cmd.Parameters.AddWithValue("@guildid", guild.Id);
-            var roleid = await database.GetSingleAsync(cmd);
-            if (String.IsNullOrEmpty(roleid))
+			var sguild = await database.GetGuildAsync(guild.Id);
+
+            if (sguild.MutedRole == 0)
             {
                 var role = await guild.CreateRoleAsync("Muted", GuildPermissions.None);
                 foreach (var chan in channels)
                 {
                     await chan.AddPermissionOverwriteAsync(role, OverwritePermissions.DenyAll(chan));
                 }
-                cmd = new MySqlCommand("UPDATE guild SET MutedRole = @roleid WHERE ID = @guildid");
-                cmd.Parameters.AddWithValue("@guildid", guild.Id);
-                cmd.Parameters.AddWithValue("@roleid", role.Id);
-                await database.NonQueryAsync(cmd);
-                await user.AddRoleAsync(role);
-                await messageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} just muted **{usertomute.Username}**");
+				sguild.MutedRole = role.Id;
+				var resp = await database.UpdateGuildAsync(sguild);
+				if(resp.All(x=>x.Successful))
+				{
+					await user.AddRoleAsync(role);
+					await messageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} just muted **{usertomute.Username}**");
+				}
+				else
+				{
+					await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+					string msg = "";
+					foreach (var res in resp)
+					{
+						msg += res.Exception + "\n";
+					}
+					await logger.AddToLogsAsync(new Models.LogMessage("MuteCMD", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
+				}
             }
             else
             {
-                var role = guild.GetRole(Convert.ToUInt64(roleid));
+                var role = guild.GetRole(sguild.MutedRole);
                 await user.AddRoleAsync(role);
                 await messageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} just muted **{usertomute.Username}**");
             }
         }
 
-        [Command("unmute", RunMode = RunMode.Async), Summary("Unmutes a user")]
+        [Command("unmute"), Summary("Unmutes a user")]
 		[RequireBotAndUserPermission(GuildPermission.ManageRoles)]
         public async Task Unmute(IUser usertounmute)
         {
-            var guild = Context.Guild;
-            var roles = guild.Roles;
-            var user = usertounmute as IGuildUser;
-            var channels = guild.TextChannels;
-            var cmd = new MySqlCommand("SELECT MutedRole from guild WHERE ID = @guildid");
-            cmd.Parameters.AddWithValue("@guildid", guild.Id);
-            var roleid = await database.GetSingleAsync(cmd);
-            if (String.IsNullOrEmpty(roleid))
-            {
-                await messageService.SendChannelAsync(Context.Channel, "Role doesn't exist, so I cannot unmute");
-                StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
-            }
-            else
-            {
-                var role = guild.GetRole(Convert.ToUInt64(roleid));
-                await user.RemoveRoleAsync(role);
-                await messageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} just unmuted **{usertounmute.Username}**");
-            }
-        }
+			var guild = Context.Guild;
+			var roles = guild.Roles;
+			var user = usertounmute as IGuildUser;
+			var channels = guild.TextChannels;
+			var sguild = await database.GetGuildAsync(guild.Id);
 
-        [Command("prune", RunMode = RunMode.Async), Summary("Cleans set amount of messages.")]
+			if (sguild.MutedRole == 0)
+			{
+				await messageService.SendChannelAsync(Context.Channel, "Role doesn't exist, so I cannot unmute");
+				DogStatsd.Increment("commands.errors",1,1, new []{ "generic" });
+			}
+			else
+			{
+				var role = guild.GetRole(sguild.MutedRole);
+				await user.RemoveRoleAsync(role);
+				await messageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} just unmuted **{usertounmute.Username}**");
+			}
+		}
+
+        [Command("prune"), Summary("Cleans set amount of messages.")]
 		[RequireBotAndUserPermission(GuildPermission.ManageMessages)]
         public async Task Prune(int amount, IUser user = null)
 		{
 			if (amount < 0)
 			{
 				await messageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} Your amount `{amount}` is under 0.");
-				StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "unm-precon" });
+				StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new [] { "unm-precon" });
 				return;
 			}
 			await Context.Message.DeleteAsync();
@@ -162,79 +170,141 @@ namespace Skuld.Modules
 			}
         }
 
-		[Command("kick", RunMode = RunMode.Async), Summary("Kicks a user"), Alias("dab", "dabon")]
+		[Command("kick"), Summary("Kicks a user"), Alias("dab", "dabon")]
 		[RequireBotAndUserPermission(GuildPermission.KickMembers)]
 		public async Task Kick(IGuildUser user, [Remainder]string reason = null)
 		{
-			var msg = $"You have been kicked from **{Context.Guild.Name}** by: {Context.User.Username}#{Context.User.Discriminator}";
-			if (reason == null)
+			try
 			{
-				try
+				var msg = $"You have been kicked from **{Context.Guild.Name}** by: {Context.User.Username}#{Context.User.Discriminator}";
+				var guild = Context.Guild as IGuild;
+				if (reason == null)
 				{
-					var dmchan = await user.GetOrCreateDMChannelAsync();
-					await dmchan.SendMessageAsync(msg);
-				}
-				catch
-				{ /*Can be Ignored lol*/ }
-				await user.KickAsync($"Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}").ContinueWith(async x =>
-				{
-					if (x.IsCompleted)
+					await user.KickAsync($"Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+					if (await guild.GetUserAsync(user.Id) == null)
 					{
-						await messageService.SendChannelAsync(Context.Channel, $"Successfully kicked: `{user.Username}`\tResponsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+						await messageService.SendChannelAsync(Context.Channel, $"Successfully kicked: `{user.Username}`\tResponsible Moderator:  {Context.User.Username}#{Context.User.Discriminator}");
+						try
+						{
+							var dmchan = await user.GetOrCreateDMChannelAsync();
+							await dmchan.SendMessageAsync(msg);
+						}
+						catch
+						{ /*Can be Ignored lol*/ }
 					}
-				});
+				}
+				else
+				{
+					msg += $" with reason:```\n{reason}```";
+					await user.KickAsync(reason + $" Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+					if (await guild.GetUserAsync(user.Id) == null)
+					{
+						await messageService.SendChannelAsync(Context.Channel, $"Successfully kicked: `{user}`\tResponsible Moderator:  {Context.User.Username}#{Context.User.Discriminator}\nReason: " + reason);
+						try
+						{
+							var dmchan = await user.GetOrCreateDMChannelAsync();
+							await dmchan.SendMessageAsync(msg);
+						}
+						catch
+						{ /*Can be Ignored lol*/ }
+					}
+				}
 			}
-			else
+			catch
 			{
-				msg += $" with reason:```\n{reason}```";
-				try
-				{
-					var dmchan = await user.GetOrCreateDMChannelAsync();
-					await dmchan.SendMessageAsync(msg);
-				}
-				catch
-				{ /*Can be Ignored lol*/ }
-				await user.KickAsync(reason+$" Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}").ContinueWith(async x =>
-				{
-					if (x.IsCompleted)
-					{
-						await messageService.SendChannelAsync(Context.Channel, $"Successfully kicked: `{user}`\tResponsible Moderator: {Context.User}\nReason: " + reason);
-					}
-				});
+				await messageService.SendChannelAsync(Context.Channel, $"Couldn't kick {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?");
 			}
 		}
-
-		[Command("ban", RunMode = RunMode.Async), Summary("Bans a user"), Alias("naenae")]
+		
+		[Command("ban"), Summary("Bans a user"), Alias("naenae")]
+		[RequireBotAndUserPermission(GuildPermission.BanMembers)]
+		public async Task Ban(IGuildUser user, [Remainder]string reason = null)
+		{
+			try
+			{
+				var msg = $"You have been banned from **{Context.Guild}** by: {Context.User.Username}#{Context.User.Discriminator}";
+				var guild = Context.Guild as IGuild;
+				if (reason == null)
+				{
+					await Context.Guild.AddBanAsync(user, 7, $"Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+					if (await guild.GetUserAsync(user.Id) == null)
+					{
+						await messageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+						try
+						{
+							var dmchan = await user.GetOrCreateDMChannelAsync();
+							await dmchan.SendMessageAsync(msg);
+						}
+						catch { }
+					}
+				}
+				else
+				{
+					msg += $" with reason:```\n{reason}```";
+					await Context.Guild.AddBanAsync(user, 7, reason + $" Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+					if (await guild.GetUserAsync(user.Id) == null)
+					{
+						await messageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}\nReason given: {reason}");
+						try
+						{
+							var dmchan = await user.GetOrCreateDMChannelAsync();
+							await dmchan.SendMessageAsync(msg);
+						}
+						catch { }
+					}
+				}
+			}
+			catch
+			{
+				await messageService.SendChannelAsync(Context.Channel, $"Couldn't ban {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?");
+			}
+		}
+		
+		[Command("ban"), Summary("Bans a user"), Alias("naenae")]
 		[RequireBotAndUserPermission(GuildPermission.BanMembers)]
 		public async Task Ban(IGuildUser user, int daystoprune = 7, [Remainder]string reason = null)
 		{
-			var msg = $"You have been banned from **{Context.Guild}** by: {Context.User.Username}#{Context.User.Discriminator}";
-			if (reason == null)
+			try
 			{
-				try
+				var msg = $"You have been banned from **{Context.Guild}** by: {Context.User.Username}#{Context.User.Discriminator}";
+				var guild = Context.Guild as IGuild;
+				if (reason == null)
 				{
-					var dmchan = await user.GetOrCreateDMChannelAsync();
-					await dmchan.SendMessageAsync(msg);
+					await Context.Guild.AddBanAsync(user, daystoprune, $"Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+					if (await guild.GetUserAsync(user.Id) == null)
+					{
+						await messageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+						try
+						{
+							var dmchan = await user.GetOrCreateDMChannelAsync();
+							await dmchan.SendMessageAsync(msg);
+						}
+						catch { }
+					}
 				}
-				catch { }
-				await Context.Guild.AddBanAsync(user, daystoprune, $"Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
-				await messageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+				else
+				{
+					msg += $" with reason:```\n{reason}```";
+					await Context.Guild.AddBanAsync(user, daystoprune, reason + $" Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+					if (await guild.GetUserAsync(user.Id) == null)
+					{
+						await messageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}\nReason given: {reason}");
+						try
+						{
+							var dmchan = await user.GetOrCreateDMChannelAsync();
+							await dmchan.SendMessageAsync(msg);
+						}
+						catch { }
+					}
+				}
 			}
-			else
+			catch
 			{
-				msg += $" with reason:```\n{reason}```";
-				try
-				{
-					var dmchan = await user.GetOrCreateDMChannelAsync();
-					await dmchan.SendMessageAsync(msg);
-				}
-				catch { }
-				await Context.Guild.AddBanAsync(user, daystoprune, reason + $" Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
-				await messageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator:{Context.User.Username}#{Context.User.Discriminator}\nReason given: {reason}");
+				await messageService.SendChannelAsync(Context.Channel, $"Couldn't ban {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?");
 			}
 		}
 
-        [Command("hackban", RunMode = RunMode.Async), Summary("Hackbans a set of userids Must be in this format hackban [id1],[id2],[id3]")]
+		[Command("hackban"), Summary("Hackbans a set of userids Must be in this format hackban [id1],[id2],[id3]")]
 		[RequireBotAndUserPermission(GuildPermission.BanMembers)]
         public async Task HackBan(params string[] ids)
         {
@@ -248,11 +318,11 @@ namespace Skuld.Modules
 			else
 			{
 				await messageService.SendChannelAsync(Context.Channel, $"Couldn't parse list of ID's.");
-				DogStatsd.Increment("commands.errors",1,1,new string[] { "parse-fail" });
+				DogStatsd.Increment("commands.errors",1,1,new [] { "parse-fail" });
 			}
 		}
 		
-		[Command("softban", RunMode = RunMode.Async), Summary("Softbans a user")]
+		[Command("softban"), Summary("Softbans a user")]
 		[RequireBotAndUserPermission(GuildPermission.BanMembers)]
 		public async Task SoftBan(IUser user, [Remainder]string reason = null)
 		{
@@ -272,203 +342,230 @@ namespace Skuld.Modules
 			}
 		}
 
-		[Command("setjrole", RunMode = RunMode.Async), Summary("Allows a role to be auto assigned on userjoin"), RequireDatabase]
+		[Command("setjrole"), Summary("Allows a role to be auto assigned on userjoin"), RequireDatabase]
 		public async Task AutoRole(IRole role = null)
 		{
+			var guild = Context.Guild;
+			var sguild = await database.GetGuildAsync(guild.Id);
 			if (role == null)
 			{
-				var guild = Context.Guild;
-				var cmd = new MySqlCommand("select autojoinrole from guild where id = @guildid");
-				cmd.Parameters.AddWithValue("@guildid", guild.Id);
-				var reader = await database.GetSingleAsync(cmd);
-				if (reader != null)
+				if(sguild.AutoJoinRole != 0)
 				{
-					cmd = new MySqlCommand("UPDATE guild SET autojoinrole = NULL WHERE ID = @guildid");
-					cmd.Parameters.AddWithValue("@guildid", guild.Id);
-					await database.NonQueryAsync(cmd).ContinueWith(async x =>
+					sguild.AutoJoinRole = 0;
+					var resp = await database.UpdateGuildAsync(sguild);
+					if (resp.All(x=>x.Successful))
 					{
 						await messageService.SendChannelAsync(Context.Channel, $"Successfully removed the member join role");
-					});
+					}
+					else
+					{
+						string msg = "";
+						foreach (var res in resp)
+							msg += res.Exception + "\n";
+						await logger.AddToLogsAsync(new Models.LogMessage("AJClCmd", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
+					}
 				}
 			}
 			else
 			{
-				var guild = Context.Guild;
-				var cmd = new MySqlCommand("UPDATE guild SET autojoinrole = @roleid WHERE ID = @guildid");
-				cmd.Parameters.AddWithValue("@guildid", guild.Id);
-				cmd.Parameters.AddWithValue("@roleid", role.Id);
-				await database.NonQueryAsync(cmd).ContinueWith(async x =>
+				sguild.AutoJoinRole = role.Id;
+				var resp = await database.UpdateGuildAsync(sguild);
+				if (resp.All(x=>x.Successful))
 				{
-					cmd = new MySqlCommand("select autojoinrole from guild where id = @guildid");
-					cmd.Parameters.AddWithValue("@guildid", guild.Id);
-					var reader = await database.GetSingleAsync(cmd);
-					if (reader != null)
-					{ await messageService.SendChannelAsync(Context.Channel, $"Successfully set **{role.Name}** as the member join role"); }
-				});
+					await messageService.SendChannelAsync(Context.Channel, $"Successfully set **{role.Name}** as the member join role");
+				}
+				else
+				{
+					string msg = "";
+					foreach (var res in resp)
+						msg += res.Exception + "\n";
+					await logger.AddToLogsAsync(new Models.LogMessage("AJClCmd", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
+				}
 			}
         }
 
-        [Command("autorole", RunMode = RunMode.Async), Summary("Get's guilds current autorole"), RequireDatabase]
+        [Command("autorole"), Summary("Get's guilds current autorole"), RequireDatabase]
         public async Task AutoRole()
         {
-            var guild = Context.Guild;
-            var cmd = new MySqlCommand("select autojoinrole from guild where id = @guildid");
-            cmd.Parameters.AddWithValue("@guildid", guild.Id);
-            var reader = await database.GetSingleAsync(cmd);
-            if (!string.IsNullOrEmpty(reader))
-            { await messageService.SendChannelAsync(Context.Channel, $"**{guild.Name}**'s current auto role is `{guild.GetRole(Convert.ToUInt64(reader)).Name}`"); }
-            else
-            { await messageService.SendChannelAsync(Context.Channel, $"Currently, **{guild.Name}** has no auto role."); }
-        }
+			var sguild = await database.GetGuildAsync(Context.Guild.Id);
 
-        [Command("setprefix", RunMode = RunMode.Async), Summary("Sets the prefix, or resets on empty prefix"), RequireDatabase]
-		[RequireUserPermission(GuildPermission.Administrator)]
-        public async Task SetPrefix(string prefix = null)
-        {
-			if(prefix!=null)
+			if(sguild.AutoJoinRole == 0)
 			{
-				var cmd = new MySqlCommand("select prefix from guild where id = @guildid");
-				cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-				string oldprefix = await database.GetSingleAsync(cmd);
-
-				cmd = new MySqlCommand("UPDATE guild SET prefix = @prefix WHERE ID = @guildid");
-				cmd.Parameters.AddWithValue("@prefix", prefix);
-				cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-				await database.NonQueryAsync(cmd).ContinueWith(async x =>
-				{
-					cmd = new MySqlCommand("select prefix from guild where id = @guildid");
-					cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-					var result = await database.GetSingleAsync(cmd);
-					if (result != oldprefix)
-					{ await messageService.SendChannelAsync(Context.Channel, $"Successfully set `{prefix}` as the Guild's prefix"); }
-					else
-					{ await messageService.SendChannelAsync(Context.Channel, $":thinking: It didn't change. Probably because it is the same as the current prefix."); }
-				});
+				await messageService.SendChannelAsync(Context.Channel, $"Currently, **{Context.Guild.Name}** has no auto role.");
 			}
 			else
 			{
-				var cmd = new MySqlCommand("select prefix from guild where id = @guildid");
-				cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-				string oldprefix = await database.GetSingleAsync(cmd);
+				await messageService.SendChannelAsync(Context.Channel, $"**{Context.Guild.Name}**'s current auto role is `{Context.Guild.GetRole(Convert.ToUInt64(sguild.AutoJoinRole)).Name}`");
+			}
+        }
 
-				cmd = new MySqlCommand("UPDATE guild SET prefix = @prefix WHERE ID = @guildid");
-				cmd.Parameters.AddWithValue("@prefix", Bot.Configuration.Prefix);
-				cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
+        [Command("setprefix"), Summary("Sets the prefix, or resets on empty prefix"), RequireDatabase]
+		[RequireUserPermission(GuildPermission.Administrator)]
+        public async Task SetPrefix(string prefix = null)
+        {
+			var sguild = await database.GetGuildAsync(Context.Guild.Id);
 
-				await database.NonQueryAsync(cmd).ContinueWith(async x =>
+			if(prefix!=null)
+			{
+				var oldprefix = sguild.Prefix;
+				sguild.Prefix = prefix;
+				var resp = await database.UpdateGuildAsync(sguild);
+				sguild = await database.GetGuildAsync(sguild.ID);
+
+				if(resp.All(x=>x.Successful))
 				{
-					cmd = new MySqlCommand("select prefix from guild where id = @guildid");
-					cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-					var result = await database.GetSingleAsync(cmd);
-					if (result != oldprefix)
-					{ await messageService.SendChannelAsync(Context.Channel, $"Successfully reset the Guild's prefix"); }
-				});
+					if (sguild.Prefix != oldprefix)
+					{
+						await messageService.SendChannelAsync(Context.Channel, $"Successfully set `{prefix}` as the Guild's prefix");
+					}
+					else
+					{
+						await messageService.SendChannelAsync(Context.Channel, $":thinking: It didn't change. Probably because it is the same as the current prefix.");
+					}
+				}
+				else
+				{
+					await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+				}
+			}
+			else
+			{
+				sguild.Prefix = Bot.Configuration.Discord.Prefix;
+
+				var resp = await database.UpdateGuildAsync(sguild);
+
+				if(resp.All(x=>x.Successful))
+				{
+					await messageService.SendChannelAsync(Context.Channel, $"Successfully reset the Guild's prefix");
+				}
+				else
+				{
+					await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+				}
 			}
         }
 
         //Set Channel
-        [Command("setwelcome", RunMode = RunMode.Async), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
+        [Command("setwelcome"), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
 		[RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetWelcome([Remainder]string welcome)
         {
-            var cmd = new MySqlCommand("UPDATE guild SET UserJoinChan = @chanid WHERE ID = @guildid");
-            cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-            cmd.Parameters.AddWithValue("@chanid", Context.Channel.Id);
-            await database.NonQueryAsync(cmd);
-            cmd = new MySqlCommand("UPDATE guild SET joinmessage = @mesg WHERE ID = @guildid");
-            cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-            cmd.Parameters.AddWithValue("@mesg", welcome);
-            await database.NonQueryAsync(cmd).ContinueWith(async x =>
-            {
-                await messageService.SendChannelAsync(Context.Channel, $"Set Welcome message!");
-            });
+			var sguild = await database.GetGuildAsync(Context.Guild.Id);
+			sguild.UserJoinChannel = Context.Channel.Id;
+			sguild.JoinMessage = welcome;
+			var resp = await database.UpdateGuildAsync(sguild);
+			if(resp.All(x=>x.Successful))
+			{
+				await messageService.SendChannelAsync(Context.Channel, $"Set Welcome message!");
+			}
+			else
+			{
+				await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+			}
         }
 
         //Current Channel
-        [Command("setwelcome", RunMode = RunMode.Async), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
+        [Command("setwelcome"), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
 		[RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetWelcome(ITextChannel channel, [Remainder]string welcome)
         {
-            var cmd = new MySqlCommand("UPDATE guild SET UserJoinChan = @chanid WHERE ID = @guildid");
-            cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-            cmd.Parameters.AddWithValue("@chanid", channel.Id);
-            await database.NonQueryAsync(cmd);
-            cmd = new MySqlCommand("UPDATE guild SET joinmessage = @mesg WHERE ID = @guildid");
-            cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-            cmd.Parameters.AddWithValue("@mesg", welcome);
-            await database.NonQueryAsync(cmd).ContinueWith(async x =>
-            {
-                await messageService.SendChannelAsync(Context.Channel, $"Set Welcome message!");
-            });
-        }
+			var sguild = await database.GetGuildAsync(Context.Guild.Id);
+			sguild.UserJoinChannel = channel.Id;
+			sguild.JoinMessage = welcome;
+			var resp = await database.UpdateGuildAsync(sguild);
+			if (resp.All(x=>x.Successful))
+			{
+				await messageService.SendChannelAsync(Context.Channel, $"Set Welcome message!");
+			}
+			else
+			{
+				await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+			}
+		}
 
         //Deletes
-        [Command("unsetwelcome", RunMode = RunMode.Async), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
+        [Command("unsetwelcome"), Summary("Clears the welcome message"), Alias("clearwelcome"), RequireDatabase]
 		[RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetWelcome()
         {
-            var cmd = new MySqlCommand("UPDATE guild SET joinmessage = NULL WHERE ID = @guildid");
-            cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-            await database.NonQueryAsync(cmd).ContinueWith(async x =>
-            {
-                await messageService.SendChannelAsync(Context.Channel, $"Removed Welcome message!");
-            });            
-        }
+			var sguild = await database.GetGuildAsync(Context.Guild.Id);
+			sguild.UserJoinChannel = 0;
+			sguild.JoinMessage = "";
+			var resp = await database.UpdateGuildAsync(sguild);
+			if (resp.All(x=>x.Successful))
+			{
+				await messageService.SendChannelAsync(Context.Channel, $"Cleared Welcome message!");
+			}
+			else
+			{
+				await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+			}
+		}
 
         //Set Channel
-        [Command("setleave", RunMode = RunMode.Async), Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
+        [Command("setleave"), RequireDatabase]
+		[Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
 		[RequireUserPermission(GuildPermission.Administrator)]
-        public async Task SetLeave(ITextChannel channel, [Remainder]string leave)
-        {
-            var cmd = new MySqlCommand("UPDATE guild SET UserLeaveChan = @chanid WHERE ID = @guildid");
-            cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-            cmd.Parameters.AddWithValue("@chanid", channel.Id);
-            await database.NonQueryAsync(cmd);
-            cmd = new MySqlCommand("UPDATE guild SET leavemessage = @mesg WHERE ID = @guildid");
-            cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-            cmd.Parameters.AddWithValue("@mesg", leave);
-            await database.NonQueryAsync(cmd).ContinueWith(async x =>
-            {
-                await messageService.SendChannelAsync(Context.Channel, $"Set Leave message!");
-            });
-        }
+		public async Task SetLeave(ITextChannel channel, [Remainder]string leave)
+		{
+			var sguild = await database.GetGuildAsync(Context.Guild.Id);
+			sguild.UserLeaveChannel = channel.Id;
+			sguild.LeaveMessage = leave;
+			var resp = await database.UpdateGuildAsync(sguild);
+			if (resp.All(x=>x.Successful))
+			{
+				await messageService.SendChannelAsync(Context.Channel, $"Set Leave message!");
+			}
+			else
+			{
+				await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+			}
+		}
 
         //Current Channel
-        [Command("setleave", RunMode = RunMode.Async), Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
+        [Command("setleave"), Alias("clearleave"), RequireDatabase]
+		[Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
 		[RequireUserPermission(GuildPermission.Administrator)]
-        public async Task SetLeave([Remainder]string leave)
-        {
-            var cmd = new MySqlCommand("UPDATE guild SET UserLeaveChan = @chanid WHERE ID = @guildid");
-            cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-            cmd.Parameters.AddWithValue("@chanid", Context.Channel.Id);
-            await database.NonQueryAsync(cmd);
-            cmd = new MySqlCommand("UPDATE guild SET leavemessage = @mesg WHERE ID = @guildid");
-            cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-            cmd.Parameters.AddWithValue("@mesg", leave);
-            await database.NonQueryAsync(cmd).ContinueWith(async x =>
-            {
-                await messageService.SendChannelAsync(Context.Channel, $"Set Leave message!");
-            });
-        }
+		public async Task SetLeave([Remainder]string leave)
+		{
+			var sguild = await database.GetGuildAsync(Context.Guild.Id);
+			sguild.UserLeaveChannel = Context.Channel.Id;
+			sguild.LeaveMessage = leave;
+			var resp = await database.UpdateGuildAsync(sguild);
+			if (resp.All(x=>x.Successful))
+			{
+				await messageService.SendChannelAsync(Context.Channel, $"Cleared Leave message!");
+			}
+			else
+			{
+				await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+			}
+		}
 
         //Deletes
-        [Command("unsetleave", RunMode = RunMode.Async), Summary("Clears the leave message"), RequireDatabase]
+        [Command("unsetleave"), Summary("Clears the leave message"), RequireDatabase]
 		[RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetLeave()
-        {
-            var cmd = new MySqlCommand("UPDATE guild SET leavemessage = NULL WHERE ID = @guildid");
-            cmd.Parameters.AddWithValue("@guildid", Context.Guild.Id);
-            await database.NonQueryAsync(cmd).ContinueWith(async x =>
-            {
-                await messageService.SendChannelAsync(Context.Channel, $"Removed Leave message!");
-            });
-        }
+		{
+			var sguild = await database.GetGuildAsync(Context.Guild.Id);
+			sguild.UserLeaveChannel = 0;
+			sguild.LeaveMessage = "";
+			var resp = await database.UpdateGuildAsync(sguild);
+			if (resp.All(x=>x.Successful))
+			{
+				await messageService.SendChannelAsync(Context.Channel, $"Set Leave message!");
+			}
+			else
+			{
+				await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+			}
+		}
 
-		[Command("addcommand", RunMode = RunMode.Async), Summary("Adds a custom command"), RequireDatabase]
+		[Command("addcommand"), Summary("Adds a custom command"), RequireDatabase]
 		[RequireUserPermission(GuildPermission.Administrator)]
 		public async Task AddCustomCommand(string name, [Remainder]string content)
 		{
-			if(name.Contains('.')||name.Contains("www.")||name.Contains("http://")||name.Contains("https://"))
+			if(Tools.Tools.IsWebsite(name))
 			{
 				await messageService.SendChannelAsync(Context.Channel, "Commands can't be a url/website", 5);
 				return;
@@ -492,36 +589,46 @@ namespace Skuld.Modules
 					{
 						await messageService.SendChannelAsync(Context.Channel, $"Custom command named `{custcmd.CommandName}` already exists, overwrite with new content? Y/N", 5);
 						var msg = await NextMessageAsync(true, true, TimeSpan.FromSeconds(5));
-						if(msg!=null)
+						if (msg != null)
 						{
 							if (msg.Content.ToLower() == "y")
 							{
-								var cmd = new MySqlCommand("UPDATE `customcommand` SET `Content` = @newcontent WHERE `GuildID` = @guildID AND `CommandName` = @commandName ;");
-								cmd.Parameters.AddWithValue("@newcontent", content);
-								cmd.Parameters.AddWithValue("@guildID", Context.Guild.Id);
-								cmd.Parameters.AddWithValue("@commandName", name);
-								await database.NonQueryAsync(cmd);
-								await messageService.SendChannelAsync(Context.Channel, $"Updated the command.");
+								var resp = await database.UpdateCustomCommand(Context.Guild, name, content);
+
+								if (resp.Successful)
+								{
+									await messageService.SendChannelAsync(Context.Channel, $"Updated the command.");
+								}
+								else
+								{
+									await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+								}
 							}
 						}
 						else
+						{
 							await messageService.SendChannelAsync(Context.Channel, "Reply timed out, not updating.", 5);
+						}
 						return;
 					}
 					else
 					{
-						var cmd = new MySqlCommand("INSERT INTO `customcommand` ( `Content`, `GuildID`, `CommandName` ) VALUES ( @newcontent , @guildID , @commandName ) ;");
-						cmd.Parameters.AddWithValue("@newcontent", content);
-						cmd.Parameters.AddWithValue("@guildID", Context.Guild.Id);
-						cmd.Parameters.AddWithValue("@commandName", name);
-						await database.NonQueryAsync(cmd);
-						await messageService.SendChannelAsync(Context.Channel, $"Added the command.");
+						var resp = await database.InsertCustomCommand(Context.Guild, name, content);
+
+						if (resp.Successful)
+						{
+							await messageService.SendChannelAsync(Context.Channel, $"Added the command.");
+						}
+						else
+						{
+							await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+						}
 					}
 				}				
 			}
 		}
 
-		[Command("deletecommand", RunMode = RunMode.Async), Summary("Deletes a custom command"), RequireDatabase]
+		[Command("deletecommand"), Summary("Deletes a custom command"), RequireDatabase]
 		[RequireUserPermission(GuildPermission.Administrator)]
 		public async Task DeleteCustomCommand(string name)
 		{
@@ -531,16 +638,21 @@ namespace Skuld.Modules
 				return;
 			}
 			else
-			{				
-				var cmd = new MySqlCommand("DELETE FROM `customcommand` WHERE `GuildID` = @guildID AND `CommandName` = @commandName ;");
-				cmd.Parameters.AddWithValue("@guildID", Context.Guild.Id);
-				cmd.Parameters.AddWithValue("@commandName", name);
-				await database.NonQueryAsync(cmd);
-				await messageService.SendChannelAsync(Context.Channel, $"Deleted the command.");							
+			{
+				await messageService.SendChannelAsync(Context.Channel, $"Are you sure? Y/N", 5);
+				var msg = await NextMessageAsync(true, true, TimeSpan.FromSeconds(5));
+				if (msg != null)
+				{
+					if (msg.Content.ToLower() == "y")
+					{
+						await database.DropCustomCommand(Context.Guild, name);
+						await messageService.SendChannelAsync(Context.Channel, $"Deleted the command.");
+					}
+				}							
 			}
 		}
 
-        [Command("guildfeature", RunMode = RunMode.Async), Summary("Configures guild features"), RequireDatabase]
+        [Command("guildfeature"), Summary("Configures guild features"), RequireDatabase]
 		[RequireUserPermission(GuildPermission.Administrator)]
         public async Task ConfigureGuildFeatures(string module, int value)
         {
@@ -553,19 +665,37 @@ namespace Skuld.Modules
                 module = module.ToLowerInvariant();
                 var settings = new Dictionary<string, string>()
                 {
-                    {"pinning","pinning" },
-                    {"levels","experience" }
+                    {"pinning","pinning" }//,
+                    //{"levels","experience" }
                 };
                 if (settings.ContainsKey(module) || settings.ContainsValue(module))
                 {
-                    if (!String.IsNullOrEmpty(await database.GetSingleAsync(new MySqlCommand("SELECT `ID` from `guildfeaturemodules` WHERE `ID` = " + Context.Guild.Id))))
+					var guild = await database.GetGuildAsync(Context.Guild.Id);
+
+                    if (guild.GuildSettings.Modules!=null)
                     {
                         var setting = settings.FirstOrDefault(x => x.Key == module || x.Value == module);
-                        await database.NonQueryAsync(new MySqlCommand($"UPDATE `guildfeaturemodules` SET `{setting.Value}` = {value} WHERE `ID` = {Context.Guild.Id}"));
+						
+						switch(setting.Value)
+						{
+							case "pinning":
+								guild.GuildSettings.Features.Pinning = Convert.ToBoolean(value);
+								break;
+
+							case "experience":
+								guild.GuildSettings.Features.Experience = Convert.ToBoolean(value);
+								break;
+						}
+
+                        await database.UpdateGuildAsync(guild);
                         if (value == 0)
-                        { await messageService.SendChannelAsync(Context.Channel, $"I disabled the `{module}` feature"); }
+                        {
+							await messageService.SendChannelAsync(Context.Channel, $"I disabled the `{module}` feature");
+						}
                         else
-                        { await messageService.SendChannelAsync(Context.Channel, $"I enabled the `{module}` feature"); }
+                        {
+							await messageService.SendChannelAsync(Context.Channel, $"I enabled the `{module}` feature");
+						}
                     }
                     else
                     {
@@ -583,7 +713,7 @@ namespace Skuld.Modules
             }
         }
 
-        [Command("guildmodule", RunMode = RunMode.Async), Summary("Configures guild modules"), RequireDatabase]
+        [Command("guildmodule"), Summary("Configures guild modules"), RequireDatabase]
 		[RequireUserPermission(GuildPermission.Administrator)]
         public async Task ConfigureGuildModules(string module, int value)
         {
@@ -594,13 +724,49 @@ namespace Skuld.Modules
             else
             {
                 module = module.ToLowerInvariant();
-                string[] modules = { "accounts", "actions", "admin", "fun", "help", "information", "search", "stats", "ai" };
+                string[] modules = { "accounts", "actions", "admin", "fun", "help", "information", "search", "stats" };
                 if (modules.Contains(module))
                 {
-                    if (!String.IsNullOrEmpty(await database.GetSingleAsync(new MySqlCommand("SELECT `ID` from `guildcommandmodules` WHERE `ID` = " + Context.Guild.Id))))
+					var guild = await database.GetGuildAsync(Context.Guild.Id);
+                    if (guild.GuildSettings.Modules!=null)
                     {
-                        await database.NonQueryAsync(new MySqlCommand($"UPDATE `guildcommandmodules` SET `{module}` = {value} WHERE `ID` = {Context.Guild.Id}"));
-                        if (value == 0)
+						switch(module)
+						{
+							case "accounts":
+								guild.GuildSettings.Modules.AccountsEnabled = Convert.ToBoolean(value);
+								break;
+
+							case "actions":
+								guild.GuildSettings.Modules.ActionsEnabled = Convert.ToBoolean(value);
+								break;
+
+							case "admin":
+								guild.GuildSettings.Modules.AdminEnabled = Convert.ToBoolean(value);
+								break;
+
+							case "fun":
+								guild.GuildSettings.Modules.FunEnabled = Convert.ToBoolean(value);
+								break;
+
+							case "help":
+								guild.GuildSettings.Modules.HelpEnabled = Convert.ToBoolean(value);
+								break;
+
+							case "information":
+								guild.GuildSettings.Modules.InformationEnabled = Convert.ToBoolean(value);
+								break;
+
+							case "search":
+								guild.GuildSettings.Modules.SearchEnabled = Convert.ToBoolean(value);
+								break;
+
+							case "stats":
+								guild.GuildSettings.Modules.StatsEnabled = Convert.ToBoolean(value);
+								break;
+						}
+
+						await database.UpdateGuildAsync(guild);
+						if (value == 0)
                         { await messageService.SendChannelAsync(Context.Channel, $"I disabled the `{module}` module"); }
                         else
                         { await messageService.SendChannelAsync(Context.Channel, $"I enabled the `{module}` module"); }
@@ -619,19 +785,19 @@ namespace Skuld.Modules
             }
         }
 
-        [Command("configurechannel", RunMode = RunMode.Async), Summary("Some features require channels to be set"), RequireDatabase]
+        [Command("configurechannel"), Summary("Some features require channels to be set"), RequireDatabase]
 		[RequireUserPermission(GuildPermission.Administrator)]
         public async Task ConfigureChannel(string module, IChannel channel)
         {
             module = module.ToLowerInvariant();
             var modules = new Dictionary<string, string>()
             {
-                {"twitchnotif","twitchnotifchannel" },
-                {"twitch","twitchnotifchannel" },
-                {"twitchnotification","twitchnotifchannel" },
-                {"twitchnotifications","twitchnotifchannel" },
-                {"twitter","twitterlogchannel" },
-                {"twitterlog","twitterlogchannel" },
+                //{"twitchnotif","twitchnotifchannel" },
+                //{"twitch","twitchnotifchannel" },
+                //{"twitchnotification","twitchnotifchannel" },
+                //{"twitchnotifications","twitchnotifchannel" },
+                //{"twitter","twitterlogchannel" },
+                //{"twitterlog","twitterlogchannel" },
                 {"userjoin","userjoinchan" },
                 {"userjoined","userjoinchan" },
                 {"userleave","userleavechan" },
@@ -639,15 +805,35 @@ namespace Skuld.Modules
 			};
             if (modules.ContainsKey(module)||modules.ContainsValue(module))
             {
-                if (!String.IsNullOrEmpty(await database.GetSingleAsync(new MySqlCommand("SELECT `ID` from `guildcommandmodules` WHERE `ID` = " + Context.Guild.Id))))
+				var guild = await database.GetGuildAsync(Context.Guild.Id);				
+
+				if (guild!=null)
                 {
-                    var setting = modules.FirstOrDefault(x => x.Key == module || x.Value == module);
-                    await database.NonQueryAsync(new MySqlCommand($"UPDATE `guild` SET `{setting.Value}` = {channel.Id} WHERE `ID` = {Context.Guild.Id}"));
+					modules.TryGetValue(module, out string key);
+					switch (key)
+					{
+						case "twitchnotifchannel":
+							guild.TwitchNotifChannel = channel.Id;
+							break;
+
+						case "twitterlogchannel":
+							guild.TwitterLogChannel = channel.Id;
+							break;
+
+						case "userjoinchan":
+							guild.UserJoinChannel = channel.Id;
+							break;
+
+						case "userleavechan":
+							guild.UserLeaveChannel = channel.Id;
+							break;
+					}
+					await database.UpdateGuildAsync(guild);
                     await messageService.SendChannelAsync(Context.Channel, $"I set `{channel.Name}` as the channel for the `{module}` module");
                 }
                 else
                 {
-                    await database.InsertAdvancedSettingsAsync(feature: false, guild: Context.Guild as Discord.WebSocket.SocketGuild);
+                    await database.InsertGuildAsync(Context.Guild);
                 }
             }
             else

@@ -8,7 +8,6 @@ using Skuld.Utilities;
 using Skuld.Extensions;
 using Discord.WebSocket;
 using Discord;
-using MySql.Data.MySqlClient;
 using StatsdClient;
 using System.Threading;
 
@@ -58,7 +57,7 @@ namespace Skuld.Services
 			};
 		}
 
-		public async Task DiscordLogger(Discord.LogMessage arg)
+		public async Task DiscordLogger(LogMessage arg)
 		{
 			await AddToLogsAsync(new Models.LogMessage(arg.Source, arg.Message, arg.Severity, arg.Exception));
 		}
@@ -102,7 +101,26 @@ namespace Skuld.Services
                 { }
             }
 
-            if (Console)
+			switch(message.Severity)
+			{
+				case LogSeverity.Info:
+					DogStatsd.Event(message.Source, $"{String.Format("{0:dd/MM/yyyy HH:mm:ss}", message.TimeStamp)} [{message.Severity}] {message.Message}", "info");
+					break;
+
+				case LogSeverity.Warning:
+					DogStatsd.Event(message.Source, $"{String.Format("{0:dd/MM/yyyy HH:mm:ss}", message.TimeStamp)} [{message.Severity}] {message.Message}", "warning");
+					break;
+
+				case LogSeverity.Critical:
+					DogStatsd.Event(message.Source, $"{String.Format("{0:dd/MM/yyyy HH:mm:ss}", message.TimeStamp)} [{message.Severity}] {message.Message}\n{message.Exception}", "critical");
+					break;
+
+				case LogSeverity.Error:
+					DogStatsd.Event(message.Source, $"{String.Format("{0:dd/MM/yyyy HH:mm:ss}", message.TimeStamp)} [{message.Severity}] {message.Message}\n{message.Exception}", "error");
+					break;
+			}
+
+			if (Console)
             {
                 System.Console.ForegroundColor = Tools.Tools.ColorBasedOnSeverity(message.Severity);
                 var consolelines = new List<string[]>();
@@ -139,8 +157,7 @@ namespace Skuld.Services
                 sw.WriteLine(tolog);
             }
         }
-
-
+		
 		//DiscordLoging
 		public void RegisterEvents()
 		{
@@ -179,7 +196,7 @@ namespace Skuld.Services
 				if (ShardsReady.Count == client.Shards.Count)
 				{
 					client.MessageReceived += messageService.OnMessageRecievedAsync;
-					await client.SetGameAsync($"{Bot.Configuration.Prefix}help | {random.Next(0, client.Shards.Count) + 1}/{client.Shards.Count}", type: ActivityType.Listening);
+					await client.SetGameAsync($"{Bot.Configuration.Discord.Prefix}help | {random.Next(0, client.Shards.Count) + 1}/{client.Shards.Count}", type: ActivityType.Listening);
 				}
 			}
 		}
@@ -195,14 +212,14 @@ namespace Skuld.Services
 					if (guild.GuildSettings.Features.Pinning)
 					{
 						var dldedmsg = await arg1.GetOrDownloadAsync();
-						int pinboardThreshold = Bot.Configuration.PinboardThreshold;
+						int pinboardThreshold = Bot.Configuration.Utils.PinboardThreshold;
 						int pinboardReactions = 0;
 						if (arg3.Emote.Name == "📌")
 						{ pinboardReactions = dldedmsg.Reactions.FirstOrDefault(x => x.Key.Name == "📌").Value.ReactionCount; }
 						if (pinboardReactions >= pinboardThreshold)
 						{
 							var now = dldedmsg.CreatedAt;
-							var dt = DateTime.UtcNow.AddDays(-Bot.Configuration.PinboardDateLimit);
+							var dt = DateTime.UtcNow.AddDays(-Bot.Configuration.Utils.PinboardDateLimit);
 							if ((now - dt).TotalDays > 0)
 							{
 								if (!dldedmsg.IsPinned)
@@ -219,7 +236,7 @@ namespace Skuld.Services
 
 		async Task Bot_ShardConnected(DiscordSocketClient arg)
 		{
-			await arg.SetGameAsync($"{Bot.Configuration.Prefix}help | {random.Next(0, client.Shards.Count) + 1}/{client.Shards.Count}", type: ActivityType.Listening);
+			await arg.SetGameAsync($"{Bot.Configuration.Discord.Prefix}help | {random.Next(0, client.Shards.Count) + 1}/{client.Shards.Count}", type: ActivityType.Listening);
 			DogStatsd.Event("shards.connected", $"Shard {arg.ShardId} Connected", alertType: "info");
 		}
 		Task Bot_ShardDisconnected(Exception arg1, DiscordSocketClient arg2)
@@ -231,40 +248,43 @@ namespace Skuld.Services
 		//Start Users
 		async Task Bot_UserJoined(SocketGuildUser arg)
 		{
-			DogStatsd.Increment("total.users");
 			await AddToLogsAsync(new Models.LogMessage("UsrJoin", $"User {arg.Username} joined {arg.Guild.Name}", LogSeverity.Info));
 			if (database.CanConnect)
 			{
-
 				await database.InsertUserAsync(arg);
 
-				string autorole = Convert.ToString(await database.GetSingleAsync(new MySqlCommand("SELECT `autojoinrole` FROM `guild` WHERE `id` = " + arg.Guild.Id)));
+				var guild = await database.GetGuildAsync(arg.Guild.Id);
 
-				if (!String.IsNullOrEmpty(autorole))
+				if (guild!=null && guild.AutoJoinRole!=0)
 				{
-					var joinroleid = Convert.ToUInt64(autorole);
-					var joinrole = arg.Guild.GetRole(joinroleid);
+					var joinrole = arg.Guild.GetRole(guild.AutoJoinRole);
 					await arg.AddRoleAsync(joinrole);
 					await AddToLogsAsync(new Models.LogMessage("UsrJoin", $"Gave user {arg.Username}, the automatic role as per request of {arg.Guild.Name}.", LogSeverity.Info));
 				}
-
-				string welcomemessage = await database.GetSingleAsync(new MySqlCommand("SELECT `joinmessage` FROM `guild` WHERE `id` = " + arg.Guild.Id));
-				if (!String.IsNullOrEmpty(welcomemessage))
+				if (guild != null && guild.UserJoinChannel !=0 && !String.IsNullOrEmpty(guild.JoinMessage))
 				{
-					var channel = arg.Guild.GetTextChannel(Convert.ToUInt64(await database.GetSingleAsync(new MySqlCommand("SELECT `userjoinchan` FROM `guild` WHERE `id` = " + arg.Guild.Id))));
+					var channel = arg.Guild.GetTextChannel(guild.UserJoinChannel);
+					var welcomemessage = guild.JoinMessage;
 					welcomemessage = welcomemessage.Replace("-m", "**" + arg.Mention + "**");
 					welcomemessage = welcomemessage.Replace("-s", "**" + arg.Guild.Name + "**");
 					welcomemessage = welcomemessage.Replace("-uc", Convert.ToString(arg.Guild.MemberCount));
 					welcomemessage = welcomemessage.Replace("-u", "**" + arg.Username + "**");
 					await messageService.SendChannelAsync(channel, welcomemessage);
 				}
-				await CheckGuildUsersAsync(arg.Guild);
-
+				var discord = client.GetUser(arg.Id);
+				var db = await database.GetUserAsync(arg.Id);
+				if (discord == null && db != null)
+				{
+					await database.DropUserAsync(arg);
+				}
+				else if (discord != null && db == null)
+				{
+					await database.InsertUserAsync(discord);
+				}
 			}
 		}
 		async Task Bot_UserLeft(SocketGuildUser arg)
 		{
-			DogStatsd.Decrement("total.users");
 			await AddToLogsAsync(new Models.LogMessage("UsrLeft", $"User {arg.Username} just left {arg.Guild.Name}", LogSeverity.Info));
 			if (database.CanConnect)
 			{
@@ -279,11 +299,16 @@ namespace Skuld.Services
 					leavemessage = leavemessage.Replace("-u", "**" + arg.Username + "**");
 					await messageService.SendChannelAsync(channel, leavemessage);
 				}
-				if (client.GetUser(arg.Id) == null)
+				var discord = client.GetUser(arg.Id);
+				var db = await database.GetUserAsync(arg.Id);
+				if (discord == null && db != null)
 				{
 					await database.DropUserAsync(arg);
 				}
-				await CheckGuildUsersAsync(arg.Guild);
+				else if (discord != null && db == null)
+				{
+					await database.InsertUserAsync(discord);
+				}
 			}
 		}
 		//End Users
@@ -297,79 +322,27 @@ namespace Skuld.Services
 
 			Thread thd = new Thread(async () =>
 			{
-				await CheckGuildUsersAsync(arg);
+				await database.CheckGuildUsersAsync(arg);
 			})
 			{
 				IsBackground = true 
 			};
 			thd.Start();
-			await botService.UpdateStats();
+			await botService.UpdateStatsAsync();
 		}
 		async Task Bot_JoinedGuild(SocketGuild arg)
 		{
 			DogStatsd.Increment("guilds.joined");
 			Thread thd = new Thread(async () =>
 			{
-				await PopulateSpecificGuild(arg);
-				await CheckGuildUsersAsync(arg);
+				await database.InsertGuildAsync(arg);
 			})
 			{
 				IsBackground = true
 			};
 			thd.Start();
-			await botService.UpdateStats();
+			await botService.UpdateStatsAsync();
 		}
 		//End Guilds
-
-		async Task PopulateGuilds()
-		{
-			if (!String.IsNullOrEmpty(Bot.Configuration.SqlDBHost) && database.CanConnect)
-			{
-				foreach (var guild in client.Guilds)
-				{ await PopulateSpecificGuild(guild).ConfigureAwait(false); }
-			}
-		}
-		async Task PopulateSpecificGuild(SocketGuild guild)
-		{
-			if (await database.GetGuildAsync(guild.Id) != null)
-			{
-				var gcmd = new MySqlCommand("INSERT IGNORE INTO `guild` (`ID`,`name`,`prefix`) VALUES ");
-				gcmd.CommandText += $"( {guild.Id} , \"{guild.Name.Replace("\"", "\\").Replace("\'", "\\'")}\" ,\"{Bot.Configuration.Prefix}\" )";
-				await database.NonQueryAsync(gcmd);
-
-				//Configures Modules
-				gcmd = new MySqlCommand($"INSERT IGNORE INTO `guildcommandmodules` (`ID`,`Accounts`,`Actions`,`Admin`,`Fun`,`Help`,`Information`,`Search`,`Stats`) VALUES ( {guild.Id} , 1, 1, 1, 1, 1, 1, 1, 1 )");
-				await database.NonQueryAsync(gcmd);
-
-				//Configures Settings
-				gcmd = new MySqlCommand($"INSERT IGNORE INTO `guildfeaturemodules` (`ID`,`Experience`,`UserJoinLeave`) VALUES ( {guild.Id} , 0, 0)");
-				await database.NonQueryAsync(gcmd);
-
-				DogStatsd.Increment("mysql.insert", 3);
-
-				await AddToLogsAsync(new Models.LogMessage("IsrtGld", $"Inserted {guild.Name}!", LogSeverity.Info));
-
-				await PopulateEntireGuildUsers(guild).ConfigureAwait(false);
-			}
-		}
-		async Task PopulateEntireGuildUsers(SocketGuild guild)
-		{
-			await guild.DownloadUsersAsync();
-			foreach (var user in guild.Users)
-			{
-				await database.InsertUserAsync(user);
-				DogStatsd.Increment("mysql.insert");
-			}
-		}
-		async Task CheckGuildUsersAsync(SocketGuild guild)
-		{
-			foreach (var user in guild.Users)
-			{
-				if (client.GetUser(user.Id) == null)
-				{
-					await database.DropUserAsync(user);
-				}
-			}
-		}
 	}
 }

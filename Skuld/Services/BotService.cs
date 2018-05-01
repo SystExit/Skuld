@@ -19,12 +19,14 @@ namespace Skuld.Services
 		LoggingService logger;
 		Config config;
 		MessageService messageService;
+		TwitchService twitch;
 
-		public BotService(DiscordShardedClient cli, LoggingService log, MessageService message)
+		public BotService(DiscordShardedClient cli, LoggingService log, MessageService message, TwitchService twi)
 		{
 			client = cli;
 			logger = log;
 			messageService = message;
+			twitch = twi;
 		}
 		
 		public void AddConfg(Config conf)
@@ -34,12 +36,14 @@ namespace Skuld.Services
 		{
 			try
 			{
-				await client.LoginAsync(TokenType.Bot, config.Token);
+				await twitch.LoginAsync(config.APIS.TwitchToken);
+
+				await client.LoginAsync(TokenType.Bot, config.Discord.Token);
 				await client.StartAsync();
 
 				Parallel.Invoke(() => SendDataToDataDog());
 
-				//await UpdateStats();
+				await UpdateStats();
 
 				await Task.Delay(-1).ConfigureAwait(false);
 			}
@@ -47,11 +51,11 @@ namespace Skuld.Services
 			{
 				await logger.AddToLogsAsync(new Models.LogMessage("Strt-Bot", "ERROR WITH THE BOT", LogSeverity.Error, ex));
 				DogStatsd.Event("FrameWork", $"Bot Crashed on start: {ex}", alertType: "error", hostname: "Skuld");
-				await StopBot("Init-Bt").ConfigureAwait(false);
+				await StopBotAsync("Init-Bt").ConfigureAwait(false);
 			}
 		}
 		
-		public async Task StopBot(string source)
+		public async Task StopBotAsync(string source)
 		{
 			logger.UnRegisterEvents();
 			await client.SetStatusAsync(UserStatus.Offline);
@@ -72,7 +76,10 @@ namespace Skuld.Services
 			{
 				int users = 0;
 				foreach (var guild in client.Guilds)
-				{ users += guild.MemberCount; }
+				{
+					users += guild.MemberCount;
+					Task.Delay(500);
+				}
 				DogStatsd.Gauge("shards.count", client.Shards.Count);
 				DogStatsd.Gauge("shards.connected", client.Shards.Count(x => x.ConnectionState == ConnectionState.Connected));
 				DogStatsd.Gauge("shards.disconnected", client.Shards.Count(x => x.ConnectionState == ConnectionState.Disconnected));
@@ -83,7 +90,7 @@ namespace Skuld.Services
 			}
 		}
 
-		public async Task<string> UpdateStats()
+		public async Task<string> UpdateStatsAsync()
 		{
 			System.Collections.Generic.List<Models.API.BotStats> botStats = new System.Collections.Generic.List<Models.API.BotStats>();
 			for (var x = 0; x < client.Shards.Count; x++)
@@ -94,13 +101,13 @@ namespace Skuld.Services
 					ShardCount = client.Shards.Count,
 					ShardID = x
 				});
-				await PublishStats(x);
+				await PublishStatsAsync(x).ConfigureAwait(false);
 			}
 
 			var webclient = (HttpWebRequest)WebRequest.Create(new Uri($"https://skuld.systemexit.co.uk/tools/updateStats.php"));
 			webclient.ContentType = "application/json";
 			webclient.Method = "POST";
-			webclient.Headers.Add(HttpRequestHeader.Authorization, config.SysExToken);
+			webclient.Headers.Add(HttpRequestHeader.Authorization, config.BotListing.SysExToken);
 			using (var swriter = new StreamWriter(await webclient.GetRequestStreamAsync()))
 			{
 				swriter.Write(Newtonsoft.Json.JsonConvert.SerializeObject(botStats));
@@ -115,7 +122,7 @@ namespace Skuld.Services
 			}
 		}
 
-		public async Task PublishStats(int shardid)
+		public async Task PublishStatsAsync(int shardid)
 		{
 			var bstats = new Models.API.BotStats()
 			{
@@ -126,13 +133,13 @@ namespace Skuld.Services
 			using (var webclient = new HttpClient())
 			using (var content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(bstats), Encoding.UTF8, "application/json"))
 			{
-				webclient.DefaultRequestHeaders.Add("Authorization", config.DBotsOrgKey);
+				webclient.DefaultRequestHeaders.Add("Authorization", config.BotListing.DBotsOrgKey);
 				await webclient.PostAsync(new Uri($"https://discordbots.org/api/bots/{client.CurrentUser.Id}/stats"), content);
 			}
 			using (var webclient = new HttpClient())
 			using (var content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(bstats), Encoding.UTF8, "application/json"))
 			{
-				webclient.DefaultRequestHeaders.Add("Authorization", config.DiscordPWKey);
+				webclient.DefaultRequestHeaders.Add("Authorization", config.BotListing.DiscordPWKey);
 				await webclient.PostAsync(new Uri($"https://bots.discord.pw/api/bots/{client.CurrentUser.Id}/stats"), content);
 			}
 		}

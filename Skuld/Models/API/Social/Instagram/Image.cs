@@ -13,11 +13,11 @@ namespace Skuld.Models.API.Social.Instagram
 		public string ID { get; set; }
 
 		[JsonProperty(PropertyName = "edge_media_to_caption")]
-		CaptionNode captions { get; set; }
+		CaptionNode CaptionCollection { get; set; }
 
-		public List<TextNode> Captions { get => captions.Captions; }
+		public List<TextNode> Captions { get => CaptionCollection.Captions; }
 		
-		public string PrimaryCaption { get => Captions.FirstOrDefault().Text;}
+		public string PrimaryCaption { get => Captions.FirstOrDefault().Text; }
 
 		[JsonProperty(PropertyName = "shortcode")]
 		public string Code { get; set; }

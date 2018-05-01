@@ -5,6 +5,7 @@ using Discord.Commands;
 using Discord;
 using Skuld.Services;
 using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Skuld.Tools
 {
@@ -31,7 +32,7 @@ namespace Skuld.Tools
         {
             if (c.User.IsBot)
             { return AccessLevel.Blocked; }
-            if (Bot.Configuration.Owners.Contains(c.User.Id) || (client.GetApplicationInfoAsync().Result).Owner.Id == c.User.Id)
+            if (Bot.Configuration.Discord.Owners.Contains(c.User.Id) || (client.GetApplicationInfoAsync().Result).Owner.Id == c.User.Id)
             { return AccessLevel.BotOwner; }
             IGuildUser user = (IGuildUser)c.User;
             if (user != null)
@@ -93,7 +94,7 @@ namespace Skuld.Tools
 
 		public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
 		{
-			var dbserv = (DatabaseService)services.GetService(typeof(DatabaseService));
+			var dbserv = Bot.services.GetRequiredService<DatabaseService>();
 
 			if(dbserv!=null)
 			{

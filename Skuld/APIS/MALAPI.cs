@@ -19,7 +19,7 @@ namespace Skuld.APIS
             else
 				url = $"https://myanimelist.net/api/anime/search.xml?q={Search}";
 			Search = Search.Replace(" ", "+");
-			var byteArray = new UTF8Encoding().GetBytes($"{Bot.Configuration.MALUName}:{Bot.Configuration.MALPassword}");
+			var byteArray = new UTF8Encoding().GetBytes($"{Bot.Configuration.APIS.MALUName}:{Bot.Configuration.APIS.MALPassword}");
 			return await WebHandler.ReturnStringAsync(new Uri(url), byteArray);
 		}
 		private static XmlDocument ConvertStringToXmlDoc(string xml)

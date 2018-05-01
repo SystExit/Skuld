@@ -4,7 +4,6 @@ using Discord.Commands;
 using Discord;
 using Skuld.Services;
 using Skuld.Tools;
-using MySql.Data.MySqlClient;
 #pragma warning disable GCop126 
 #pragma warning disable GCop646
 
@@ -27,21 +26,27 @@ namespace Skuld.Modules
 			messageService = msgSrv;
 		}
 
-        [Command("money",RunMode = RunMode.Async), Summary("Gets a user's money"), RequireDatabase]
+        [Command("money", RunMode = RunMode.Async), Summary("Gets a user's money"), RequireDatabase]
         public async Task GetMoney([Remainder]IUser user = null)
         {
 			if (user == null)
+			{
 				user = Context.User;
+			}
 
             var usr = await database.GetUserAsync(user.Id);
 
             if (Context.User == user)
-            { await messageService.SendChannelAsync(Context.Channel, $"You have: {Bot.Configuration.MoneySymbol + usr.Money.ToString("N0")}"); }
+            {
+				await messageService.SendChannelAsync(Context.Channel, $"You have: {Bot.Configuration.Utils.MoneySymbol + usr.Money.ToString("N0")}");
+			}
             else
-            { await messageService.SendChannelAsync(Context.Channel, message: $"**{user.Username}** has: {Bot.Configuration.MoneySymbol + usr.Money.ToString("N0")}"); }
+            {
+				await messageService.SendChannelAsync(Context.Channel, message: $"**{user.Username}** has: {Bot.Configuration.Utils.MoneySymbol + usr.Money.ToString("N0")}");
+			}
         }
 
-        [Command("profile", RunMode = RunMode.Async), Summary("Get a user's profile"), RequireDatabase]
+        [Command("profile"), Summary("Get a user's profile"), RequireDatabase]
         public async Task GetProfile([Remainder]IUser user = null)
         {
 			if (user == null)
@@ -60,7 +65,7 @@ namespace Skuld.Modules
                             IconUrl = user.GetAvatarUrl() ?? "http://www.emoji.co.uk/files/mozilla-emojis/smileys-people-mozilla/11419-bust-in-silhouette.png"
                         }
                     };
-                    embed.AddField(Bot.Configuration.MoneyName, userLocal.Money.ToString("N0") ?? "No Money", inline: true);
+                    embed.AddField(Bot.Configuration.Utils.MoneyName, userLocal.Money.ToString("N0") ?? "No Money", inline: true);
                     embed.AddField("Luck Factor", userLocal.LuckFactor.ToString("P2") ?? "No LuckFactor",inline: true);
                     if (!string.IsNullOrEmpty(userLocal.Daily))
                     { embed.AddField("Daily", userLocal.Daily, inline: true); }
@@ -92,11 +97,13 @@ namespace Skuld.Modules
             }            
         }
 
-        [Command("profile-ext", RunMode = RunMode.Async), Summary("Gets extended information about a user"), RequireDatabase]
+        [Command("profile-ext"), Summary("Gets extended information about a user"), RequireDatabase]
         public async Task GetProfileExt([Remainder]IUser user = null)
         {
 			if (user == null)
+			{
 				user = Context.User;
+			}
             try
             {
                 var userLocal = await database.GetUserAsync(user.Id);
@@ -108,7 +115,7 @@ namespace Skuld.Modules
                         Color = Tools.Tools.RandomColor()
                     };
 
-                    embed.AddField(Bot.Configuration.MoneyName, userLocal.Money.ToString("N0") ?? "No Money", inline: true);
+                    embed.AddField(Bot.Configuration.Utils.MoneyName, userLocal.Money.ToString("N0") ?? "No Money", inline: true);
                     embed.AddField("Luck Factor", userLocal.LuckFactor.ToString("P2") ?? "No LuckFactor", inline: true);
 
                     if (!String.IsNullOrEmpty(userLocal.Daily))
@@ -168,26 +175,36 @@ namespace Skuld.Modules
             }            
         }
 
-        [Command("description", RunMode = RunMode.Async), Summary("Sets description, if no argument is passed, cleans the description"), RequireDatabase]
+        [Command("description"), Summary("Sets description, if no argument is passed, cleans the description"), RequireDatabase]
         public async Task SetDescription([Remainder]string description = null)
         {
 			if (description != null)
 			{
-				var command = new MySqlCommand("UPDATE accounts SET description = @description WHERE ID = @userid");
-				command.Parameters.AddWithValue("@userid", Context.User.Id);
-				command.Parameters.AddWithValue("@description", description);
-				await database.NonQueryAsync(command).ContinueWith(async x =>
+				var user = await database.GetUserAsync(Context.User.Id);
+				user.Description = description;
+				var result = await database.UpdateUserAsync(user);
+				if(result.Successful)
 				{
-					if (x.IsCompleted)
-					{ await messageService.SendChannelAsync(Context.Channel, $"Successfully set your description to **{description}**"); }
-				});
+					await messageService.SendChannelAsync(Context.Channel, $"Successfully set your description to **{description}**");
+				}
+				else
+				{
+					await messageService.SendChannelAsync(Context.Channel, $"Something happened <:blobsick:350673776071147521>");
+				}
 			}
 			else
 			{
-				var command = new MySqlCommand("UPDATE `accounts` SET Description = \"I have no description\" WHERE ID = @userid");
-				command.Parameters.AddWithValue("@userid", Context.User.Id);
-				await database.GetSingleAsync(command);
-				await messageService.SendChannelAsync(Context.Channel, $"I cleared your description.");
+				var user = await database.GetUserAsync(Context.User.Id);
+				user.Description = "";
+				var result = await database.UpdateUserAsync(user);
+				if (result.Successful)
+				{
+					await messageService.SendChannelAsync(Context.Channel, $"Successfully cleared your description.");
+				}
+				else
+				{
+					await messageService.SendChannelAsync(Context.Channel, $"Something happened <:blobsick:350673776071147521>");
+				}
 			}
         }
 
@@ -198,16 +215,16 @@ namespace Skuld.Modules
             if(suser!=null)
             {
                 suser.Daily = Convert.ToString(DateTime.UtcNow);
-                suser.Money += Bot.Configuration.DailyAmount;
+                suser.Money += Bot.Configuration.Utils.DailyAmount;
                 await database.UpdateUserAsync(suser);
-                await messageService.SendChannelAsync(Context.Channel, $"You got your daily of: `{Bot.Configuration.MoneySymbol+Bot.Configuration.DailyAmount}`, you now have: {Bot.Configuration.MoneySymbol}{(suser.Money)}");
+                await messageService.SendChannelAsync(Context.Channel, $"You got your daily of: `{Bot.Configuration.Utils.MoneySymbol + Bot.Configuration.Utils.DailyAmount}`, you now have: {Bot.Configuration.Utils.MoneySymbol}{(suser.Money.ToString("N0"))}");
             }
             else
             {
                 await InsertUser(user).ConfigureAwait(false);
             }
         }
-        [Command("daily", RunMode = RunMode.Async), Summary("Daily Money"), RequireDatabase]
+        [Command("daily"), Summary("Daily Money"), RequireDatabase]
         public async Task Daily([Remainder]IUser user = null)
 		{
 			if(user == null)
@@ -248,7 +265,7 @@ namespace Skuld.Modules
 						{
 							await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder
 							{
-								Author = new EmbedAuthorBuilder()
+								Author = new EmbedAuthorBuilder
 								{
 									Name = "Error with the command"
 								},
@@ -264,9 +281,13 @@ namespace Skuld.Modules
 								var suser = await database.GetUserAsync(user.Id);
 								if (suser != null && !user.IsBot)
 								{
-									await database.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "money", Convert.ToString(suser.Money + Bot.Configuration.DailyAmount));
-									await database.ModifyUserAsync((Context.User as Discord.WebSocket.SocketUser), "daily", Convert.ToString(DateTime.UtcNow));
-									await messageService.SendChannelAsync(Context.Channel, $"Yo, you just gave {user.Username} {Bot.Configuration.MoneySymbol}{Bot.Configuration.DailyAmount}! They now have {Bot.Configuration.MoneySymbol}{suser.Money + Bot.Configuration.DailyAmount}");
+									suser.Money += Bot.Configuration.Utils.DailyAmount;
+									await database.UpdateUserAsync(suser);
+
+									csuser.Daily = Convert.ToString(DateTime.UtcNow);
+									await database.UpdateUserAsync(csuser);
+
+									await messageService.SendChannelAsync(Context.Channel, $"Yo, you just gave {user.Username} {Bot.Configuration.Utils.MoneySymbol}{Bot.Configuration.Utils.DailyAmount}! They now have {Bot.Configuration.Utils.MoneySymbol}{suser.Money.ToString("N0")}");
 								}
 								else
 								{
@@ -283,7 +304,7 @@ namespace Skuld.Modules
 			}
         }
 
-        [Command("give", RunMode = RunMode.Async), Summary("Give away ur money"),RequireDatabase]
+        [Command("give"), Summary("Give away ur money"),RequireDatabase]
         public async Task Give(IUser user, ulong amount)
         {
             if (amount == 0)
@@ -291,34 +312,47 @@ namespace Skuld.Modules
                 await messageService.SendChannelAsync(Context.Channel,"Why would you want to give zero money to someone? :thinking:");
 				return;
             }
-            if (user != Context.User)
-            {
-                var oldusergive = await database.GetUserAsync(user.Id);
-                if (oldusergive != null && !user.IsBot)
-                {
-                    var oldusersend = await database.GetUserAsync(Context.User.Id);
-                    var res1 = await database.ModifyUserAsync((user as Discord.WebSocket.SocketUser), "money", Convert.ToString(oldusergive.Money + amount));
-                    var res2 = await database.ModifyUserAsync((Context.User as Discord.WebSocket.SocketUser), "money", Convert.ToString(oldusersend.Money - amount));
-                    if (res1.Successful && res2.Successful)
-                    { await messageService.SendChannelAsync(Context.Channel, $"Successfully gave **{user.Username}** {Bot.Configuration.MoneySymbol + amount}"); }
-                    else
-                    {
-                        string message = $"Res1 error: {res1.Error ?? "None"}\nRes2 error: {res2.Error ?? "None"}";
-                        await logger.AddToLogsAsync(new Models.LogMessage("DailyGive", $"{res1.Error}\t{res2.Error}", LogSeverity.Error));
-                        await messageService.SendChannelAsync(Context.Channel, $"Oops, something bad happened. :(\n```\n{message}```");
-                        StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
-                    }
-                }
-                else if (user.IsBot)
-                { await messageService.SendChannelAsync(Context.Channel, $"Hey, uhhh... Robots aren't supported. :("); }
-                else
-                {
-                    await InsertUser(user);
-                    await Give(user, amount).ConfigureAwait(false);
-                }
-            }
-            else
-                await messageService.SendChannelAsync(Context.Channel, "<:gibeOops:350681606362759173> Can't give money to yourself... Oh, I guess you can... But why would you want to?");            
+			if (user != Context.User)
+			{
+				var oldusergive = await database.GetUserAsync(user.Id);
+				if (oldusergive != null && !user.IsBot)
+				{
+					var oldusersend = await database.GetUserAsync(Context.User.Id);
+
+					if (oldusersend.Money >= amount)
+					{
+						oldusergive.Money += amount;
+						oldusersend.Money -= amount;
+
+						var resp = await database.UpdateUserAsync(oldusergive);
+						var resp2 = await database.UpdateUserAsync(oldusersend);
+
+						if (resp.Successful && resp2.Successful)
+						{
+							await messageService.SendChannelAsync(Context.Channel, $"Successfully gave **{user.Username}** {Bot.Configuration.Utils.MoneySymbol + amount}");
+						}
+						else
+						{
+							await logger.AddToLogsAsync(new Models.LogMessage("DailyGive", $"{resp.Error}\t{resp2.Error}", LogSeverity.Error));
+							await messageService.SendChannelAsync(Context.Channel, $"Oops, something happened. :(");
+							StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+						}
+					}
+				}
+				else if (user.IsBot)
+				{
+					await messageService.SendChannelAsync(Context.Channel, $"Hey, uhhh... Robots aren't supported. :(");
+				}
+				else
+				{
+					await InsertUser(user);
+					await Give(user, amount).ConfigureAwait(false);
+				}
+			}
+			else
+			{
+				await messageService.SendChannelAsync(Context.Channel, "<:gibeOops:350681606362759173> Can't give money to yourself... Oh, I guess you can... But why would you want to?");
+			}
         }
 
         private async Task InsertUser(IUser user)

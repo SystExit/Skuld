@@ -16,7 +16,7 @@ namespace Skuld.Services
 			logger = log;
 		}
 
-		public TwitchService(TwitchRestConfig config)
+		public void CreateClient(TwitchRestConfig config)
 		{
 			client = new TwitchRestClient(config);
 			client.Log += logger.TwitchLogger;

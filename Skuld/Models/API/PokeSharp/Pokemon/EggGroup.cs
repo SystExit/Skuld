@@ -6,7 +6,7 @@ namespace PokeSharp.Models.Pokemon
     public class EggGroup
     {
         [JsonProperty(PropertyName = "id")]
-        public int? ID {get;set; }
+		public int? ID { get; set; }
         [JsonProperty(PropertyName = "name")]
         public string Name { get; set; }
         [JsonProperty(PropertyName = "names")]

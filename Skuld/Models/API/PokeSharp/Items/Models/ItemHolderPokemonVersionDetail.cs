@@ -8,6 +8,6 @@ namespace PokeSharp.Models.Items
         [JsonProperty(PropertyName = "rarity")]
         public string Rarity { get; set; }
         [JsonProperty(PropertyName = "version")]
-        public NamedAPIResource Version {get;set;}
+		public NamedAPIResource Version { get; set; }
     }
 }

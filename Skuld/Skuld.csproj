@@ -82,9 +82,6 @@
     <PackageReference Include="YoutubeExplode" Version="4.2.2" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="CowsaySharp.Library">
-      <HintPath>..\References\CowsaySharp.Library.dll</HintPath>
-    </Reference>
     <Reference Include="Discord.Addons.Interactive">
       <HintPath>..\References\Discord.Addons.Interactive.dll</HintPath>
     </Reference>

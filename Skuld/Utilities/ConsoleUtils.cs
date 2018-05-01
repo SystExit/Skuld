@@ -25,7 +25,7 @@ namespace Skuld.Utilities
 
                 isFirst = false;
 
-                for(int i=0;i<line.Length;i++)
+                for(int i=0; i<line.Length; i++)
                 {
                     var value = line[i];
                     sb.Append(value.PadRight(maxValues[i]));

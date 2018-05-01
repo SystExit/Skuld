@@ -7,7 +7,6 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 using Skuld.Services;
 using System.Reflection;
-using Discord.WebSocket;
 
 namespace Skuld.Modules
 {
@@ -23,15 +22,15 @@ namespace Skuld.Modules
 			process = Process.GetCurrentProcess();
 		}
 
-        [Command("ping", RunMode = RunMode.Async), Summary("Print Ping")]
+        [Command("ping"), Summary("Print Ping")]
         public async Task Ping() =>
             await messageService.SendChannelAsync(Context.Channel, "PONG: " + Context.Client.GetShardFor(Context.Guild).Latency + "ms");
 
-        [Command("uptime", RunMode = RunMode.Async), Summary("Current Uptime")]
+        [Command("uptime"), Summary("Current Uptime")]
         public async Task Uptime()=>
             await messageService.SendChannelAsync(Context.Channel, $"Uptime: {string.Format("{0:dd} Days {0:hh} Hours {0:mm} Minutes {0:ss} Seconds", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}");
 
-        [Command("stats", RunMode = RunMode.Async), Summary("All stats")]
+        [Command("stats"), Summary("All stats")]
         public async Task StatsAll()
 		{
 			var currentuser = Context.Client.CurrentUser;
@@ -58,11 +57,11 @@ namespace Skuld.Modules
             await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
         }
 
-        [Command("netfw", RunMode = RunMode.Async), Summary(".Net Info")]
+        [Command("netfw"), Summary(".Net Info")]
         public async Task Netinfo() =>
             await messageService.SendChannelAsync(Context.Channel, $"{RuntimeInformation.FrameworkDescription} {RuntimeInformation.OSArchitecture}");
 
-        [Command("discord", RunMode = RunMode.Async), Summary("Discord Info")]
+        [Command("discord"), Summary("Discord Info")]
         public async Task Discnet() => 
             await messageService.SendChannelAsync(Context.Channel, $"Discord.Net Library Version: {DiscordConfig.Version}");
     }

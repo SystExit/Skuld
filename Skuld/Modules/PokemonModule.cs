@@ -22,10 +22,10 @@ namespace Skuld.Modules
 			messageService = msg;
 		}
 
-        [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
+        [Command("pokemon"), Summary("Gets information about a pokemon id")]
         public async Task Getpokemon(string pokemon, string group=null) =>
             await SendPokemonAsync(await PokeSharpClient.GetPocketMonster(pokemon.ToLowerInvariant()), group??"default").ConfigureAwait(false);
-        [Command("pokemon", RunMode = RunMode.Async), Summary("Gets information about a pokemon id")]
+        [Command("pokemon"), Summary("Gets information about a pokemon id")]
         public async Task Getpokemon(int pokemonid, string group=null) =>
             await SendPokemonAsync(await PokeSharpClient.GetPocketMonster(pokemonid), group??"default").ConfigureAwait(false);
 
