@@ -758,7 +758,7 @@ namespace Skuld.Services
 				command.Parameters.AddWithValue("@glares", user.Glares);
 				command.Parameters.AddWithValue("@userID", user.ID);
 
-				return await SingleQueryAsync(command);
+				return await SingleQueryAsync(command).ConfigureAwait(false);
 			}
 			return new SqlResult
 			{
