@@ -670,7 +670,7 @@ namespace Skuld.Services
 				command.Parameters.AddWithValue("@created", DateTime.UtcNow);
 				command.Parameters.AddWithValue("@pastatitle", pastaname);
 
-				return await SingleQueryAsync(command);
+				return await SingleQueryAsync(command).ConfigureAwait(false);
 			}
 			return new SqlResult
 			{
@@ -816,7 +816,7 @@ namespace Skuld.Services
 				cmd.Parameters.AddWithValue("@newcontent", content);
 				cmd.Parameters.AddWithValue("@guildID", guild.Id);
 				cmd.Parameters.AddWithValue("@commandName", command);
-				return await SingleQueryAsync(cmd);
+				return await SingleQueryAsync(cmd).ConfigureAwait(false);
 			}
 			return new SqlResult
 			{

@@ -8,7 +8,6 @@ using Skuld.Utilities;
 using Skuld.Extensions;
 using Discord.WebSocket;
 using Discord;
-using MySql.Data.MySqlClient;
 using StatsdClient;
 using System.Threading;
 

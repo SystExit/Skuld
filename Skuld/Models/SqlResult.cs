@@ -20,11 +20,9 @@ namespace Skuld.Models
 
 		public static bool operator ==(SqlResult x, SqlResult y)
 		{
-			if (x.Successful == y.Successful &&
-				x.Error == y.Error &&
-				x.Data == y.Data &&
-				x.Exception == y.Exception)
-				return true;
+			if (x.Successful == y.Successful && x.Error == y.Error && x.Data == y.Data && x.Exception == y.Exception)
+			{ return true; }
+
 			return false;
 		}
 		public static bool operator !=(SqlResult x, SqlResult y)

@@ -45,14 +45,14 @@ namespace Skuld.Services
 		{
 			DogStatsd.Increment("messages.recieved");
 
-			if (arg.Author.IsBot) return;
+			if (arg.Author.IsBot) { return; }
 
 			var message = arg as SocketUserMessage;
-			if (message == null) return;
+			if (message == null) { return; }
 
 			var context = new ShardedCommandContext(client, message);
 
-			if(!MessageTools.IsEnabledChannel((ITextChannel)context.Channel)) return;
+			if (!MessageTools.IsEnabledChannel((ITextChannel)context.Channel)) { return; }
 			
 			try
 			{
@@ -61,7 +61,7 @@ namespace Skuld.Services
 				if (database.CanConnect)
 				{
 					var usr = await database.GetUserAsync(context.User.Id);
-					if (usr == null) await database.InsertUserAsync(context.User).ConfigureAwait(false);
+					if (usr == null) { await database.InsertUserAsync(context.User).ConfigureAwait(false); }
 
 					if (context.Guild != null)
 					{
@@ -76,8 +76,8 @@ namespace Skuld.Services
 					}
 				}
 
-				if (sguild != null) { if (!HasPrefix(message, sguild.Prefix)) return; }
-				else { if (!HasPrefix(message)) return; }
+				if (sguild != null) { if (!HasPrefix(message, sguild.Prefix)) { return; } }
+				else { if (!HasPrefix(message)) { return; } }
 
 				if (database.CanConnect)
 				{
@@ -101,13 +101,13 @@ namespace Skuld.Services
 				}
 
 				var cmds = commandService.Search(context, GetCmdName(message, sguild)).Commands;
-				if (cmds == null || cmds.Count == 0) return;
+				if (cmds == null || cmds.Count == 0) { return; }
 
 				if (database.CanConnect)
 				{
 					var cmd = cmds.FirstOrDefault().Command;
 					var mods = sguild.GuildSettings.Modules;
-					if (ModuleDisabled(mods, cmd)) return; 
+					if (ModuleDisabled(mods, cmd)) { return; }
 				}
 
 				Thread thd = new Thread(
@@ -187,7 +187,7 @@ namespace Skuld.Services
 			return retn;
 		}
 
-		bool ModuleDisabled(GuildCommandModules cmdmods, CommandInfo command)
+		static bool ModuleDisabled(GuildCommandModules cmdmods, CommandInfo command)
 		{
 			if (!cmdmods.AccountsEnabled && command.Module.Name.ToLowerInvariant() == "accounts")
 			{ return true; }
@@ -287,7 +287,7 @@ namespace Skuld.Services
 			{
 				var textChan = (ITextChannel)channel;
 				var mesgChan = (IMessageChannel)channel;
-				if (channel == null || textChan == null || mesgChan == null) return null;
+				if (channel == null || textChan == null || mesgChan == null) { return null; }
 				await mesgChan.TriggerTypingAsync();
 				await logger.AddToLogsAsync(new Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
 				return await mesgChan.SendMessageAsync(message);
@@ -304,7 +304,7 @@ namespace Skuld.Services
 			{
 				var textChan = (ITextChannel)channel;
 				var mesgChan = (IMessageChannel)channel;
-				if (channel == null || textChan == null || mesgChan == null) return null;
+				if (channel == null || textChan == null || mesgChan == null) { return null; }
 				await mesgChan.TriggerTypingAsync();
 				IUserMessage msg;
 				var perm = (await textChan.Guild.GetUserAsync(client.CurrentUser.Id)).GetPermissions(textChan).EmbedLinks;
@@ -336,7 +336,7 @@ namespace Skuld.Services
 		{
 			var textChan = (ITextChannel)channel;
 			var mesgChan = (IMessageChannel)channel;
-			if (channel == null || textChan == null || mesgChan == null) return null;
+			if (channel == null || textChan == null || mesgChan == null) { return null; }
 			await mesgChan.TriggerTypingAsync();
 			IUserMessage msg;
 			try
@@ -358,7 +358,7 @@ namespace Skuld.Services
 			{
 				var textChan = (ITextChannel)channel;
 				var mesgChan = (IMessageChannel)channel;
-				if (channel == null || textChan == null || mesgChan == null) return;
+				if (channel == null || textChan == null || mesgChan == null) { return; }
 				await mesgChan.TriggerTypingAsync();
 				IUserMessage msg = await mesgChan.SendMessageAsync(message);
 				await logger.AddToLogsAsync(new Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
@@ -376,7 +376,7 @@ namespace Skuld.Services
 			{
 				var textChan = (ITextChannel)channel;
 				var mesgChan = (IMessageChannel)channel;
-				if (channel == null || textChan == null || mesgChan == null) return;
+				if (channel == null || textChan == null || mesgChan == null) { return; }
 				await mesgChan.TriggerTypingAsync();
 				var perm = (await textChan.Guild.GetUserAsync(client.CurrentUser.Id)).GetPermissions(textChan).EmbedLinks;
 				IUserMessage msg = null;
@@ -408,7 +408,7 @@ namespace Skuld.Services
 		{
 			var textChan = (ITextChannel)channel;
 			var mesgChan = (IMessageChannel)channel;
-			if (channel == null || textChan == null || mesgChan == null) return;
+			if (channel == null || textChan == null || mesgChan == null) { return; }
 			await mesgChan.TriggerTypingAsync();
 			try
 			{
@@ -468,21 +468,21 @@ namespace Skuld.Services
 		private async Task InsertCommand(CommandInfo command, IUser user)
 		{
 			var suser = await database.GetUserAsync(user.Id);
-			if (suser != null) await database.UpdateUserUsageAsync(suser, command.Name ?? command.Module.Name);
+			if (suser != null) { await database.UpdateUserUsageAsync(suser, command.Name ?? command.Module.Name); }
 			else
 			{
-				await database.InsertUserAsync(user);
-				await InsertCommand(command, user);
+				await database.InsertUserAsync(user).ConfigureAwait(false);
+				await InsertCommand(command, user).ConfigureAwait(false);
 			}
 		}
 		private async Task InsertCommand(CustomCommand command, IUser user)
 		{
 			var suser = await database.GetUserAsync(user.Id);
-			if (suser != null) await database.UpdateUserUsageAsync(suser, command.CommandName);
+			if (suser != null) { await database.UpdateUserUsageAsync(suser, command.CommandName); }
 			else
 			{
-				await database.InsertUserAsync(user);
-				await InsertCommand(command, user);
+				await database.InsertUserAsync(user).ConfigureAwait(false);
+				await InsertCommand(command, user).ConfigureAwait(false);
 			}
 		}
 	}
