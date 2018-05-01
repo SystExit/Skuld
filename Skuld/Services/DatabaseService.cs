@@ -954,7 +954,7 @@ namespace Skuld.Services
 				command.Parameters.AddWithValue("@xp", features.Experience);
 				command.Parameters.AddWithValue("@guildID", id);
 
-				return await SingleQueryAsync(command);
+				return await SingleQueryAsync(command).ConfigureAwait(false);
 			}
 			return new SqlResult
 			{
