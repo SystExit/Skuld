@@ -35,7 +35,7 @@ namespace Skuld.Modules
 			await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = kitsu }.Build());
 		}
 
-		[Command("danbooru"), Summary(""), Ratelimit(20, 1, Measure.Minutes)]
+		[Command("danbooru"), Summary("Gets stuff from danbooru"), Ratelimit(20, 1, Measure.Minutes)]
 		public async Task Danbooru(params string[] tags)
 		{
 			if (BooruClient.ContainsBlacklistedTags(tags))
@@ -53,7 +53,7 @@ namespace Skuld.Modules
 			}
 		}
 
-		[Command("gelbooru"), Summary(""), RequireNsfw, Ratelimit(20, 1, Measure.Minutes)]
+		[Command("gelbooru"), Summary("Gets stuff from gelbooru"), RequireNsfw, Ratelimit(20, 1, Measure.Minutes)]
 		public async Task Gelbooru(params string[] tags)
 		{
 			if (BooruClient.ContainsBlacklistedTags(tags))
@@ -71,7 +71,7 @@ namespace Skuld.Modules
 			}
 		}
 
-		[Command("rule34"), Summary(""), RequireNsfw, Ratelimit(20, 1, Measure.Minutes)]
+		[Command("rule34"), Summary("Gets stuff from rule34"), RequireNsfw, Ratelimit(20, 1, Measure.Minutes)]
 		public async Task R34(params string[] tags)
 		{
 			if (BooruClient.ContainsBlacklistedTags(tags))
@@ -89,7 +89,7 @@ namespace Skuld.Modules
 			}
 		}
 
-		[Command("e621"), Summary(""), RequireNsfw, Ratelimit(20, 1, Measure.Minutes)]
+		[Command("e621"), Summary("Gets stuff from e621"), RequireNsfw, Ratelimit(20, 1, Measure.Minutes)]
 		public async Task E621(params string[] tags)
 		{
 			if (BooruClient.ContainsBlacklistedTags(tags))
@@ -107,7 +107,7 @@ namespace Skuld.Modules
 			}
 		}
 
-		[Command("konachan"), Summary(""), RequireNsfw, Ratelimit(20, 1, Measure.Minutes)]
+		[Command("konachan"), Summary("Gets stuff from konachan"), RequireNsfw, Ratelimit(20, 1, Measure.Minutes)]
 		public async Task KonaChan(params string[] tags)
 		{
 			if (BooruClient.ContainsBlacklistedTags(tags))
@@ -125,7 +125,7 @@ namespace Skuld.Modules
 			}
 		}
 
-		[Command("yandere"), Summary(""), RequireNsfw, Ratelimit(20, 1, Measure.Minutes)]
+		[Command("yandere"), Summary("Gets stuff from yandere"), RequireNsfw, Ratelimit(20, 1, Measure.Minutes)]
 		public async Task Yandere(params string[] tags)
 		{
 			if (BooruClient.ContainsBlacklistedTags(tags))
