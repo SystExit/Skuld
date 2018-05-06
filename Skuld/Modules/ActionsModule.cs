@@ -99,13 +99,14 @@ namespace Skuld.Modules
 					}
                     else
                     {
-                        usr.HP -= dhp;
-                        if (usr.HP > 0)
-                        {
+						if(dhp < usr.HP)
+						{
+							usr.HP -= dhp;
+
 							await Database.UpdateUserAsync(usr);
 
-                            await SendAsync($"{contuser.Mention} just stabbed {guilduser.Mention} for {dhp} HP, they now have {usr.HP} HP left", gif.URL).ConfigureAwait(false);
-                        }
+							await SendAsync($"{contuser.Mention} just stabbed {guilduser.Mention} for {dhp} HP, they now have {usr.HP} HP left", gif.URL).ConfigureAwait(false);
+						}
                         else
 						{
 							usr.HP = 0;
