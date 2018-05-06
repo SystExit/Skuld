@@ -8,11 +8,7 @@ namespace Skuld.APIS
 {
     public class TvAPIClient
 	{
-		readonly LoggingService logger;
-		public TvAPIClient(LoggingService log) //depinj
-		{
-			logger = log;
-		}
+		public LoggingService Logger { get; }
 
 		public static readonly Uri BaseTVDBUri = new Uri("https://api.thetvdb.com");
 

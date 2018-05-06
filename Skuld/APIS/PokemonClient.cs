@@ -9,8 +9,8 @@ namespace Skuld.APIS
 {
     public class PokeSharpClient
     {
-		Random Random { get; set; }
-		LoggingService Logger { get; set; }
+		public Random Random { get; set; }
+		public LoggingService Logger { get; set; }
 
         public static int? HighestPokeID = GetHighestPokemon().Result;
         private static async Task<int> GetHighestPokemon()
