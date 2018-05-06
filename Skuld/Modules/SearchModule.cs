@@ -746,7 +746,7 @@ namespace Skuld.Modules
 						embed.AddField("Move", mve, inline: true);
 					}
 					auth.Url = "https://bulbapedia.bulbagarden.net/wiki/" + pokemon.Name + "_(Pokémon)";
-					embed.Footer = new EmbedFooterBuilder() { Text = "Click the name to view more moves, I limited it to 4 to prevent a wall of text" };
+					embed.Footer = new EmbedFooterBuilder { Text = "Click the name to view more moves, I limited it to 4 to prevent a wall of text" };
 				}
 				if (group == "games" || group == "game")
 				{

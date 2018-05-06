@@ -20,7 +20,7 @@ namespace Skuld.Models.API.Booru
 		{
 			get
 			{
-				if(Prating=="s")
+				if(Prating == "s")
 				{
 					return Rating.Safe;
 				}

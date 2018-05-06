@@ -24,9 +24,7 @@ namespace Skuld.APIS
 			AddblacklistedTags(newtags);
 			var tagstring = String.Join("%20", newtags);
 
-			Uri requesturl = requesturl = new Uri("https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&tags=" + tagstring);
-
-			var data = await WebHandler.ReturnStringAsync(requesturl);
+			var data = await WebHandler.ReturnStringAsync(new Uri("https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&tags=" + tagstring));
 
 			if (data != null)
 			{
@@ -42,9 +40,7 @@ namespace Skuld.APIS
 			AddblacklistedTags(newtags);
 			var tagstring = String.Join("%20", newtags);
 
-			Uri requesturl = requesturl = new Uri("https://rule34.xxx/index.php?page=dapi&s=post&q=index&json=1&tags=" + tagstring);
-
-			var data = await WebHandler.ReturnStringAsync(requesturl);
+			var data = await WebHandler.ReturnStringAsync(new Uri("https://rule34.xxx/index.php?page=dapi&s=post&q=index&json=1&tags=" + tagstring));
 			if (data != null)
 			{
 				var posts = JsonConvert.DeserializeObject<List<Rule34Image>>(data);
@@ -59,9 +55,7 @@ namespace Skuld.APIS
 			AddblacklistedTags(newtags);
 			var tagstring = String.Join("%20", newtags);
 
-			Uri requesturl = requesturl = new Uri("https://danbooru.donmai.us/posts.json?tags=" + tagstring);
-
-			var data = await WebHandler.ReturnStringAsync(requesturl);
+			var data = await WebHandler.ReturnStringAsync(new Uri("https://danbooru.donmai.us/posts.json?tags=" + tagstring));
 			if(data!=null)
 			{
 				var posts = JsonConvert.DeserializeObject<List<DanbooruImage>>(data);
@@ -76,9 +70,7 @@ namespace Skuld.APIS
 			AddblacklistedTags(newtags);
 			var tagstring = String.Join("%20", newtags);
 
-			Uri requesturl = requesturl = new Uri("https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=" + tagstring);
-
-			var data = await WebHandler.ReturnStringAsync(requesturl);
+			var data = await WebHandler.ReturnStringAsync(new Uri("https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=" + tagstring));
 
 			if (data != null)
 			{
@@ -93,9 +85,7 @@ namespace Skuld.APIS
 			AddblacklistedTags(newtags);
 			var tagstring = String.Join("%20", newtags);
 
-			Uri requesturl = requesturl = new Uri("https://konachan.com/post.json?tags=" + tagstring);
-
-			var data = await WebHandler.ReturnStringAsync(requesturl);
+			var data = await WebHandler.ReturnStringAsync(new Uri("https://konachan.com/post.json?tags=" + tagstring));
 			
 			if (data != null)
 			{
@@ -110,9 +100,7 @@ namespace Skuld.APIS
 			AddblacklistedTags(newtags);
 			var tagstring = String.Join("%20", newtags);
 
-			Uri requesturl = requesturl = new Uri("https://e621.net/post/index.json?tags=" + tagstring);
-
-			var data = await WebHandler.ReturnStringAsync(requesturl);
+			var data = await WebHandler.ReturnStringAsync(new Uri("https://e621.net/post/index.json?tags=" + tagstring));
 			
 			if (data != null)
 			{
@@ -127,9 +115,7 @@ namespace Skuld.APIS
 			AddblacklistedTags(newtags);
 			var tagstring = String.Join("%20", newtags);
 
-			Uri requesturl = requesturl = new Uri("https://yande.re/post.json?tags=" + tagstring);
-
-			var data = await WebHandler.ReturnStringAsync(requesturl);
+			var data = await WebHandler.ReturnStringAsync(new Uri("https://yande.re/post.json?tags=" + tagstring));
 			
 			if (data != null)
 			{
