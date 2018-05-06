@@ -53,6 +53,7 @@ namespace Skuld.Modules
 					{
 						string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
 						await MessageService.SendChannelAsync(Context.Channel, message);
+						return;
 					}
 				}
 				await MessageService.SendChannelAsync(Context.Channel, "Couldn't find an image");				
@@ -77,6 +78,7 @@ namespace Skuld.Modules
 					{
 						string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
 						await MessageService.SendChannelAsync(Context.Channel, message);
+						return;
 					}
 				}
 				await MessageService.SendChannelAsync(Context.Channel, "Couldn't find an image");
@@ -101,6 +103,7 @@ namespace Skuld.Modules
 					{
 						string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
 						await MessageService.SendChannelAsync(Context.Channel, message);
+						return;
 					}
 				}
 				await MessageService.SendChannelAsync(Context.Channel, "Couldn't find an image");
@@ -124,6 +127,7 @@ namespace Skuld.Modules
 					{
 						string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
 						await MessageService.SendChannelAsync(Context.Channel, message);
+						return;
 					}
 				}
 				await MessageService.SendChannelAsync(Context.Channel, "Couldn't find an image");
@@ -148,6 +152,7 @@ namespace Skuld.Modules
 					{
 						string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
 						await MessageService.SendChannelAsync(Context.Channel, message);
+						return;
 					}
 				}
 				await MessageService.SendChannelAsync(Context.Channel, "Couldn't find an image");
@@ -171,6 +176,7 @@ namespace Skuld.Modules
 					{
 						string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
 						await MessageService.SendChannelAsync(Context.Channel, message);
+						return;
 					}
 				}
 				await MessageService.SendChannelAsync(Context.Channel, "Couldn't find an image");
