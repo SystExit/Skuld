@@ -648,6 +648,7 @@ namespace Skuld.Modules
         }
 
 		[Command("safebooru"), Summary("Gets stuff from safebooru"), Ratelimit(20, 1, Measure.Minutes)]
+		[Alias("Safe")]
 		public async Task Safebooru(params string[] tags)
 		{
 			if (BooruClient.ContainsBlacklistedTags(tags))

@@ -36,6 +36,7 @@ namespace Skuld.Modules
 		}
 
 		[Command("danbooru"), Summary("Gets stuff from danbooru"), Ratelimit(20, 1, Measure.Minutes)]
+		[Alias("dan")]
 		public async Task Danbooru(params string[] tags)
 		{
 			if (BooruClient.ContainsBlacklistedTags(tags))
@@ -46,14 +47,21 @@ namespace Skuld.Modules
 			else
 			{
 				var posts = await BooruClient.GetDanbooruImagesAsync(tags);
-				var post = posts.GetRandomImage();
-
-				string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
-				await MessageService.SendChannelAsync(Context.Channel, message);
+				if(posts!=null)
+				{
+					var post = posts.GetRandomImage();
+					if (post != null)
+					{
+						string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
+						await MessageService.SendChannelAsync(Context.Channel, message);
+					}
+				}
+				await MessageService.SendChannelAsync(Context.Channel, "Couldn't find an image");				
 			}
 		}
 
 		[Command("gelbooru"), Summary("Gets stuff from gelbooru"), RequireNsfw, Ratelimit(20, 1, Measure.Minutes)]
+		[Alias("gel")]
 		public async Task Gelbooru(params string[] tags)
 		{
 			if (BooruClient.ContainsBlacklistedTags(tags))
@@ -64,14 +72,21 @@ namespace Skuld.Modules
 			else
 			{
 				var posts = await BooruClient.GetGelbooruImagesAsync(tags);
-				var post = posts.GetRandomImage();
-
-				string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
-				await MessageService.SendChannelAsync(Context.Channel, message);
+				if (posts != null)
+				{
+					var post = posts.GetRandomImage();
+					if (post != null)
+					{
+						string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
+						await MessageService.SendChannelAsync(Context.Channel, message);
+					}
+				}
+				await MessageService.SendChannelAsync(Context.Channel, "Couldn't find an image");
 			}
 		}
 
 		[Command("rule34"), Summary("Gets stuff from rule34"), RequireNsfw, Ratelimit(20, 1, Measure.Minutes)]
+		[Alias("r34")]
 		public async Task R34(params string[] tags)
 		{
 			if (BooruClient.ContainsBlacklistedTags(tags))
@@ -82,10 +97,16 @@ namespace Skuld.Modules
 			else
 			{
 				var posts = await BooruClient.GetRule34ImagesAsync(tags);
-				var post = posts.GetRandomImage();
-
-				string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
-				await MessageService.SendChannelAsync(Context.Channel, message);
+				if (posts != null)
+				{
+					var post = posts.GetRandomImage();
+					if (post != null)
+					{
+						string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
+						await MessageService.SendChannelAsync(Context.Channel, message);
+					}
+				}
+				await MessageService.SendChannelAsync(Context.Channel, "Couldn't find an image");
 			}
 		}
 
@@ -100,14 +121,21 @@ namespace Skuld.Modules
 			else
 			{
 				var posts = await BooruClient.GetE621ImagesAsync(tags);
-				var post = posts.GetRandomImage();
-
-				string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
-				await MessageService.SendChannelAsync(Context.Channel, message);
+				if (posts != null)
+				{
+					var post = posts.GetRandomImage();
+					if (post != null)
+					{
+						string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
+						await MessageService.SendChannelAsync(Context.Channel, message);
+					}
+				}
+				await MessageService.SendChannelAsync(Context.Channel, "Couldn't find an image");
 			}
 		}
 
 		[Command("konachan"), Summary("Gets stuff from konachan"), RequireNsfw, Ratelimit(20, 1, Measure.Minutes)]
+		[Alias("kona", "kc")]
 		public async Task KonaChan(params string[] tags)
 		{
 			if (BooruClient.ContainsBlacklistedTags(tags))
@@ -118,10 +146,16 @@ namespace Skuld.Modules
 			else
 			{
 				var posts = await BooruClient.GetKonaChanImagesAsync(tags);
-				var post = posts.GetRandomImage();
-
-				string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
-				await MessageService.SendChannelAsync(Context.Channel, message);
+				if (posts != null)
+				{
+					var post = posts.GetRandomImage();
+					if (post != null)
+					{
+						string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
+						await MessageService.SendChannelAsync(Context.Channel, message);
+					}
+				}
+				await MessageService.SendChannelAsync(Context.Channel, "Couldn't find an image");
 			}
 		}
 
@@ -136,10 +170,16 @@ namespace Skuld.Modules
 			else
 			{
 				var posts = await BooruClient.GetYandereImagesAsync(tags);
-				var post = posts.GetRandomImage();
-
-				string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
-				await MessageService.SendChannelAsync(Context.Channel, message);
+				if (posts != null)
+				{
+					var post = posts.GetRandomImage();
+					if (post != null)
+					{
+						string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
+						await MessageService.SendChannelAsync(Context.Channel, message);
+					}
+				}
+				await MessageService.SendChannelAsync(Context.Channel, "Couldn't find an image");
 			}
 		}
 	}

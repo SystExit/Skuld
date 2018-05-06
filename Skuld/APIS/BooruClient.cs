@@ -36,13 +36,13 @@ namespace Skuld.APIS
 
 			var data = await WebHandler.ReturnStringAsync(requesturl);
 
-			var posts = JsonConvert.DeserializeObject<List<SafebooruImage>>(data);
-			if (posts != null)
+			if (data != null)
 			{
+				var posts = JsonConvert.DeserializeObject<List<SafebooruImage>>(data);
 				return posts;
 			}
 
-			else return null;
+			return null;
 		}
 		public async Task<IReadOnlyList<Rule34Image>> GetRule34ImagesAsync(params string[] tags)
 		{
@@ -53,14 +53,13 @@ namespace Skuld.APIS
 			Uri requesturl = requesturl = new Uri(Rule34BaseUri.OriginalString + tagstring);
 
 			var data = await WebHandler.ReturnStringAsync(requesturl);
-
-			var posts = JsonConvert.DeserializeObject<List<Rule34Image>>(data);
-			if (posts != null)
+			if (data != null)
 			{
+				var posts = JsonConvert.DeserializeObject<List<Rule34Image>>(data);
 				return posts;
 			}
 
-			else return null;
+			return null;
 		}
 		public async Task<IReadOnlyList<DanbooruImage>> GetDanbooruImagesAsync(params string[] tags)
 		{
@@ -71,14 +70,13 @@ namespace Skuld.APIS
 			Uri requesturl = requesturl = new Uri(DanbooruBaseUri.OriginalString + tagstring);
 
 			var data = await WebHandler.ReturnStringAsync(requesturl);
-
-			var posts = JsonConvert.DeserializeObject<List<DanbooruImage>>(data);
-			if (posts != null)
+			if(data!=null)
 			{
+				var posts = JsonConvert.DeserializeObject<List<DanbooruImage>>(data);
 				return posts;
 			}
 
-			else return null;
+			return null;
 		}
 		public async Task<IReadOnlyList<GelbooruImage>> GetGelbooruImagesAsync(params string[] tags)
 		{
@@ -90,12 +88,11 @@ namespace Skuld.APIS
 
 			var data = await WebHandler.ReturnStringAsync(requesturl);
 
-			var posts = JsonConvert.DeserializeObject<List<GelbooruImage>>(data);
-			if (posts != null)
+			if (data != null)
 			{
+				var posts = JsonConvert.DeserializeObject<List<GelbooruImage>>(data);
 				return posts;
 			}
-
 			else return null;
 		}
 		public async Task<IReadOnlyList<KonaChanImage>> GetKonaChanImagesAsync(params string[] tags)
@@ -107,13 +104,12 @@ namespace Skuld.APIS
 			Uri requesturl = requesturl = new Uri(KonaChanBaseUri.OriginalString + tagstring);
 
 			var data = await WebHandler.ReturnStringAsync(requesturl);
-
-			var posts = JsonConvert.DeserializeObject<List<KonaChanImage>>(data);
-			if (posts != null)
+			
+			if (data != null)
 			{
+				var posts = JsonConvert.DeserializeObject<List<KonaChanImage>>(data);
 				return posts;
 			}
-
 			else return null;
 		}
 		public async Task<IReadOnlyList<E621Image>> GetE621ImagesAsync(params string[] tags)
@@ -125,13 +121,12 @@ namespace Skuld.APIS
 			Uri requesturl = requesturl = new Uri(E621BaseUri.OriginalString + tagstring);
 
 			var data = await WebHandler.ReturnStringAsync(requesturl);
-
-			var posts = JsonConvert.DeserializeObject<List<E621Image>>(data);
-			if (posts != null)
+			
+			if (data != null)
 			{
+				var posts = JsonConvert.DeserializeObject<List<E621Image>>(data);
 				return posts;
 			}
-
 			else return null;
 		}
 		public async Task<IReadOnlyList<YandereImage>> GetYandereImagesAsync(params string[] tags)
@@ -143,13 +138,12 @@ namespace Skuld.APIS
 			Uri requesturl = requesturl = new Uri(YandereBaseUri.OriginalString + tagstring);
 
 			var data = await WebHandler.ReturnStringAsync(requesturl);
-
-			var posts = JsonConvert.DeserializeObject<List<YandereImage>>(data);
-			if (posts != null)
+			
+			if (data != null)
 			{
+				var posts = JsonConvert.DeserializeObject<List<YandereImage>>(data);
 				return posts;
 			}
-
 			else return null;
 		}
 

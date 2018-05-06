@@ -7,11 +7,15 @@ using System.Net;
 using HtmlAgilityPack;
 using System.Text;
 using System.Reflection;
+using Skuld.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Skuld.APIS
 {
 	public class WebHandler
 	{
+		static LoggingService loggingService { get { return Bot.services.GetRequiredService<LoggingService>(); } }
+
 		static string UAGENT = "Mozilla/5.0 (compatible; SkuldBot/" + Assembly.GetEntryAssembly().GetName().Version.ToString().Substring(0, 3) + "; +https://github.com/exsersewo/Skuld/)";
 
 		public static HttpWebRequest CreateWebRequest(Uri uri, byte[] auth = null)
@@ -32,74 +36,98 @@ namespace Skuld.APIS
 
 		public static async Task<string> ReturnStringAsync(Uri url)
 		{
-			var client = CreateWebRequest(url);
+			try
+			{
+				var client = CreateWebRequest(url);
 
-			var resp = (HttpWebResponse)(await client.GetResponseAsync());
-			if (resp.StatusCode == HttpStatusCode.OK)
-			{
-				var reader = new StreamReader(resp.GetResponseStream());
-				var responce = await reader.ReadToEndAsync();
-				resp.Dispose();
-				client.Abort();
-				return responce;
+				var resp = (HttpWebResponse)(await client.GetResponseAsync());
+				if (resp.StatusCode == HttpStatusCode.OK)
+				{
+					var reader = new StreamReader(resp.GetResponseStream());
+					var responce = await reader.ReadToEndAsync();
+					resp.Dispose();
+					client.Abort();
+					return responce;
+				}
+				else
+				{
+					resp.Dispose();
+					client.Abort();
+					return null;
+				}
 			}
-			else
+			catch(Exception ex)
 			{
-				resp.Dispose();
-				client.Abort();
+				await loggingService.AddToLogsAsync(new Models.LogMessage("WebHandler", ex.Message, Discord.LogSeverity.Error, ex));
 				return null;
 			}
 		}
         public static async Task<string> ReturnStringAsync(Uri url, byte[] headers)
 		{
-			var client = CreateWebRequest(url, headers);
+			try
+			{
+				var client = CreateWebRequest(url, headers);
 
-			var resp = (HttpWebResponse)(await client.GetResponseAsync());
-			if (resp.StatusCode == HttpStatusCode.OK)
-			{
-				var reader = new StreamReader(resp.GetResponseStream());
-				var responce = await reader.ReadToEndAsync();
-				resp.Dispose();
-				client.Abort();
-				return responce;
+				var resp = (HttpWebResponse)(await client.GetResponseAsync());
+				if (resp.StatusCode == HttpStatusCode.OK)
+				{
+					var reader = new StreamReader(resp.GetResponseStream());
+					var responce = await reader.ReadToEndAsync();
+					resp.Dispose();
+					client.Abort();
+					return responce;
+				}
+				else
+				{
+					resp.Dispose();
+					client.Abort();
+					return null;
+				}
 			}
-			else
+			catch (Exception ex)
 			{
-				resp.Dispose();
-				client.Abort();
+				await loggingService.AddToLogsAsync(new Models.LogMessage("WebHandler", ex.Message, Discord.LogSeverity.Error, ex));
 				return null;
 			}
 		}
 		public static async Task<HtmlDocument> ScrapeUrlAsync(Uri url)
 		{
-			var request = CreateWebRequest(url);
-			request.Timeout = 2000;
-			request.UserAgent = UAGENT;
-
 			try
 			{
-				var response = (HttpWebResponse)await request.GetResponseAsync();
-				var doc = new HtmlDocument();
-				if (response.StatusCode == HttpStatusCode.OK)
+				var request = CreateWebRequest(url);
+				request.Timeout = 2000;
+				request.UserAgent = UAGENT;
+
+				try
 				{
-					doc.Load(response.GetResponseStream(), Encoding.UTF8);
-					request.Abort();
+					var response = (HttpWebResponse)await request.GetResponseAsync();
+					var doc = new HtmlDocument();
+					if (response.StatusCode == HttpStatusCode.OK)
+					{
+						doc.Load(response.GetResponseStream(), Encoding.UTF8);
+						request.Abort();
+					}
+					if (doc != null)
+						return doc;
+					else
+						return null;
 				}
-				if (doc != null)
-					return doc;
-				else
-					return null;
-			}
-			catch(WebException ex)
-			{
-				if(ex.Status == WebExceptionStatus.Timeout)
+				catch (WebException ex)
+				{
+					if (ex.Status == WebExceptionStatus.Timeout)
+					{
+						return null;
+					}
+					throw;
+				}
+				catch
 				{
 					return null;
 				}
-				throw;
 			}
-			catch
+			catch (Exception ex)
 			{
+				await loggingService.AddToLogsAsync(new Models.LogMessage("WebHandler", ex.Message, Discord.LogSeverity.Error, ex));
 				return null;
 			}
 		}
