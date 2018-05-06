@@ -13,22 +13,16 @@ namespace Skuld.Modules
     [Group, Name("Stats")]
     public class Stats : ModuleBase<ShardedCommandContext>
 	{
-		readonly MessageService messageService;
-		readonly Process process;
-
-		public Stats(MessageService msg)//depinj
-		{
-			messageService = msg;
-			process = Process.GetCurrentProcess();
-		}
+		public MessageService MessageService { get; set; }		
+		Process Process = Process.GetCurrentProcess();
 
         [Command("ping"), Summary("Print Ping")]
         public async Task Ping() =>
-            await messageService.SendChannelAsync(Context.Channel, "PONG: " + Context.Client.GetShardFor(Context.Guild).Latency + "ms");
+            await MessageService.SendChannelAsync(Context.Channel, "PONG: " + Context.Client.GetShardFor(Context.Guild).Latency + "ms");
 
         [Command("uptime"), Summary("Current Uptime")]
         public async Task Uptime()=>
-            await messageService.SendChannelAsync(Context.Channel, $"Uptime: {string.Format("{0:dd} Days {0:hh} Hours {0:mm} Minutes {0:ss} Seconds", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}");
+            await MessageService.SendChannelAsync(Context.Channel, $"Uptime: {string.Format("{0:dd} Days {0:hh} Hours {0:mm} Minutes {0:ss} Seconds", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}");
 
         [Command("stats"), Summary("All stats")]
         public async Task StatsAll()
@@ -50,19 +44,19 @@ namespace Skuld.Modules
             embed.AddField("Pong",Context.Client.GetShardFor(Context.Guild).Latency + "ms",inline:true);
             embed.AddField("Guilds", Context.Client.Guilds.Count().ToString(),inline:true);
             embed.AddField("Shards", Context.Client.Shards.Count().ToString(),inline:true);
-            embed.AddField("Commands", messageService.commandService.Commands.Count().ToString(),inline:true);
-            embed.AddField("Memory Used", (process.WorkingSet64 / 1024) / 1024 + "MB",inline:true);
+            embed.AddField("Commands", MessageService.commandService.Commands.Count().ToString(),inline:true);
+            embed.AddField("Memory Used", (Process.WorkingSet64 / 1024) / 1024 + "MB",inline:true);
 			embed.AddField("Operating System", Environment.OSVersion);
 
-            await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
+            await MessageService.SendChannelAsync(Context.Channel, "", embed.Build());
         }
 
         [Command("netfw"), Summary(".Net Info")]
         public async Task Netinfo() =>
-            await messageService.SendChannelAsync(Context.Channel, $"{RuntimeInformation.FrameworkDescription} {RuntimeInformation.OSArchitecture}");
+            await MessageService.SendChannelAsync(Context.Channel, $"{RuntimeInformation.FrameworkDescription} {RuntimeInformation.OSArchitecture}");
 
         [Command("discord"), Summary("Discord Info")]
         public async Task Discnet() => 
-            await messageService.SendChannelAsync(Context.Channel, $"Discord.Net Library Version: {DiscordConfig.Version}");
+            await MessageService.SendChannelAsync(Context.Channel, $"Discord.Net Library Version: {DiscordConfig.Version}");
     }
 }

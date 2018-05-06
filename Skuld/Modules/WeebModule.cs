@@ -13,37 +13,24 @@ using Skuld.Services;
 
 namespace Skuld.Modules
 {
-    [Group, Name("Search")]
+    [Group]
     public class Weeb : InteractiveBase<ShardedCommandContext>
     {
-		readonly DatabaseService database;
-		readonly Locale locale;
-		readonly MessageService messageService;
-		readonly SysExClient sysExClient;
-		readonly LoggingService logger;
-
-		public Weeb(DatabaseService db,
-			Locale loc,
-			MessageService msg,
-			LoggingService log,
-			SysExClient sysCli) //depinj
-		{
-			database = db;
-			locale = loc;
-			messageService = msg;
-			logger = log;
-			sysExClient = sysCli;
-		}
+		public DatabaseService Database { get; set; }
+		public Locale Locale { get; set; }
+		public MessageService MessageService { get; set; }
+		public SysExClient SysExClient { get; set; }
+		public LoggingService Logger { get; set; }
 
         private static int timeout = 20;
         private MangaArr MangaArray;
         [Command("manga"), Summary("Gets a manga from MyAnimeList.Net")]
         public async Task MangaGet([Remainder]string mangatitle)
 		{
-			var usr = await database.GetUserAsync(Context.User.Id);
-			var loc = locale.GetLocale(locale.defaultLocale);
+			var usr = await Database.GetUserAsync(Context.User.Id);
+			var loc = Locale.GetLocale(Locale.defaultLocale);
 			if (usr != null)
-				loc = locale.GetLocale(usr.Language);
+				loc = Locale.GetLocale(usr.Language);
 
 			var pages = new List<string>();
             MangaArray = await MALAPI.GetMangasAsync(mangatitle);
@@ -100,7 +87,7 @@ namespace Skuld.Modules
                 else
                 {
                     entrymessage += String.Join(Environment.NewLine, entries.ToArray());
-                    msg = await messageService.SendChannelAsync(Context.Channel, entrymessage);
+                    msg = await MessageService.SendChannelAsync(Context.Channel, entrymessage);
                 }
                 var response = await NextMessageAsync(fromSourceUser: true, inSourceChannel: true, timeout:TimeSpan.FromSeconds(timeout));
                 await GetMangaAtPosition(Convert.ToInt32(response.Content), response.Channel).ConfigureAwait(false);
@@ -133,10 +120,10 @@ namespace Skuld.Modules
         {
             try
 			{
-				var usr = await database.GetUserAsync(Context.User.Id);
-				var loc = locale.GetLocale(locale.defaultLocale);
+				var usr = await Database.GetUserAsync(Context.User.Id);
+				var loc = Locale.GetLocale(Locale.defaultLocale);
 				if (usr != null)
-					loc = locale.GetLocale(usr.Language);
+					loc = Locale.GetLocale(usr.Language);
 
 				var embed = new EmbedBuilder
                 {
@@ -157,11 +144,11 @@ namespace Skuld.Modules
                 embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_SCORE"), Tools.Tools.CheckForEmptyWithLocale(mango.Score, loc), true);
                 embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), Tools.Tools.CheckForEmptyWithLocale(HttpUtility.HtmlDecode(mango.Synopsis.Split('<')[0]), loc), true);
 
-                await messageService.SendChannelAsync(channel ?? Context.Channel, "", embed.Build());
+                await MessageService.SendChannelAsync(channel ?? Context.Channel, "", embed.Build());
             }
             catch (Exception ex)
             {
-                await logger.AddToLogsAsync(new Models.LogMessage("Weeb-Mng", "Something happened", LogSeverity.Error, ex));
+                await Logger.AddToLogsAsync(new Models.LogMessage("Weeb-Mng", "Something happened", LogSeverity.Error, ex));
             }
         }
 
@@ -169,10 +156,10 @@ namespace Skuld.Modules
         [Command("anime"), Summary("Gets an anime from MyAnimeList.Net")]
         public async Task Animuget([Remainder]string animetitle)
 		{
-			var usr = await database.GetUserAsync(Context.User.Id);
-			var loc = locale.GetLocale(locale.defaultLocale);
+			var usr = await Database.GetUserAsync(Context.User.Id);
+			var loc = Locale.GetLocale(Locale.defaultLocale);
 			if (usr != null)
-				loc = locale.GetLocale(usr.Language);
+				loc = Locale.GetLocale(usr.Language);
 
 			var pages = new List<string>();
             AnimeArray = await MALAPI.GetAnimesAsync(animetitle);
@@ -219,7 +206,7 @@ namespace Skuld.Modules
                 else
                 {
                     entrymessage += String.Join(Environment.NewLine, entries.ToArray());
-                    msg = await messageService.SendChannelAsync(Context.Channel, entrymessage);
+                    msg = await MessageService.SendChannelAsync(Context.Channel, entrymessage);
                 }
                 var response = await NextMessageAsync(fromSourceUser: true, inSourceChannel: true, timeout: TimeSpan.FromSeconds(timeout));
                 await GetAnimeAtPosition(Convert.ToInt32(response.Content), response.Channel).ConfigureAwait(false);
@@ -247,10 +234,10 @@ namespace Skuld.Modules
         {
             try
 			{
-				var usr = await database.GetUserAsync(Context.User.Id);
-				var loc = locale.GetLocale(locale.defaultLocale);
+				var usr = await Database.GetUserAsync(Context.User.Id);
+				var loc = Locale.GetLocale(Locale.defaultLocale);
 				if (usr != null)
-					loc = locale.GetLocale(usr.Language);
+					loc = Locale.GetLocale(usr.Language);
 
 				var embed = new EmbedBuilder
                 {
@@ -271,19 +258,19 @@ namespace Skuld.Modules
                 embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_SCORE"), Tools.Tools.CheckForEmptyWithLocale(animu.Score, loc), true);
                 embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), Tools.Tools.CheckForEmptyWithLocale(HttpUtility.HtmlDecode(animu.Synopsis.Split('<')[0]), loc), true);
 
-                await messageService.SendChannelAsync(channel ?? Context.Channel, "", embed.Build());
+                await MessageService.SendChannelAsync(channel ?? Context.Channel, "", embed.Build());
             }
             catch (Exception ex)
             {
-                await logger.AddToLogsAsync(new Models.LogMessage("Weeb-Anm", "Something happened", LogSeverity.Error, ex));
+                await Logger.AddToLogsAsync(new Models.LogMessage("Weeb-Anm", "Something happened", LogSeverity.Error, ex));
             }
         }
         
         [Command("weebgif"), Summary("Gets a weeb gif")]
         public async Task WeebGif()
         {
-			var gif = await sysExClient.GetWeebReactionGifAsync();
-            await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder
+			var gif = await SysExClient.GetWeebReactionGifAsync();
+            await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder
             {
                 ImageUrl = gif,
 				Color = Tools.Tools.RandomColor()

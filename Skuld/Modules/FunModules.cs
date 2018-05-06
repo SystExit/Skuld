@@ -7,49 +7,29 @@ using Skuld.Tools;
 using Discord;
 using System.Globalization;
 using System.Linq;
-using MySql.Data.MySqlClient;
 using System.Text.RegularExpressions;
 using Discord.Addons.Interactive;
 using Skuld.Services;
+using Skuld.Extensions;
+using Skuld.Models.API.Booru;
+using System.Collections.Generic;
 
 namespace Skuld.Modules
 {
     [Group,Name("Fun")]
     public class Fun : InteractiveBase<ShardedCommandContext>
     {
-		readonly DatabaseService database;
-		readonly Random random;
-		readonly LoggingService logger;
-		readonly AnimalAPIS animals;
-		readonly Locale locale;
-		readonly MessageService messageService;
-		readonly WebComicClients comicClients;
-		readonly SysExClient sysExClient;
-		readonly Strawpoll strawpoll;
-		readonly APIS.YNWTF YNWTFcli;
-
-		public Fun(DatabaseService db,
-			Random ran,
-			LoggingService log,
-			AnimalAPIS anim,
-			Locale loc,
-			MessageService msgsrv,
-			SysExClient sysEx,
-			Strawpoll straw,
-			APIS.YNWTF yn,
-			WebComicClients comicli)
-		{
-			database = db;
-			random = ran;
-			logger = log;
-			animals = anim;
-			locale = loc;
-			comicClients = comicli;
-			sysExClient = sysEx;
-			strawpoll = straw;
-			YNWTFcli = yn;
-			messageService = msgsrv;
-		} //depinject
+		public DatabaseService Database { get; set; }
+		public Random Random { get; set; }
+		public LoggingService Logger { get; set; }
+		public AnimalAPIS Animals { get; set; }
+		public Locale Locale { get; set; }
+		public MessageService MessageService { get; set; }
+		public WebComicClients ComicClients { get; set; }
+		public SysExClient SysExClient { get; set; }
+		public Strawpoll Strawpoll { get; set; }
+		public APIS.YNWTF YNWTFcli { get; set; }
+		public BooruClient BooruClient { get; set; }
 
         static string[] eightball = {
 			"SKULD_FUN_8BALL_YES1",
@@ -93,98 +73,81 @@ namespace Skuld.Modules
         [Command("neko"),Summary("neko grill"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Neko()
         {
-            var neko = await animals.GetNekoAsync();
+            var neko = await Animals.GetNekoAsync();
 			if (neko != null)
-				await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = neko }.Build());
+				await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = neko }.Build());
 			else
-				await messageService.SendChannelAsync(Context.Channel, "Hmmm <:Thunk:350673785923567616>, I got an empty response.");
+				await MessageService.SendChannelAsync(Context.Channel, "Hmmm <:Thunk:350673785923567616>, I got an empty response.");
         }
-        [RequireNsfw]
-        [Command("lewdneko"), Summary("Lewd Neko Grill"), Ratelimit(20, 1, Measure.Minutes)]
-        public async Task LewdNeko()
-        {
-            var neko = await animals.GetLewdNekoAsync();
-            if (neko != null)            
-                await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = neko }.Build());
-			else
-				await messageService.SendChannelAsync(Context.Channel, "Hmmm <:Thunk:350673785923567616>, I got an empty response.");
-		}
 
 		[Command("kitsune"), Summary("Kitsunemimi Grill"), Ratelimit(20, 1, Measure.Minutes)]
 		public async Task Kitsune()
 		{
-			var kitsu = await sysExClient.GetKitsuneAsync();
-			await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = kitsu }.Build());
+			var kitsu = await SysExClient.GetKitsuneAsync();
+			await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = kitsu }.Build());
 		}
-		[RequireNsfw]
-		[Command("lewdkitsune"), Summary("Lewd Kitsunemimi Grill"), Ratelimit(20, 1, Measure.Minutes)]
-		public async Task LewdKitsune()
-		{
-			var kitsu = await sysExClient.GetLewdKitsuneAsync();
-			await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { ImageUrl = kitsu }.Build());
-		}
-
+		
 		[Command("kitty"), Summary("kitty"), Ratelimit(20, 1, Measure.Minutes)]
         [Alias("cat", "cats", "kittycat", "kitty cat", "meow", "kitties", "kittys")]
         public async Task Kitty()
         {
-            var kitty = await animals.GetKittyAsync();
+            var kitty = await Animals.GetKittyAsync();
 
 			if (videoext.Any(kitty.Contains))
-				await messageService.SendChannelAsync(Context.Channel, kitty);
+				await MessageService.SendChannelAsync(Context.Channel, kitty);
 			if (kitty == "https://i.ytimg.com/vi/29AcbY5ahGo/hqdefault.jpg")
-				await messageService.SendChannelAsync(Context.Channel, "Both the api's are down, that makes the sad a big sad. <:blobcry:350681079415439361>", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = kitty }.Build());
+				await MessageService.SendChannelAsync(Context.Channel, "Both the api's are down, that makes the sad a big sad. <:blobcry:350681079415439361>", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = kitty }.Build());
 			else
-				await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = kitty }.Build());
+				await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = kitty }.Build());
         }
 
         [Command("doggo"), Summary("doggo"), Ratelimit(20, 1, Measure.Minutes)]
         [Alias("dog", "dogs", "doggy")]
         public async Task Doggo()
         {            
-            var doggo = await animals.GetDoggoAsync();
+            var doggo = await Animals.GetDoggoAsync();
             if (videoext.Any(doggo.Contains))
-				await messageService.SendChannelAsync(Context.Channel, doggo);
+				await MessageService.SendChannelAsync(Context.Channel, doggo);
 			if (doggo == "https://i.imgur.com/ZSMi3Zt.jpg")
-				await messageService.SendChannelAsync(Context.Channel, "The api is down, that makes the sad a big sad. <:blobcry:350681079415439361>", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = doggo }.Build());
+				await MessageService.SendChannelAsync(Context.Channel, "The api is down, that makes the sad a big sad. <:blobcry:350681079415439361>", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = doggo }.Build());
 			else
-				await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = doggo }.Build());
+				await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = doggo }.Build());
         }
 
 		[Command("bird"), Summary("birb"), Ratelimit(20, 1, Measure.Minutes)]
 		[Alias("birb")]
 		public async Task Birb()
 		{
-			var birb = await animals.GetBirbAsync();
+			var birb = await Animals.GetBirbAsync();
 			if (videoext.Any(birb.Contains))
-			 await messageService.SendChannelAsync(Context.Channel, birb);
+			 await MessageService.SendChannelAsync(Context.Channel, birb);
 			else
-			 await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = birb }.Build());
+			 await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = birb }.Build());
 		}
 
 		[Command("llama"), Summary("Llama"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Llama()
         {
-			var llama = await sysExClient.GetLlamaAsync();
-            await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = llama }.Build());
+			var llama = await SysExClient.GetLlamaAsync();
+            await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = llama }.Build());
         }
 
         [Command("seal"), Summary("Seal"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Seal()
         {
-            var seal = await sysExClient.GetSealAsync();
-			await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = seal }.Build());
+            var seal = await SysExClient.GetSealAsync();
+			await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Color = Tools.Tools.RandomColor(), ImageUrl = seal }.Build());
         }
 
         [Command("eightball"), Summary("Eightball")]
         [Alias("8ball")]
         public async Task Eightball([Remainder]string question = null)
         {
-            var usr = await database.GetUserAsync(Context.User.Id);
-			var local = locale.GetLocale(locale.defaultLocale);
+            var usr = await Database.GetUserAsync(Context.User.Id);
+			var local = Locale.GetLocale(Locale.defaultLocale);
 			if(usr!=null)
-				local = locale.GetLocale(usr.Language);
-			await messageService.SendChannelAsync(Context.Channel, $"{Context.User.Username} :8ball: says: {local.GetString(eightball[random.Next(0, eightball.Length)])}");
+				local = Locale.GetLocale(usr.Language);
+			await MessageService.SendChannelAsync(Context.Channel, $"{Context.User.Username} :8ball: says: {local.GetString(eightball[Random.Next(0, eightball.Length)])}");
         }
 
         [Command("roll"), Summary("Roll a die")]
@@ -192,18 +155,18 @@ namespace Skuld.Modules
         {
             try
             {
-                int rand = random.Next(1, (upper + 1));
+                int rand = Random.Next(1, (upper + 1));
                 if (rand == 1)
                 {
-					if (database.CanConnect)
+					if (Database.CanConnect)
 					{
-						var oldusr = await database.GetUserAsync(Context.User.Id);
+						var oldusr = await Database.GetUserAsync(Context.User.Id);
 						oldusr.LuckFactor = Math.Round((oldusr.LuckFactor / 1.1), 4);
 
 						if (oldusr.LuckFactor < 0.1)
 							oldusr.LuckFactor = 0.1;
 
-						await database.UpdateUserAsync(oldusr);
+						await Database.UpdateUserAsync(oldusr);
 					}
 
                     await Context.Channel.SendMessageAsync($"{Context.User.Mention} just rolled and got a {rand} :weary:");
@@ -225,30 +188,30 @@ namespace Skuld.Modules
 			{
 				if (title == "list" || title == "help")
 				{
-					await messageService.SendChannelAsync(Context.Channel, "Nope");
+					await MessageService.SendChannelAsync(Context.Channel, "Nope");
 					StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
 				}
 				else
 				{
-					var pasta = await database.GetPastaAsync(title);
+					var pasta = await Database.GetPastaAsync(title);
 					if (pasta != null)
 					{
-						await messageService.SendChannelAsync(Context.Channel, $"Pasta already exists with name: **{title}**");
+						await MessageService.SendChannelAsync(Context.Channel, $"Pasta already exists with name: **{title}**");
 						StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
 					}
 					else
 					{
-						var resp = await database.InsertPastaAsync(Context.User, title, content);
+						var resp = await Database.InsertPastaAsync(Context.User, title, content);
 						if (resp.Successful)
 						{
-							await messageService.SendChannelAsync(Context.Channel, $"Successfully added: **{title}**");
+							await MessageService.SendChannelAsync(Context.Channel, $"Successfully added: **{title}**");
 						}
 					}
 				}
 			}
 			if (cmd == "edit" || cmd == "change" || cmd == "modify")
 			{
-				var pasta = await database.GetPastaAsync(title);
+				var pasta = await Database.GetPastaAsync(title);
 				if (pasta.OwnerID == Context.User.Id)
 				{
 					content = content.Replace("\'", "\\\'");
@@ -256,16 +219,16 @@ namespace Skuld.Modules
 
 					pasta.Content = content;
 
-					var resp = await database.UpdatePastaAsync(pasta);
+					var resp = await Database.UpdatePastaAsync(pasta);
 					if (resp.Successful)
 					{
-						await messageService.SendChannelAsync(Context.Channel, $"Successfully changed the content of **{title}**");
+						await MessageService.SendChannelAsync(Context.Channel, $"Successfully changed the content of **{title}**");
 					}
 				}
 				else
 				{
 					StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "unm-precon" });
-					await messageService.SendChannelAsync(Context.Channel, "I'm sorry, but you don't own the Pasta");
+					await MessageService.SendChannelAsync(Context.Channel, "I'm sorry, but you don't own the Pasta");
 				}
 			}
 		}
@@ -273,12 +236,12 @@ namespace Skuld.Modules
 		[Command("pasta"), Summary("Pastas are nice"), RequireDatabase]
         public async Task Pasta(string cmd, string title)
         {
-			var pastaLocal = await database.GetPastaAsync(title);
+			var pastaLocal = await Database.GetPastaAsync(title);
 			if (pastaLocal != null)
 			{
 				if (cmd == "who" || cmd == "?")
 				{
-					var embed = new EmbedBuilder()
+					var embed = new EmbedBuilder
 					{
 						Color = Tools.Tools.RandomColor(),
 						Title = pastaLocal.Name
@@ -291,11 +254,11 @@ namespace Skuld.Modules
 					embed.AddField("Created", pastaLocal.Created, inline: true);
 					embed.AddField("UpVotes", ":arrow_double_up: " + pastaLocal.Upvotes, inline: true);
 					embed.AddField("DownVotes", ":arrow_double_down: " + pastaLocal.Downvotes, inline: true);
-					await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
+					await MessageService.SendChannelAsync(Context.Channel, "", embed.Build());
 				}
 				if (cmd == "upvote")
 				{
-					await messageService.SendChannelAsync(Context.Channel, "This function is currently disabled due to a new update coming soon. :( Sorry for the inconvenience");
+					await MessageService.SendChannelAsync(Context.Channel, "This function is currently disabled due to a new update coming soon. :( Sorry for the inconvenience");
 					/*command = new MySqlCommand("SELECT upvotes FROM pasta WHERE pastaname = @title");
 					command.Parameters.AddWithValue("@title", title);
 					uint upvotes = Convert.ToUInt32(await Sql.GetSingleAsync(command));
@@ -308,11 +271,11 @@ namespace Skuld.Modules
 					command.Parameters.AddWithValue("@title", title);
 					uint upvote = Convert.ToUInt32(await Sql.GetSingleAsync(command));
 					if (upvotes == upvote)
-						await messageService.SendChannelAsync(Context.Channel, $"Upvote added to **{title}** it currently has: {upvotes} Upvotes");*/
+						await MessageService.SendChannelAsync(Context.Channel, $"Upvote added to **{title}** it currently has: {upvotes} Upvotes");*/
 				}
 				if (cmd == "downvote")
 				{
-					await messageService.SendChannelAsync(Context.Channel, "This function is currently disabled due to a new update coming soon. :( Sorry for the inconvenience");
+					await MessageService.SendChannelAsync(Context.Channel, "This function is currently disabled due to a new update coming soon. :( Sorry for the inconvenience");
 					/*command = new MySqlCommand("SELECT downvotes FROM pasta WHERE pastaname = @title");
 					command.Parameters.AddWithValue("@title", title);
 					uint downvotes = Convert.ToUInt32(await Sql.GetSingleAsync(command));
@@ -325,17 +288,17 @@ namespace Skuld.Modules
 					command.Parameters.AddWithValue("@title", title);
 					uint Downvote = Convert.ToUInt32(await Sql.GetSingleAsync(command));
 					if (downvotes == Downvote)
-						await messageService.SendChannelAsync(Context.Channel, $"Downvote added to **{title}** it currently has: {downvotes} Downvote");*/
+						await MessageService.SendChannelAsync(Context.Channel, $"Downvote added to **{title}** it currently has: {downvotes} Downvote");*/
 				}
 				if (cmd == "delete")
 				{
 					if (Convert.ToUInt64(pastaLocal.OwnerID) == Context.User.Id)
 					{
-						var resp = await database.DropPastaAsync(title);
+						var resp = await Database.DropPastaAsync(title);
 
 						if(resp.Successful)
 						{
-							await messageService.SendChannelAsync(Context.Channel, $"Successfully deleted: **{title}**");
+							await MessageService.SendChannelAsync(Context.Channel, $"Successfully deleted: **{title}**");
 						}
 					}
 				}
@@ -343,7 +306,7 @@ namespace Skuld.Modules
 			else
 			{
 				StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
-				await messageService.SendChannelAsync(Context.Channel, $"Pasta `{title}` doesn't exist. :/ Sorry.");
+				await MessageService.SendChannelAsync(Context.Channel, $"Pasta `{title}` doesn't exist. :/ Sorry.");
 			}
         }
 		
@@ -352,7 +315,7 @@ namespace Skuld.Modules
         {
 			if (title == "list")
 			{
-				var pastas = await database.GetAllPastasAsync();
+				var pastas = await Database.GetAllPastasAsync();
 
 				string pastanames = "```\n";
 
@@ -366,7 +329,7 @@ namespace Skuld.Modules
 
 				pastanames += "\n```";
 
-				await messageService.SendChannelAsync(Context.Channel, $"I found:\n{pastanames}");
+				await MessageService.SendChannelAsync(Context.Channel, $"I found:\n{pastanames}");
 			}
 			else if (title == "help")
 			{
@@ -383,19 +346,19 @@ namespace Skuld.Modules
 					"  upvote  : Upvotes a pasta\n" +
 					" downvote : Downvotes a pasta\n" +
 					"  delete  : deletes a pasta```";
-				await messageService.SendChannelAsync(Context.Channel, help);
+				await MessageService.SendChannelAsync(Context.Channel, help);
 			}
 			else
 			{
-				var pasta = await database.GetPastaAsync(title);
+				var pasta = await Database.GetPastaAsync(title);
 				if (pasta != null)
 				{
-					await messageService.SendChannelAsync(Context.Channel, pasta.Content);
+					await MessageService.SendChannelAsync(Context.Channel, pasta.Content);
 				}
 				else
 				{
 					StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-					await messageService.SendChannelAsync(Context.Channel, $"Whoops, `{title}` doesn't exist");
+					await MessageService.SendChannelAsync(Context.Channel, $"Whoops, `{title}` doesn't exist");
 				}
 			}
 		}
@@ -405,15 +368,15 @@ namespace Skuld.Modules
         {
 			if (int1 > 151 || int1 < 0)
 			{
-				await messageService.SendChannelAsync(Context.Channel, $"{int1} over/under limit. (151)");
+				await MessageService.SendChannelAsync(Context.Channel, $"{int1} over/under limit. (151)");
 			}
 			else if (int2 > 151 || int2 < 0)
 			{
-				await messageService.SendChannelAsync(Context.Channel, $"{int2} over/under limit. (151)");
+				await MessageService.SendChannelAsync(Context.Channel, $"{int2} over/under limit. (151)");
 			}
 			else
 			{
-				await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder
+				await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder
 				{
 					Color = Tools.Tools.RandomColor(),
 					ImageUrl = $"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png"
@@ -425,37 +388,40 @@ namespace Skuld.Modules
         public async Task StrawpollSend(string title, [Remainder]string options)
         {
             var optionsLocal = options.Split(',');
-            var poll = await strawpoll.SendPoll(title, optionsLocal);            
-            await messageService.SendChannelAsync(Context.Channel,$"Strawpoll **{title}** has been created, here's the link: {poll.Url}");
+            var poll = await Strawpoll.SendPoll(title, optionsLocal);            
+            await MessageService.SendChannelAsync(Context.Channel,$"Strawpoll **{title}** has been created, here's the link: {poll.Url}");
         }
-
-        [Command("strawpoll"), Summary("Gets a strawpoll")]
-        public async Task StrawpollGet(int id) =>
-            await StrawpollGet("http://www.strawpoll.me/" + id).ConfigureAwait(false);
-
+		
         [Command("strawpoll"), Summary("Gets a strawpoll")]
         public async Task StrawpollGet(string url)
         {
-            var poll = await strawpoll.GetPoll(url);
-            var embed = new EmbedBuilder()
-            {
-                Author = new EmbedAuthorBuilder()
-                {
-                    Name = poll.Title,
-                    Url = poll.Url
-                },
-                Color = Tools.Tools.RandomColor(),
-                Footer = new EmbedFooterBuilder()
-                {
-                    Text = "Strawpoll ID: " + poll.ID
-                },
-                Timestamp = DateTime.UtcNow
-            };
-            for (int z = 0; z < poll.Options.Length; z++)
-            { embed.AddField(poll.Options[z], poll.Votes[z]); }
+			if (!Tools.Tools.IsWebsite(url))
+				url = "https://strawpoll.me/" + url;
+            var poll = await Strawpoll.GetPoll(url);
+			if(poll!=null)
+			{
+				var embed = new EmbedBuilder
+				{
+					Author = new EmbedAuthorBuilder
+					{
+						Name = poll.Title,
+						Url = poll.Url
+					},
+					Color = Tools.Tools.RandomColor(),
+					Footer = new EmbedFooterBuilder
+					{
+						Text = "Strawpoll ID: " + poll.ID
+					},
+					Timestamp = DateTime.UtcNow
+				};
+				for (int z = 0; z < poll.Options.Length; z++)
+				{ embed.AddField(poll.Options[z], poll.Votes[z]); }
 
-            await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
-        }
+				await MessageService.SendChannelAsync(Context.Channel, "", embed.Build());
+			}
+
+			await MessageService.SendChannelAsync(Context.Channel, "Poll: `"+url+"` doesn't exist");
+		}
 
         [Command("emoji"), Summary("Turns text into bigmoji")]
         public async Task Emojify([Remainder]string message)
@@ -471,7 +437,7 @@ namespace Skuld.Modules
                 else
 					newmessage += " ";
             }
-            await messageService.SendChannelAsync(Context.Channel, newmessage);
+            await MessageService.SendChannelAsync(Context.Channel, newmessage);
         }
 
         /*[Command("slots", RunMode= RunMode.Async),Summary("Test your luck")]
@@ -499,16 +465,16 @@ namespace Skuld.Modules
 			}
 		}*/
 
-        [Command("xkcd"), Summary("Get's random XKCD comic"), Ratelimit(5, 1, Measure.Minutes)]
+        [Command("xkcd"), Summary("Get's Random XKCD comic"), Ratelimit(5, 1, Measure.Minutes)]
         public async Task XKCD(int comicid = -1)
         {
 			if(comicid == -1)
 			{
-				await SendXKCD((await comicClients.GetRandomXKCDComicAsync()));
+				await SendXKCD((await ComicClients.GetRandomXKCDComicAsync())).ConfigureAwait(false);
 			}
 			else
 			{
-				await SendXKCD((await comicClients.GetXKCDComicAsync(comicid)));
+				await SendXKCD((await ComicClients.GetXKCDComicAsync(comicid))).ConfigureAwait(false);
 			}
         }
         public async Task SendXKCD(XKCDComic comic)
@@ -538,15 +504,15 @@ namespace Skuld.Modules
 				{
 					dateTime = DateTime.ParseExact($"{comic.day} {comic.month} {comic.year}", "dd MM yyyy", CultureInfo.InvariantCulture);
 				}
-				await messageService.SendChannelAsync(Context.Channel, string.Empty, new EmbedBuilder()
+				await MessageService.SendChannelAsync(Context.Channel, string.Empty, new EmbedBuilder
 				{
-					Author = new EmbedAuthorBuilder()
+					Author = new EmbedAuthorBuilder
 					{
 						Name = "Randall Patrick Munroe - XKCD",
 						Url = "https://xkcd.com/" + comic.num + "/",
 						IconUrl = "https://pbs.twimg.com/profile_images/602808103281692673/8lIim6cB_400x400.png"
 					},
-					Footer = new EmbedFooterBuilder()
+					Footer = new EmbedFooterBuilder
 					{
 						Text = "Strip released on"
 					},
@@ -559,12 +525,12 @@ namespace Skuld.Modules
 			}
         }
 
-        [Command("cah"), Summary("Gets a random Cynaide & Happiness Comic"), Alias("cyanide&happiness","c&h"), Ratelimit(5, 1, Measure.Minutes)]
+        [Command("cah"), Summary("Gets a Random Cynaide & Happiness Comic"), Alias("cyanide&happiness","c&h"), Ratelimit(5, 1, Measure.Minutes)]
         public async Task CAH()
         {
             try
             {
-				var comic = await comicClients.GetCAHComicAsync();
+				var comic = await ComicClients.GetCAHComicAsync();
                 var embed = new EmbedBuilder
                 {
                     Author = new EmbedAuthorBuilder
@@ -576,11 +542,11 @@ namespace Skuld.Modules
                     ImageUrl = comic.ImageURL,
                     Color = Tools.Tools.RandomColor()
                 }.Build();
-                await messageService.SendChannelAsync(Context.Channel, comic.URL, embed);
+                await MessageService.SendChannelAsync(Context.Channel, comic.URL, embed);
             }
             catch(Exception ex)
             {
-                await logger.AddToLogsAsync(new Models.LogMessage("CAH-Cmd", "Error parsing website", LogSeverity.Error, ex));
+                await Logger.AddToLogsAsync(new Models.LogMessage("CAH-Cmd", "Error parsing website", LogSeverity.Error, ex));
             }
         }
 
@@ -588,7 +554,7 @@ namespace Skuld.Modules
         public async Task Time()
         {
             var offset = new DateTimeOffset(DateTime.UtcNow);
-            await messageService.SendChannelAsync(Context.Channel,offset.ToString());
+            await MessageService.SendChannelAsync(Context.Channel,offset.ToString());
         }
 
         [Command("time"), Summary("Gets time from utc with offset")]
@@ -599,7 +565,7 @@ namespace Skuld.Modules
             var nts = ts.Add(TimeSpan.FromHours(ofs));
             var dtOffset = new DateTimeOffset(DateTime.UtcNow);
             var ndtof = dtOffset.ToOffset(nts);
-            await messageService.SendChannelAsync(Context.Channel,ndtof.ToString());
+            await MessageService.SendChannelAsync(Context.Channel,ndtof.ToString());
         }
 
         [Command("roast"), Summary("\"Roasts\" a user, these are all taken as jokes, and aren't actually meant to cause harm.")]
@@ -607,16 +573,16 @@ namespace Skuld.Modules
         {
 			if (user == null)
 				user = Context.User;
-            var roast = await sysExClient.GetRoastAsync();
-            await messageService.SendChannelAsync(Context.Channel, user.Mention + " " + roast);
+            var roast = await SysExClient.GetRoastAsync();
+            await MessageService.SendChannelAsync(Context.Channel, user.Mention + " " + roast);
         }
 
         [Command("dadjoke"), Summary("Gives you a bad dad joke to facepalm at.")]
         public async Task DadJoke()
         {
-			var joke = await sysExClient.GetDadJokeAsync();
+			var joke = await SysExClient.GetDadJokeAsync();
 
-            await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder
+            await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder
             {
                 Title = joke.Setup,
                 Description = Tools.Tools.CheckForNull(joke.Punchline),
@@ -627,9 +593,9 @@ namespace Skuld.Modules
         [Command("pickup",RunMode = RunMode.Async),Summary("Cringe at these bad user-submitted pick up lines. (Don't actually use these or else you'll get laughed at. :3)"),Alias("pickupline")]
         public async Task PickUp()
         {
-			var pickup = await sysExClient.GetPickupLineAsync();
+			var pickup = await SysExClient.GetPickupLineAsync();
 
-            await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder
+            await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder
             {
                 Title = pickup.Setup,
                 Description = Tools.Tools.CheckForNull(pickup.Punchline),
@@ -653,19 +619,19 @@ namespace Skuld.Modules
                     Name = aPOD.CopyRight
                 }
             };
-            await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
+            await MessageService.SendChannelAsync(Context.Channel, "", embed.Build());
         }
 
-        [Command("choose"), Summary("Choose from things")]
+        [Command("choose"), Summary("Choose from things, eg: books | games")]
         public async Task Choose([Remainder]string choices)
         {
             var choicearr = choices.Split('|');
-            var choice = choicearr[random.Next(0, choicearr.Length)];
+            var choice = choicearr[Random.Next(0, choicearr.Length)];
             if (Char.IsWhiteSpace(choice[0]))
             { choice = choice.Remove(choice[0], 1); }
             else if (Char.IsWhiteSpace(choice[choice.Length - 1]))
             { choice = choice.Remove(choice.Length - 1); }
-            await messageService.SendChannelAsync(Context.Channel, $"<:blobthinkcool:350673773113901056> | __{(Context.User as IGuildUser).Nickname??Context.User.Username}__ I choose: **{choice}**");
+            await MessageService.SendChannelAsync(Context.Channel, $"<:blobthinkcool:350673773113901056> | __{(Context.User as IGuildUser).Nickname ??Context.User.Username}__ I choose: **{choice}**");
         }
 
         [Command("yn"), Summary("Yes? or No?")]
@@ -678,83 +644,53 @@ namespace Skuld.Modules
                 Title = YNResp.Answer,
                 ImageUrl = YNResp.Image
             };
-            await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
+            await MessageService.SendChannelAsync(Context.Channel, "", embed.Build());
         }
 
-		[Command("heal"), Summary("Did you run out of health? Here's the healing station"), RequireDatabase]
-		public async Task Heal(uint hp, [Remainder]IUser User = null)
+		[Command("safebooru"), Summary("Gets stuff from safebooru"), Ratelimit(20, 1, Measure.Minutes)]
+		[Alias("Safe")]
+		public async Task Safebooru(params string[] tags)
 		{
-			if (User == null)
-				User = Context.User;
-			if (User == Context.User)
+			if (BooruClient.ContainsBlacklistedTags(tags))
 			{
-				var user = await database.GetUserAsync(User.Id);
-				var offset = 10000 - user.HP;
-				if (hp > offset)
+				await MessageService.SendChannelAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+			}
+			else
+			{
+				var posts = await BooruClient.GetSafebooruImagesAsync(tags);
+				var post = GetSafeImage(posts);
+				if(post != null)
 				{
-					await messageService.SendChannelAsync(Context.Channel, "You sure you wanna do that? You only need to heal by: `" + offset + "` HP");
-				}
-				var cost = GetCostOfHP(hp);
-				if (user.Money >= cost)
-				{
-					if (user.HP == 10000)
-					{
-						await messageService.SendChannelAsync(Context.Channel, "You're already at max health");
-						return;
-					}
-					user.Money -= cost;
-					user.HP += hp;
-
-					if (user.HP > 10000)
-						user.HP = 10000;
-
-					await database.UpdateUserAsync(user);
-					
-					await messageService.SendChannelAsync(Context.Channel, $"You have healed your hp by {hp} for {Bot.Configuration.Utils.MoneySymbol}{cost.ToString("N0")}");
+					string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
+					await MessageService.SendChannelAsync(Context.Channel, message);
 				}
 				else
 				{
-					await messageService.SendChannelAsync(Context.Channel, "You don't have enough money for this action.");
+					await MessageService.SendChannelAsync(Context.Channel, "Couldn't find an image");
+				}
+			}
+		}
+		int EdgeCase;
+		public SafebooruImage GetSafeImage(IReadOnlyList<SafebooruImage> posts)
+		{
+			var post = posts.GetRandomImage();
+			EdgeCase++;
+			if(EdgeCase <= 5)
+			{
+				if (post.Rating != Rating.Safe)
+				{
+					return GetSafeImage(posts);
+				}
+				else
+				{
+					return post;
 				}
 			}
 			else
 			{
-				var user = await database.GetUserAsync(User.Id);
-				var you  = await database.GetUserAsync(Context.User.Id);
-				var offset = 10000 - user.HP;
-				if (hp > offset)
-				{
-					await messageService.SendChannelAsync(Context.Channel, "You sure you wanna do that? They only need to heal by: `" + offset + "` HP");
-				}
-				var cost = GetCostOfHP(hp);
-				if (you.Money >= cost)
-				{
-					if (user.HP == 10000)
-					{
-						await messageService.SendChannelAsync(Context.Channel, "They're already at max health");
-						return;
-					}
-					user.HP += hp;
-					you.Money -= cost;
-
-					if (user.HP > 10000)
-						user.HP = 10000;
-
-					await database.UpdateUserAsync(user);
-					await database.UpdateUserAsync(you);
-
-					await messageService.SendChannelAsync(Context.Channel, $"You have healed {User.Username}'s health by {hp} for {Bot.Configuration.Utils.MoneySymbol}{cost.ToString("N0")}");
-				}
-				else
-				{
-					await messageService.SendChannelAsync(Context.Channel, "You don't have enough money for this action.");
-				}
+				EdgeCase = 0;
+				return null;
 			}
 		}
-
-        ulong GetCostOfHP(uint hp)
-        {
-            return (ulong)(hp / 0.8);
-        }
-    }
+	}
 }

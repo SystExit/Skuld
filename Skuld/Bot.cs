@@ -98,6 +98,8 @@ namespace Skuld
 				.AddSingleton<WebComicClients>()
 				.AddSingleton<Locale>()
 				.AddSingleton<MessageService>()
+				.AddSingleton<BooruClient>()
+				.AddSingleton<PokeSharp.Deserializer.PokeSharpClient>()
 				.AddSingleton(new Utilities.MessageServiceConfig
 				{
 					ArgPos = 0,
@@ -125,6 +127,7 @@ namespace Skuld
 			services.GetRequiredService<Strawpoll>();
 			await services.GetRequiredService<WebComicClients>().GetXKCDLastPageAsync();
 			services.GetRequiredService<Locale>();
+			services.GetRequiredService<BooruClient>();
 
 			services.GetRequiredService<TwitchService>().CreateClient(new NTwitch.Rest.TwitchRestConfig
 			{
@@ -146,7 +149,7 @@ namespace Skuld
 				services.GetRequiredService<Random>());
 
 			logger.RegisterEvents();
-
+			
 			await services.GetRequiredService<MessageService>().ConfigureAsync(new CommandServiceConfig
 			{
 				CaseSensitiveCommands = false,
