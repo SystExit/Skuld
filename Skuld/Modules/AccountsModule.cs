@@ -13,18 +13,9 @@ namespace Skuld.Modules
 
     public class Accounts : ModuleBase<ShardedCommandContext>
     {
-		readonly DatabaseService database;
-		readonly LoggingService logger;
-		readonly MessageService messageService;
-
-		public Accounts(DatabaseService db,
-			LoggingService log,
-			MessageService msgSrv) //depinj
-		{
-			database = db;
-			logger = log;
-			messageService = msgSrv;
-		}
+		public DatabaseService Database { get; set; }
+		public LoggingService Logger { get; set; }
+		public MessageService MessageService { get; set; }
 
         [Command("money", RunMode = RunMode.Async), Summary("Gets a user's money"), RequireDatabase]
         public async Task GetMoney([Remainder]IUser user = null)
@@ -34,15 +25,15 @@ namespace Skuld.Modules
 				user = Context.User;
 			}
 
-            var usr = await database.GetUserAsync(user.Id);
+            var usr = await Database.GetUserAsync(user.Id);
 
             if (Context.User == user)
             {
-				await messageService.SendChannelAsync(Context.Channel, $"You have: {Bot.Configuration.Utils.MoneySymbol + usr.Money.ToString("N0")}");
+				await MessageService.SendChannelAsync(Context.Channel, $"You have: {Bot.Configuration.Utils.MoneySymbol + usr.Money.ToString("N0")}");
 			}
             else
             {
-				await messageService.SendChannelAsync(Context.Channel, message: $"**{user.Username}** has: {Bot.Configuration.Utils.MoneySymbol + usr.Money.ToString("N0")}");
+				await MessageService.SendChannelAsync(Context.Channel, message: $"**{user.Username}** has: {Bot.Configuration.Utils.MoneySymbol + usr.Money.ToString("N0")}");
 			}
         }
 
@@ -53,7 +44,7 @@ namespace Skuld.Modules
 				user = Context.User;
             try
             {
-                var userLocal = await database.GetUserAsync(user.Id);
+                var userLocal = await Database.GetUserAsync(user.Id);
                 if(userLocal != null)
                 {
                     var embed = new EmbedBuilder
@@ -76,12 +67,12 @@ namespace Skuld.Modules
                     else
                     { embed.AddField("Favourite Command", "No favourite Command", inline: true); }
 					embed.AddField("Description", userLocal.Description ?? "No Description", inline: false);
-					await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
+					await MessageService.SendChannelAsync(Context.Channel, "", embed.Build());
                 }
                 else
                 {
-                    await logger.AddToLogsAsync(new Models.LogMessage("CMD-Prof", "User doesn't exist", LogSeverity.Error));
-                    var msg = await messageService.SendChannelAsync(Context.Channel, "Error!! Fixing...");
+                    await Logger.AddToLogsAsync(new Models.LogMessage("CMD-Prof", "User doesn't exist", LogSeverity.Error));
+                    var msg = await MessageService.SendChannelAsync(Context.Channel, "Error!! Fixing...");
                     StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
                     await InsertUser(user).ConfigureAwait(false);
                     await msg.ModifyAsync(x => x.Content = "Try again now. ~~You may delete this message~~");
@@ -89,8 +80,8 @@ namespace Skuld.Modules
             }
             catch (Exception ex)
             {
-                await logger.AddToLogsAsync(new Models.LogMessage("CMD-Prof", "Error in Profile", LogSeverity.Error, ex));
-                var msg = await messageService.SendChannelAsync(Context.Channel, "Error!! Fixing...");
+                await Logger.AddToLogsAsync(new Models.LogMessage("CMD-Prof", "Error in Profile", LogSeverity.Error, ex));
+                var msg = await MessageService.SendChannelAsync(Context.Channel, "Error!! Fixing...");
                 StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
                 await InsertUser(user).ConfigureAwait(false);
                 await msg.ModifyAsync(x=>x.Content = "Try again now. ~~You may delete this message~~");
@@ -106,7 +97,7 @@ namespace Skuld.Modules
 			}
             try
             {
-                var userLocal = await database.GetUserAsync(user.Id);
+                var userLocal = await Database.GetUserAsync(user.Id);
                 if(userLocal != null)
                 {
                     var embed = new EmbedBuilder
@@ -154,12 +145,12 @@ namespace Skuld.Modules
                     { embed.AddField("Favourite Command", "No favourite Command", inline: true); }
 
 					embed.AddField("Description", userLocal.Description ?? "No Description", inline: false);
-					await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
+					await MessageService.SendChannelAsync(Context.Channel, "", embed.Build());
                 }
                 else
                 {
-                    await logger.AddToLogsAsync(new Models.LogMessage("CMD-ProfExt", "User doesn't exist", LogSeverity.Error));
-                    var msg = await messageService.SendChannelAsync(Context.Channel, "Error!! Fixing...");
+                    await Logger.AddToLogsAsync(new Models.LogMessage("CMD-ProfExt", "User doesn't exist", LogSeverity.Error));
+                    var msg = await MessageService.SendChannelAsync(Context.Channel, "Error!! Fixing...");
                     StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
                     await InsertUser(user).ConfigureAwait(false);
                     await msg.ModifyAsync(x => x.Content = "Try again now. ~~You may delete this message~~");
@@ -167,8 +158,8 @@ namespace Skuld.Modules
             }
             catch(Exception ex)
             {
-                await logger.AddToLogsAsync(new Models.LogMessage("CMD-ProfExt", "Error in Profile-Ext", LogSeverity.Error, ex));
-                var msg = await messageService.SendChannelAsync(Context.Channel, "Error!! Fixing...");
+                await Logger.AddToLogsAsync(new Models.LogMessage("CMD-ProfExt", "Error in Profile-Ext", LogSeverity.Error, ex));
+                var msg = await MessageService.SendChannelAsync(Context.Channel, "Error!! Fixing...");
                 StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
                 await InsertUser(user).ConfigureAwait(false);
                 await msg.ModifyAsync(x => x.Content = "Try again now. ~~You may delete this message~~");
@@ -180,44 +171,44 @@ namespace Skuld.Modules
         {
 			if (description != null)
 			{
-				var user = await database.GetUserAsync(Context.User.Id);
+				var user = await Database.GetUserAsync(Context.User.Id);
 				user.Description = description;
-				var result = await database.UpdateUserAsync(user);
+				var result = await Database.UpdateUserAsync(user);
 				if(result.Successful)
 				{
-					await messageService.SendChannelAsync(Context.Channel, $"Successfully set your description to **{description}**");
+					await MessageService.SendChannelAsync(Context.Channel, $"Successfully set your description to **{description}**");
 				}
 				else
 				{
-					await messageService.SendChannelAsync(Context.Channel, $"Something happened <:blobsick:350673776071147521>");
+					await MessageService.SendChannelAsync(Context.Channel, $"Something happened <:blobsick:350673776071147521>");
 				}
 			}
 			else
 			{
-				var user = await database.GetUserAsync(Context.User.Id);
+				var user = await Database.GetUserAsync(Context.User.Id);
 				user.Description = "";
-				var result = await database.UpdateUserAsync(user);
+				var result = await Database.UpdateUserAsync(user);
 				if (result.Successful)
 				{
-					await messageService.SendChannelAsync(Context.Channel, $"Successfully cleared your description.");
+					await MessageService.SendChannelAsync(Context.Channel, $"Successfully cleared your description.");
 				}
 				else
 				{
-					await messageService.SendChannelAsync(Context.Channel, $"Something happened <:blobsick:350673776071147521>");
+					await MessageService.SendChannelAsync(Context.Channel, $"Something happened <:blobsick:350673776071147521>");
 				}
 			}
         }
 
         private async Task NewDaily(IUser user)
         {
-            var suser = await database.GetUserAsync(user.Id);
+            var suser = await Database.GetUserAsync(user.Id);
 
             if(suser!=null)
             {
                 suser.Daily = Convert.ToString(DateTime.UtcNow);
                 suser.Money += Bot.Configuration.Utils.DailyAmount;
-                await database.UpdateUserAsync(suser);
-                await messageService.SendChannelAsync(Context.Channel, $"You got your daily of: `{Bot.Configuration.Utils.MoneySymbol + Bot.Configuration.Utils.DailyAmount}`, you now have: {Bot.Configuration.Utils.MoneySymbol}{(suser.Money.ToString("N0"))}");
+                await Database.UpdateUserAsync(suser);
+                await MessageService.SendChannelAsync(Context.Channel, $"You got your daily of: `{Bot.Configuration.Utils.MoneySymbol + Bot.Configuration.Utils.DailyAmount}`, you now have: {Bot.Configuration.Utils.MoneySymbol}{(suser.Money.ToString("N0"))}");
             }
             else
             {
@@ -229,7 +220,7 @@ namespace Skuld.Modules
 		{
 			if(user == null)
 			{
-				var suser = await database.GetUserAsync(Context.User.Id);
+				var suser = await Database.GetUserAsync(Context.User.Id);
 				if (!String.IsNullOrEmpty(suser.Daily))
 				{
 					var olddate = Convert.ToDateTime(suser.Daily);
@@ -238,7 +229,7 @@ namespace Skuld.Modules
 					{
 						var remain = olddate.AddDays(1).Subtract(DateTime.UtcNow);
 						string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
-						await messageService.SendChannelAsync(Context.Channel, $"You must wait `{remaining}`");
+						await MessageService.SendChannelAsync(Context.Channel, $"You must wait `{remaining}`");
 					}
 					else
 					{ await NewDaily(Context.User).ConfigureAwait(false); }
@@ -248,7 +239,7 @@ namespace Skuld.Modules
 			}
 			else
 			{
-				var csuser = await database.GetUserAsync(Context.User.Id);
+				var csuser = await Database.GetUserAsync(Context.User.Id);
 				if (!String.IsNullOrEmpty(csuser.Daily))
 				{
 					var olddate = Convert.ToDateTime(csuser.Daily);
@@ -257,13 +248,13 @@ namespace Skuld.Modules
 					{
 						var remain = olddate.AddDays(1).Subtract(DateTime.UtcNow);
 						string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
-						await messageService.SendChannelAsync(Context.Channel, $"You must wait `{remaining}`");
+						await MessageService.SendChannelAsync(Context.Channel, $"You must wait `{remaining}`");
 					}
 					else
 					{
 						if (user.IsBot)
 						{
-							await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder
+							await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder
 							{
 								Author = new EmbedAuthorBuilder
 								{
@@ -278,16 +269,16 @@ namespace Skuld.Modules
 						{
 							if (user != Context.User)
 							{
-								var suser = await database.GetUserAsync(user.Id);
+								var suser = await Database.GetUserAsync(user.Id);
 								if (suser != null && !user.IsBot)
 								{
 									suser.Money += Bot.Configuration.Utils.DailyAmount;
-									await database.UpdateUserAsync(suser);
+									await Database.UpdateUserAsync(suser);
 
 									csuser.Daily = Convert.ToString(DateTime.UtcNow);
-									await database.UpdateUserAsync(csuser);
+									await Database.UpdateUserAsync(csuser);
 
-									await messageService.SendChannelAsync(Context.Channel, $"Yo, you just gave {user.Username} {Bot.Configuration.Utils.MoneySymbol}{Bot.Configuration.Utils.DailyAmount}! They now have {Bot.Configuration.Utils.MoneySymbol}{suser.Money.ToString("N0")}");
+									await MessageService.SendChannelAsync(Context.Channel, $"Yo, you just gave {user.Username} {Bot.Configuration.Utils.MoneySymbol}{Bot.Configuration.Utils.DailyAmount}! They now have {Bot.Configuration.Utils.MoneySymbol}{suser.Money.ToString("N0")}");
 								}
 								else
 								{
@@ -309,39 +300,39 @@ namespace Skuld.Modules
         {
             if (amount == 0)
             {
-                await messageService.SendChannelAsync(Context.Channel,"Why would you want to give zero money to someone? :thinking:");
+                await MessageService.SendChannelAsync(Context.Channel,"Why would you want to give zero money to someone? :thinking:");
 				return;
             }
 			if (user != Context.User)
 			{
-				var oldusergive = await database.GetUserAsync(user.Id);
+				var oldusergive = await Database.GetUserAsync(user.Id);
 				if (oldusergive != null && !user.IsBot)
 				{
-					var oldusersend = await database.GetUserAsync(Context.User.Id);
+					var oldusersend = await Database.GetUserAsync(Context.User.Id);
 
 					if (oldusersend.Money >= amount)
 					{
 						oldusergive.Money += amount;
 						oldusersend.Money -= amount;
 
-						var resp = await database.UpdateUserAsync(oldusergive);
-						var resp2 = await database.UpdateUserAsync(oldusersend);
+						var resp = await Database.UpdateUserAsync(oldusergive);
+						var resp2 = await Database.UpdateUserAsync(oldusersend);
 
 						if (resp.Successful && resp2.Successful)
 						{
-							await messageService.SendChannelAsync(Context.Channel, $"Successfully gave **{user.Username}** {Bot.Configuration.Utils.MoneySymbol + amount}");
+							await MessageService.SendChannelAsync(Context.Channel, $"Successfully gave **{user.Username}** {Bot.Configuration.Utils.MoneySymbol + amount}");
 						}
 						else
 						{
-							await logger.AddToLogsAsync(new Models.LogMessage("DailyGive", $"{resp.Error}\t{resp2.Error}", LogSeverity.Error));
-							await messageService.SendChannelAsync(Context.Channel, $"Oops, something happened. :(");
+							await Logger.AddToLogsAsync(new Models.LogMessage("DailyGive", $"{resp.Error}\t{resp2.Error}", LogSeverity.Error));
+							await MessageService.SendChannelAsync(Context.Channel, $"Oops, something happened. :(");
 							StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
 						}
 					}
 				}
 				else if (user.IsBot)
 				{
-					await messageService.SendChannelAsync(Context.Channel, $"Hey, uhhh... Robots aren't supported. :(");
+					await MessageService.SendChannelAsync(Context.Channel, $"Hey, uhhh... Robots aren't supported. :(");
 				}
 				else
 				{
@@ -351,17 +342,93 @@ namespace Skuld.Modules
 			}
 			else
 			{
-				await messageService.SendChannelAsync(Context.Channel, "<:gibeOops:350681606362759173> Can't give money to yourself... Oh, I guess you can... But why would you want to?");
+				await MessageService.SendChannelAsync(Context.Channel, "<:gibeOops:350681606362759173> Can't give money to yourself... Oh, I guess you can... But why would you want to?");
 			}
-        }
+		}
 
-        private async Task InsertUser(IUser user)
+		[Command("heal"), Summary("Did you run out of health? Here's the healing station"), RequireDatabase]
+		public async Task Heal(uint hp, [Remainder]IUser User = null)
+		{
+			if (User == null)
+				User = Context.User;
+			if (User == Context.User)
+			{
+				var user = await Database.GetUserAsync(User.Id);
+				var offset = 10000 - user.HP;
+				if (hp > offset)
+				{
+					await MessageService.SendChannelAsync(Context.Channel, "You sure you wanna do that? You only need to heal by: `" + offset + "` HP");
+				}
+				var cost = GetCostOfHP(hp);
+				if (user.Money >= cost)
+				{
+					if (user.HP == 10000)
+					{
+						await MessageService.SendChannelAsync(Context.Channel, "You're already at max health");
+						return;
+					}
+					user.Money -= cost;
+					user.HP += hp;
+
+					if (user.HP > 10000)
+						user.HP = 10000;
+
+					await Database.UpdateUserAsync(user);
+
+					await MessageService.SendChannelAsync(Context.Channel, $"You have healed your hp by {hp} for {Bot.Configuration.Utils.MoneySymbol}{cost.ToString("N0")}");
+				}
+				else
+				{
+					await MessageService.SendChannelAsync(Context.Channel, "You don't have enough money for this action.");
+				}
+			}
+			else
+			{
+				var user = await Database.GetUserAsync(User.Id);
+				var you = await Database.GetUserAsync(Context.User.Id);
+				var offset = 10000 - user.HP;
+				if (hp > offset)
+				{
+					await MessageService.SendChannelAsync(Context.Channel, "You sure you wanna do that? They only need to heal by: `" + offset + "` HP");
+				}
+				var cost = GetCostOfHP(hp);
+				if (you.Money >= cost)
+				{
+					if (user.HP == 10000)
+					{
+						await MessageService.SendChannelAsync(Context.Channel, "They're already at max health");
+						return;
+					}
+					user.HP += hp;
+					you.Money -= cost;
+
+					if (user.HP > 10000)
+						user.HP = 10000;
+
+					await Database.UpdateUserAsync(user);
+					await Database.UpdateUserAsync(you);
+
+					await MessageService.SendChannelAsync(Context.Channel, $"You have healed {User.Username}'s health by {hp} for {Bot.Configuration.Utils.MoneySymbol}{cost.ToString("N0")}");
+				}
+				else
+				{
+					await MessageService.SendChannelAsync(Context.Channel, "You don't have enough money for this action.");
+				}
+			}
+		}
+
+		ulong GetCostOfHP(uint hp)
+		{
+			return (ulong)(hp / 0.8);
+		}
+
+		private async Task InsertUser(IUser user)
         {
-            var result = await database.InsertUserAsync((user as Discord.WebSocket.SocketUser));
+            var result = await Database.InsertUserAsync((user as Discord.WebSocket.SocketUser));
             if (!result.Successful)
             {
-                await logger.AddToLogsAsync(new Models.LogMessage("AccountModule", result.Error, LogSeverity.Error));
-                await messageService.SendChannelAsync(Context.Channel, $"I'm sorry there was an issue; `{result.Error}`");
+                await Logger.AddToLogsAsync(new Models.LogMessage("AccountModule", result.Error, LogSeverity.Error));
+                await MessageService.SendChannelAsync(Context.Channel, $"I'm sorry there was an issue; `{result.Error}`");
                 StatsdClient.DogStatsd.Increment("commands.errors",1,1, new string[]{ "generic" });
             }
         }

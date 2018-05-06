@@ -2,9 +2,7 @@
 using System.Threading.Tasks;
 using Discord.Commands;
 using Discord;
-using MySql.Data.MySqlClient;
 using System.Reactive.Linq;
-using System.Collections.Generic;
 using Skuld.Services;
 
 namespace Skuld.Modules
@@ -12,15 +10,8 @@ namespace Skuld.Modules
     [Group, Name("Help"), ]
     public class Help : ModuleBase<ShardedCommandContext>
     {
-		readonly DatabaseService database;
-		readonly MessageService messageService;
-
-		public Help(DatabaseService db,
-			MessageService msgsrv)//depinj
-		{
-			database = db;
-			messageService = msgsrv;
-		}
+		public DatabaseService Database { get; set; }
+		public MessageService MessageService { get; set; }
 
         [Command("help"), Summary("Gets all commands or a specific command's information")]
         public async Task _Help([Remainder]string command=null)
@@ -29,7 +20,7 @@ namespace Skuld.Modules
 			{
 				string prefix = Bot.Configuration.Discord.Prefix;
 
-				var guild = await database.GetGuildAsync(Context.Guild.Id);
+				var guild = await Database.GetGuildAsync(Context.Guild.Id);
 				if (guild != null)
 				{
 					prefix = guild.Prefix;
@@ -44,7 +35,7 @@ namespace Skuld.Modules
 					},
 					Color = Tools.Tools.RandomColor()
 				};
-				foreach (var module in messageService.commandService.Modules)
+				foreach (var module in MessageService.commandService.Modules)
 				{
 					if (module.Name != "Help")
 					{
@@ -65,19 +56,19 @@ namespace Skuld.Modules
 				}
 				embed.Description = $"The prefix of **{Context.Guild.Name}** is: `{prefix}`";
 
-				await messageService.SendDMsAsync(Context.Channel, (await Context.User.GetOrCreateDMChannelAsync()), "", embed.Build());
+				await MessageService.SendDMsAsync(Context.Channel, (await Context.User.GetOrCreateDMChannelAsync()), "", embed.Build());
 			}
 			else
 			{
-				var cmd = Tools.Tools.GetCommandHelp(messageService.commandService, Context, command);
+				var cmd = Tools.Tools.GetCommandHelp(MessageService.commandService, Context, command);
 				if(cmd==null)
 				{
-					await messageService.SendChannelAsync(Context.Channel, $"Sorry, I couldn't find a command like **{command}**.");
+					await MessageService.SendChannelAsync(Context.Channel, $"Sorry, I couldn't find a command like **{command}**.");
 					return;
 				}
 				else
 				{
-					await messageService.SendChannelAsync(Context.Channel, "", cmd);
+					await MessageService.SendChannelAsync(Context.Channel, "", cmd);
 				}
 			}
         }

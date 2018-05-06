@@ -9,15 +9,8 @@ namespace Skuld.APIS
 {
     public class PokeSharpClient
     {
-		static Random random;
-		static LoggingService logger;
-
-		public PokeSharpClient(Random rnd,
-			LoggingService log) //depinject
-		{
-			random = rnd;
-			logger = log;
-		}
+		Random Random { get; set; }
+		LoggingService Logger { get; set; }
 
         public static int? HighestPokeID = GetHighestPokemon().Result;
         private static async Task<int> GetHighestPokemon()
@@ -40,7 +33,7 @@ namespace Skuld.APIS
             }
         }
 
-        public static async Task<Pokemon> GetPokemon(int? id = null)
+        public async Task<Pokemon> GetPokemonAsync(int? id = null)
         {
             Pokemon pokemon = null;
             try
@@ -63,7 +56,7 @@ namespace Skuld.APIS
                 {
                     if(HighestPokeID.HasValue && HighestPokeID > 0)
                     {
-                        var rand = random.Next(0, HighestPokeID.Value);
+                        var rand = Random.Next(0, HighestPokeID.Value);
                         if (!Directory.Exists(AppContext.BaseDirectory + "/skuld/storage/pokemon/"))
                             Directory.CreateDirectory(AppContext.BaseDirectory + "/skuld/storage/pokemon/");
                         string pokejson = AppContext.BaseDirectory + $"/skuld/storage/pokemon/{rand}.json";
@@ -85,7 +78,7 @@ namespace Skuld.APIS
             }
             catch(Exception ex)
             {
-                await logger.AddToLogsAsync(new Models.LogMessage("PokeAPI-G", "Error", Discord.LogSeverity.Error, ex));
+                await Logger.AddToLogsAsync(new Models.LogMessage("PokeAPI-G", "Error", Discord.LogSeverity.Error, ex));
                 return null;
             }
         }

@@ -8,13 +8,7 @@
     <Version>0.3.9.0</Version>
     <NoWin32Manifest>true</NoWin32Manifest>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Old Tools\**" />
-    <EmbeddedResource Remove="Old Tools\**" />
-    <None Remove="Old Tools\**" />
-  </ItemGroup>
-
+	
   <ItemGroup>
     <Folder Include="..\src\APIS\Steam\" />
   </ItemGroup>
@@ -85,14 +79,6 @@
     <Reference Include="Discord.Addons.Interactive">
       <HintPath>..\References\Discord.Addons.Interactive.dll</HintPath>
     </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Update="libsodium.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="opus.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
 </Project>

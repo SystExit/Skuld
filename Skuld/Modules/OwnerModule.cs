@@ -17,30 +17,17 @@ namespace Skuld.Modules
     [RequireOwner, Group, Name("Owner")]
     public class Owner : ModuleBase<ShardedCommandContext>
     {
-		readonly MessageService messageService;
-		readonly Random random;
-		readonly DatabaseService database;
-		readonly LoggingService logger;
-		readonly BotService botService;
-
-		public Owner(MessageService msg,
-			BotService bot,
-			DatabaseService db,
-			LoggingService log,
-			Random ran) //depinj
-		{
-			messageService = msg;
-			botService = bot;
-			database = db;
-			logger = log;
-			random = ran;
-		}
+		public MessageService MessageService { get; set; }
+		public Random Random { get; set; }
+		public DatabaseService Database { get; set; }
+		public LoggingService Logger { get; set; }
+		public BotService BotService { get; set; }
         			
 		[Command("stop")]
         public async Task Stop()
 		{
-			await messageService.SendChannelAsync(Context.Channel, "Stopping!");
-			await botService.StopBotAsync("StopCmd").ConfigureAwait(false);
+			await MessageService.SendChannelAsync(Context.Channel, "Stopping!");
+			await BotService.StopBotAsync("StopCmd").ConfigureAwait(false);
 		}
 
         [Command("shardrestart"), Summary("Restarts shard")]
@@ -61,7 +48,7 @@ namespace Skuld.Modules
             }
             catch
             {
-                await messageService.SendChannelAsync(Context.Channel, $":nauseated_face: Something went wrong. Try again.");
+                await MessageService.SendChannelAsync(Context.Channel, $":nauseated_face: Something went wrong. Try again.");
             }
         }
         [Command("resetgame"), Summary("Reset Game")]
@@ -69,12 +56,12 @@ namespace Skuld.Modules
         {
             try
             {
-                await Context.Client.SetGameAsync($"{messageService.config.Prefix}help | {random.Next(0, Context.Client.Shards.Count) + 1}/{Context.Client.Shards.Count}");
+                await Context.Client.SetGameAsync($"{MessageService.config.Prefix}help | {Random.Next(0, Context.Client.Shards.Count) + 1}/{Context.Client.Shards.Count}");
                 await Context.Message.DeleteAsync();
             }
             catch
             {
-                await messageService.SendChannelAsync(Context.Channel, $":nauseated_face: Something went wrong. Try again.");
+                await MessageService.SendChannelAsync(Context.Channel, $":nauseated_face: Something went wrong. Try again.");
             }
         }
 		[Command("setstream"), Summary("Sets stream")]
@@ -100,7 +87,7 @@ namespace Skuld.Modules
                 lines.Add(new string[] { item.ShardId.ToString(), item.ConnectionState.ToString(), item.Latency.ToString(), item.Guilds.Count.ToString() });
             }
 
-            await messageService.SendChannelAsync(Context.Channel, "```"+ ConsoleUtils.PrettyLines(lines, 2) + "```");
+            await MessageService.SendChannelAsync(Context.Channel, "```"+ ConsoleUtils.PrettyLines(lines, 2) + "```");
         }
         [Command("getshard"), Summary("Gets all information about specific shard")]
         public async Task ShardGet(int shardid = -1)
@@ -131,11 +118,11 @@ namespace Skuld.Modules
             embed.AddField("Guilds", shard.Guilds.Count.ToString(), true);
             embed.AddField("Status", shard.ConnectionState, true);
             embed.AddField("Latencty", shard.Latency+"ms", true);
-            await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
+            await MessageService.SendChannelAsync(Context.Channel, "", embed.Build());
         }
         [Command("shard"), Summary("Gets the shard the guild is on")]
         public async Task ShardGet() => 
-			await messageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} the server: `{Context.Guild.Name}` is on `{Context.Client.GetShardIdFor(Context.Guild)}`");        
+			await MessageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} the server: `{Context.Guild.Name}` is on `{Context.Client.GetShardIdFor(Context.Guild)}`");        
 
         [Command("name"), Summary("Name")]
         public async Task Name([Remainder]string name) => await Context.Client.CurrentUser.ModifyAsync(x => x.Username = name);
@@ -162,18 +149,18 @@ namespace Skuld.Modules
         [Command("moneyadd"), Summary("Gives money to people"), RequireDatabase]
         public async Task GiveMoney(IGuildUser user, ulong amount)
         {
-            var suser = await database.GetUserAsync(user.Id);
+            var suser = await Database.GetUserAsync(user.Id);
             if (suser!=null)
             {
                 suser.Money += amount;
 					
-                await database.UpdateUserAsync(suser);
+                await Database.UpdateUserAsync(suser);
 
-                await messageService.SendChannelAsync(Context.Channel, $"User {user.Username} now has: {Bot.Configuration.Utils.MoneySymbol + suser.Money}");
+                await MessageService.SendChannelAsync(Context.Channel, $"User {user.Username} now has: {Bot.Configuration.Utils.MoneySymbol + suser.Money}");
             }
             else
             {
-                await database.InsertUserAsync(user as SocketUser);
+                await Database.InsertUserAsync(user as SocketUser);
                 await GiveMoney(user, amount).ConfigureAwait(false);
             }            
         }
@@ -186,11 +173,11 @@ namespace Skuld.Modules
             {
                 if (Context.Client.GetGuild(id) == null)
                 {
-                    await messageService.SendChannelAsync(Context.Channel,$"Left guild **{guild.Name}**");
+                    await MessageService.SendChannelAsync(Context.Channel,$"Left guild **{guild.Name}**");
                 }
                 else
                 {
-                    await messageService.SendChannelAsync(Context.Channel, $"Hmm, I haven't left **{guild.Name}**");
+                    await MessageService.SendChannelAsync(Context.Channel, $"Hmm, I haven't left **{guild.Name}**");
                 }
             });
         }
@@ -202,7 +189,7 @@ namespace Skuld.Modules
             {
 				if (code.ToLowerInvariant().Contains("token") || code.ToLowerInvariant().Contains("config"))
 				{
-					await messageService.SendChannelAsync(Context.Channel, "Nope.");
+					await MessageService.SendChannelAsync(Context.Channel, "Nope.");
 					return;
 				}
                 if (code.StartsWith("```cs", StringComparison.Ordinal)&&code.EndsWith("```", StringComparison.Ordinal))
@@ -237,11 +224,11 @@ namespace Skuld.Modules
                 embed.Description = $"{result}";
 				if (result != null)
 				{
-					await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
+					await MessageService.SendChannelAsync(Context.Channel, "", embed.Build());
 				}
 				else
 				{
-					await messageService.SendChannelAsync(Context.Channel, "Result is empty or null");
+					await MessageService.SendChannelAsync(Context.Channel, "Result is empty or null");
 				}                
             }
 #pragma warning disable CS0168 // Variable is declared but never used
@@ -258,23 +245,23 @@ namespace Skuld.Modules
                     Color = new Color(255, 0, 0),
                     Description = $"{ex.Message}"
                 };
-                await logger.AddToLogsAsync(new Models.LogMessage("EvalCMD", "Error with eval command " + ex.Message, LogSeverity.Error, ex));
-                await messageService.SendChannelAsync(Context.Channel, "", embed.Build());
+                await Logger.AddToLogsAsync(new Models.LogMessage("EvalCMD", "Error with eval command " + ex.Message, LogSeverity.Error, ex));
+                await MessageService.SendChannelAsync(Context.Channel, "", embed.Build());
             }
         }
 
         [Command("pubstats"), Summary("no")]
         public async Task PubStats()
         {
-            await messageService.SendChannelAsync(Context.Channel, "Ok, publishing stats to the Discord Bot lists.");
+            await MessageService.SendChannelAsync(Context.Channel, "Ok, publishing stats to the Discord Bot lists.");
             string list = "";
             int shardcount = Context.Client.Shards.Count;
-			await botService.UpdateStatsAsync();
+			await BotService.UpdateStatsAsync();
             foreach(var shard in Context.Client.Shards)
             {                
                 list += $"I sent ShardID: {shard.ShardId} Guilds: {shard.Guilds.Count} Shards: {shardcount}\n";
             }
-            await messageService.SendChannelAsync(Context.Channel, list);
+            await MessageService.SendChannelAsync(Context.Channel, list);
         }
 
 		[Command("rebuildguilds")]
@@ -287,7 +274,7 @@ namespace Skuld.Modules
 				foreach(var guild in Context.Client.Guilds)
 				{
 					count++;
-					await database.InsertGuildAsync(guild);
+					await Database.InsertGuildAsync(guild);
 					Thread.Sleep(2000);
 					message += count + ". Inserted\n";
 				}
@@ -297,7 +284,7 @@ namespace Skuld.Modules
 			};
 			thd.Start();
 			if (message != "")
-			{ await messageService.SendChannelAsync(Context.Channel, message); }
+			{ await MessageService.SendChannelAsync(Context.Channel, message); }
 		}
     }
 

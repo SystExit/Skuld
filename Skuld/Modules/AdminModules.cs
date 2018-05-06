@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Discord.Commands;
 using Skuld.Tools;
 using Discord;
-using MySql.Data.MySqlClient;
 using Discord.Addons.Interactive;
 using StatsdClient;
 using Skuld.Services;
@@ -15,22 +14,13 @@ namespace Skuld.Modules
     [Group,Name("Admin"),RequireRole(AccessLevel.ServerMod)]
     public class Admin : InteractiveBase<ShardedCommandContext>
     {
-		readonly DatabaseService database;
-		readonly LoggingService logger;
-		readonly MessageService messageService;
-
-		public Admin(DatabaseService db,
-			LoggingService log,
-			MessageService message)
-		{
-			database = db;
-			logger = log;
-			messageService = message;
-		}
+		public DatabaseService Database { get; set; }
+		public LoggingService Logger { get; set; }
+		public MessageService MessageService { get; set; }
 
         [Command("say"), Summary("Say something to a channel")]
         public async Task Say(IMessageChannel channel, [Remainder]string message) =>
-            await messageService.SendChannelAsync(channel, message);
+            await MessageService.SendChannelAsync(channel, message);
 
         [Command("roleids"), Summary("Gets all role ids")]
         public async Task GetRoleIds()
@@ -66,7 +56,7 @@ namespace Skuld.Modules
                 await PagedReplyAsync(pages, fromSourceUser: true);
             }
             else
-				await messageService.SendChannelAsync(Context.Channel, "```cs\n" + lines + "```");
+				await MessageService.SendChannelAsync(Context.Channel, "```cs\n" + lines + "```");
         }
 
         [Command("mute"), Summary("Mutes a user")]
@@ -77,7 +67,7 @@ namespace Skuld.Modules
             var roles = guild.Roles;
             var user = usertomute as IGuildUser;
             var channels = guild.TextChannels;
-			var sguild = await database.GetGuildAsync(guild.Id);
+			var sguild = await Database.GetGuildAsync(guild.Id);
 
             if (sguild.MutedRole == 0)
             {
@@ -87,28 +77,28 @@ namespace Skuld.Modules
                     await chan.AddPermissionOverwriteAsync(role, OverwritePermissions.DenyAll(chan));
                 }
 				sguild.MutedRole = role.Id;
-				var resp = await database.UpdateGuildAsync(sguild);
+				var resp = await Database.UpdateGuildAsync(sguild);
 				if(resp.All(x=>x.Successful))
 				{
 					await user.AddRoleAsync(role);
-					await messageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} just muted **{usertomute.Username}**");
+					await MessageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} just muted **{usertomute.Username}**");
 				}
 				else
 				{
-					await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+					await MessageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
 					string msg = "";
 					foreach (var res in resp)
 					{
 						msg += res.Exception + "\n";
 					}
-					await logger.AddToLogsAsync(new Models.LogMessage("MuteCMD", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
+					await Logger.AddToLogsAsync(new Models.LogMessage("MuteCMD", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
 				}
             }
             else
             {
                 var role = guild.GetRole(sguild.MutedRole);
                 await user.AddRoleAsync(role);
-                await messageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} just muted **{usertomute.Username}**");
+                await MessageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} just muted **{usertomute.Username}**");
             }
         }
 
@@ -120,18 +110,18 @@ namespace Skuld.Modules
 			var roles = guild.Roles;
 			var user = usertounmute as IGuildUser;
 			var channels = guild.TextChannels;
-			var sguild = await database.GetGuildAsync(guild.Id);
+			var sguild = await Database.GetGuildAsync(guild.Id);
 
 			if (sguild.MutedRole == 0)
 			{
-				await messageService.SendChannelAsync(Context.Channel, "Role doesn't exist, so I cannot unmute");
+				await MessageService.SendChannelAsync(Context.Channel, "Role doesn't exist, so I cannot unmute");
 				DogStatsd.Increment("commands.errors",1,1, new []{ "generic" });
 			}
 			else
 			{
 				var role = guild.GetRole(sguild.MutedRole);
 				await user.RemoveRoleAsync(role);
-				await messageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} just unmuted **{usertounmute.Username}**");
+				await MessageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} just unmuted **{usertounmute.Username}**");
 			}
 		}
 
@@ -141,7 +131,7 @@ namespace Skuld.Modules
 		{
 			if (amount < 0)
 			{
-				await messageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} Your amount `{amount}` is under 0.");
+				await MessageService.SendChannelAsync(Context.Channel, $"{Context.User.Mention} Your amount `{amount}` is under 0.");
 				StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new [] { "unm-precon" });
 				return;
 			}
@@ -153,7 +143,7 @@ namespace Skuld.Modules
 				await chan.DeleteMessagesAsync(messages).ContinueWith(async x =>
 				{
 					if (x.IsCompleted)
-					{ await messageService.SendChannelAsync(Context.Channel, ":ok_hand: Done!", 5); }
+					{ await MessageService.SendChannelAsync(Context.Channel, ":ok_hand: Done!", 5); }
 				});				
 			}
 			else
@@ -165,7 +155,7 @@ namespace Skuld.Modules
 				await chan.DeleteMessagesAsync(usermessages).ContinueWith(async x =>
 				{
 					if (x.IsCompleted)
-					{ await messageService.SendChannelAsync(Context.Channel, ":ok_hand: Done!", 5); }
+					{ await MessageService.SendChannelAsync(Context.Channel, ":ok_hand: Done!", 5); }
 				});
 			}
         }
@@ -183,7 +173,7 @@ namespace Skuld.Modules
 					await user.KickAsync($"Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
 					if (await guild.GetUserAsync(user.Id) == null)
 					{
-						await messageService.SendChannelAsync(Context.Channel, $"Successfully kicked: `{user.Username}`\tResponsible Moderator:  {Context.User.Username}#{Context.User.Discriminator}");
+						await MessageService.SendChannelAsync(Context.Channel, $"Successfully kicked: `{user.Username}`\tResponsible Moderator:  {Context.User.Username}#{Context.User.Discriminator}");
 						try
 						{
 							var dmchan = await user.GetOrCreateDMChannelAsync();
@@ -199,7 +189,7 @@ namespace Skuld.Modules
 					await user.KickAsync(reason + $" Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
 					if (await guild.GetUserAsync(user.Id) == null)
 					{
-						await messageService.SendChannelAsync(Context.Channel, $"Successfully kicked: `{user}`\tResponsible Moderator:  {Context.User.Username}#{Context.User.Discriminator}\nReason: " + reason);
+						await MessageService.SendChannelAsync(Context.Channel, $"Successfully kicked: `{user}`\tResponsible Moderator:  {Context.User.Username}#{Context.User.Discriminator}\nReason: " + reason);
 						try
 						{
 							var dmchan = await user.GetOrCreateDMChannelAsync();
@@ -212,7 +202,7 @@ namespace Skuld.Modules
 			}
 			catch
 			{
-				await messageService.SendChannelAsync(Context.Channel, $"Couldn't kick {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?");
+				await MessageService.SendChannelAsync(Context.Channel, $"Couldn't kick {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?");
 			}
 		}
 		
@@ -229,7 +219,7 @@ namespace Skuld.Modules
 					await Context.Guild.AddBanAsync(user, 7, $"Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
 					if (await guild.GetUserAsync(user.Id) == null)
 					{
-						await messageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+						await MessageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
 						try
 						{
 							var dmchan = await user.GetOrCreateDMChannelAsync();
@@ -244,7 +234,7 @@ namespace Skuld.Modules
 					await Context.Guild.AddBanAsync(user, 7, reason + $" Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
 					if (await guild.GetUserAsync(user.Id) == null)
 					{
-						await messageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}\nReason given: {reason}");
+						await MessageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}\nReason given: {reason}");
 						try
 						{
 							var dmchan = await user.GetOrCreateDMChannelAsync();
@@ -256,7 +246,7 @@ namespace Skuld.Modules
 			}
 			catch
 			{
-				await messageService.SendChannelAsync(Context.Channel, $"Couldn't ban {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?");
+				await MessageService.SendChannelAsync(Context.Channel, $"Couldn't ban {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?");
 			}
 		}
 		
@@ -273,7 +263,7 @@ namespace Skuld.Modules
 					await Context.Guild.AddBanAsync(user, daystoprune, $"Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
 					if (await guild.GetUserAsync(user.Id) == null)
 					{
-						await messageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
+						await MessageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
 						try
 						{
 							var dmchan = await user.GetOrCreateDMChannelAsync();
@@ -288,7 +278,7 @@ namespace Skuld.Modules
 					await Context.Guild.AddBanAsync(user, daystoprune, reason + $" Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}");
 					if (await guild.GetUserAsync(user.Id) == null)
 					{
-						await messageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}\nReason given: {reason}");
+						await MessageService.SendChannelAsync(Context.Channel, $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}\nReason given: {reason}");
 						try
 						{
 							var dmchan = await user.GetOrCreateDMChannelAsync();
@@ -300,7 +290,7 @@ namespace Skuld.Modules
 			}
 			catch
 			{
-				await messageService.SendChannelAsync(Context.Channel, $"Couldn't ban {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?");
+				await MessageService.SendChannelAsync(Context.Channel, $"Couldn't ban {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?");
 			}
 		}
 
@@ -313,11 +303,11 @@ namespace Skuld.Modules
 				foreach (var id in ids)
 					await Context.Guild.AddBanAsync(Convert.ToUInt64(id));
 
-				await messageService.SendChannelAsync(Context.Channel, $"Banned IDs: {ids}");
+				await MessageService.SendChannelAsync(Context.Channel, $"Banned IDs: {ids}");
 			}
 			else
 			{
-				await messageService.SendChannelAsync(Context.Channel, $"Couldn't parse list of ID's.");
+				await MessageService.SendChannelAsync(Context.Channel, $"Couldn't parse list of ID's.");
 				DogStatsd.Increment("commands.errors",1,1,new [] { "parse-fail" });
 			}
 		}
@@ -330,14 +320,14 @@ namespace Skuld.Modules
 			if(reason == null)
 			{
 				await Context.Guild.AddBanAsync(user, 7, newreason);
-				await messageService.SendChannelAsync(Context.Channel, $"Successfully softbanned: `{user.Username}#{user.Discriminator}`");
+				await MessageService.SendChannelAsync(Context.Channel, $"Successfully softbanned: `{user.Username}#{user.Discriminator}`");
 				await Context.Guild.RemoveBanAsync(user);
 			}
 			else
 			{
 				newreason += " - Reason: " + reason;
 				await Context.Guild.AddBanAsync(user, 7, newreason);
-				await messageService.SendChannelAsync(Context.Channel, $"Successfully softbanned: `{user.Username}#{user.Discriminator}`\nReason given: {reason}");
+				await MessageService.SendChannelAsync(Context.Channel, $"Successfully softbanned: `{user.Username}#{user.Discriminator}`\nReason given: {reason}");
 				await Context.Guild.RemoveBanAsync(user);
 			}
 		}
@@ -346,40 +336,40 @@ namespace Skuld.Modules
 		public async Task AutoRole(IRole role = null)
 		{
 			var guild = Context.Guild;
-			var sguild = await database.GetGuildAsync(guild.Id);
+			var sguild = await Database.GetGuildAsync(guild.Id);
 			if (role == null)
 			{
 				if(sguild.AutoJoinRole != 0)
 				{
 					sguild.AutoJoinRole = 0;
-					var resp = await database.UpdateGuildAsync(sguild);
+					var resp = await Database.UpdateGuildAsync(sguild);
 					if (resp.All(x=>x.Successful))
 					{
-						await messageService.SendChannelAsync(Context.Channel, $"Successfully removed the member join role");
+						await MessageService.SendChannelAsync(Context.Channel, $"Successfully removed the member join role");
 					}
 					else
 					{
 						string msg = "";
 						foreach (var res in resp)
 							msg += res.Exception + "\n";
-						await logger.AddToLogsAsync(new Models.LogMessage("AJClCmd", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
+						await Logger.AddToLogsAsync(new Models.LogMessage("AJClCmd", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
 					}
 				}
 			}
 			else
 			{
 				sguild.AutoJoinRole = role.Id;
-				var resp = await database.UpdateGuildAsync(sguild);
+				var resp = await Database.UpdateGuildAsync(sguild);
 				if (resp.All(x=>x.Successful))
 				{
-					await messageService.SendChannelAsync(Context.Channel, $"Successfully set **{role.Name}** as the member join role");
+					await MessageService.SendChannelAsync(Context.Channel, $"Successfully set **{role.Name}** as the member join role");
 				}
 				else
 				{
 					string msg = "";
 					foreach (var res in resp)
 						msg += res.Exception + "\n";
-					await logger.AddToLogsAsync(new Models.LogMessage("AJClCmd", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
+					await Logger.AddToLogsAsync(new Models.LogMessage("AJClCmd", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
 				}
 			}
         }
@@ -387,15 +377,15 @@ namespace Skuld.Modules
         [Command("autorole"), Summary("Get's guilds current autorole"), RequireDatabase]
         public async Task AutoRole()
         {
-			var sguild = await database.GetGuildAsync(Context.Guild.Id);
+			var sguild = await Database.GetGuildAsync(Context.Guild.Id);
 
 			if(sguild.AutoJoinRole == 0)
 			{
-				await messageService.SendChannelAsync(Context.Channel, $"Currently, **{Context.Guild.Name}** has no auto role.");
+				await MessageService.SendChannelAsync(Context.Channel, $"Currently, **{Context.Guild.Name}** has no auto role.");
 			}
 			else
 			{
-				await messageService.SendChannelAsync(Context.Channel, $"**{Context.Guild.Name}**'s current auto role is `{Context.Guild.GetRole(Convert.ToUInt64(sguild.AutoJoinRole)).Name}`");
+				await MessageService.SendChannelAsync(Context.Channel, $"**{Context.Guild.Name}**'s current auto role is `{Context.Guild.GetRole(Convert.ToUInt64(sguild.AutoJoinRole)).Name}`");
 			}
         }
 
@@ -403,44 +393,44 @@ namespace Skuld.Modules
 		[RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetPrefix(string prefix = null)
         {
-			var sguild = await database.GetGuildAsync(Context.Guild.Id);
+			var sguild = await Database.GetGuildAsync(Context.Guild.Id);
 
 			if(prefix!=null)
 			{
 				var oldprefix = sguild.Prefix;
 				sguild.Prefix = prefix;
-				var resp = await database.UpdateGuildAsync(sguild);
-				sguild = await database.GetGuildAsync(sguild.ID);
+				var resp = await Database.UpdateGuildAsync(sguild);
+				sguild = await Database.GetGuildAsync(sguild.ID);
 
 				if(resp.All(x=>x.Successful))
 				{
 					if (sguild.Prefix != oldprefix)
 					{
-						await messageService.SendChannelAsync(Context.Channel, $"Successfully set `{prefix}` as the Guild's prefix");
+						await MessageService.SendChannelAsync(Context.Channel, $"Successfully set `{prefix}` as the Guild's prefix");
 					}
 					else
 					{
-						await messageService.SendChannelAsync(Context.Channel, $":thinking: It didn't change. Probably because it is the same as the current prefix.");
+						await MessageService.SendChannelAsync(Context.Channel, $":thinking: It didn't change. Probably because it is the same as the current prefix.");
 					}
 				}
 				else
 				{
-					await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+					await MessageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
 				}
 			}
 			else
 			{
 				sguild.Prefix = Bot.Configuration.Discord.Prefix;
 
-				var resp = await database.UpdateGuildAsync(sguild);
+				var resp = await Database.UpdateGuildAsync(sguild);
 
 				if(resp.All(x=>x.Successful))
 				{
-					await messageService.SendChannelAsync(Context.Channel, $"Successfully reset the Guild's prefix");
+					await MessageService.SendChannelAsync(Context.Channel, $"Successfully reset the Guild's prefix");
 				}
 				else
 				{
-					await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+					await MessageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
 				}
 			}
         }
@@ -450,17 +440,17 @@ namespace Skuld.Modules
 		[RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetWelcome([Remainder]string welcome)
         {
-			var sguild = await database.GetGuildAsync(Context.Guild.Id);
+			var sguild = await Database.GetGuildAsync(Context.Guild.Id);
 			sguild.UserJoinChannel = Context.Channel.Id;
 			sguild.JoinMessage = welcome;
-			var resp = await database.UpdateGuildAsync(sguild);
+			var resp = await Database.UpdateGuildAsync(sguild);
 			if(resp.All(x=>x.Successful))
 			{
-				await messageService.SendChannelAsync(Context.Channel, $"Set Welcome message!");
+				await MessageService.SendChannelAsync(Context.Channel, $"Set Welcome message!");
 			}
 			else
 			{
-				await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+				await MessageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
 			}
         }
 
@@ -469,17 +459,17 @@ namespace Skuld.Modules
 		[RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetWelcome(ITextChannel channel, [Remainder]string welcome)
         {
-			var sguild = await database.GetGuildAsync(Context.Guild.Id);
+			var sguild = await Database.GetGuildAsync(Context.Guild.Id);
 			sguild.UserJoinChannel = channel.Id;
 			sguild.JoinMessage = welcome;
-			var resp = await database.UpdateGuildAsync(sguild);
+			var resp = await Database.UpdateGuildAsync(sguild);
 			if (resp.All(x=>x.Successful))
 			{
-				await messageService.SendChannelAsync(Context.Channel, $"Set Welcome message!");
+				await MessageService.SendChannelAsync(Context.Channel, $"Set Welcome message!");
 			}
 			else
 			{
-				await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+				await MessageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
 			}
 		}
 
@@ -488,17 +478,17 @@ namespace Skuld.Modules
 		[RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetWelcome()
         {
-			var sguild = await database.GetGuildAsync(Context.Guild.Id);
+			var sguild = await Database.GetGuildAsync(Context.Guild.Id);
 			sguild.UserJoinChannel = 0;
 			sguild.JoinMessage = "";
-			var resp = await database.UpdateGuildAsync(sguild);
+			var resp = await Database.UpdateGuildAsync(sguild);
 			if (resp.All(x=>x.Successful))
 			{
-				await messageService.SendChannelAsync(Context.Channel, $"Cleared Welcome message!");
+				await MessageService.SendChannelAsync(Context.Channel, $"Cleared Welcome message!");
 			}
 			else
 			{
-				await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+				await MessageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
 			}
 		}
 
@@ -508,17 +498,17 @@ namespace Skuld.Modules
 		[RequireUserPermission(GuildPermission.Administrator)]
 		public async Task SetLeave(ITextChannel channel, [Remainder]string leave)
 		{
-			var sguild = await database.GetGuildAsync(Context.Guild.Id);
+			var sguild = await Database.GetGuildAsync(Context.Guild.Id);
 			sguild.UserLeaveChannel = channel.Id;
 			sguild.LeaveMessage = leave;
-			var resp = await database.UpdateGuildAsync(sguild);
+			var resp = await Database.UpdateGuildAsync(sguild);
 			if (resp.All(x=>x.Successful))
 			{
-				await messageService.SendChannelAsync(Context.Channel, $"Set Leave message!");
+				await MessageService.SendChannelAsync(Context.Channel, $"Set Leave message!");
 			}
 			else
 			{
-				await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+				await MessageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
 			}
 		}
 
@@ -528,17 +518,17 @@ namespace Skuld.Modules
 		[RequireUserPermission(GuildPermission.Administrator)]
 		public async Task SetLeave([Remainder]string leave)
 		{
-			var sguild = await database.GetGuildAsync(Context.Guild.Id);
+			var sguild = await Database.GetGuildAsync(Context.Guild.Id);
 			sguild.UserLeaveChannel = Context.Channel.Id;
 			sguild.LeaveMessage = leave;
-			var resp = await database.UpdateGuildAsync(sguild);
+			var resp = await Database.UpdateGuildAsync(sguild);
 			if (resp.All(x=>x.Successful))
 			{
-				await messageService.SendChannelAsync(Context.Channel, $"Cleared Leave message!");
+				await MessageService.SendChannelAsync(Context.Channel, $"Cleared Leave message!");
 			}
 			else
 			{
-				await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+				await MessageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
 			}
 		}
 
@@ -547,17 +537,17 @@ namespace Skuld.Modules
 		[RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetLeave()
 		{
-			var sguild = await database.GetGuildAsync(Context.Guild.Id);
+			var sguild = await Database.GetGuildAsync(Context.Guild.Id);
 			sguild.UserLeaveChannel = 0;
 			sguild.LeaveMessage = "";
-			var resp = await database.UpdateGuildAsync(sguild);
+			var resp = await Database.UpdateGuildAsync(sguild);
 			if (resp.All(x=>x.Successful))
 			{
-				await messageService.SendChannelAsync(Context.Channel, $"Set Leave message!");
+				await MessageService.SendChannelAsync(Context.Channel, $"Set Leave message!");
 			}
 			else
 			{
-				await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+				await MessageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
 			}
 		}
 
@@ -567,61 +557,61 @@ namespace Skuld.Modules
 		{
 			if(Tools.Tools.IsWebsite(name))
 			{
-				await messageService.SendChannelAsync(Context.Channel, "Commands can't be a url/website", 5);
+				await MessageService.SendChannelAsync(Context.Channel, "Commands can't be a url/website", 5);
 				return;
 			}
 			if(name.Split(' ').Length>1)
 			{
-				await messageService.SendChannelAsync(Context.Channel, "Commands can't contain a space", 5);
+				await MessageService.SendChannelAsync(Context.Channel, "Commands can't contain a space", 5);
 				return;
 			}
 			else
 			{
-				var cmdsearch = messageService.commandService.Search(Context, name);
+				var cmdsearch = MessageService.commandService.Search(Context, name);
 				if (cmdsearch.Commands!=null)
 				{
-					await messageService.SendChannelAsync(Context.Channel, "The bot already has this command", 5);
+					await MessageService.SendChannelAsync(Context.Channel, "The bot already has this command", 5);
 				}
 				else
 				{
-					var custcmd = await database.GetCustomCommandAsync(Context.Guild.Id, name);
+					var custcmd = await Database.GetCustomCommandAsync(Context.Guild.Id, name);
 					if (custcmd != null)
 					{
-						await messageService.SendChannelAsync(Context.Channel, $"Custom command named `{custcmd.CommandName}` already exists, overwrite with new content? Y/N", 5);
+						await MessageService.SendChannelAsync(Context.Channel, $"Custom command named `{custcmd.CommandName}` already exists, overwrite with new content? Y/N", 5);
 						var msg = await NextMessageAsync(true, true, TimeSpan.FromSeconds(5));
 						if (msg != null)
 						{
 							if (msg.Content.ToLower() == "y")
 							{
-								var resp = await database.UpdateCustomCommand(Context.Guild, name, content);
+								var resp = await Database.UpdateCustomCommand(Context.Guild, name, content);
 
 								if (resp.Successful)
 								{
-									await messageService.SendChannelAsync(Context.Channel, $"Updated the command.");
+									await MessageService.SendChannelAsync(Context.Channel, $"Updated the command.");
 								}
 								else
 								{
-									await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+									await MessageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
 								}
 							}
 						}
 						else
 						{
-							await messageService.SendChannelAsync(Context.Channel, "Reply timed out, not updating.", 5);
+							await MessageService.SendChannelAsync(Context.Channel, "Reply timed out, not updating.", 5);
 						}
 						return;
 					}
 					else
 					{
-						var resp = await database.InsertCustomCommand(Context.Guild, name, content);
+						var resp = await Database.InsertCustomCommand(Context.Guild, name, content);
 
 						if (resp.Successful)
 						{
-							await messageService.SendChannelAsync(Context.Channel, $"Added the command.");
+							await MessageService.SendChannelAsync(Context.Channel, $"Added the command.");
 						}
 						else
 						{
-							await messageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
+							await MessageService.SendChannelAsync(Context.Channel, "Something happened. <:blobsick:350673776071147521>");
 						}
 					}
 				}				
@@ -634,19 +624,19 @@ namespace Skuld.Modules
 		{
 			if (name.Split(' ').Length > 1)
 			{
-				await messageService.SendChannelAsync(Context.Channel, "Commands can't contain a space");
+				await MessageService.SendChannelAsync(Context.Channel, "Commands can't contain a space");
 				return;
 			}
 			else
 			{
-				await messageService.SendChannelAsync(Context.Channel, $"Are you sure? Y/N", 5);
+				await MessageService.SendChannelAsync(Context.Channel, $"Are you sure? Y/N", 5);
 				var msg = await NextMessageAsync(true, true, TimeSpan.FromSeconds(5));
 				if (msg != null)
 				{
 					if (msg.Content.ToLower() == "y")
 					{
-						await database.DropCustomCommand(Context.Guild, name);
-						await messageService.SendChannelAsync(Context.Channel, $"Deleted the command.");
+						await Database.DropCustomCommand(Context.Guild, name);
+						await MessageService.SendChannelAsync(Context.Channel, $"Deleted the command.");
 					}
 				}							
 			}
@@ -657,9 +647,9 @@ namespace Skuld.Modules
         public async Task ConfigureGuildFeatures(string module, int value)
         {
             if (value > 1)
-            { await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder() { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build()); }
+            { await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder() { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build()); }
             if (value < 0)
-            { await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder() { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build()); }
+            { await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder() { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build()); }
             else
             {
                 module = module.ToLowerInvariant();
@@ -670,7 +660,7 @@ namespace Skuld.Modules
                 };
                 if (settings.ContainsKey(module) || settings.ContainsValue(module))
                 {
-					var guild = await database.GetGuildAsync(Context.Guild.Id);
+					var guild = await Database.GetGuildAsync(Context.Guild.Id);
 
                     if (guild.GuildSettings.Modules!=null)
                     {
@@ -687,19 +677,19 @@ namespace Skuld.Modules
 								break;
 						}
 
-                        await database.UpdateGuildAsync(guild);
+                        await Database.UpdateGuildAsync(guild);
                         if (value == 0)
                         {
-							await messageService.SendChannelAsync(Context.Channel, $"I disabled the `{module}` feature");
+							await MessageService.SendChannelAsync(Context.Channel, $"I disabled the `{module}` feature");
 						}
                         else
                         {
-							await messageService.SendChannelAsync(Context.Channel, $"I enabled the `{module}` feature");
+							await MessageService.SendChannelAsync(Context.Channel, $"I enabled the `{module}` feature");
 						}
                     }
                     else
                     {
-                        await database.InsertAdvancedSettingsAsync(feature: false, guild: Context.Guild as Discord.WebSocket.SocketGuild);
+                        await Database.InsertAdvancedSettingsAsync(feature: false, guild: Context.Guild as Discord.WebSocket.SocketGuild);
                     }
                 }
                 else
@@ -708,7 +698,7 @@ namespace Skuld.Modules
                     foreach (var mod in settings)
                     { modulelist += mod.Key + " (" + mod.Value + ")" + ", "; }
                     modulelist = modulelist.Remove(modulelist.Length - 2);
-                    await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules (raw name in brackets). \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build());
+                    await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules (raw name in brackets). \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build());
                 }
             }
         }
@@ -718,16 +708,16 @@ namespace Skuld.Modules
         public async Task ConfigureGuildModules(string module, int value)
         {
             if (value > 1)
-            { await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build()); }
+            { await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build()); }
             if (value < 0)
-            { await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build()); }
+            { await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build()); }
             else
             {
                 module = module.ToLowerInvariant();
                 string[] modules = { "accounts", "actions", "admin", "fun", "help", "information", "search", "stats" };
                 if (modules.Contains(module))
                 {
-					var guild = await database.GetGuildAsync(Context.Guild.Id);
+					var guild = await Database.GetGuildAsync(Context.Guild.Id);
                     if (guild.GuildSettings.Modules!=null)
                     {
 						switch(module)
@@ -765,22 +755,22 @@ namespace Skuld.Modules
 								break;
 						}
 
-						await database.UpdateGuildAsync(guild);
+						await Database.UpdateGuildAsync(guild);
 						if (value == 0)
-                        { await messageService.SendChannelAsync(Context.Channel, $"I disabled the `{module}` module"); }
+                        { await MessageService.SendChannelAsync(Context.Channel, $"I disabled the `{module}` module"); }
                         else
-                        { await messageService.SendChannelAsync(Context.Channel, $"I enabled the `{module}` module"); }
+                        { await MessageService.SendChannelAsync(Context.Channel, $"I enabled the `{module}` module"); }
                     }
                     else
                     {
-                        await database.InsertAdvancedSettingsAsync(feature: false, guild: Context.Guild as Discord.WebSocket.SocketGuild);
+                        await Database.InsertAdvancedSettingsAsync(feature: false, guild: Context.Guild as Discord.WebSocket.SocketGuild);
                     }
                 }
                 else
                 {
                     string modulelist = string.Join(", ", modules);
                     modulelist = modulelist.Remove(modulelist.Length - 2);
-                    await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build());
+                    await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build());
                 }
             }
         }
@@ -805,7 +795,7 @@ namespace Skuld.Modules
 			};
             if (modules.ContainsKey(module)||modules.ContainsValue(module))
             {
-				var guild = await database.GetGuildAsync(Context.Guild.Id);				
+				var guild = await Database.GetGuildAsync(Context.Guild.Id);				
 
 				if (guild!=null)
                 {
@@ -828,19 +818,19 @@ namespace Skuld.Modules
 							guild.UserLeaveChannel = channel.Id;
 							break;
 					}
-					await database.UpdateGuildAsync(guild);
-                    await messageService.SendChannelAsync(Context.Channel, $"I set `{channel.Name}` as the channel for the `{module}` module");
+					await Database.UpdateGuildAsync(guild);
+                    await MessageService.SendChannelAsync(Context.Channel, $"I set `{channel.Name}` as the channel for the `{module}` module");
                 }
                 else
                 {
-                    await database.InsertGuildAsync(Context.Guild);
+                    await Database.InsertGuildAsync(Context.Guild);
                 }
             }
             else
             {
                 string modulelist = string.Join(", ", modules);
                 modulelist = modulelist.Remove(modulelist.Length - 2);
-                await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build());
+                await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build());
             }
         }
     }

@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Discord.Commands;
 using Discord;
 using Skuld.APIS;
-using MySql.Data.MySqlClient;
 using System.Collections.Generic;
 using Skuld.Models.API.SysEx;
 using System.Linq;
@@ -14,34 +13,23 @@ namespace Skuld.Modules
     [Group, Name("Actions")]
     public class Actions : ModuleBase<ShardedCommandContext>
     {
-		readonly Random random;
-		readonly DatabaseService database;
-		readonly MessageService messageService;
-		readonly SysExClient sysExClient;
-
-		public Actions(Random rnd,
-			DatabaseService db,
-			SysExClient sysEx,
-			MessageService msg)
-		{
-			random = rnd;
-			database = db;
-			sysExClient = sysEx;
-			messageService = msg;
-		}
+		public Random Random { get; set; }
+		public DatabaseService Database { get; set; }
+		public MessageService MessageService { get; set; }
+		public SysExClient SysExClient { get; set; }
 
 		List<WeebGif> actiongifs;
 		async Task CheckFillGifs()
 		{
 			if (actiongifs != null) return;
 			else
-			{ actiongifs = await sysExClient.GetAllWeebActionGifsAsync(); }
+			{ actiongifs = await SysExClient.GetAllWeebActionGifsAsync(); }
 		}
 
 		WeebGif GetWeebActionFromType(GifType type)
 		{
 			var sorted = actiongifs.Where(x => x.GifType == type).ToList();
-			return sorted[random.Next(sorted.Count())];
+			return sorted[Random.Next(sorted.Count())];
 		}
 
         [Command("slap"), Summary("Slap a user")]
@@ -99,11 +87,11 @@ namespace Skuld.Modules
 			}
             else
             {
-                if (database.CanConnect)
+                if (Database.CanConnect)
                 {
-                    uint dhp = (uint)random.Next(0, 100);
+                    uint dhp = (uint)Random.Next(0, 100);
 
-					var usr = await database.GetUserAsync(guilduser.Id).ConfigureAwait(false);
+					var usr = await Database.GetUserAsync(guilduser.Id).ConfigureAwait(false);
 
                     if (usr == null)
                     {
@@ -114,14 +102,14 @@ namespace Skuld.Modules
                         usr.HP -= dhp;
                         if (usr.HP > 0)
                         {
-							await database.UpdateUserAsync(usr);
+							await Database.UpdateUserAsync(usr);
 
                             await SendAsync($"{contuser.Mention} just stabbed {guilduser.Mention} for {dhp} HP, they now have {usr.HP} HP left", gif.URL).ConfigureAwait(false);
                         }
                         else
 						{
 							usr.HP = 0;
-							await database.UpdateUserAsync(usr);
+							await Database.UpdateUserAsync(usr);
 
 							await SendAsync($"{contuser.Mention} just stabbed {guilduser.Mention} for {dhp} HP, they now have {usr.HP} HP left", gif.URL).ConfigureAwait(false);
 						}
@@ -257,9 +245,9 @@ namespace Skuld.Modules
 			}
             else
             {
-                if (database.CanConnect)
+                if (Database.CanConnect)
                 {
-					var cusr = await database.GetUserAsync(Context.User.Id).ConfigureAwait(false);
+					var cusr = await Database.GetUserAsync(Context.User.Id).ConfigureAwait(false);
 
 					if (cusr == null)
                     {
@@ -269,9 +257,9 @@ namespace Skuld.Modules
                     {
 						cusr.Pets += 1;
 
-						await database.UpdateUserAsync(cusr).ConfigureAwait(false);
+						await Database.UpdateUserAsync(cusr).ConfigureAwait(false);
 						
-						var gusr = await database.GetUserAsync(guilduser.Id).ConfigureAwait(false);
+						var gusr = await Database.GetUserAsync(guilduser.Id).ConfigureAwait(false);
                         if (gusr == null)
                         {
                             await InsertUser(guilduser).ConfigureAwait(false);
@@ -280,7 +268,7 @@ namespace Skuld.Modules
                         {
 							gusr.Petted += 1;
 
-							await database.UpdateUserAsync(gusr).ConfigureAwait(false);
+							await Database.UpdateUserAsync(gusr).ConfigureAwait(false);
 
                             await SendAsync($"{contuser.Mention} just petted {guilduser.Mention}, they've been petted {gusr.Petted} time(s)!", gif.URL).ConfigureAwait(false);
                         }
@@ -312,9 +300,9 @@ namespace Skuld.Modules
 			}
             else
             {
-                if (database.CanConnect)
+                if (Database.CanConnect)
                 {
-					var usr = await database.GetUserAsync(contuser.Id).ConfigureAwait(false);
+					var usr = await Database.GetUserAsync(contuser.Id).ConfigureAwait(false);
 
                     if (usr == null)
                     {
@@ -324,9 +312,9 @@ namespace Skuld.Modules
                     {
                         usr.Glares += 1;
 						
-						await database.UpdateUserAsync(usr).ConfigureAwait(false);
+						await Database.UpdateUserAsync(usr).ConfigureAwait(false);
 						
-						var usr2 = await database.GetUserAsync(guilduser.Id).ConfigureAwait(false);
+						var usr2 = await Database.GetUserAsync(guilduser.Id).ConfigureAwait(false);
 
 						if(usr2 == null)
 						{
@@ -336,7 +324,7 @@ namespace Skuld.Modules
                         {
                             usr2.GlaredAt += 1;
 
-							await database.UpdateUserAsync(usr2).ConfigureAwait(false);
+							await Database.UpdateUserAsync(usr2).ConfigureAwait(false);
 							
 							await SendAsync($"{contuser.Mention} glares at {guilduser.Mention}, they've been glared at {usr2.GlaredAt} time(s)!", gif.URL).ConfigureAwait(false);
                         }
@@ -351,9 +339,9 @@ namespace Skuld.Modules
 
         private async Task InsertUser(IUser user)
         {
-            await database.InsertUserAsync(user);
+            await Database.InsertUserAsync(user);
         }
         private async Task SendAsync(string message, string image)
-            => await messageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Description = message, Color = Tools.Tools.RandomColor(), ImageUrl = image }.Build());
+            => await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Description = message, Color = Tools.Tools.RandomColor(), ImageUrl = image }.Build());
     }
 }

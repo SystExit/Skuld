@@ -11,7 +11,7 @@ namespace PokeSharp.Deserializer
 {
     public class PokeSharpClient
     {
-        public static async Task<PocketMonster> GetPocketMonster(int id)
+        public async Task<PocketMonster> GetPocketMonsterAsync(int id)
         {
             var path = Path.Combine(AppContext.BaseDirectory + "/skuld/storage/pokemon/");
             PocketMonster poket = null;
@@ -42,7 +42,7 @@ namespace PokeSharp.Deserializer
                 }                
             }
         }
-        public static async Task<PocketMonster> GetPocketMonster(string name)
+        public async Task<PocketMonster> GetPocketMonsterAsync(string name)
         {
             var path = Path.Combine(AppContext.BaseDirectory + "/skuld/storage/pokemon/");
             PocketMonster poket = null;
@@ -68,7 +68,7 @@ namespace PokeSharp.Deserializer
                 }
             }
         }
-        private static async Task<string> WebRequest(string name)
+        private async Task<string> WebRequest(string name)
         {
             using (HttpClient client = new HttpClient())
             {
