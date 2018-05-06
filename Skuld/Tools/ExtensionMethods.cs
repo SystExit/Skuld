@@ -32,6 +32,9 @@ namespace Skuld.Extensions
 		public static Rule34Image GetRandomImage(this IReadOnlyList<Rule34Image> posts)
 			=> posts[Bot.services.GetRequiredService<Random>().Next(0, posts.Count)];
 		
+		public static RealbooruImage GetRandomImage(this IReadOnlyList<RealbooruImage> posts)
+			=> posts[Bot.services.GetRequiredService<Random>().Next(0, posts.Count)];
+
 		public static SafebooruImage GetRandomImage(this IReadOnlyList<SafebooruImage> posts)
 			=> posts[Bot.services.GetRequiredService<Random>().Next(0, posts.Count)];
 		

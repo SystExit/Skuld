@@ -49,6 +49,21 @@ namespace Skuld.APIS
 
 			return null;
 		}
+		public async Task<IReadOnlyList<RealbooruImage>> GetRealBooruImagesAsync(params string[] tags)
+		{
+			IList<string> newtags = tags.ToList();
+			AddblacklistedTags(newtags);
+			var tagstring = String.Join("%20", newtags);
+
+			var data = await WebHandler.ReturnStringAsync(new Uri("https://realbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=" + tagstring));
+			if (data != null)
+			{
+				var posts = JsonConvert.DeserializeObject<List<RealbooruImage>>(data);
+				return posts;
+			}
+
+			return null;
+		}
 		public async Task<IReadOnlyList<DanbooruImage>> GetDanbooruImagesAsync(params string[] tags)
 		{
 			IList<string> newtags = tags.ToList();

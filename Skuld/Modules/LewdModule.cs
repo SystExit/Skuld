@@ -182,5 +182,29 @@ namespace Skuld.Modules
 				await MessageService.SendChannelAsync(Context.Channel, "Couldn't find an image");
 			}
 		}
+
+		[Command("real"), Summary("Gets stuff from Realbooru"), RequireNsfw, Ratelimit(20, 1, Measure.Minutes)]
+		public async Task Realbooru(params string[] tags)
+		{
+			if (BooruClient.ContainsBlacklistedTags(tags))
+			{
+				await MessageService.SendChannelAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+			}
+			else
+			{
+				var posts = await BooruClient.GetRealBooruImagesAsync(tags);
+				if (posts != null)
+				{
+					var post = posts.GetRandomImage();
+					if (post != null)
+					{
+						string message = "<" + post.PostUrl + ">\n" + post.ImageUrl;
+						await MessageService.SendChannelAsync(Context.Channel, message);
+						return;
+					}
+				}
+				await MessageService.SendChannelAsync(Context.Channel, "Couldn't find an image");
+			}
+		}
 	}
 }
