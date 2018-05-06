@@ -241,7 +241,7 @@ namespace Skuld.Modules
 			{
 				if (cmd == "who" || cmd == "?")
 				{
-					var embed = new EmbedBuilder()
+					var embed = new EmbedBuilder
 					{
 						Color = Tools.Tools.RandomColor(),
 						Title = pastaLocal.Name
@@ -400,15 +400,15 @@ namespace Skuld.Modules
             var poll = await Strawpoll.GetPoll(url);
 			if(poll!=null)
 			{
-				var embed = new EmbedBuilder()
+				var embed = new EmbedBuilder
 				{
-					Author = new EmbedAuthorBuilder()
+					Author = new EmbedAuthorBuilder
 					{
 						Name = poll.Title,
 						Url = poll.Url
 					},
 					Color = Tools.Tools.RandomColor(),
-					Footer = new EmbedFooterBuilder()
+					Footer = new EmbedFooterBuilder
 					{
 						Text = "Strawpoll ID: " + poll.ID
 					},
@@ -470,11 +470,11 @@ namespace Skuld.Modules
         {
 			if(comicid == -1)
 			{
-				await SendXKCD((await ComicClients.GetRandomXKCDComicAsync()));
+				await SendXKCD((await ComicClients.GetRandomXKCDComicAsync())).ConfigureAwait(false);
 			}
 			else
 			{
-				await SendXKCD((await ComicClients.GetXKCDComicAsync(comicid)));
+				await SendXKCD((await ComicClients.GetXKCDComicAsync(comicid))).ConfigureAwait(false);
 			}
         }
         public async Task SendXKCD(XKCDComic comic)
@@ -504,15 +504,15 @@ namespace Skuld.Modules
 				{
 					dateTime = DateTime.ParseExact($"{comic.day} {comic.month} {comic.year}", "dd MM yyyy", CultureInfo.InvariantCulture);
 				}
-				await MessageService.SendChannelAsync(Context.Channel, string.Empty, new EmbedBuilder()
+				await MessageService.SendChannelAsync(Context.Channel, string.Empty, new EmbedBuilder
 				{
-					Author = new EmbedAuthorBuilder()
+					Author = new EmbedAuthorBuilder
 					{
 						Name = "Randall Patrick Munroe - XKCD",
 						Url = "https://xkcd.com/" + comic.num + "/",
 						IconUrl = "https://pbs.twimg.com/profile_images/602808103281692673/8lIim6cB_400x400.png"
 					},
-					Footer = new EmbedFooterBuilder()
+					Footer = new EmbedFooterBuilder
 					{
 						Text = "Strip released on"
 					},
@@ -654,7 +654,6 @@ namespace Skuld.Modules
 			if (BooruClient.ContainsBlacklistedTags(tags))
 			{
 				await MessageService.SendChannelAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
-				return;
 			}
 			else
 			{
@@ -671,7 +670,7 @@ namespace Skuld.Modules
 				}
 			}
 		}
-		int EdgeCase = 0;
+		int EdgeCase;
 		public SafebooruImage GetSafeImage(IReadOnlyList<SafebooruImage> posts)
 		{
 			var post = posts.GetRandomImage();

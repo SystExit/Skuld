@@ -13,10 +13,8 @@ namespace Skuld.Modules
     [Group, Name("Stats")]
     public class Stats : ModuleBase<ShardedCommandContext>
 	{
-		public MessageService MessageService { get; set; }
-
-		[DontInject]
-		Process Process { get { return Process.GetCurrentProcess(); } }
+		public MessageService MessageService { get; set; }		
+		Process Process = Process.GetCurrentProcess();
 
         [Command("ping"), Summary("Print Ping")]
         public async Task Ping() =>

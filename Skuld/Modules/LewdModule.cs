@@ -42,7 +42,6 @@ namespace Skuld.Modules
 			if (BooruClient.ContainsBlacklistedTags(tags))
 			{
 				await MessageService.SendChannelAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
-				return;
 			}
 			else
 			{

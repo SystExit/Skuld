@@ -43,7 +43,7 @@ namespace Skuld.Services
 
 				Parallel.Invoke(() => SendDataToDataDog());
 
-				await UpdateStatsAsync();
+				await UpdateStatsAsync().ConfigureAwait(false);
 
 				await Task.Delay(-1).ConfigureAwait(false);
 			}

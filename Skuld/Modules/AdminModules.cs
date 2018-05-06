@@ -647,9 +647,9 @@ namespace Skuld.Modules
         public async Task ConfigureGuildFeatures(string module, int value)
         {
             if (value > 1)
-            { await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder() { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build()); }
+            { await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build()); }
             if (value < 0)
-            { await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder() { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build()); }
+            { await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build()); }
             else
             {
                 module = module.ToLowerInvariant();

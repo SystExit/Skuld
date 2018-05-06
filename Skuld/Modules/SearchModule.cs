@@ -148,13 +148,13 @@ namespace Skuld.Modules
             var users = await twicli.GetUsersAsync(twitchStreamer);
             var chan = await users.FirstOrDefault().GetChannelAsync();
             var stream = await chan.GetStreamAsync();
-            var embed = new EmbedBuilder()
+            var embed = new EmbedBuilder
             {
                 Color = Tools.Tools.RandomColor()
             };
             if (stream != null)
             {
-                embed.Author = new EmbedAuthorBuilder()
+                embed.Author = new EmbedAuthorBuilder
                 {
                     Name = chan.DisplayName,
                     IconUrl = chan.LogoUrl,
@@ -491,10 +491,10 @@ namespace Skuld.Modules
                 item["author"].ToString(),
                 item["thumbs_up"].ToString(),
                 item["thumbs_down"].ToString());
-            var embed = new EmbedBuilder()
+            var embed = new EmbedBuilder
             {
                 Color = Tools.Tools.RandomColor(),
-                Author = new EmbedAuthorBuilder()
+                Author = new EmbedAuthorBuilder
                 {
                     Name = word.Word,
                     Url = word.PermaLink
@@ -520,9 +520,9 @@ namespace Skuld.Modules
                 Description = desc.Remove(500) + "...\nRead more at the article.",
                 Url = $"https://{langcode}.wikipedia.org/wiki/{query}"
             };
-            var embed = new EmbedBuilder()
+            var embed = new EmbedBuilder
             {
-                Author = new EmbedAuthorBuilder()
+                Author = new EmbedAuthorBuilder
                 {
                     Name = page.Name,
                     Url = page.Url
@@ -536,10 +536,10 @@ namespace Skuld.Modules
         [Command("gif"), Summary("Gets a gif")]
         public async Task Gifcommand([Remainder]string query)
         {
-            var embed = new EmbedBuilder()
+            var embed = new EmbedBuilder
             {
                 Color = Tools.Tools.RandomColor(),
-                Author = new EmbedAuthorBuilder()
+                Author = new EmbedAuthorBuilder
                 {
                     Name = "Giphy",
                     IconUrl = "https://giphy.com/favicon.ico",
@@ -576,10 +576,10 @@ namespace Skuld.Modules
             var jobject = JObject.Parse(JsonConvert.SerializeXNode(xNode));
             dynamic item = jobject["results"]["result"].First();
             var definedword = new Define(word,item["definition"].ToString(),item["example"].ToString(),item["partofspeech"].ToString(),item["term"].ToString());
-            var embed = new EmbedBuilder()
+            var embed = new EmbedBuilder
             {
                 Color = Tools.Tools.RandomColor(),
-                Author = new EmbedAuthorBuilder()
+                Author = new EmbedAuthorBuilder
                 {
                     Name = definedword.Word
                 }
@@ -662,12 +662,12 @@ namespace Skuld.Modules
             { await PagedReplyAsync(paginatedMessage); }
             else
             {
-                await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder()
+                await MessageService.SendChannelAsync(Context.Channel, "", new EmbedBuilder
                 {
                     Title = paginatedMessage.Title,
                     Color = Tools.Tools.RandomColor(),
                     Description = pages.FirstOrDefault(),
-                    Footer = new EmbedFooterBuilder()
+                    Footer = new EmbedFooterBuilder
                     {
                         Text = "Page 1/1"
                     }

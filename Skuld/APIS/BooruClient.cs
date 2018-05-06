@@ -9,14 +9,6 @@ namespace Skuld.APIS
 {
     public class BooruClient
 	{
-		readonly Uri DanbooruBaseUri = new Uri("https://danbooru.donmai.us/posts.json?tags=");
-		readonly Uri GelbooruBaseUri = new Uri("https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=");
-		readonly Uri Rule34BaseUri = new Uri("https://rule34.xxx/index.php?page=dapi&s=post&q=index&json=1&tags=");
-		readonly Uri E621BaseUri = new Uri("https://e621.net/post/index.json?tags=");
-		readonly Uri YandereBaseUri = new Uri("https://yande.re/post.json?tags=");
-		readonly Uri SafebooruBaseUri = new Uri("https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&tags=");
-		readonly Uri KonaChanBaseUri = new Uri("https://konachan.com/post.json?tags=");
-
 		readonly List<string> blacklistedTags = new List<string>
 		{
 			"loli",
@@ -32,7 +24,7 @@ namespace Skuld.APIS
 			AddblacklistedTags(newtags);
 			var tagstring = String.Join("%20", newtags);
 
-			Uri requesturl = requesturl = new Uri(SafebooruBaseUri.OriginalString + tagstring);
+			Uri requesturl = requesturl = new Uri("https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&tags=" + tagstring);
 
 			var data = await WebHandler.ReturnStringAsync(requesturl);
 
@@ -50,7 +42,7 @@ namespace Skuld.APIS
 			AddblacklistedTags(newtags);
 			var tagstring = String.Join("%20", newtags);
 
-			Uri requesturl = requesturl = new Uri(Rule34BaseUri.OriginalString + tagstring);
+			Uri requesturl = requesturl = new Uri("https://rule34.xxx/index.php?page=dapi&s=post&q=index&json=1&tags=" + tagstring);
 
 			var data = await WebHandler.ReturnStringAsync(requesturl);
 			if (data != null)
@@ -67,7 +59,7 @@ namespace Skuld.APIS
 			AddblacklistedTags(newtags);
 			var tagstring = String.Join("%20", newtags);
 
-			Uri requesturl = requesturl = new Uri(DanbooruBaseUri.OriginalString + tagstring);
+			Uri requesturl = requesturl = new Uri("https://danbooru.donmai.us/posts.json?tags=" + tagstring);
 
 			var data = await WebHandler.ReturnStringAsync(requesturl);
 			if(data!=null)
@@ -84,7 +76,7 @@ namespace Skuld.APIS
 			AddblacklistedTags(newtags);
 			var tagstring = String.Join("%20", newtags);
 
-			Uri requesturl = requesturl = new Uri(GelbooruBaseUri.OriginalString + tagstring);
+			Uri requesturl = requesturl = new Uri("https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=" + tagstring);
 
 			var data = await WebHandler.ReturnStringAsync(requesturl);
 
@@ -101,7 +93,7 @@ namespace Skuld.APIS
 			AddblacklistedTags(newtags);
 			var tagstring = String.Join("%20", newtags);
 
-			Uri requesturl = requesturl = new Uri(KonaChanBaseUri.OriginalString + tagstring);
+			Uri requesturl = requesturl = new Uri("https://konachan.com/post.json?tags=" + tagstring);
 
 			var data = await WebHandler.ReturnStringAsync(requesturl);
 			
@@ -118,7 +110,7 @@ namespace Skuld.APIS
 			AddblacklistedTags(newtags);
 			var tagstring = String.Join("%20", newtags);
 
-			Uri requesturl = requesturl = new Uri(E621BaseUri.OriginalString + tagstring);
+			Uri requesturl = requesturl = new Uri("https://e621.net/post/index.json?tags=" + tagstring);
 
 			var data = await WebHandler.ReturnStringAsync(requesturl);
 			
@@ -135,7 +127,7 @@ namespace Skuld.APIS
 			AddblacklistedTags(newtags);
 			var tagstring = String.Join("%20", newtags);
 
-			Uri requesturl = requesturl = new Uri(YandereBaseUri.OriginalString + tagstring);
+			Uri requesturl = requesturl = new Uri("https://yande.re/post.json?tags=" + tagstring);
 
 			var data = await WebHandler.ReturnStringAsync(requesturl);
 			
@@ -161,7 +153,6 @@ namespace Skuld.APIS
 				{
 					returnvalue = true;
 				}
-				continue;
 			}
 			return returnvalue;
 		}

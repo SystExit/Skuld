@@ -20,14 +20,17 @@ namespace Skuld.Models.API.Booru
 		{
 			get
 			{
-				switch (Prating)
+				if(Prating=="s")
 				{
-					case "s":
-						return Rating.Safe;
-					case "q":
-						return Rating.Questionable;
-					case "e":
-						return Rating.Explicit;
+					return Rating.Safe;
+				}
+				if(Prating == "q")
+				{
+					return Rating.Questionable;
+				}
+				if(Prating == "e")
+				{
+					return Rating.Explicit;
 				}
 				return Rating.None;
 			}
