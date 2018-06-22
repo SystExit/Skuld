@@ -45,6 +45,7 @@ namespace Skuld.APIS
 				{
 					var reader = new StreamReader(resp.GetResponseStream());
 					var responce = await reader.ReadToEndAsync();
+                    StatsdClient.DogStatsd.Increment("web.get");
 					resp.Dispose();
 					client.Abort();
 					return responce;
@@ -73,7 +74,8 @@ namespace Skuld.APIS
 				{
 					var reader = new StreamReader(resp.GetResponseStream());
 					var responce = await reader.ReadToEndAsync();
-					resp.Dispose();
+                    StatsdClient.DogStatsd.Increment("web.get");
+                    resp.Dispose();
 					client.Abort();
 					return responce;
 				}
@@ -105,7 +107,8 @@ namespace Skuld.APIS
 					if (response.StatusCode == HttpStatusCode.OK)
 					{
 						doc.Load(response.GetResponseStream(), Encoding.UTF8);
-						request.Abort();
+                        StatsdClient.DogStatsd.Increment("web.get");
+                        request.Abort();
 					}
 					if (doc != null)
 						return doc;
@@ -136,7 +139,8 @@ namespace Skuld.APIS
 			var client = new WebClient();
 			client.Headers.Add("User-Agent", UAGENT);
 			await client.DownloadFileTaskAsync(url, filepath);
-			client.Dispose();
+            StatsdClient.DogStatsd.Increment("web.download");
+            client.Dispose();
 			return filepath;
 		}
 
@@ -148,10 +152,15 @@ namespace Skuld.APIS
 				client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
                 using (HttpResponseMessage resp = await client.PostAsync(url, content))
                 {
-					if (resp.IsSuccessStatusCode)
-						return await resp.Content.ReadAsStringAsync();
-					else
-						return null;
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        StatsdClient.DogStatsd.Increment("web.post");
+                        return await resp.Content.ReadAsStringAsync();
+                    }
+                    else
+                    {
+                        return null;
+                    }
                 }
             }
         }
@@ -163,10 +172,15 @@ namespace Skuld.APIS
 				client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
                 using (HttpResponseMessage resp = await client.PostAsync(url, content))
                 {
-                    if (resp.IsSuccessStatusCode)                    
-                        return await resp.Content.ReadAsStreamAsync();                    
-                    else                    
-                        return null;                    
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        StatsdClient.DogStatsd.Increment("web.post");
+                        return await resp.Content.ReadAsStreamAsync();
+                    }
+                    else
+                    {
+                        return null;
+                    }
                 }
             }
         }
@@ -178,10 +192,15 @@ namespace Skuld.APIS
                 client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
                 using (HttpResponseMessage resp = await client.PostAsync(url, content))
                 {
-                    if (resp.IsSuccessStatusCode)                    
-                        return await resp.Content.ReadAsByteArrayAsync();                    
-                    else                    
-                        return null;                    
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        StatsdClient.DogStatsd.Increment("web.post");
+                        return await resp.Content.ReadAsByteArrayAsync();
+                    }
+                    else
+                    {
+                        return null;
+                    }
                 }
             }
 		}

@@ -85,6 +85,7 @@ namespace Skuld.Tools
 		public string Username { get; set; }
 		public string Password { get; set; }
 		public string Database { get; set; }
+        public bool SSL { get; set; }
 
 		public ConfigSQL()
 		{

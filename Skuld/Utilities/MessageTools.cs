@@ -3,7 +3,6 @@ using Discord.WebSocket;
 using Skuld.Models;
 using Skuld.Services;
 using Discord;
-using Discord.Commands;
 
 namespace Skuld.Utilities
 {
@@ -42,20 +41,13 @@ namespace Skuld.Utilities
 			return content[0];
 		}
 
-		public static bool IsEnabledChannel(ITextChannel channel)
+		public static bool IsEnabledChannel(IGuildUser user, ITextChannel channel)
 		{
+            if (user.GuildPermissions.Administrator) return true;
 			if (channel == null) return true;
 			if (channel.Topic == null) return true;
-			if (channel.Topic.EndsWith("-commands") || channel.Topic.StartsWith("-commands")) return false;
+			if (channel.Topic.Contains("-command")) return false;
 			return true;
-		}
-
-		public static bool IsPrefixReset(ShardedCommandContext ShardCon, DiscordShardedClient client)
-		{
-			if (ShardCon.Message.Content.Contains($"{Bot.Configuration.Discord.Prefix}resetprefix")) { return true; }
-			if (ShardCon.Message.Content.Contains($"{Bot.Configuration.Discord.AltPrefix}resetprefix")) { return true; }
-
-			return false;
 		}
 	}
 }

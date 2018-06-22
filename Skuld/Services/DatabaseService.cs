@@ -1,38 +1,39 @@
 ﻿using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
-using System.Data;
+using System.Globalization;
 using System;
 using Skuld.Models;
 using Discord.WebSocket;
 using System.Collections.Generic;
-using Skuld.Tools;
 using Discord;
 using StatsdClient;
-using System.Threading;
+using Skuld.Extensions;
+using Skuld.Globalization;
 
 namespace Skuld.Services
 {
     public class DatabaseService
     {
-		readonly LoggingService logger;
-		readonly Locale local;
-		readonly DiscordShardedClient client;
+        LoggingService logger;
+        Locale local;
+        DiscordShardedClient client;
 
-        private static string cs = $@"server={Bot.Configuration.SQL.Host};user={Bot.Configuration.SQL.Username};password={Bot.Configuration.SQL.Password};database={Bot.Configuration.SQL.Database};charset=utf8mb4";
+        private static string cs = $@"server={Bot.Configuration.SQL.Host};user={Bot.Configuration.SQL.Username};password={Bot.Configuration.SQL.Password};database={Bot.Configuration.SQL.Database};charset=utf8mb4;";
 
 		public bool CanConnect = false;
 
-		public DatabaseService(LoggingService log,
-			DiscordShardedClient cli,
-			Locale loc) //inherits from depinjection
+		public DatabaseService(LoggingService log, Locale loc, DiscordShardedClient cli)
 		{
-			logger = log;
-			client = cli;
-			local = loc;
+            logger = log;local = loc;client = cli;
 		}
 
 		public async Task CheckConnectionAsync()
 		{
+            if(!Bot.Configuration.SQL.SSL && !cs.Contains("SslMode=None;"))
+            {
+                cs += "SslMode=None;";
+            }
+
 			bool canconnect = false;
 			using (var conn = new MySqlConnection(cs))
 			{
@@ -44,8 +45,9 @@ namespace Skuld.Services
 					else
 					{ canconnect = false; }
 				}
-				catch
+				catch (Exception ex)
 				{
+                    await logger.AddToLogsAsync(new Models.LogMessage("Database", ex.Message, LogSeverity.Error, ex));
 					canconnect = false;
 				}
 				finally
@@ -56,7 +58,7 @@ namespace Skuld.Services
 			CanConnect = canconnect;
 		}
 		
-        async Task<SqlResult> SingleQueryAsync(MySqlCommand command)
+        public async Task<SqlResult> SingleQueryAsync(MySqlCommand command)
         {
 			if(CanConnect)
 			{
@@ -154,7 +156,10 @@ namespace Skuld.Services
 
 								user.Language = Convert.ToString(reader["language"]);
 
-								user.Daily = Convert.ToString(reader["daily"]);
+                                if (reader["daily"] != DBNull.Value)
+                                { user.Daily = Convert.ToDateTime(reader["daily"], new CultureInfo("en-GB")); }
+                                else
+                                { user.Daily = null; }
 
 								user.LuckFactor = Convert.ToDouble(reader["luckfactor"]);
 
@@ -328,6 +333,131 @@ namespace Skuld.Services
 			}
 			return null;
 		}
+        public async Task<SqlResult> CastPastaVoteAsync(IUser user, string title, bool upvote)
+        {
+            if(CanConnect)
+            {
+                var pasta = await GetPastaAsync(title);
+                if(pasta != null)
+                {
+                    var command = new MySqlCommand("INSERT INTO `pastakarma` (PastaID,UserID,VoteType) VALUES (@pastaid,@userid,@votetype)");
+
+                    command.Parameters.AddWithValue("@pastaid", pasta.ID);
+                    command.Parameters.AddWithValue("@userid", user.Id);
+
+                    if (upvote)
+                    {
+                        command.Parameters.AddWithValue("@votetype", 1);
+                    }
+                    else
+                    {
+                        command.Parameters.AddWithValue("@votetype", 0);
+                    }
+
+                    var usercasted = await HasUserVotedOnPastaAsync(user, title);
+
+                    if(!usercasted)
+                    {
+                        return await SingleQueryAsync(command);
+                    }
+                    else
+                    {
+                        var tmpcom = new MySqlCommand("SELECT VoteType FROM `pastakarma` WHERE UserID = @userid AND PastaID = @pastaid");
+                        tmpcom.Parameters.AddWithValue("@userid", user.Id);
+                        tmpcom.Parameters.AddWithValue("@pastaid", pasta.ID);
+                        var res = await SingleQueryAsync(tmpcom);
+
+                        var datares = Convert.ToString(res.Data).ToBool();
+
+                        if(datares == upvote)
+                        {
+                            return new SqlResult()
+                            {
+                                Successful = false,
+                                Error = "User already upvoted"
+                            };
+                        }
+                        if((datares == upvote) == false)
+                        {
+                            return new SqlResult()
+                            {
+                                Successful = false,
+                                Error = "User already downvoted"
+                            };
+                        }
+
+                        return await ChangeUserVoteOnPastaAsync(user, title);
+                    }
+                }
+                else
+                {
+                    return new SqlResult()
+                    {
+                        Successful = false,
+                        Error = "Pasta \"" + title + "\" doesn't exist"
+                    };
+                }
+            }
+            return new SqlResult()
+            {
+                Successful = false,
+                Error = "Database not enabled"
+            };
+        }
+        public async Task<bool> HasUserVotedOnPastaAsync(IUser user, string title)
+        {
+            if(CanConnect)
+            {
+                var pasta = await GetPastaAsync(title);
+                if (pasta != null)
+                {
+                    var command = new MySqlCommand("SELECT * FROM `pastakarma` WHERE PastaID = @pastaid AND UserID = @userid");
+                    
+                    command.Parameters.AddWithValue("@userid", user.Id);
+                    command.Parameters.AddWithValue("@pastaid", pasta.ID);
+
+                    var res = await SingleQueryAsync(command);
+
+                    if(res.Data==null)
+                    {
+                        return false;
+                    }
+                    else
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        public async Task<SqlResult> ChangeUserVoteOnPastaAsync(IUser user, string title)
+        {
+            if(CanConnect)
+            {
+                var pasta = await GetPastaAsync(title);
+                if(pasta!=null)
+                {
+                    var command = new MySqlCommand("UPDATE `pastakarma` SET VoteType = @votetype WHERE UserID = @userID AND PastaID = @pastaid");
+                    command.Parameters.AddWithValue("@UserID", user.Id);
+                    command.Parameters.AddWithValue("@pastaid", pasta.ID);
+
+                    return await SingleQueryAsync(command);
+                }
+                else
+                {
+                    return new SqlResult()
+                    {
+                        Successful = false,
+                        Error = "Pasta \"" + title + "\" doesn't exist"
+                    };
+                }
+            }
+            return new SqlResult()
+            {
+                Successful = false,
+                Error = "Database not enabled"
+            };
+        }
 
 		public async Task<CustomCommand> GetCustomCommandAsync(ulong GuildID, string Command)
 		{
@@ -510,16 +640,22 @@ namespace Skuld.Services
 
 							comSetts.AdminEnabled = Convert.ToBoolean(reader["admin"]);
 
-							comSetts.FunEnabled = Convert.ToBoolean(reader["fun"]);
+                            comSetts.CustomEnabled = Convert.ToBoolean(reader["custom"]);
+
+                            comSetts.FunEnabled = Convert.ToBoolean(reader["fun"]);
 
 							comSetts.HelpEnabled = Convert.ToBoolean(reader["help"]);
 
 							comSetts.InformationEnabled = Convert.ToBoolean(reader["information"]);
 
-							comSetts.SearchEnabled = Convert.ToBoolean(reader["search"]);
+                            comSetts.LewdEnabled = Convert.ToBoolean(reader["lewd"]);
+
+                            comSetts.SearchEnabled = Convert.ToBoolean(reader["search"]);
 
 							comSetts.StatsEnabled = Convert.ToBoolean(reader["stats"]);
-						}
+
+                            comSetts.WeebEnabled = Convert.ToBoolean(reader["weeb"]);
+                        }
 						DogStatsd.Increment("mysql.rows_ret", rows);
 
 						await conn.CloseAsync();
@@ -572,10 +708,10 @@ namespace Skuld.Services
 		{
 			if(CanConnect)
 			{
-				var command = new MySqlCommand("INSERT INTO ");
+				var command = new MySqlCommand("INSERT IGNORE INTO ");
 				if (feature)
 				{
-					command.CommandText += "`guildfeaturemodules` (`ID`,`Experience`,`UserJoinLeave`) VALUES (@guildid,0,0);";
+					command.CommandText += "`guildfeaturemodules` (`ID`,`Pinning`,`Experience`) VALUES (@guildid,0,0);";
 					command.Parameters.AddWithValue("@guildid", guild.Id);
 				}
 				else
@@ -747,7 +883,7 @@ namespace Skuld.Services
 				
 				command.Parameters.AddWithValue("@money", user.Money);
 				command.Parameters.AddWithValue("@description", user.Description);
-				command.Parameters.AddWithValue("@daily", user.Daily);
+				command.Parameters.AddWithValue("@daily", Convert.ToString(user.Daily));
 				command.Parameters.AddWithValue("@luckfactor", user.LuckFactor);
 				command.Parameters.AddWithValue("@language", user.Language);
 				command.Parameters.AddWithValue("@dmenabled", user.DMEnabled);
@@ -919,19 +1055,22 @@ namespace Skuld.Services
 			{
 				var command = new MySqlCommand("UPDATE `guildcommandmodules` " +
 						"SET `Accounts` = @accounts, `Actions` = @actions, " +
-						"`Admin` = @admin, `Fun` = @fun, " +
-						"`Help` = @help, `Information` = @info, " +
-						"`Search` = @search, `Stats` = @stats " +
+						"`Admin` = @admin, `Custom` = @custom, `Fun` = @fun, " +
+						"`Help` = @help, `Information` = @info, `Lewd` = @lewd, " +
+						"`Search` = @search, `Stats` = @stats, `Weeb` = @weeb" +
 						"WHERE ID = @guildID;");
 
 				command.Parameters.AddWithValue("@accounts", modules.AccountsEnabled);
 				command.Parameters.AddWithValue("@actions", modules.ActionsEnabled);
 				command.Parameters.AddWithValue("@admin", modules.AdminEnabled);
+				command.Parameters.AddWithValue("@custom", modules.CustomEnabled);
 				command.Parameters.AddWithValue("@fun", modules.FunEnabled);
 				command.Parameters.AddWithValue("@help", modules.HelpEnabled);
 				command.Parameters.AddWithValue("@info", modules.InformationEnabled);
+				command.Parameters.AddWithValue("@lewd", modules.LewdEnabled);
 				command.Parameters.AddWithValue("@search", modules.SearchEnabled);
 				command.Parameters.AddWithValue("@stats", modules.StatsEnabled);
+				command.Parameters.AddWithValue("@weeb", modules.WeebEnabled);
 				command.Parameters.AddWithValue("@guildID", id);
 
 				return await SingleQueryAsync(command).ConfigureAwait(false);
@@ -1004,13 +1143,13 @@ namespace Skuld.Services
 
 				//Configures Modules
 				gcmd = new MySqlCommand("INSERT IGNORE INTO `guildcommandmodules` " +
-					"(`ID`,`Accounts`,`Actions`,`Admin`,`Fun`,`Help`,`Information`,`Search`,`Stats`) " +
-					$"VALUES ( {guild.Id} , 1, 1, 1, 1, 1, 1, 1, 1 )");
+					"(`ID`,`Accounts`,`Actions`,`Admin`, `Custom`,`Fun`,`Help`,`Information`,`Lewd`,`Search`,`Stats`,`Weeb`) " +
+					$"VALUES ( {guild.Id} , 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 )");
 				results.Add(await SingleQueryAsync(gcmd).ConfigureAwait(false));
 
 				//Configures Settings
-				gcmd = new MySqlCommand("INSERT IGNORE INTO `guildfeaturemodules` " + "(`ID`,`Starboard`,`Pinning`,`Experience`,`UserJoinLeave`,`UserModification`,`UserBanEvents`,`GuildModification`,`GuildChannelModification`,`GuildRoleModification`) " +
-					$"VALUES ( {guild.Id} , 0, 0, 0, 0, 0, 0, 0, 0, 0 )");
+				gcmd = new MySqlCommand("INSERT IGNORE INTO `guildfeaturemodules` " + "(`ID`,`Starboard`,`Pinning`) " +
+					$"VALUES ( {guild.Id} , 0, 0 )");
 				results.Add(await SingleQueryAsync(gcmd).ConfigureAwait(false));
 
 				results.AddRange(await CheckGuildUsersAsync(guild).ConfigureAwait(false));

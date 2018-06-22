@@ -1,20 +1,18 @@
 ﻿using System.Threading.Tasks;
-using NTwitch;
 using NTwitch.Rest;
+using System.Linq;
 
 namespace Skuld.Services
 {
     public class TwitchService
     {
-		TwitchRestClient client;
-		LoggingService logger;
+		public TwitchRestClient client { get; set; }
+        readonly LoggingService logger;
 
-		public TwitchRestClient Client { get { return client; } }
-
-		public TwitchService(LoggingService log) //depinj
-		{
-			logger = log;
-		}
+        public TwitchService(LoggingService log)
+        {
+            logger = log;
+        }
 
 		public void CreateClient(TwitchRestConfig config)
 		{
@@ -26,5 +24,11 @@ namespace Skuld.Services
 		{
 			await client.LoginAsync(token);
 		}
+
+        public async Task<RestChannel> GetUserAsync(string user)
+        {
+            var users = await client.GetUsersAsync(user);
+            return await users.FirstOrDefault().GetChannelAsync();
+        }
     }
 }

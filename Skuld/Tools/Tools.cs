@@ -1,42 +1,19 @@
 ﻿using Discord;
-using System.IO;
-using System.Text;
 using System;
-using System.Resources;
 using Discord.Commands;
-using System.Linq;
 using System.Collections.Generic;
+using Skuld.Extensions;
+using SteamStoreQuery;
+using Skuld.Utilities;
 
 namespace Skuld.Tools
 {
     public class Tools
     {
 		static readonly Random random = new Random();
+        static string BaseSteamRunUrl = "https://skuld.systemexit.co.uk/tools/steam.php?action=run&appid=";
+        static string BaseSteamStoreUrl = "https://skuld.systemexit.co.uk/tools/steam.php?action=store&appid=";
 
-        private static readonly string[] _validExtensions = { ".jpg", ".bmp", ".gif", ".png" };
-        public static bool IsImageExtension(string url)
-        {
-            foreach (var ext in _validExtensions)
-            {
-                if (url.Contains(ext))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-        public static Color RandomColor()
-        {
-            var bytes = new byte[3];
-            random.NextBytes(bytes);
-            return new Color(bytes[0], bytes[1], bytes[2]);
-        }
-
-        public static MemoryStream GenerateStreamFromString(string value)
-        {
-            return new MemoryStream(Encoding.UTF8.GetBytes(value ?? ""));
-        }
         public static int ParseInt32OrDefault(string s)
         {
             if (Int32.TryParse(s, out int tmp))
@@ -58,91 +35,62 @@ namespace Skuld.Tools
             else
                 return 0;
         }
-
-        public static string CheckForEmpty(string s)
+        
+        public static Color HexToDiscordColor(string hex)
         {
-            if (string.IsNullOrEmpty(s) || string.IsNullOrWhiteSpace(s))
-                return "SKULD_GENERIC_EMPTY";
-            else
-                return s;
+            var col = System.Drawing.ColorTranslator.FromHtml(hex);
+            return new Color(col.R, col.G, col.B);
         }
-        public static string CheckForEmptyWithLocale(string s, ResourceManager locale)
-        {
-            if (string.IsNullOrEmpty(s) || string.IsNullOrWhiteSpace(s))
-                return locale.GetString("SKULD_GENERIC_EMPTY");
-            else
-                return s;
-        }
-
-        public static string CheckForNull(string s)
-        {
-            if (string.IsNullOrEmpty(s) || string.IsNullOrWhiteSpace(s))
-                return null;
-            else
-                return s;
-        }
-
-		public static bool IsWebsite(string input)
+        
+        public static Embed GetCommandHelp(CommandService commandService, ICommandContext context, string commandname)
 		{
-			if (input.Contains('.') || input.Contains("www.") || input.Contains("http://") || input.Contains("https://"))
-			{ return true; }
-
-			return false;
-		}
-
-        public static ConsoleColor ColorBasedOnSeverity(LogSeverity sev)
-        {
-            if (sev == LogSeverity.Critical)
-                return ConsoleColor.DarkRed;
-            if (sev == LogSeverity.Error)
-                return ConsoleColor.Red;
-            if (sev == LogSeverity.Info)
-                return ConsoleColor.Green;
-            if (sev == LogSeverity.Warning)
-                return ConsoleColor.Yellow;
-            if (sev == LogSeverity.Verbose)
-                return ConsoleColor.Cyan;
-            return ConsoleColor.White;
-        }
-
-		public static Embed GetCommandHelp(CommandService commandService, ICommandContext context, string command)
-		{
-			if (command.ToLower() != "pasta")
+			if (commandname.ToLower() != "pasta")
 			{
-				var result = commandService.Search(context, command);
+                var embed = new EmbedBuilder
+                {
+                    Description = $"Here are some commands like **{commandname}**",
+                    Color = EmbedUtils.RandomColor()
+                };
 
-				if (!result.IsSuccess)
-				{
-					return null;
-				}
+                var serch = commandService.Search(context, commandname).Commands;
 
-				var embed = new EmbedBuilder
-				{
-					Description = $"Here are some commands like **{command}**",
-					Color = RandomColor()
-				};
+                var summ = GetSummaryAsync(serch);
 
-				var cmd = result.Commands.FirstOrDefault();
-
-				var summ = GetSummaryAsync(cmd.Command, result.Commands, command);
-
-				embed.AddField(x =>
-				{
-					x.Name = string.Join(", ", cmd.Command.Aliases);
-					x.Value = summ;
-					x.IsInline = false;
-				});
+				embed.AddField(string.Join(", ", serch[0].Command.Aliases), summ, false);
 
 				return embed.Build();
 			}
-			return null;
+            else
+            {
+                var embed = new EmbedBuilder
+                {
+                    Description = "Here's how to do stuff with **pasta**:\n\n" +
+                    "```cs\n" +
+                    "   give   : Give a user your pasta\n" +
+                    "   list   : List all pasta\n" +
+                    "   edit   : Change the content of your pasta\n" +
+                    "  change  : Same as above\n" +
+                    "   new    : Creates a new pasta\n" +
+                    "    +     : Same as above\n" +
+                    "   who    : Gets information about a pasta\n" +
+                    "    ?     : Same as above\n" +
+                    "  upvote  : Upvotes a pasta\n" +
+                    " downvote : Downvotes a pasta\n" +
+                    "  delete  : deletes a pasta```",
+                    Color = EmbedUtils.RandomColor()
+                };
+                return embed.Build();
+            }
 		}
 
-		public static string GetSummaryAsync(CommandInfo cmd, IReadOnlyList<CommandMatch> Commands, string comm)
+		public static string GetSummaryAsync(IReadOnlyList<CommandMatch> Variants)
 		{
-			string summ = "Summary: " + cmd.Summary;
+            var primary = Variants[0];
+
+			string summ = "Summary: " + primary.Command.Summary;
 			int totalparams = 0;
-			foreach (var com in Commands)
+
+			foreach (var com in Variants)
 			{
 				totalparams += com.Command.Parameters.Count;
 			}
@@ -151,21 +99,97 @@ namespace Skuld.Tools
 			{
 				summ += "\nParameters:\n";
 
-				foreach (var param in cmd.Parameters)
-				{
-					if (param.IsOptional)
-					{
-						summ += $"**[Optional]** {param.Name} - {param.Type.Name}\n";
-					}
-					else
-					{
-						summ += $"**[Required]** {param.Name} - {param.Type.Name}\n";
-					}
-				}
+                int instance = 0;
+
+                foreach(var cmd in Variants)
+                {
+                    instance++;
+                    if(Variants.Count>1)
+                    {
+                        summ += $"**Command Version: {instance}**\n";
+                    }
+                    if (cmd.Command.Parameters.Count == 0)
+                    {
+                        summ += "No Parameters\n";
+                    }
+                    foreach (var param in cmd.Command.Parameters)
+                    {
+                        if (param.IsOptional)
+                        {
+                            summ += $"**[Optional]** {param.Name} - {param.Type.Name}\n";
+                        }
+                        else
+                        {
+                            summ += $"**[Required]** {param.Name} - {param.Type.Name}\n";
+                        }
+                    }
+                }
 
 				return summ;
 			}
 			return summ + "\nParameters: None";
-		}
-	}
+		}              
+
+        public static string GetBooruMessage(int score, string fileurl, string posturl, bool isvideo)
+        {
+            string message = $"`Score: {score}` <{posturl}>\n{fileurl}";
+
+            if (isvideo)
+            {
+                message += "(Video)";
+            }
+
+            return message;
+        }
+
+        public static string GetSteamGameDescription(Listing game, Steam.Models.SteamStore.StoreAppDetailsDataModel appdata)
+        {
+            var launchurl = BaseSteamRunUrl += appdata.SteamAppId;
+            var storeurl = BaseSteamStoreUrl += appdata.SteamAppId;
+
+            var fulldesc = appdata.AboutTheGame;
+            var clean = fulldesc.Replace("<br /> ", "").Replace("<br/> ", "").Replace("<br />", "").Replace("<br/>", "").Replace("<br> ", "\n").Replace("<br>", "\n");
+            var split = clean.Split("\n");
+
+            int count = 0;
+            while (count < split.Length)
+            {
+                if (count == split.Length - 1)
+                {
+                    count = -1; break;
+                }
+                if (split[count] == "")
+                {
+                    count++; continue;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            var desc = split[count].StripHtml();
+
+            string returnstring = "";
+            //Description
+            returnstring += desc;
+            //seperator
+            returnstring += "\n\n";
+            //Cost
+            if (!appdata.IsFree)
+            {
+                returnstring += "Price (USD): $" + game.PriceUSD;
+            }
+            else
+            {
+                returnstring += "Price (USD): Free";
+            }
+            //seperator
+            returnstring += "\n\n";
+            //LaunchURL
+            returnstring += $"[Launch]({launchurl}) | [Store]({storeurl})";
+
+            return returnstring;
+        }
+    }
 }

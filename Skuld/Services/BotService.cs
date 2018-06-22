@@ -10,24 +10,31 @@ using Skuld.Tools;
 using System.Linq;
 using StatsdClient;
 using System.Net;
+using Skuld.Tools.Stats;
 
 namespace Skuld.Services
 {
     public class BotService
     {
-		DiscordShardedClient client;
-		LoggingService logger;
-		Config config;
-		MessageService messageService;
-		TwitchService twitch;
+        DiscordShardedClient client;
+        LoggingService logger;
+        Config config;
+        MessageService messageService;
+        TwitchService twitch;
+        SoftwareStats softwareStats;
 
-		public BotService(DiscordShardedClient cli, LoggingService log, MessageService message, TwitchService twi)
-		{
-			client = cli;
-			logger = log;
-			messageService = message;
-			twitch = twi;
-		}
+        public BotService(DiscordShardedClient shard,
+            LoggingService log,
+            MessageService msg,
+            TwitchService twit,
+            SoftwareStats soft)
+        {
+            client = shard;
+            logger = log;
+            twitch = twit;
+            softwareStats = soft;
+            messageService = msg;
+        }
 		
 		public void AddConfg(Config conf)
 		{ config = conf; }
@@ -43,7 +50,7 @@ namespace Skuld.Services
 
 				Parallel.Invoke(() => SendDataToDataDog());
 
-				await UpdateStatsAsync().ConfigureAwait(false);
+				//await UpdateStatsAsync().ConfigureAwait(false);
 
 				await Task.Delay(-1).ConfigureAwait(false);
 			}

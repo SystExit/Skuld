@@ -30,11 +30,14 @@
         public bool AccountsEnabled { get; set; }
         public bool ActionsEnabled { get; set; }
         public bool AdminEnabled { get; set; }
+        public bool CustomEnabled { get; set; }
         public bool FunEnabled { get; set; }
         public bool HelpEnabled { get; set; }
         public bool InformationEnabled { get; set; }
+        public bool LewdEnabled { get; set; }
         public bool SearchEnabled { get; set; }
         public bool StatsEnabled { get; set; }
+        public bool WeebEnabled { get; set; }
     }
     public class GuildFeatureModules
     {

@@ -10,12 +10,13 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.Linq;
 using System.Threading;
+using Skuld.Extensions;
 
 namespace Skuld.Services
 {
     public class MessageService
     {
-		DiscordShardedClient client;
+        readonly DiscordShardedClient client;
 		DatabaseService database;
 		LoggingService logger;
 		public MessageServiceConfig config;
@@ -32,13 +33,23 @@ namespace Skuld.Services
 			logger = log;
 		}
 
+        public async Task<bool> CheckEmbedPermission(IGuildChannel channel)
+            => (await channel.Guild.GetCurrentUserAsync()).GetPermissions(channel).EmbedLinks;
+
 		public async Task ConfigureAsync(CommandServiceConfig config, IServiceProvider services)
 		{
-			commandService = new CommandService(config);
-			var logger = services.GetRequiredService<LoggingService>();
-			commandService.Log += logger.DiscordLogger;
-			await commandService.AddModulesAsync(Assembly.GetEntryAssembly(), services);
-			commandService.AddTypeReader<Uri>(new UriTypeReader());
+            try
+            {
+                commandService = new CommandService(config);
+                var logger = services.GetRequiredService<LoggingService>();
+                commandService.Log += logger.DiscordLogger;
+                await commandService.AddModulesAsync(Assembly.GetEntryAssembly(), services);
+                commandService.AddTypeReader<Uri>(new UriTypeReader());
+            }
+            catch(Exception ex)
+            {
+                await logger.AddToLogsAsync(new Models.LogMessage("CS-Config", ex.Message, LogSeverity.Critical, ex));
+            }
 		}
 
 		public async Task OnMessageRecievedAsync(SocketMessage arg)
@@ -48,11 +59,11 @@ namespace Skuld.Services
 			if (arg.Author.IsBot) { return; }
 
 			var message = arg as SocketUserMessage;
-			if (message == null) { return; }
+            if(message is null) { return; }
 
 			var context = new ShardedCommandContext(client, message);
 
-			if (!MessageTools.IsEnabledChannel((ITextChannel)context.Channel)) { return; }
+			if (!MessageTools.IsEnabledChannel(context.Guild.GetUser(context.User.Id), (ITextChannel)context.Channel)) { return; }
 			
 			try
 			{
@@ -79,33 +90,25 @@ namespace Skuld.Services
 				if (sguild != null) { if (!HasPrefix(message, sguild.Prefix)) { return; } }
 				else { if (!HasPrefix(message)) { return; } }
 
-				if (database.CanConnect)
-				{
-					if (MessageTools.IsPrefixReset(context, client))
-					{
-						sguild.Prefix = config.Prefix;
-						await database.UpdateGuildAsync(sguild);
-						await SendChannelAsync(context.Channel, "Reset the prefix back to `sk!`");
-						return;
-					}
-				}
+                if(sguild!= null && sguild.GuildSettings.Modules.CustomEnabled)
+                {
+                    var customcommand = await MessageTools.GetCustomCommandAsync(context.Guild,
+                        MessageTools.GetCommandName(MessageTools.GetPrefixFromCommand(sguild, arg.Content, Bot.Configuration),
+                        0, arg), database);
 
-				var customcommand = await MessageTools.GetCustomCommandAsync(context.Guild,
-					MessageTools.GetCommandName(MessageTools.GetPrefixFromCommand(sguild, arg.Content, Bot.Configuration), 
-					0, arg), database);
-
-				if (customcommand != null)
-				{
-					await DispatchCommandAsync(context, customcommand);
-					return;
-				}
+                    if (customcommand != null)
+                    {
+                        await DispatchCommandAsync(context, customcommand);
+                        return;
+                    }
+                }
 
 				var cmds = commandService.Search(context, GetCmdName(message, sguild)).Commands;
 				if (cmds == null || cmds.Count == 0) { return; }
 
+				var cmd = cmds.FirstOrDefault().Command;
 				if (database.CanConnect)
 				{
-					var cmd = cmds.FirstOrDefault().Command;
 					var mods = sguild.GuildSettings.Modules;
 					if (ModuleDisabled(mods, cmd)) { return; }
 				}
@@ -113,13 +116,12 @@ namespace Skuld.Services
 				Thread thd = new Thread(
 					async () =>
 					{
-						var cmd = cmds.FirstOrDefault().Command;
 						DogStatsd.Increment("commands.total.threads", 1, 1, new[] { $"module:{cmd.Module.Name.ToLowerInvariant()}", $"cmd:{cmd.Name.ToLowerInvariant()}" });
 						await DispatchCommandAsync(context, cmd).ConfigureAwait(false);
-						DogStatsd.Decrement("commands.total.threads", 1, 1, new[] { $"module:{cmd.Module.Name.ToLowerInvariant()}", $"cmd:{cmd.Name.ToLowerInvariant()}" });
 					})
 				{
-					IsBackground = true
+					IsBackground = true,
+					Name = $"CommandExecution - module:{cmd.Module.Name.ToLowerInvariant()}|cmd:{cmd.Name.ToLowerInvariant()}"
 				};
 				thd.Start();
 			}
@@ -201,12 +203,16 @@ namespace Skuld.Services
 			{ return true; }
 			if (!cmdmods.InformationEnabled && command.Module.Name.ToLowerInvariant() == "information")
 			{ return true; }
-			if (!cmdmods.SearchEnabled && command.Module.Name.ToLowerInvariant() == "search")
+            if (!cmdmods.LewdEnabled && command.Module.Name.ToLowerInvariant() == "lewd")
+            { return true; }
+            if (!cmdmods.SearchEnabled && command.Module.Name.ToLowerInvariant() == "search")
 			{ return true; }
 			if (!cmdmods.StatsEnabled && command.Module.Name.ToLowerInvariant() == "stats")
 			{ return true; }
+            if (!cmdmods.WeebEnabled && command.Module.Name.ToLowerInvariant() == "weeb")
+            { return true; }
 
-			return false;
+            return false;
 		}
 
 		public async Task DispatchCommandAsync(ICommandContext context, CustomCommand command)
@@ -232,7 +238,10 @@ namespace Skuld.Services
 			if (result.IsSuccess)
 			{
 				DogStatsd.Histogram("commands.latency", watch.ElapsedMilliseconds(), 0.5, new[] { $"module:{command.Module.Name.ToLowerInvariant()}", $"cmd:{command.Name.ToLowerInvariant()}" });
-				await InsertCommand(command, context.User).ConfigureAwait(false);
+                if(database.CanConnect)
+                {
+                    await InsertCommand(command, context.User).ConfigureAwait(false);
+                }
 				DogStatsd.Increment("commands.processed", 1, 1, new[] { $"module:{command.Module.Name.ToLowerInvariant()}", $"cmd:{command.Name.ToLowerInvariant()}" });
 			}
 
@@ -307,16 +316,16 @@ namespace Skuld.Services
 				if (channel == null || textChan == null || mesgChan == null) { return null; }
 				await mesgChan.TriggerTypingAsync();
 				IUserMessage msg;
-				var perm = (await textChan.Guild.GetUserAsync(client.CurrentUser.Id)).GetPermissions(textChan).EmbedLinks;
+				var perm = await CheckEmbedPermission(textChan);
 				if (!perm)
 				{
 					if (message != null)
 					{
-						msg = await mesgChan.SendMessageAsync(message + "\n" + EmbedToText.ConvertEmbedToText(embed));
+						msg = await mesgChan.SendMessageAsync(message + "\n" + embed.ToMessage());
 					}
 					else
 					{
-						msg = await mesgChan.SendMessageAsync(EmbedToText.ConvertEmbedToText(embed));
+						msg = await mesgChan.SendMessageAsync(embed.ToMessage());
 					}
 				}
 				else
@@ -362,8 +371,7 @@ namespace Skuld.Services
 				await mesgChan.TriggerTypingAsync();
 				IUserMessage msg = await mesgChan.SendMessageAsync(message);
 				await logger.AddToLogsAsync(new Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
-				await Task.Delay((int)(timeout * 1000));
-				DeleteMessage(msg);
+                await msg.DeleteAfterSecondsAsync((int)timeout);
 			}
 			catch (Exception ex)
 			{
@@ -378,17 +386,17 @@ namespace Skuld.Services
 				var mesgChan = (IMessageChannel)channel;
 				if (channel == null || textChan == null || mesgChan == null) { return; }
 				await mesgChan.TriggerTypingAsync();
-				var perm = (await textChan.Guild.GetUserAsync(client.CurrentUser.Id)).GetPermissions(textChan).EmbedLinks;
+                var perm = await CheckEmbedPermission(textChan);
 				IUserMessage msg = null;
 				if (!perm)
 				{
 					if (message != null)
 					{
-						msg = await mesgChan.SendMessageAsync(message + "\n" + EmbedToText.ConvertEmbedToText(embed));
+						msg = await mesgChan.SendMessageAsync(message + "\n" + embed.ToMessage());
 					}
 					else
 					{
-						msg = await mesgChan.SendMessageAsync(EmbedToText.ConvertEmbedToText(embed));
+						msg = await mesgChan.SendMessageAsync(embed.ToMessage());
 					}
 				}
 				else
@@ -396,8 +404,7 @@ namespace Skuld.Services
 					msg = await mesgChan.SendMessageAsync(message, isTTS: false, embed: embed);
 				}
 				await logger.AddToLogsAsync(new Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
-				await Task.Delay((int)(timeout * 1000));
-				DeleteMessage(msg);
+                await msg.DeleteAfterSecondsAsync((int)timeout);
 			}
 			catch (Exception ex)
 			{
@@ -414,21 +421,11 @@ namespace Skuld.Services
 			{
 				IUserMessage msg = await mesgChan.SendFileAsync(filename, message);
 				await logger.AddToLogsAsync(new Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
-				await Task.Delay((int)(timeout * 1000));
-				DeleteMessage(msg);
+                await msg.DeleteAfterSecondsAsync((int)timeout);
 			}
 			catch (Exception ex)
 			{
 				await logger.AddToLogsAsync(new Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
-			}
-		}
-
-		private async void DeleteMessage(IUserMessage msg)
-		{
-			if (msg != null)
-			{
-				await msg.DeleteAsync();
-				await logger.AddToLogsAsync(new Models.LogMessage("MsgDisp", $"Deleted a timed message", LogSeverity.Info));
 			}
 		}
 

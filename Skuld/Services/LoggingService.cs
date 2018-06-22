@@ -17,8 +17,8 @@ namespace Skuld.Services
     {
         public StreamWriter sw;
         List<Models.LogMessage> Logs;
-        bool Console;
-        bool File;
+        readonly bool Console;
+        readonly bool File;
 		static List<DiscordSocketClient> ShardsReady;
 		DiscordShardedClient client;
 		MessageService messageService;
@@ -64,7 +64,7 @@ namespace Skuld.Services
 
 		public async Task TwitchLogger(NTwitch.LogMessage arg)
 		{
-			await AddToLogsAsync(new Models.LogMessage(arg.Source, arg.Message, (arg.Level).FromNTwitch(), arg.Exception));
+			await AddToLogsAsync(new Models.LogMessage(arg.Source, arg.Message, (arg.Level).ToDiscord(), arg.Exception));
 		}
 
 		public async Task AddToLogsAsync(Models.LogMessage message)
@@ -122,7 +122,7 @@ namespace Skuld.Services
 
 			if (Console)
             {
-                System.Console.ForegroundColor = Tools.Tools.ColorBasedOnSeverity(message.Severity);
+                System.Console.ForegroundColor = message.Severity.SeverityToColor();
                 var consolelines = new List<string[]>();
                 if(ConsoleMessage!=null)
                 {

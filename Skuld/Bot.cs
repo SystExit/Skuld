@@ -14,6 +14,13 @@ using StatsdClient;
 using Imgur.API.Authentication.Impl;
 using Skuld.Services;
 using Google.Apis.Customsearch.v1;
+using SysEx.Net;
+using Booru.Net;
+using PokeSharp;
+using SteamWebAPI2.Interfaces;
+using Skuld.Tools.Stats;
+using Skuld.Globalization;
+using Weeb.net;
 
 namespace Skuld
 {
@@ -24,8 +31,10 @@ namespace Skuld
         static string logfile;
         static string Prefix;
         public static Config Configuration;
+        public static double CPUUsageLastMinute;
+        public static double CPUUsageTotal;
         /*END VARS*/
-		static void Main()
+        static void Main()
 		{
 			try
 			{
@@ -77,51 +86,68 @@ namespace Skuld
 				TotalShards = Configuration.Discord.Shards
 			});
 
-			services = new ServiceCollection()
-				.AddSingleton(cli)
-				.AddSingleton<BotService>()
-				.AddSingleton(new InteractiveService(cli, TimeSpan.FromSeconds(60)))
-				.AddSingleton(new LoggingService(true, true, logfile))
-				.AddSingleton<DatabaseService>()
-				.AddSingleton<YoutubeClient>()
-				.AddSingleton(new ImgurClient(Configuration.APIS.ImgurClientID, Configuration.APIS.ImgurClientSecret))
-				.AddSingleton<Random>()
-				.AddSingleton<PokeSharpClient>()
-				.AddSingleton<SysExClient>()
-				.AddSingleton<NASAClient>()
-				.AddSingleton<AnimalAPIS>()
-				.AddSingleton<MALAPI>()
-				.AddSingleton<YNWTF>()
-				.AddSingleton<SocialAPIS>()
-				.AddSingleton<TwitchService>()
-				.AddSingleton<Strawpoll>()
-				.AddSingleton<WebComicClients>()
-				.AddSingleton<Locale>()
-				.AddSingleton<MessageService>()
-				.AddSingleton<BooruClient>()
-				.AddSingleton<PokeSharp.Deserializer.PokeSharpClient>()
-				.AddSingleton(new Utilities.MessageServiceConfig
-				{
-					ArgPos = 0,
-					Prefix = Configuration.Discord.Prefix,
-					AltPrefix = Configuration.Discord.AltPrefix
-				})
-				.AddSingleton(new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer { ApiKey = Configuration.APIS.GoogleAPI, ApplicationName = "Skuld" }))
-				.BuildServiceProvider();
+            //var weebprovider = new WeebClient("Skuld", Assembly.GetEntryAssembly().GetName().Version.ToString());'
+
+            var logger = new LoggingService(true, true, logfile);
+
+            services = new ServiceCollection()
+                .AddSingleton(cli)
+                .AddSingleton<HardwareStats>()
+                .AddSingleton<SoftwareStats>()
+                .AddSingleton<Locale>()
+                .AddSingleton(new InteractiveService(cli, TimeSpan.FromSeconds(60)))
+                .AddSingleton(logger)
+                .AddSingleton<DatabaseService>()
+                .AddSingleton<YoutubeClient>()
+                .AddSingleton(new ImgurClient(Configuration.APIS.ImgurClientID, Configuration.APIS.ImgurClientSecret))
+                .AddSingleton<Random>()
+                .AddSingleton<PokeSharpClient>()
+                .AddSingleton<SysExClient>()
+                .AddSingleton<NASAClient>()
+                .AddSingleton<AnimalAPIS>()
+                .AddSingleton<YNWTF>()
+                .AddSingleton<SocialAPIS>()
+                .AddSingleton<Strawpoll>()
+                .AddSingleton<WebComicClients>()
+                .AddSingleton<BooruClient>()
+                .AddSingleton<PokeSharpClient>()
+                .AddSingleton<SteamStore>()
+                .AddSingleton<SearchService>()
+                .AddSingleton(new TwitchService(logger))
+                .AddSingleton(new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer { ApiKey = Configuration.APIS.GoogleAPI, ApplicationName = "Skuld" }))
+                //.AddSingleton(weebprovider)
+                .AddSingleton<BotService>()
+                .AddSingleton<MessageService>()
+                .AddSingleton(new Utilities.MessageServiceConfig
+                {
+                    ArgPos = 0,
+                    Prefix = Configuration.Discord.Prefix,
+                    AltPrefix = Configuration.Discord.AltPrefix
+                })
+                .BuildServiceProvider();
 
 			await InitializeServicesAsync();
 			
 			services.GetRequiredService<BotService>().AddConfg(Configuration);
-		}
+        }
 
 		static async Task InitializeServicesAsync()
 		{
-			services.GetRequiredService<Random>();
+            var logger = services.GetRequiredService<LoggingService>();
+
+            logger.Config(services.GetRequiredService<BotService>(),
+                services.GetRequiredService<DiscordShardedClient>(),
+                services.GetRequiredService<MessageService>(),
+                services.GetRequiredService<DatabaseService>(),
+                services.GetRequiredService<Random>());
+
+            logger.RegisterEvents();
+
+            services.GetRequiredService<Random>();
 			services.GetRequiredService<PokeSharpClient>();
 			services.GetRequiredService<SysExClient>();
 			services.GetRequiredService<NASAClient>();
 			services.GetRequiredService<AnimalAPIS>();
-			services.GetRequiredService<MALAPI>();
 			services.GetRequiredService<YNWTF>();
 			services.GetRequiredService<SocialAPIS>();
 			services.GetRequiredService<Strawpoll>();
@@ -139,23 +165,13 @@ namespace Skuld
 			await db.CheckConnectionAsync();
 
 			await services.GetRequiredService<Locale>().InitialiseLocalesAsync();
-
-			var logger = services.GetRequiredService<LoggingService>();
-
-			logger.Config(services.GetRequiredService<BotService>(),
-				services.GetRequiredService<DiscordShardedClient>(),
-				services.GetRequiredService<MessageService>(),
-				services.GetRequiredService<DatabaseService>(),
-				services.GetRequiredService<Random>());
-
-			logger.RegisterEvents();
-			
+            			
 			await services.GetRequiredService<MessageService>().ConfigureAsync(new CommandServiceConfig
 			{
 				CaseSensitiveCommands = false,
 				DefaultRunMode = RunMode.Async,
 				LogLevel = LogSeverity.Verbose,
-				IgnoreExtraArgs = true
+				//IgnoreExtraArgs = true
 			}, services);
 
 			services.GetRequiredService<DiscordShardedClient>().Log += logger.DiscordLogger;

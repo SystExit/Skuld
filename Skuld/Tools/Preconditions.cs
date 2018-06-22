@@ -48,6 +48,22 @@ namespace Skuld.Tools
             return AccessLevel.User;                             // If nothing else, return a default permission.
         }
     }
+
+    public class RequireDeveloper : PreconditionAttribute
+    {
+        public RequireDeveloper()
+        {
+
+        }
+
+        public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
+        {
+            if (Bot.Configuration.Discord.Owners.Contains(context.User.Id) || (context.Client.GetApplicationInfoAsync().Result).Owner.Id == context.User.Id)
+            { return Task.FromResult(PreconditionResult.FromSuccess()); }
+            else
+                return Task.FromResult(PreconditionResult.FromError("Not a bot owner/developer"));
+        }
+    }
 	
 	public class RequireBotAndUserPermission : PreconditionAttribute
 	{
