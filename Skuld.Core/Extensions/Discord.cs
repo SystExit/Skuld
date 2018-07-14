@@ -1,8 +1,8 @@
-﻿using System;
-using Discord;
+﻿using Discord;
 using Discord.WebSocket;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using System;
 
 namespace Skuld.Core.Extensions
 {
@@ -21,8 +21,6 @@ namespace Skuld.Core.Extensions
             if (user.Status == UserStatus.Offline) status = DiscordEmotes.Offline + " Offline";
             if (user.Activity != null) if (user.Activity.Type == ActivityType.Streaming) status = DiscordEmotes.Streaming + $" {user.Activity.Type.ToString()}";
 
-            string pngavatar = user.GetAvatarUrl(ImageFormat.Png);
-            string gifavatar = user.GetAvatarUrl(ImageFormat.Gif);
             string name = user.Username + $"#{user.DiscriminatorValue}";
 
             if (user.Nickname != null) name += $" {nickname}";
@@ -30,7 +28,7 @@ namespace Skuld.Core.Extensions
             var embed = new EmbedBuilder
             {
                 Color = EmbedColor,
-                Author = new EmbedAuthorBuilder { IconUrl = pngavatar ?? "", Name = name },
+                Author = new EmbedAuthorBuilder { IconUrl = user.GetAvatarUrl(ImageFormat.Png), Name = name },
                 ImageUrl = user.GetAvatarUrl()
             };
 

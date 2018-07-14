@@ -1,18 +1,18 @@
-﻿using System;
-using Discord;
+﻿using Discord;
+using Discord.Addons.Interactive;
 using Discord.Commands;
-using Skuld.Commands;
-using Skuld.Utilities.Discord;
-using Skuld.Services;
-using System.Threading.Tasks;
-using System.Linq;
 using Kitsu.Anime;
 using Kitsu.Manga;
+using Skuld.Commands;
 using Skuld.Core.Globalization;
-using SysEx.Net;
 using Skuld.Core.Services;
-using Discord.Addons.Interactive;
 using Skuld.Extensions;
+using Skuld.Services;
+using Skuld.Utilities.Discord;
+using SysEx.Net;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Skuld.Modules
 {
@@ -48,7 +48,6 @@ namespace Skuld.Modules
                         Color = Color.Purple,
                         Pages = pages
                     }, true);
-
                 }
                 else
                 {
@@ -104,7 +103,6 @@ namespace Skuld.Modules
                         Color = Color.Purple,
                         Pages = pages
                     }, true);
-
                 }
                 else
                 {

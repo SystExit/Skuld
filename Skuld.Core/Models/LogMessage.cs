@@ -1,5 +1,5 @@
-﻿using System;
-using Discord;
+﻿using Discord;
+using System;
 
 namespace Skuld.Core.Models
 {

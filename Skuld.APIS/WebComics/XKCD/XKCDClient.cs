@@ -1,10 +1,10 @@
-﻿using System;
-using Skuld.APIS.WebComics.XKCD.Models;
-using Newtonsoft.Json;
-using System.Threading.Tasks;
-using Skuld.APIS.Utilities;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Skuld.APIS.Utilities;
+using Skuld.APIS.WebComics.XKCD.Models;
 using Skuld.Core.Services;
+using System;
+using System.Threading.Tasks;
 
 namespace Skuld.APIS.WebComics.XKCD
 {
@@ -23,7 +23,7 @@ namespace Skuld.APIS.WebComics.XKCD
             GetLastPageAsync().GetAwaiter().GetResult();
         }
 
-        async Task<int?> GetLastPageAsync()
+        private async Task<int?> GetLastPageAsync()
         {
             var rawresp = await ReturnStringAsync(new Uri("https://xkcd.com/info.0.json"));
             var jsonresp = JObject.Parse(rawresp);
@@ -59,7 +59,7 @@ namespace Skuld.APIS.WebComics.XKCD
             {
                 XKCDLastPage = await GetLastPageAsync().ConfigureAwait(false);
             }
-            if(!rateLimiter.IsRatelimited())
+            if (!rateLimiter.IsRatelimited())
             {
                 if (comicid < XKCDLastPage.Value && comicid > 0)
                     return JsonConvert.DeserializeObject<XKCDComic>((await ReturnStringAsync(new Uri($"https://xkcd.com/{comicid}/info.0.json"))));

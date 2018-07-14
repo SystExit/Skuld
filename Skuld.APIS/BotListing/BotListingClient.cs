@@ -1,13 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using Discord.WebSocket;
+﻿using Discord.WebSocket;
+using Newtonsoft.Json;
 using Skuld.APIS.BotListing.Models;
 using Skuld.APIS.Utilities;
-using System.Threading.Tasks;
+using Skuld.Core.Services;
+using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
-using Newtonsoft.Json;
-using Skuld.Core.Services;
+using System.Threading.Tasks;
 
 namespace Skuld.APIS
 {
@@ -54,7 +54,7 @@ namespace Skuld.APIS
                         await webclient.PostAsync(new Uri($"https://bots.discord.pw/api/bots/{client.CurrentUser.Id}/stats"), content);
                     }
                 }
-                await Task.Delay(TimeSpan.FromSeconds(5).Milliseconds);
+                await Task.Delay(TimeSpan.FromSeconds(5).Milliseconds).ConfigureAwait(false);
             }
 
             //sysex
@@ -64,10 +64,9 @@ namespace Skuld.APIS
                 {
                     webclient.DefaultRequestHeaders.Add("UserAgent", UAGENT);
                     webclient.DefaultRequestHeaders.Add("Authorization", sysextoken);
-                    await webclient.PostAsync(new Uri($"https://skuld.systemexit.co.uk/tools/updateStats.php"), content);
+                    await webclient.PostAsync(new Uri($"https://skuld.systemexit.co.uk/tools/updateStats.php"), content).ConfigureAwait(false);
                 }
             }
-
         }
     }
 }

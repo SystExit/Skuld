@@ -1,7 +1,7 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using Discord;
 using Discord.Commands;
-using Discord;
+using System;
+using System.Threading.Tasks;
 
 namespace Skuld.Commands.Preconditions
 {

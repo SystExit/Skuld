@@ -1,11 +1,11 @@
 ﻿using Discord;
-using System.Threading.Tasks;
-using Skuld.Utilities.Discord;
-using Skuld.Models.Database;
-using Skuld.Core.Models;
 using Skuld.Core.Extensions;
-using System;
+using Skuld.Core.Models;
+using Skuld.Models.Database;
 using Skuld.Services;
+using Skuld.Utilities.Discord;
+using System;
+using System.Threading.Tasks;
 
 namespace Skuld.Extensions
 {
@@ -130,11 +130,11 @@ namespace Skuld.Extensions
 
         public static async Task<bool> DoDailyAsync(this SkuldUser user, DatabaseService db, SkuldConfig config, SkuldUser sender = null)
         {
-            if(sender == null)
+            if (sender == null)
             {
-                if(user.Daily != 0)
+                if (user.Daily != 0)
                 {
-                    if(user.Daily < (86400 - DateTime.UtcNow.ToEpoch()))
+                    if (user.Daily < (86400 - DateTime.UtcNow.ToEpoch()))
                     {
                         user.Daily = DateTime.UtcNow.ToEpoch();
                         user.Money += config.Preferences.DailyAmount;

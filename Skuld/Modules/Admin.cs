@@ -1,19 +1,19 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using Skuld.Services;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using Skuld.Commands;
-using Skuld.Core.Services;
 using Skuld.Commands.Preconditions;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
-using StatsdClient;
-using Skuld.Core.Models.Discord;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
+using Skuld.Core.Models.Discord;
+using Skuld.Core.Services;
+using Skuld.Services;
+using StatsdClient;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace Skuld.Modules
 {
@@ -778,7 +778,6 @@ namespace Skuld.Modules
                     modules.TryGetValue(module, out string key);
                     switch (key)
                     {
-
                         case "userjoinchan":
                             guild.UserJoinChannel = channel.Id;
                             break;
@@ -817,7 +816,6 @@ namespace Skuld.Modules
                 await Database.InsertGuildAsync(Context.Guild);
                 await ReplyAsync(Context.Channel, $"`{Context.Guild.Name}` doesn't exist in database, fixing.");
             }
-
         }
     }
 }

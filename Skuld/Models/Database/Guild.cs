@@ -23,6 +23,7 @@ namespace Skuld.Models.Database
         public GuildFeatureModules Features { get; set; }
         public IReadOnlyList<GuildLevelRewards> LevelRewards { get; set; }
     }
+
     public class GuildCommandModules
     {
         public bool AccountsEnabled { get; set; }
@@ -36,11 +37,13 @@ namespace Skuld.Models.Database
         public bool StatsEnabled { get; set; }
         public bool WeebEnabled { get; set; }
     }
+
     public class GuildFeatureModules
     {
         public bool Pinning { get; set; }
         public bool Experience { get; set; }
     }
+
     public class GuildLevelRewards
     {
         public ulong RoleID { get; set; }

@@ -1,25 +1,24 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using Booru.Net;
 using Discord;
-using Discord.WebSocket;
-using System.IO;
-using Microsoft.Extensions.DependencyInjection;
 using Discord.Addons.Interactive;
-using YoutubeExplode;
-using StatsdClient;
-using Imgur.API.Authentication.Impl;
-using Google.Apis.Customsearch.v1;
-using SysEx.Net;
-using Booru.Net;
-using PokeSharp;
-using SteamWebAPI2.Interfaces;
-using Skuld.Core.Utilities.Stats;
-using Skuld.Core.Globalization;
-using Weeb.net;
-using Skuld.Core.Models;
-using Skuld.APIS;
-using Skuld.Core.Services;
 using Discord.Commands;
+using Discord.WebSocket;
+using Google.Apis.Customsearch.v1;
+using Imgur.API.Authentication.Impl;
+using Microsoft.Extensions.DependencyInjection;
+using PokeSharp;
+using Skuld.APIS;
+using Skuld.Core.Globalization;
+using Skuld.Core.Models;
+using Skuld.Core.Services;
+using Skuld.Core.Utilities.Stats;
+using StatsdClient;
+using SteamWebAPI2.Interfaces;
+using SysEx.Net;
+using System;
+using System.IO;
+using System.Threading.Tasks;
+using YoutubeExplode;
 
 namespace Skuld.Services
 {
@@ -33,6 +32,7 @@ namespace Skuld.Services
 
         public HostService()
         {
+            EnsureConfigExists();
             logfile = Path.Combine(AppContext.BaseDirectory, "skuld", "logs", DateTime.Now.ToString("dd-MM-yyyy") + ".log");
             Configuration = SkuldConfig.Load();
         }
@@ -53,7 +53,7 @@ namespace Skuld.Services
             await BotService.StartAsync();
         }
 
-        static async Task InstallServicesAsync()
+        private static async Task InstallServicesAsync()
         {
             var logger = new GenericLogger(true, true, logfile);
             try
@@ -123,7 +123,7 @@ namespace Skuld.Services
             }
         }
 
-        async Task InitializeServicesAsync()
+        private async Task InitializeServicesAsync()
         {
             var logger = Services.GetRequiredService<MessageService>().logger;
 
@@ -149,9 +149,11 @@ namespace Skuld.Services
                 LogLevel = LogSeverity.Verbose,
                 //IgnoreExtraArgs = true
             }, Services);
+
+            ConfigureStatsCollector();
         }
 
-        void EnsureConfigExists()
+        private void EnsureConfigExists()
         {
             try
             {
@@ -180,7 +182,7 @@ namespace Skuld.Services
             }
         }
 
-        void ConfigureStatsCollector()
+        private void ConfigureStatsCollector()
         {
             DogStatsd.Configure(new StatsdConfig
             {

@@ -5,13 +5,13 @@ using Skuld.Core.Extensions;
 using Skuld.Core.Globalization;
 using Skuld.Core.Models;
 using Skuld.Core.Services;
+using Skuld.Core.Utilities;
 using Skuld.Models.Database;
 using StatsdClient;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Skuld.Core.Utilities;
 
 namespace Skuld.Services
 {
@@ -22,7 +22,7 @@ namespace Skuld.Services
         private Locale local;
         private DiscordShardedClient client;
 
-        string ConnectionString;
+        private string ConnectionString;
 
         public bool CanConnect = false;
 
@@ -580,7 +580,7 @@ namespace Skuld.Services
 
                                     var rawroles = Convert.ToString(reader["JoinableRoles"]);
 
-                                    if(!string.IsNullOrWhiteSpace(rawroles))
+                                    if (!string.IsNullOrWhiteSpace(rawroles))
                                     {
                                         var roles = rawroles.Split(',');
 
@@ -735,7 +735,7 @@ namespace Skuld.Services
                 }
                 else
                 {
-                    command.CommandText += "`guildmodules` (`GuildID`,`Accounts`, `Actions`,`Admin`,`Custom`,`Fun`,`Information`,`Lewd`,`Search`,`Stats`,`Weeb`) VALUES (@guildid,1,1,1,1,1,1,1);";
+                    command.CommandText += "`guildmodules` (`GuildID`,`Accounts`, `Actions`,`Admin`,`Custom`,`Fun`,`Information`,`Lewd`,`Search`,`Stats`,`Weeb`) VALUES (@guildid,1,1,1,1,1,1,1,1,1,1);";
                     command.Parameters.AddWithValue("@guildid", guild.Id);
                 }
                 return await SingleQueryAsync(command).ConfigureAwait(false);
@@ -856,7 +856,7 @@ namespace Skuld.Services
         {
             if (CanConnect)
             {
-                return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `users` WHERE `UserID` = {user.Id}; DELETE FROM `usercommandusage` WHERE `UserID` = {user.Id}; DELETE FROM `pasta` WHERE `OwnerID` = {user.Id}; DELETE FROM `userglobalxp` WHERE `UserID` = {user.Id}; DELETE FROM `userguildxp` WHERE `UserID` = {user.Id};")).ConfigureAwait(false);
+                return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `users` WHERE `UserID` = {user.Id}; DELETE FROM `usercommandusage` WHERE `UserID` = {user.Id}; DELETE FROM `pasta` WHERE `OwnerID` = {user.Id}; DELETE FROM `userguildxp` WHERE `UserID` = {user.Id};")).ConfigureAwait(false);
             }
             return new SqlResult
             {
@@ -902,15 +902,15 @@ namespace Skuld.Services
             {
                 var command = new MySqlCommand(
                     "UPDATE `users` SET " +
-                    "`Banned = @banned, " +
-                    "`Description` = @description, " +
-                    "`CanDM` = @dmenabled," +
-                    "`Money` = @money, " +
-                    "`Language` = @language, " +
-                    "`HP` = @hp, " +
-                    "`Patted` = @petted, `Pats` = @pets, " +
-                    "`GlaredAt` = @glaredat, `Glares` = @glares " +
-                    "`LastDaily` = @daily, " +
+                    "Banned = @banned, " +
+                    "Description = @description, " +
+                    "CanDM = @dmenabled, " +
+                    "Money = @money, " +
+                    "Language = @language, " +
+                    "HP = @hp, " +
+                    "Patted = @petted, Pats = @pets, " +
+                    "GlaredAt = @glaredat, Glares = @glares, " +
+                    "LastDaily = @daily " +
                     "WHERE UserID = @userID "
                 );
 
@@ -1149,7 +1149,7 @@ namespace Skuld.Services
 
         public async Task<object> GetUserExperienceAsync(IUser user)
         {
-            if(CanConnect)
+            if (CanConnect)
             {
                 var command = new MySqlCommand("SELECT * FROM `userguildxp` WHERE UserID = @userID");
 
@@ -1266,11 +1266,11 @@ namespace Skuld.Services
 
         public async Task<SqlResult> AddExperienceAsync(IUser user, ulong amount, IGuild guild)
         {
-            if(CanConnect)
+            if (CanConnect)
             {
                 var userExperience = await GetUserExperienceAsync(user);
 
-                if(userExperience is UserExperience)
+                if (userExperience is UserExperience)
                 {
                     var guildExp = (userExperience as UserExperience).GuildExperiences.First(x => x.GuildID == guild.Id);
 

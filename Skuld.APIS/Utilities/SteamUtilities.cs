@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Skuld.Core.Extensions;
 using SteamStoreQuery;
-using Skuld.Core.Extensions;
 
 namespace Skuld.APIS.Utilities
 {
     public static class SteamUtilities
     {
-        static string BaseSteamRunUrl = "https://skuld.systemexit.co.uk/tools/steam.php?action=run&appid=";
-        static string BaseSteamStoreUrl = "https://skuld.systemexit.co.uk/tools/steam.php?action=store&appid=";
+        private static string BaseSteamRunUrl = "https://skuld.systemexit.co.uk/tools/steam.php?action=run&appid=";
+        private static string BaseSteamStoreUrl = "https://skuld.systemexit.co.uk/tools/steam.php?action=store&appid=";
 
         public static string GetSteamGameDescription(Listing game, Steam.Models.SteamStore.StoreAppDetailsDataModel appdata)
         {
@@ -29,7 +26,7 @@ namespace Skuld.APIS.Utilities
                 }
                 if (split[count] == "")
                 {
-                    count++; continue;
+                    count++;
                 }
                 else
                 {

@@ -1,14 +1,14 @@
-﻿using System;
-using Discord;
+﻿using Discord;
 using Discord.Commands;
 using Skuld.Commands;
 using Skuld.Core.Utilities.Stats;
-using Skuld.Utilities.Discord;
 using Skuld.Services;
-using System.Threading.Tasks;
+using Skuld.Utilities.Discord;
+using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace Skuld.Modules
 {

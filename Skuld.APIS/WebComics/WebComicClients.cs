@@ -1,8 +1,8 @@
 ﻿using Skuld.APIS.WebComics.Explosm;
 using Skuld.APIS.WebComics.XKCD;
+using Skuld.Core.Services;
 using System;
 using System.Threading.Tasks;
-using Skuld.Core.Services;
 
 namespace Skuld.APIS
 {
@@ -19,13 +19,13 @@ namespace Skuld.APIS
 
         //cah
         public async Task<object> GetCAHComicAsync()
-            => await explosmClient.GetComicAsync();
+            => await explosmClient.GetComicAsync().ConfigureAwait(false);
 
         //xkcd
         public async Task<object> GetRandomXKCDComic()
-            => await XKCDClient.GetRandomComicAsync();
-        public async Task<object> GetXKCDComic(int id)
-            => await XKCDClient.GetComicAsync(id);
+            => await XKCDClient.GetRandomComicAsync().ConfigureAwait(false);
 
+        public async Task<object> GetXKCDComic(int id)
+            => await XKCDClient.GetComicAsync(id).ConfigureAwait(false);
     }
 }

@@ -1,10 +1,10 @@
 ﻿using Newtonsoft.Json;
-using System;
-using System.Net;
-using System.Threading.Tasks;
 using Skuld.APIS.Animals.Models;
 using Skuld.APIS.Utilities;
 using Skuld.Core.Services;
+using System;
+using System.Net;
+using System.Threading.Tasks;
 
 namespace Skuld.APIS
 {
@@ -32,17 +32,19 @@ namespace Skuld.APIS
             switch (type)
             {
                 case AnimalType.Bird:
-                    return await GetBirdAsync();
+                    return await GetBirdAsync().ConfigureAwait(false);
+
                 case AnimalType.Doggo:
-                    return await GetDoggoAsync();
+                    return await GetDoggoAsync().ConfigureAwait(false);
+
                 case AnimalType.Kitty:
-                    return await GetKittyAsync();
+                    return await GetKittyAsync().ConfigureAwait(false);
             }
 
             return null;
         }
 
-        async Task<string> GetBirdAsync()
+        private async Task<string> GetBirdAsync()
         {
             if (birdrateLimiter.IsRatelimited()) return null;
 
@@ -53,7 +55,7 @@ namespace Skuld.APIS
             return birb;
         }
 
-        async Task<string> GetKittyAsync()
+        private async Task<string> GetKittyAsync()
         {
             try
             {
@@ -91,7 +93,7 @@ namespace Skuld.APIS
             }
         }
 
-        async Task<string> GetDoggoAsync()
+        private async Task<string> GetDoggoAsync()
         {
             try
             {

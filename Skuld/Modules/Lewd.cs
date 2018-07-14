@@ -1,13 +1,13 @@
-﻿using Discord;
+﻿using Booru.Net;
+using Discord;
 using Discord.Commands;
-using Skuld.Commands;
-using System.Threading.Tasks;
-using Skuld.Extensions;
 using Skuld.APIS;
-using Skuld.Core.Commands.Attributes;
-using SysEx.Net;
-using Booru.Net;
 using Skuld.APIS.NekoLife.Models;
+using Skuld.Commands;
+using Skuld.Core.Commands.Attributes;
+using Skuld.Extensions;
+using SysEx.Net;
+using System.Threading.Tasks;
 
 namespace Skuld.Modules
 {

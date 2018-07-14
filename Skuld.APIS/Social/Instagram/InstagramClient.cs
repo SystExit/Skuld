@@ -1,10 +1,10 @@
 ﻿using Newtonsoft.Json;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using Skuld.APIS.Social.Instagram.Models;
 using Skuld.APIS.Utilities;
 using Skuld.Core.Services;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Skuld.APIS.Social.Instagram
 {

@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using System.Threading.Tasks;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Skuld.Models.Database
 {
@@ -11,7 +11,7 @@ namespace Skuld.Models.Database
         public string Description { get; set; }
         public bool CanDM { get; set; }
         public ulong Money { get; set; }
-		public string Language { get; set; }
+        public string Language { get; set; }
         public uint HP { get; set; }
         public uint Patted { get; set; }
         public uint Pats { get; set; }
@@ -21,6 +21,7 @@ namespace Skuld.Models.Database
         public string AvatarUrl { get; set; }
         public string FavCmd { get; set; }
         public ulong FavCmdUsg { get; set; }
+
         public async Task<long> GetPastaKarma()
         {
             long returnkarma = 0;
@@ -28,7 +29,7 @@ namespace Skuld.Models.Database
             var db = Services.HostService.Services.GetRequiredService<Services.DatabaseService>();
 
             var pastas = await db.GetAllPastasAsync();
-            if(pastas != null && pastas.Count > 0)
+            if (pastas != null && pastas.Count > 0)
             {
                 var ownedpastas = pastas.Where(x => x.OwnerID == ID);
 

@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Resources;
-using System.IO;
+﻿using Discord;
 using HtmlAgilityPack;
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using Discord;
+using System.Resources;
+using System.Text;
 
 namespace Skuld.Core.Extensions
 {
@@ -225,7 +225,6 @@ namespace Skuld.Core.Extensions
         {
             var thing = dateTime - dateTimeOffset;
             string rtnstrng = "";
-            var temp = thing.TotalDays - Math.Floor(thing.TotalDays);
             int days = (int)Math.Floor(thing.TotalDays);
             rtnstrng += days + " days ";
             return rtnstrng + "ago";

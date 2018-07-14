@@ -1,14 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using StatsdClient;
-using Discord;
+﻿using Discord;
 using Discord.WebSocket;
-using System.Linq;
-using System.Threading;
+using Skuld.APIS;
 using Skuld.Core.Models;
 using Skuld.Core.Services;
-using Skuld.APIS;
+using StatsdClient;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Skuld.Services
 {
@@ -75,10 +75,10 @@ namespace Skuld.Services
             ShardsReady = null;
         }
 
-        async Task Bot_Log(Discord.LogMessage arg)
+        private async Task Bot_Log(Discord.LogMessage arg)
             => await logger.AddToLogsAsync(new Core.Models.LogMessage("Discord-Log: " + arg.Source, arg.Message, arg.Severity, arg.Exception));
 
-        async Task Bot_ShardReady(DiscordSocketClient arg)
+        private async Task Bot_ShardReady(DiscordSocketClient arg)
         {
             if (!ShardsReady.Contains(arg))
             {
@@ -92,9 +92,9 @@ namespace Skuld.Services
             }
         }
 
-        async Task Bot_UserUpdated(SocketUser arg1, SocketUser arg2)
+        private async Task Bot_UserUpdated(SocketUser arg1, SocketUser arg2)
         {
-            if(arg1.GetAvatarUrl() != arg2.GetAvatarUrl())
+            if (arg1.GetAvatarUrl() != arg2.GetAvatarUrl())
             {
                 var usr = await database.GetUserAsync(arg2.Id);
 
@@ -104,7 +104,7 @@ namespace Skuld.Services
             }
         }
 
-        async Task Bot_ReactionAdded(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3)
+        private async Task Bot_ReactionAdded(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3)
         {
             if (database.CanConnect)
             {
@@ -137,19 +137,20 @@ namespace Skuld.Services
             }
         }
 
-        async Task Bot_ShardConnected(DiscordSocketClient arg)
+        private async Task Bot_ShardConnected(DiscordSocketClient arg)
         {
             await arg.SetGameAsync($"{Configuration.Discord.Prefix}help | {random.Next(0, client.Shards.Count) + 1}/{client.Shards.Count}", type: ActivityType.Listening);
             DogStatsd.Event("shards.connected", $"Shard {arg.ShardId} Connected", alertType: "info");
         }
-        Task Bot_ShardDisconnected(Exception arg1, DiscordSocketClient arg2)
+
+        private Task Bot_ShardDisconnected(Exception arg1, DiscordSocketClient arg2)
         {
             DogStatsd.Event($"Shard.disconnected", $"Shard {arg2.ShardId} Disconnected, error: {arg1}", alertType: "error");
             return Task.CompletedTask;
         }
 
         //Start Users
-        async Task Bot_UserJoined(SocketGuildUser arg)
+        private async Task Bot_UserJoined(SocketGuildUser arg)
         {
             await logger.AddToLogsAsync(new Core.Models.LogMessage("UsrJoin", $"User {arg.Username} joined {arg.Guild.Name}", LogSeverity.Info));
             if (database.CanConnect)
@@ -186,7 +187,8 @@ namespace Skuld.Services
                 }
             }
         }
-        async Task Bot_UserLeft(SocketGuildUser arg)
+
+        private async Task Bot_UserLeft(SocketGuildUser arg)
         {
             await logger.AddToLogsAsync(new Core.Models.LogMessage("UsrLeft", $"User {arg.Username} just left {arg.Guild.Name}", LogSeverity.Info));
             if (database.CanConnect)
@@ -214,10 +216,11 @@ namespace Skuld.Services
                 }
             }
         }
+
         //End Users
 
         //Start Guilds
-        async Task Bot_LeftGuild(SocketGuild arg)
+        private async Task Bot_LeftGuild(SocketGuild arg)
         {
             DogStatsd.Increment("guilds.left");
 
@@ -233,7 +236,8 @@ namespace Skuld.Services
             thd.Start();
             await botListing.SendDataAsync(Configuration.BotListing.SysExToken, Configuration.BotListing.DiscordPWKey, Configuration.BotListing.DBotsOrgKey);
         }
-        async Task Bot_JoinedGuild(SocketGuild arg)
+
+        private async Task Bot_JoinedGuild(SocketGuild arg)
         {
             DogStatsd.Increment("guilds.joined");
             Thread thd = new Thread(async () =>
@@ -246,6 +250,7 @@ namespace Skuld.Services
             thd.Start();
             await botListing.SendDataAsync(Configuration.BotListing.SysExToken, Configuration.BotListing.DiscordPWKey, Configuration.BotListing.DBotsOrgKey);
         }
+
         //End Guilds
     }
 }

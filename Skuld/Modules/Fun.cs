@@ -1,28 +1,28 @@
-﻿using Discord;
+﻿using Booru.Net;
+using Discord;
 using Discord.Commands;
-using Skuld.Services;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Skuld.Commands;
-using Skuld.Core.Services;
-using Skuld.Commands.Preconditions;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
-using StatsdClient;
-using Skuld.Core.Extensions;
-using Skuld.Utilities.Discord;
 using Skuld.APIS;
-using Skuld.Extensions;
-using Skuld.Core.Commands.Attributes;
-using System.Globalization;
-using Skuld.Core.Globalization;
-using SysEx.Net;
-using Booru.Net;
-using Skuld.APIS.NekoLife.Models;
 using Skuld.APIS.Animals.Models;
-using Skuld.APIS.WebComics.XKCD.Models;
+using Skuld.APIS.NekoLife.Models;
 using Skuld.APIS.WebComics.Explosm.Models;
+using Skuld.APIS.WebComics.XKCD.Models;
+using Skuld.Commands;
+using Skuld.Commands.Preconditions;
+using Skuld.Core.Commands.Attributes;
+using Skuld.Core.Extensions;
+using Skuld.Core.Globalization;
+using Skuld.Core.Services;
+using Skuld.Extensions;
+using Skuld.Services;
+using Skuld.Utilities.Discord;
+using StatsdClient;
+using SysEx.Net;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace Skuld.Modules
 {
@@ -41,8 +41,9 @@ namespace Skuld.Modules
         public BooruClient BooruClient { get; set; }
         public NekosLifeClient NekoLife { get; set; }
         public NASAClient NASAClient { get; set; }
+        public MessageService messageService { get; set; }
 
-        static string[] eightball = {
+        private static string[] eightball = {
             "SKULD_FUN_8BALL_YES1",
             "SKULD_FUN_8BALL_YES2",
             "SKULD_FUN_8BALL_YES3",
@@ -311,20 +312,8 @@ namespace Skuld.Modules
             }
             else if (title == "help")
             {
-                string help = "Here's how to do stuff with **pasta**:\n\n" +
-                    "```cs\n" +
-                    "   give   : Give a user your pasta\n" +
-                    "   list   : List all pasta\n" +
-                    "   edit   : Change the content of your pasta\n" +
-                    "  change  : Same as above\n" +
-                    "   new    : Creates a new pasta\n" +
-                    "    +     : Same as above\n" +
-                    "   who    : Gets information about a pasta\n" +
-                    "    ?     : Same as above\n" +
-                    "  upvote  : Upvotes a pasta\n" +
-                    " downvote : Downvotes a pasta\n" +
-                    "  delete  : deletes a pasta```";
-                await ReplyAsync(Context.Channel, help);
+                var embed = DiscordUtilities.GetCommandHelp(messageService.commandService, Context, "pasta");
+                await ReplyAsync(Context.Channel, embed);
             }
             else
             {
@@ -425,6 +414,7 @@ namespace Skuld.Modules
                 DogStatsd.Increment("web.get");
             }
         }
+
         public async Task SendXKCD(XKCDComic comic)
         {
             if (comic != null)
@@ -627,7 +617,9 @@ namespace Skuld.Modules
                 await ReplyAsync(Context.Channel, "Couldn't find an image");
             }
         }
-        int EdgeCase;
+
+        private int EdgeCase;
+
         public SafebooruImage GetSafeImage(IReadOnlyList<SafebooruImage> posts)
         {
             var post = posts.GetRandomImage();

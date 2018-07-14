@@ -1,11 +1,11 @@
 ﻿using Newtonsoft.Json;
+using Skuld.APIS.StrawPoll.Models;
+using Skuld.APIS.Utilities;
+using Skuld.Core.Services;
 using System;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Skuld.APIS.Utilities;
-using Skuld.APIS.StrawPoll.Models;
-using Skuld.Core.Services;
 
 namespace Skuld.APIS
 {
@@ -27,14 +27,14 @@ namespace Skuld.APIS
                 if (rateLimiter.IsRatelimited()) return null;
 
                 var sendpoll = new SendPoll
-                    {
-                        Title = title,
-                        Options = polloptions,
-                        Multi = false
-                    };
-                    var sendpollserialized = JsonConvert.SerializeObject(sendpoll);
-                    var post = await PostStringAsync(new Uri("https://strawpoll.me/api/v2/polls"), new StringContent(sendpollserialized, Encoding.UTF8, "application/json"));
-                    return JsonConvert.DeserializeObject<RecievePoll>(post);
+                {
+                    Title = title,
+                    Options = polloptions,
+                    Multi = false
+                };
+                var sendpollserialized = JsonConvert.SerializeObject(sendpoll);
+                var post = await PostStringAsync(new Uri("https://strawpoll.me/api/v2/polls"), new StringContent(sendpollserialized, Encoding.UTF8, "application/json"));
+                return JsonConvert.DeserializeObject<RecievePoll>(post);
             }
             catch (Exception ex)
             {
@@ -44,7 +44,7 @@ namespace Skuld.APIS
         }
 
         public async Task<RecievePoll> GetPoll(int pollid)
-            => await GetPoll("https://strawpoll.me/api/v2/polls/" + pollid);
+            => await GetPoll("https://strawpoll.me/api/v2/polls/" + pollid).ConfigureAwait(false);
 
         public async Task<RecievePoll> GetPoll(string url)
         {

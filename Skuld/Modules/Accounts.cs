@@ -1,14 +1,14 @@
-﻿using System.Threading.Tasks;
-using Discord;
+﻿using Discord;
 using Discord.Commands;
-using Skuld.Core.Models;
-using Skuld.Services;
-using Skuld.Core.Services;
-using Skuld.Commands.Preconditions;
 using Skuld.Commands;
-using Skuld.Extensions;
+using Skuld.Commands.Preconditions;
 using Skuld.Core.Extensions;
+using Skuld.Core.Models;
+using Skuld.Core.Services;
+using Skuld.Extensions;
+using Skuld.Services;
 using System;
+using System.Threading.Tasks;
 
 namespace Skuld.Modules
 {
@@ -26,7 +26,7 @@ namespace Skuld.Modules
 
             var skuser = await Database.GetUserAsync(user.Id);
 
-            if(skuser != null)
+            if (skuser != null)
             {
                 if (user == Context.User)
                     await ReplyAsync(Context.Channel, $"You have: {Configuration.Preferences.MoneySymbol}{skuser.Money.ToString("N0")}");
@@ -46,7 +46,7 @@ namespace Skuld.Modules
             if (user == null) user = (IGuildUser)Context.User;
 
             var skuser = await Database.GetUserAsync(user.Id);
-            if(skuser != null)
+            if (skuser != null)
             {
                 var embed = await skuser.GetProfileAsync(user, Configuration);
 
@@ -81,7 +81,7 @@ namespace Skuld.Modules
         [Command("daily"), Summary("Daily Money")]
         public async Task Daily(IGuildUser user = null)
         {
-            if(user == null)
+            if (user == null)
             {
                 var suser = await Database.GetUserAsync(Context.User.Id);
                 if (await suser.DoDailyAsync(Database, Configuration))
@@ -117,7 +117,7 @@ namespace Skuld.Modules
         public async Task Give(IGuildUser user, ulong amount)
         {
             var skuser = await Database.GetUserAsync(Context.User.Id);
-            if(skuser.Money < amount)
+            if (skuser.Money < amount)
             {
                 await ReplyWithMentionAsync(Context.Channel, Context.User, "You can't give more money than you have");
                 return;
@@ -147,25 +147,24 @@ namespace Skuld.Modules
             if (user == null) user = (IGuildUser)Context.User;
 
             var skuser = await Database.GetUserAsync(user.Id);
-            if(user.Id == Context.User.Id)
+            if (user.Id == Context.User.Id)
             {
-                if(skuser.HP == 10000)
+                if (skuser.HP == 10000)
                 {
                     await ReplyWithMentionAsync(Context.Channel, Context.User, "You're already at max health");
                     return;
                 }
                 var amount = GetCostOfHP(hp);
-                if(skuser.Money < amount)
+                if (skuser.Money < amount)
                 {
                     await ReplyWithMentionAsync(Context.Channel, Context.User, "You don't have enough money for this action");
                     return;
                 }
-                if(hp > (10000 - skuser.HP))
+                if (hp > (10000 - skuser.HP))
                 {
                     await ReplyWithMentionAsync(Context.Channel, Context.User, "You only need to heal by: " + (10000 - skuser.HP));
                     return;
                 }
-
 
                 skuser.Money -= amount;
                 skuser.HP += hp;
@@ -211,13 +210,13 @@ namespace Skuld.Modules
             }
         }
 
-        ulong GetCostOfHP(uint hp)
+        private ulong GetCostOfHP(uint hp)
         {
             return (ulong)(hp / 0.8);
         }
     }
 
-    [Group("account"), RequireDatabase]
+    [Group("account"), Name("Accounts"), RequireDatabase]
     public class Account : SkuldBase<ShardedCommandContext>
     {
         public SkuldConfig Configuration { get; set; }

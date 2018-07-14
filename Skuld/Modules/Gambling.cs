@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Skuld.Modules
+﻿namespace Skuld.Modules
 {
-    class Gambling
+    internal class Gambling
     {
     }
 }

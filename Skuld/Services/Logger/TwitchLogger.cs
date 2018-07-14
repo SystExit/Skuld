@@ -1,7 +1,7 @@
-﻿using System.Threading.Tasks;
-using Skuld.Core.Extensions;
-using Skuld.Core.Services;
+﻿using Skuld.Core.Extensions;
 using Skuld.Core.Models;
+using Skuld.Core.Services;
+using System.Threading.Tasks;
 
 namespace Skuld.Services
 {

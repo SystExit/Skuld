@@ -1,13 +1,13 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
+using Skuld.Core.Services;
+using Skuld.Models.Database;
+using Skuld.Services;
+using Skuld.Utilities.Discord;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Skuld.Models.Database;
-using Skuld.Utilities.Discord;
-using Skuld.Services;
-using Skuld.Core.Services;
 
 namespace Skuld.Extensions
 {
@@ -130,8 +130,11 @@ namespace Skuld.Extensions
             await HostService.Services.GetRequiredService<GenericLogger>().AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Deleted a timed message", LogSeverity.Info));
         }
 
-        public static async Task<bool> CanEmbedAsync(this ITextChannel channel)
-            => (await channel.Guild.GetCurrentUserAsync()).GetPermissions(channel).EmbedLinks;
+        public static async Task<bool> CanEmbedAsync(this IMessageChannel channel, IGuild guild = null)
+        {
+            if (guild == null) return true;
+            else return (await guild.GetCurrentUserAsync()).GetPermissions(channel as IGuildChannel).EmbedLinks;
+        }
 
         public static string ToText(this Embed embed)
         {
@@ -156,6 +159,5 @@ namespace Skuld.Extensions
                 message += " | " + embed.Timestamp.Value.ToString("dd'/'MM'/'yyyy hh:mm:ss tt");
             return message;
         }
-
     }
 }

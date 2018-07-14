@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Discord.Commands;
+using Skuld.Services;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Discord.Commands;
-using Skuld.Services;
 
 namespace Skuld.Commands.Preconditions
 {
@@ -10,7 +10,6 @@ namespace Skuld.Commands.Preconditions
     {
         public RequireDeveloper()
         {
-
         }
 
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)

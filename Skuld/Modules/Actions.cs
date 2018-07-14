@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Discord;
+﻿using Discord;
 using Discord.Commands;
 using Skuld.Commands;
 using Skuld.Core.Models;
-using Skuld.Services;
 using Skuld.Core.Services;
-using System.Threading.Tasks;
-using SysEx.Net;
+using Skuld.Services;
 using Skuld.Utilities.Discord;
+using SysEx.Net;
+using System;
+using System.Threading.Tasks;
 
 namespace Skuld.Modules
 {
@@ -69,7 +67,7 @@ namespace Skuld.Modules
                 await SendAsync($"{Context.User.Mention} stabbed {user.Mention}", gif.URL).ConfigureAwait(false);
                 return;
             }
-            if(Database.CanConnect)
+            if (Database.CanConnect)
             {
                 uint dhp = (uint)Random.Next(0, 100);
 
@@ -205,7 +203,7 @@ namespace Skuld.Modules
                 await SendAsync($"{Context.User.Mention} just headpatted {user.Mention}", gif.URL).ConfigureAwait(false);
                 return;
             }
-            if(Database.CanConnect)
+            if (Database.CanConnect)
             {
                 var cusr = await Database.GetUserAsync(Context.User.Id).ConfigureAwait(false);
 

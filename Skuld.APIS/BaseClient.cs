@@ -1,4 +1,5 @@
 ﻿using HtmlAgilityPack;
+using Skuld.Core.Services;
 using System;
 using System.IO;
 using System.Net;
@@ -7,13 +8,12 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Skuld.Core.Services;
 
 namespace Skuld.APIS
 {
     public class BaseClient
     {
-        public static GenericLogger loggingService;
+        public static GenericLogger loggingService { get; set; }
 
         public BaseClient(GenericLogger logger)
         {
@@ -38,37 +38,7 @@ namespace Skuld.APIS
             return returncli;
         }
 
-        public async Task<string> ReturnStringAsync(Uri url)
-        {
-            try
-            {
-                var client = CreateWebRequest(url);
-
-                var resp = (HttpWebResponse)(await client.GetResponseAsync());
-                if (resp.StatusCode == HttpStatusCode.OK)
-                {
-                    var reader = new StreamReader(resp.GetResponseStream());
-                    var responce = await reader.ReadToEndAsync();
-                    StatsdClient.DogStatsd.Increment("web.get");
-                    resp.Dispose();
-                    client.Abort();
-                    return responce;
-                }
-                else
-                {
-                    resp.Dispose();
-                    client.Abort();
-                    return null;
-                }
-            }
-            catch (Exception ex)
-            {
-                await loggingService.AddToLogsAsync(new Core.Models.LogMessage("WebHandler", ex.Message, Discord.LogSeverity.Error, ex));
-                return null;
-            }
-        }
-
-        public async Task<string> ReturnStringAsync(Uri url, byte[] headers)
+        public async Task<string> ReturnStringAsync(Uri url, byte[] headers = null)
         {
             try
             {
@@ -78,7 +48,7 @@ namespace Skuld.APIS
                 if (resp.StatusCode == HttpStatusCode.OK)
                 {
                     var reader = new StreamReader(resp.GetResponseStream());
-                    var responce = await reader.ReadToEndAsync();
+                    var responce = await reader.ReadToEndAsync().ConfigureAwait(false);
                     StatsdClient.DogStatsd.Increment("web.get");
                     resp.Dispose();
                     client.Abort();

@@ -1,14 +1,16 @@
-﻿using System;
-using System.Threading.Tasks;
-using Discord.Commands;
+﻿using Discord.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Skuld.Services;
+using System;
+using System.Threading.Tasks;
 
 namespace Skuld.Commands.Preconditions
 {
     public class RequireDatabase : PreconditionAttribute
     {
-        public RequireDatabase() { }
+        public RequireDatabase()
+        {
+        }
 
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {

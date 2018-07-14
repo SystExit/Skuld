@@ -1,18 +1,18 @@
 ﻿using Discord;
-using System;
 using Discord.Commands;
+using System;
 using System.Collections.Generic;
 
 namespace Skuld.Utilities.Discord
 {
     public class DiscordUtilities
     {
-		static readonly Random random = new Random();
+        private static readonly Random random = new Random();
 
         public static Embed GetCommandHelp(CommandService commandService, ICommandContext context, string commandname)
-		{
-			if (commandname.ToLower() != "pasta")
-			{
+        {
+            if (commandname.ToLower() != "pasta")
+            {
                 var embed = new EmbedBuilder
                 {
                     Description = $"Here are some commands like **{commandname}**",
@@ -23,10 +23,10 @@ namespace Skuld.Utilities.Discord
 
                 var summ = GetSummaryAsync(serch);
 
-				embed.AddField(string.Join(", ", serch[0].Command.Aliases), summ, false);
+                embed.AddField(string.Join(", ", serch[0].Command.Aliases), summ, false);
 
-				return embed.Build();
-			}
+                return embed.Build();
+            }
             else
             {
                 var embed = new EmbedBuilder
@@ -48,30 +48,30 @@ namespace Skuld.Utilities.Discord
                 //embed.WithRandomColor();
                 return embed.Build();
             }
-		}
+        }
 
-		public static string GetSummaryAsync(IReadOnlyList<CommandMatch> Variants)
-		{
+        public static string GetSummaryAsync(IReadOnlyList<CommandMatch> Variants)
+        {
             var primary = Variants[0];
 
-			string summ = "Summary: " + primary.Command.Summary;
-			int totalparams = 0;
+            string summ = "Summary: " + primary.Command.Summary;
+            int totalparams = 0;
 
-			foreach (var com in Variants)
-			{
-				totalparams += com.Command.Parameters.Count;
-			}
+            foreach (var com in Variants)
+            {
+                totalparams += com.Command.Parameters.Count;
+            }
 
-			if (totalparams > 0)
-			{
-				summ += "\nParameters:\n";
+            if (totalparams > 0)
+            {
+                summ += "\nParameters:\n";
 
                 int instance = 0;
 
-                foreach(var cmd in Variants)
+                foreach (var cmd in Variants)
                 {
                     instance++;
-                    if(Variants.Count>1)
+                    if (Variants.Count > 1)
                     {
                         summ += $"**Command Version: {instance}**\n";
                     }
@@ -92,9 +92,9 @@ namespace Skuld.Utilities.Discord
                     }
                 }
 
-				return summ;
-			}
-			return summ + "\nParameters: None";
-		}
+                return summ;
+            }
+            return summ + "\nParameters: None";
+        }
     }
 }

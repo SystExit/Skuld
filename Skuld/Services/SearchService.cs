@@ -1,16 +1,16 @@
-﻿using System;
-using Discord;
-using System.Threading.Tasks;
+﻿using Discord;
+using Google.Apis.Customsearch.v1;
 using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Imgur.API.Models;
-using Google.Apis.Customsearch.v1;
-using YoutubeExplode;
-using System.Linq;
-using Skuld.Extensions;
-using Skuld.Core.Services;
 using Skuld.Core.Models;
+using Skuld.Core.Services;
+using Skuld.Extensions;
 using Skuld.Utilities.Discord;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+using YoutubeExplode;
 
 namespace Skuld.Services
 {

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Skuld.Core.Services;
+﻿using Skuld.Core.Services;
 
 namespace Skuld.APIS
 {
@@ -10,7 +7,6 @@ namespace Skuld.APIS
     {
         public EntertainmentClient(GenericLogger log) : base(log)
         {
-
         }
     }
 }

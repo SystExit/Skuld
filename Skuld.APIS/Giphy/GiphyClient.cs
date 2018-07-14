@@ -1,9 +1,9 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using Newtonsoft.Json.Linq;
 using Skuld.APIS.Giphy.Models;
 using Skuld.APIS.Utilities;
-using Newtonsoft.Json.Linq;
 using Skuld.Core.Services;
+using System;
+using System.Threading.Tasks;
 
 namespace Skuld.APIS
 {

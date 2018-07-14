@@ -1,23 +1,23 @@
-﻿using System;
-using Discord;
-using Discord.Commands;
-using Skuld.Commands;
-using Skuld.Utilities.Discord;
-using Skuld.Services;
-using System.Threading.Tasks;
-using System.Linq;
-using Skuld.Core.Services;
+﻿using Discord;
 using Discord.Addons.Interactive;
-using Skuld.Extensions;
+using Discord.Commands;
 using PokeSharp;
-using SteamWebAPI2.Interfaces;
 using Skuld.APIS;
-using Skuld.Core.Commands.Attributes;
-using SteamStoreQuery;
 using Skuld.APIS.Pokemon.Models;
-using System.IO;
+using Skuld.Commands;
+using Skuld.Core.Commands.Attributes;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
+using Skuld.Core.Services;
+using Skuld.Extensions;
+using Skuld.Services;
+using Skuld.Utilities.Discord;
+using SteamStoreQuery;
+using SteamWebAPI2.Interfaces;
+using System;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Skuld.Modules
 {
@@ -303,6 +303,7 @@ namespace Skuld.Modules
         [Command("pokemon"), Summary("Gets information about a pokemon id")]
         public async Task Getpokemon(string pokemon, string group = null) =>
     await SendPokemonAsync(await PokeMonClient.GetPocketMonsterAsync(pokemon.ToLowerInvariant()), group ?? "default").ConfigureAwait(false);
+
         [Command("pokemon"), Summary("Gets information about a pokemon id")]
         public async Task Getpokemon(int pokemonid, string group = null) =>
             await SendPokemonAsync(await PokeMonClient.GetPocketMonsterAsync(pokemonid), group ?? "default").ConfigureAwait(false);

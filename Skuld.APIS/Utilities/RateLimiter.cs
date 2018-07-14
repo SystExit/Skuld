@@ -4,8 +4,8 @@ namespace Skuld.APIS.Utilities
 {
     public class RateLimiter
     {
-        public const int DefaultRequestLimit = 5000;
-        public const int DefaultResetInterval = 30; // Minutes
+        public static int DefaultRequestLimit = 5000;
+        public static int DefaultResetInterval = 30; // Minutes
         public int RequestLimit { get; private set; }
         public int RequestsRemaining { get; private set; }
         public TimeSpan ResetInterval => TimeSpan.FromMinutes(_resetInterval);
@@ -24,6 +24,7 @@ namespace Skuld.APIS.Utilities
         {
             RequestLimit = requestLimit ?? DefaultRequestLimit;
         }
+
         public void SetRequestInterval(int? resetInterval = null)
         {
             _resetInterval = resetInterval ?? DefaultResetInterval;

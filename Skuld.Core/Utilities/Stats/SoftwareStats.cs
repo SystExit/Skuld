@@ -1,7 +1,7 @@
-﻿using System;
-using System.Reflection;
+﻿using Booru.Net;
 using SysEx.Net;
-using Booru.Net;
+using System;
+using System.Reflection;
 using Weeb.net;
 
 namespace Skuld.Core.Utilities.Stats

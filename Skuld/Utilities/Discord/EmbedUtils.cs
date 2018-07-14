@@ -1,7 +1,7 @@
-﻿using System;
-using Discord;
-using Skuld.Services;
+﻿using Discord;
 using Microsoft.Extensions.DependencyInjection;
+using Skuld.Services;
+using System;
 
 namespace Skuld.Utilities.Discord
 {

@@ -2,8 +2,8 @@
 {
     public class MessageServiceConfig
     {
-		public int ArgPos;
-		public string Prefix;
-		public string AltPrefix;
+        public int ArgPos;
+        public string Prefix;
+        public string AltPrefix;
     }
 }

@@ -1,9 +1,9 @@
 ﻿using Newtonsoft.Json;
 using Skuld.APIS.Social.Reddit.Models;
-using System;
 using Skuld.APIS.Utilities;
-using System.Threading.Tasks;
 using Skuld.Core.Services;
+using System;
+using System.Threading.Tasks;
 
 namespace Skuld.APIS.Social.Reddit
 {
@@ -11,13 +11,13 @@ namespace Skuld.APIS.Social.Reddit
     {
         private readonly RateLimiter rateLimiter;
 
-        public RedditClient(GenericLogger log) : base (log)
+        public RedditClient(GenericLogger log) : base(log)
         {
             rateLimiter = new RateLimiter();
         }
 
         public async Task<SubReddit> GetSubRedditAsync(string subRedditName)
-            => await GetSubRedditAsync(subRedditName, 10);
+            => await GetSubRedditAsync(subRedditName, 10).ConfigureAwait(false);
 
         public async Task<SubReddit> GetSubRedditAsync(string subRedditName, int amountOfPosts)
         {

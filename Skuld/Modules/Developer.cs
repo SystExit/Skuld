@@ -1,22 +1,22 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using Skuld.Services;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Skuld.Commands;
-using Skuld.Core.Services;
-using Skuld.Utilities.Discord;
-using Skuld.Core.Utilities;
-using Skuld.Commands.Preconditions;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
+using Skuld.APIS;
+using Skuld.Commands;
+using Skuld.Commands.Preconditions;
+using Skuld.Core.Models;
+using Skuld.Core.Services;
+using Skuld.Core.Utilities;
+using Skuld.Services;
+using Skuld.Utilities.Discord;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Skuld.Core.Models;
-using Skuld.APIS;
+using System.Threading.Tasks;
 
 namespace Skuld.Modules
 {
@@ -238,6 +238,38 @@ namespace Skuld.Modules
                     await Database.InsertGuildAsync(guild);
                     Thread.Sleep(2000);
                     message += count + ". Inserted\n";
+                }
+            })
+            {
+                IsBackground = true
+            };
+            thd.Start();
+            if (message != "")
+            { await ReplyAsync(Context.Channel, message); }
+        }
+
+        [Command("rebuildusers")]
+        public async Task RebuildUsers()
+        {
+            string message = "";
+            int count = 0;
+            Thread thd = new Thread(async () =>
+            {
+                foreach (var guild in Context.Client.Guilds)
+                {
+                    await guild.DownloadUsersAsync();
+                    foreach (var user in guild.Users)
+                    {
+                        count++;
+                        var usr = await Database.GetUserAsync(user.Id);
+                        if (usr == null) await Database.InsertUserAsync(user);
+                        else
+                        {
+                            await Database.SingleQueryAsync(new MySql.Data.MySqlClient.MySqlCommand($"UPDATE `users` SET `AvatarUrl` = \"{user.GetAvatarUrl()}\" WHERE `UserID` = {user.Id};"));
+                        }
+                        Thread.Sleep(2000);
+                        message += count + ". Inserted\n";
+                    }
                 }
             })
             {

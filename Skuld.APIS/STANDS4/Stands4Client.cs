@@ -1,21 +1,21 @@
-﻿using System;
-using Skuld.APIS.Utilities;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Skuld.APIS.STANDS4.Models;
+using Skuld.APIS.Utilities;
+using Skuld.Core.Services;
+using System;
+using System.Linq;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using System.Xml;
 using System.Xml.Linq;
-using Newtonsoft.Json.Linq;
-using System.Linq;
-using Skuld.Core.Services;
 
 namespace Skuld.APIS
 {
     public class Stands4Client : BaseClient
     {
         private readonly RateLimiter rateLimiter;
-        int stands4userid;
-        string stands4usertoken;
+        private int stands4userid;
+        private string stands4usertoken;
 
         public Stands4Client(int userid, string token, GenericLogger log) : base(log)
         {

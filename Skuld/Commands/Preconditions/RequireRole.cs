@@ -1,17 +1,17 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Discord;
 using Discord.Commands;
-using Discord;
 using Discord.WebSocket;
 using Skuld.Core.Models.Discord;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Skuld.Commands.Preconditions
 {
     public class RequireRole : PreconditionAttribute
     {
         private readonly AccessLevel Level;
-        readonly DiscordShardedClient client = Services.HostService.Client;
+        private readonly DiscordShardedClient client = Services.HostService.Client;
 
         public RequireRole(AccessLevel level)
         {

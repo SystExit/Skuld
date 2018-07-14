@@ -5,8 +5,14 @@ using Kitsu.Anime;
 using Kitsu.Manga;
 using Microsoft.Extensions.DependencyInjection;
 using NTwitch.Rest;
+using Skuld.APIS.Pokemon.Models;
+using Skuld.APIS.Social.Reddit.Models;
+using Skuld.APIS.UrbanDictionary.Models;
+using Skuld.APIS.Utilities;
 using Skuld.Core.Extensions;
 using Skuld.Core.Utilities;
+using Skuld.Services;
+using Skuld.Utilities.Discord;
 using Steam.Models.SteamStore;
 using SteamStoreQuery;
 using System;
@@ -14,12 +20,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Resources;
 using System.Threading.Tasks;
-using Skuld.Services;
-using Skuld.APIS.Social.Reddit.Models;
-using Skuld.APIS.UrbanDictionary.Models;
-using Skuld.APIS.Pokemon.Models;
-using Skuld.APIS.Utilities;
-using Skuld.Utilities.Discord;
 
 namespace Skuld.Extensions
 {

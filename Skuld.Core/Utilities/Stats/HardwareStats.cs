@@ -17,8 +17,8 @@ namespace Skuld.Core.Utilities.Stats
 
     public class CPUStats
     {
-        TimeSpan StartTime;
-        double CPUTotalUsg { get; set; }
+        private TimeSpan StartTime;
+        private double CPUTotalUsg { get; set; }
 
         public void Start()
         {

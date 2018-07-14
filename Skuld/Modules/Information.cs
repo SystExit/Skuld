@@ -3,19 +3,19 @@ using Discord.Commands;
 using Discord.WebSocket;
 using NodaTime;
 using Skuld.APIS;
+using Skuld.Commands;
+using Skuld.Core.Extensions;
+using Skuld.Core.Globalization;
+using Skuld.Core.Models;
+using Skuld.Core.Services;
+using Skuld.Core.Utilities;
 using Skuld.Extensions;
 using Skuld.Services;
+using Skuld.Utilities.Discord;
 using System;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
-using Skuld.Commands;
-using Skuld.Core.Services;
-using Skuld.Core.Extensions;
-using Skuld.Core.Models;
-using Skuld.Utilities.Discord;
-using Skuld.Core.Globalization;
-using Skuld.Core.Utilities;
 
 namespace Skuld.Modules
 {

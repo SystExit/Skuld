@@ -1,11 +1,11 @@
 ﻿using Newtonsoft.Json;
 using Skuld.APIS.NASA.Models;
+using Skuld.APIS.Utilities;
+using Skuld.Core.Services;
 using System;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
-using Skuld.APIS.Utilities;
-using Skuld.Core.Services;
 
 namespace Skuld.APIS
 {
@@ -14,7 +14,7 @@ namespace Skuld.APIS
         private readonly RateLimiter rateLimiter;
         private string token;
 
-        public NASAClient(GenericLogger log, string tok) : base (log)
+        public NASAClient(GenericLogger log, string tok) : base(log)
         {
             rateLimiter = new RateLimiter();
             token = tok;

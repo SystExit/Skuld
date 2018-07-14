@@ -1,10 +1,10 @@
-﻿using Skuld.APIS.WebComics.Explosm.Models;
+﻿using Skuld.APIS.Utilities;
+using Skuld.APIS.WebComics.Explosm.Models;
+using Skuld.Core.Services;
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Skuld.APIS.Utilities;
-using Skuld.Core.Services;
 
 namespace Skuld.APIS.WebComics.Explosm
 {

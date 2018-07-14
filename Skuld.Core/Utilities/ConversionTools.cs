@@ -1,5 +1,5 @@
-﻿using System;
-using Discord;
+﻿using Discord;
+using System;
 
 namespace Skuld.Core.Utilities
 {
@@ -12,6 +12,7 @@ namespace Skuld.Core.Utilities
             else
                 return 0;
         }
+
         public static uint ParseUInt32OrDefault(string s)
         {
             if (UInt32.TryParse(s, out uint tmp))
@@ -19,6 +20,7 @@ namespace Skuld.Core.Utilities
             else
                 return 0;
         }
+
         public static UInt64 ParseUInt64OrDefault(string input)
         {
             if (UInt64.TryParse(input, out ulong tmp))

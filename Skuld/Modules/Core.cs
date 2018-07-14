@@ -1,10 +1,10 @@
 ﻿using Discord;
-using Skuld.Utilities.Discord;
 using Discord.Commands;
-using Skuld.Services;
-using System.Threading.Tasks;
 using Skuld.Commands;
+using Skuld.Services;
+using Skuld.Utilities.Discord;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Skuld.Modules
 {
@@ -17,11 +17,11 @@ namespace Skuld.Modules
         [Command("help"), Summary("Gets all commands or a specific command's information")]
         public async Task Help([Remainder]string command = null)
         {
-            if(command == null)
+            if (command == null)
             {
                 string prefix = MessageService.config.Prefix;
 
-                if(Database.CanConnect)
+                if (Database.CanConnect)
                 {
                     var guild = await Database.GetGuildAsync(Context.Guild.Id);
                     if (guild != null)
@@ -38,10 +38,10 @@ namespace Skuld.Modules
                     Color = EmbedUtils.RandomColor(),
                     Description = $"The prefix of **{Context.Guild.Name}** is: `{prefix}`"
                 };
-                foreach(var module in MessageService.commandService.Modules)
+                foreach (var module in MessageService.commandService.Modules)
                 {
                     string desc = "";
-                    foreach(var cmd in module.Commands)
+                    foreach (var cmd in module.Commands)
                     {
                         var result = await cmd.CheckPreconditionsAsync(Context);
                         if (result.IsSuccess)
@@ -62,7 +62,7 @@ namespace Skuld.Modules
             else
             {
                 var cmd = DiscordUtilities.GetCommandHelp(MessageService.commandService, Context, command);
-                if(cmd == null)
+                if (cmd == null)
                 {
                     await ReplyAsync(Context.Channel, $"Sorry, I couldn't find a command like **{command}**.");
                 }

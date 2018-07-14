@@ -4,7 +4,7 @@ namespace Skuld
 {
     public class Program
     {
-        static void Main()
-            =>  new HostService().CreateAsync().GetAwaiter().GetResult();
+        private static void Main()
+            => new HostService().CreateAsync().GetAwaiter().GetResult();
     }
 }

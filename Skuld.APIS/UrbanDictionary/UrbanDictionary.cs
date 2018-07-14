@@ -1,9 +1,9 @@
 ﻿using Newtonsoft.Json;
+using Skuld.APIS.UrbanDictionary.Models;
 using Skuld.APIS.Utilities;
+using Skuld.Core.Services;
 using System;
 using System.Threading.Tasks;
-using Skuld.APIS.UrbanDictionary.Models;
-using Skuld.Core.Services;
 
 namespace Skuld.APIS
 {
