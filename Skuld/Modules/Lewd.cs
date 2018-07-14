@@ -1,32 +1,31 @@
-﻿using System.Threading.Tasks;
+﻿using Discord;
 using Discord.Commands;
-using Skuld.APIS;
-using Skuld.Tools;
-using Discord;
-using System.Text.RegularExpressions;
-using Discord.Addons.Interactive;
-using Skuld.Services;
+using Skuld.Commands;
+using System.Threading.Tasks;
 using Skuld.Extensions;
+using Skuld.APIS;
+using Skuld.Core.Commands.Attributes;
 using SysEx.Net;
 using Booru.Net;
+using Skuld.APIS.NekoLife.Models;
 
 namespace Skuld.Modules
 {
     [Group, RequireNsfw]
-    public class Lewd : InteractiveBase<ShardedCommandContext>
+    public class Lewd : SkuldBase<ShardedCommandContext>
     {
-        public AnimalAPIS Animals { get; set; }
         public SysExClient SysExClient { get; set; }
         public BooruClient BooruClient { get; set; }
+        public NekosLifeClient NekosLifeClient { get; set; }
 
         [Command("lewdneko"), Summary("Lewd Neko Grill"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task LewdNeko()
         {
-            var neko = await Animals.GetLewdNekoAsync();
+            var neko = await NekosLifeClient.GetAsync(NekoImageType.LewdNeko);
             if (neko != null)
-                await Context.Channel.ReplyAsync(new EmbedBuilder { ImageUrl = neko }.Build());
+                await ReplyAsync(Context.Channel, new EmbedBuilder { ImageUrl = neko }.Build());
             else
-                await Context.Channel.ReplyAsync("Hmmm <:Thunk:350673785923567616>, I got an empty response.");
+                await ReplyAsync(Context.Channel, "Hmmm <:Thunk:350673785923567616>, I got an empty response.");
         }
 
         [Command("lewdkitsune"), Summary("Lewd Kitsunemimi Grill"), Ratelimit(20, 1, Measure.Minutes)]
@@ -34,7 +33,7 @@ namespace Skuld.Modules
         {
             var kitsu = await SysExClient.GetLewdKitsuneAsync();
             StatsdClient.DogStatsd.Increment("web.get");
-            await Context.Channel.ReplyAsync("", new EmbedBuilder { ImageUrl = kitsu }.Build());
+            await ReplyAsync(Context.Channel, new EmbedBuilder { ImageUrl = kitsu }.Build());
         }
 
         [Command("danbooru"), Summary("Gets stuff from danbooru"), Ratelimit(20, 1, Measure.Minutes)]
@@ -43,7 +42,7 @@ namespace Skuld.Modules
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await Context.Channel.ReplyAsync("Your tags contains a banned tag, please remove it.");
+                await ReplyAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
             }
             else
             {
@@ -55,11 +54,11 @@ namespace Skuld.Modules
                     var post = posts.GetRandomImage();
                     if (post != null)
                     {
-                        await Context.Channel.ReplyAsync(Tools.Tools.GetBooruMessage(post.Score, post.ImageUrl, post.PostUrl, post.ImageUrl.IsVideoFile()));
+                        await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
                         return;
                     }
                 }
-                await Context.Channel.ReplyAsync("Couldn't find an image");
+                await ReplyAsync(Context.Channel, "Couldn't find an image");
             }
         }
 
@@ -69,7 +68,7 @@ namespace Skuld.Modules
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await Context.Channel.ReplyAsync("Your tags contains a banned tag, please remove it.");
+                await ReplyAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
             }
             else
             {
@@ -81,11 +80,11 @@ namespace Skuld.Modules
                     var post = posts.GetRandomImage();
                     if (post != null)
                     {
-                        await Context.Channel.ReplyAsync(Tools.Tools.GetBooruMessage(post.Score, post.ImageUrl, post.PostUrl, post.ImageUrl.IsVideoFile()));
+                        await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
                         return;
                     }
                 }
-                await Context.Channel.ReplyAsync("Couldn't find an image");
+                await ReplyAsync(Context.Channel, "Couldn't find an image");
             }
         }
 
@@ -95,7 +94,7 @@ namespace Skuld.Modules
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await Context.Channel.ReplyAsync("Your tags contains a banned tag, please remove it.");
+                await ReplyAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
             }
             else
             {
@@ -107,11 +106,11 @@ namespace Skuld.Modules
                     var post = posts.GetRandomImage();
                     if (post != null)
                     {
-                        await Context.Channel.ReplyAsync(Tools.Tools.GetBooruMessage(post.Score, post.ImageUrl, post.PostUrl, post.ImageUrl.IsVideoFile()));
+                        await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
                         return;
                     }
                 }
-                await Context.Channel.ReplyAsync("Couldn't find an image");
+                await ReplyAsync(Context.Channel, "Couldn't find an image");
             }
         }
 
@@ -120,7 +119,7 @@ namespace Skuld.Modules
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await Context.Channel.ReplyAsync("Your tags contains a banned tag, please remove it.");
+                await ReplyAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
             }
             else
             {
@@ -132,11 +131,11 @@ namespace Skuld.Modules
                     var post = posts.GetRandomImage();
                     if (post != null)
                     {
-                        await Context.Channel.ReplyAsync(Tools.Tools.GetBooruMessage(post.Score, post.ImageUrl, post.PostUrl, post.ImageUrl.IsVideoFile()));
+                        await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
                         return;
                     }
                 }
-                await Context.Channel.ReplyAsync("Couldn't find an image");
+                await ReplyAsync(Context.Channel, "Couldn't find an image");
             }
         }
 
@@ -146,7 +145,7 @@ namespace Skuld.Modules
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await Context.Channel.ReplyAsync("Your tags contains a banned tag, please remove it.");
+                await ReplyAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
             }
             else
             {
@@ -158,11 +157,11 @@ namespace Skuld.Modules
                     var post = posts.GetRandomImage();
                     if (post != null)
                     {
-                        await Context.Channel.ReplyAsync(Tools.Tools.GetBooruMessage(post.Score, post.ImageUrl, post.PostUrl, post.ImageUrl.IsVideoFile()));
+                        await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
                         return;
                     }
                 }
-                await Context.Channel.ReplyAsync("Couldn't find an image");
+                await ReplyAsync(Context.Channel, "Couldn't find an image");
             }
         }
 
@@ -171,7 +170,7 @@ namespace Skuld.Modules
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await Context.Channel.ReplyAsync("Your tags contains a banned tag, please remove it.");
+                await ReplyAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
             }
             else
             {
@@ -183,12 +182,11 @@ namespace Skuld.Modules
                     var post = posts.GetRandomImage();
                     if (post != null)
                     {
-
-                        await Context.Channel.ReplyAsync(Tools.Tools.GetBooruMessage(post.Score, post.ImageUrl, post.PostUrl, post.ImageUrl.IsVideoFile()));
+                        await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
                         return;
                     }
                 }
-                await Context.Channel.ReplyAsync("Couldn't find an image");
+                await ReplyAsync(Context.Channel, "Couldn't find an image");
             }
         }
 
@@ -197,7 +195,7 @@ namespace Skuld.Modules
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await Context.Channel.ReplyAsync("Your tags contains a banned tag, please remove it.");
+                await ReplyAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
             }
             else
             {
@@ -209,11 +207,11 @@ namespace Skuld.Modules
                     var post = posts.GetRandomImage();
                     if (post != null)
                     {
-                        await Context.Channel.ReplyAsync(Tools.Tools.GetBooruMessage(post.Score, post.ImageUrl, post.PostUrl, post.ImageUrl.IsVideoFile()));
+                        await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
                         return;
                     }
                 }
-                await Context.Channel.ReplyAsync("Couldn't find an image");
+                await ReplyAsync(Context.Channel, "Couldn't find an image");
             }
         }
     }

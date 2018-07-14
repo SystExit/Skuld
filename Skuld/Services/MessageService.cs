@@ -2,14 +2,18 @@
 using System.Threading.Tasks;
 using StatsdClient;
 using System;
-using Skuld.Utilities;
 using Discord;
-using Skuld.Models;
 using Discord.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.Linq;
 using System.Threading;
+using Skuld.Core.Extensions;
+using Skuld.Core.Commands.TypeReaders;
+using Skuld.Models;
+using Skuld.Utilities.Discord;
+using Skuld.Utilities.Messaging;
+using Skuld.Models.Database;
 using Skuld.Extensions;
 
 namespace Skuld.Services
@@ -18,19 +22,17 @@ namespace Skuld.Services
     {
         readonly DiscordShardedClient client;
 		DatabaseService database;
-		LoggingService logger;
+        public DiscordLogger logger;
 		public MessageServiceConfig config;
 		public CommandService commandService;
 
-		public MessageService(DiscordShardedClient cli,
-			DatabaseService db,
-			MessageServiceConfig serviceConfig,
-			LoggingService log) //inherits from depinjection
+		public MessageService(DiscordShardedClient cli, DatabaseService db, DiscordLogger log, MessageServiceConfig serviceConfig) //inherits from depinjection
 		{
 			client = cli;
 			database = db;
 			config = serviceConfig;
 			logger = log;
+            logger.AddMessageService(this);
 		}
 
         public async Task<bool> CheckEmbedPermission(IGuildChannel channel)
@@ -41,14 +43,16 @@ namespace Skuld.Services
             try
             {
                 commandService = new CommandService(config);
-                var logger = services.GetRequiredService<LoggingService>();
-                commandService.Log += logger.DiscordLogger;
+
+                commandService.Log += (arg) =>
+                   logger.logger.AddToLogsAsync(new Core.Models.LogMessage("CommandService - "+arg.Source, arg.Message, arg.Severity, arg.Exception));
+
                 await commandService.AddModulesAsync(Assembly.GetEntryAssembly(), services);
                 commandService.AddTypeReader<Uri>(new UriTypeReader());
             }
             catch(Exception ex)
             {
-                await logger.AddToLogsAsync(new Models.LogMessage("CS-Config", ex.Message, LogSeverity.Critical, ex));
+                await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("CS-Config", ex.Message, LogSeverity.Critical, ex));
             }
 		}
 
@@ -64,7 +68,7 @@ namespace Skuld.Services
 			var context = new ShardedCommandContext(client, message);
 
 			if (!MessageTools.IsEnabledChannel(context.Guild.GetUser(context.User.Id), (ITextChannel)context.Channel)) { return; }
-			
+
 			try
 			{
 				SkuldGuild sguild = null;
@@ -73,6 +77,7 @@ namespace Skuld.Services
 				{
 					var usr = await database.GetUserAsync(context.User.Id);
 					if (usr == null) { await database.InsertUserAsync(context.User).ConfigureAwait(false); }
+                    if (usr.Banned) return;
 
 					if (context.Guild != null)
 					{
@@ -84,6 +89,61 @@ namespace Skuld.Services
 								sguild = await database.GetGuildAsync(context.Guild.Id).ConfigureAwait(false);
 							});
 						}
+                        else
+                        {
+                            if(sguild.GuildSettings.Features.Experience)
+                            {
+                                var luserexperience = await database.GetUserExperienceAsync(context.User);
+
+                                if (luserexperience is UserExperience)
+                                {
+                                    var luxp = (UserExperience)luserexperience;
+
+                                    var gld = luxp.GuildExperiences.First(x => x.GuildID == context.Guild.Id);
+                                    if (gld != null)
+                                    {
+                                        if(gld.LastGranted < (60 - DateTime.UtcNow.ToEpoch()))
+                                        {
+                                            var amount = (ulong)HostService.Services.GetRequiredService<Random>().Next(0, 25);
+
+                                            var xptonextlevel = GetXPRequirement(gld.Level + 1, 1.618); //get next level xp requirement based on phi
+
+                                            if ((gld.XP + amount) >= xptonextlevel) //if over or equal to next level requirement, update accordingly
+                                            {
+                                                gld.XP = 0;
+                                                gld.TotalXP += amount;
+                                                gld.Level++;
+                                                gld.LastGranted = DateTime.UtcNow.ToEpoch();
+                                                await context.Channel.SendMessageAsync($"Congratulations {context.User.Mention}!! You're now level **{gld.Level}**");
+                                                await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("MessageService", "User levelled up", LogSeverity.Info));
+                                                DogStatsd.Increment("user.levelup");
+                                            }
+                                            else //otherwise append current status
+                                            {
+                                                gld.XP += amount;
+                                                gld.TotalXP += amount;
+                                                gld.LastGranted = DateTime.UtcNow.ToEpoch();
+                                            }
+                                            await database.UpdateGuildExperienceAsync(context.User, gld, context.Guild);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        gld = new GuildExperience();
+                                        gld.LastGranted = DateTime.UtcNow.ToEpoch();
+                                        gld.XP = gld.TotalXP = (ulong)HostService.Services.GetRequiredService<Random>().Next(0, 25);
+                                        await database.UpdateGuildExperienceAsync(context.User, gld, context.Guild);
+                                    }
+                                }
+                                else
+                                {
+                                    var gld = new GuildExperience();
+                                    gld.LastGranted = DateTime.UtcNow.ToEpoch();
+                                    gld.XP = gld.TotalXP = (ulong)HostService.Services.GetRequiredService<Random>().Next(0, 25);
+                                    await database.InsertGuildExperienceAsync(context.User, context.Guild, gld);
+                                }
+                            }
+                        }
 					}
 				}
 
@@ -93,7 +153,7 @@ namespace Skuld.Services
                 if(sguild!= null && sguild.GuildSettings.Modules.CustomEnabled)
                 {
                     var customcommand = await MessageTools.GetCustomCommandAsync(context.Guild,
-                        MessageTools.GetCommandName(MessageTools.GetPrefixFromCommand(sguild, arg.Content, Bot.Configuration),
+                        MessageTools.GetCommandName(MessageTools.GetPrefixFromCommand(sguild, arg.Content, HostService.Configuration),
                         0, arg), database);
 
                     if (customcommand != null)
@@ -127,9 +187,12 @@ namespace Skuld.Services
 			}
 			catch(Exception ex)
 			{
-				await logger.AddToLogsAsync(new Models.LogMessage("CmdDisp", ex.Message, LogSeverity.Error, ex));
+				await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("CmdDisp", ex.Message, LogSeverity.Error, ex));
 			}
 		}
+
+        ulong GetXPRequirement(ulong level, double growthmod)
+            => (ulong)((level * 50) * (level * growthmod));
 
 		string GetCmdName(IUserMessage arg, SkuldGuild sguild = null)
 		{
@@ -177,13 +240,13 @@ namespace Skuld.Services
 			bool retn;
 			if (gprefix!=null)
 			{
-				retn = message.HasStringPrefix(gprefix, ref config.ArgPos) || 
-					   message.HasStringPrefix(config.Prefix, ref config.ArgPos) || 
+				retn = message.HasStringPrefix(gprefix, ref config.ArgPos) ||
+					   message.HasStringPrefix(config.Prefix, ref config.ArgPos) ||
 					   message.HasStringPrefix(config.AltPrefix, ref config.ArgPos);
 			}
 			else
 			{
-				retn = message.HasStringPrefix(config.Prefix, ref config.ArgPos) || 
+				retn = message.HasStringPrefix(config.Prefix, ref config.ArgPos) ||
 					   message.HasStringPrefix(config.AltPrefix, ref config.ArgPos);
 			}
 			return retn;
@@ -198,8 +261,6 @@ namespace Skuld.Services
 			if (!cmdmods.AdminEnabled && command.Module.Name.ToLowerInvariant() == "admin")
 			{ return true; }
 			if (!cmdmods.FunEnabled && command.Module.Name.ToLowerInvariant() == "fun")
-			{ return true; }
-			if (!cmdmods.HelpEnabled && command.Module.Name.ToLowerInvariant() == "help")
 			{ return true; }
 			if (!cmdmods.InformationEnabled && command.Module.Name.ToLowerInvariant() == "information")
 			{ return true; }
@@ -232,7 +293,7 @@ namespace Skuld.Services
 		{
 			var watch = new Stopwatch();
 			watch.Start();
-			var result = await commandService.ExecuteAsync(context, config.ArgPos, Bot.services);
+			var result = await commandService.ExecuteAsync(context, config.ArgPos, HostService.Services);
 			watch.Stop();
 
 			if (result.IsSuccess)
@@ -250,14 +311,14 @@ namespace Skuld.Services
 				bool displayerror = true;
 				if (result.ErrorReason.Contains("few parameters"))
 				{
-					var cmdembed = Tools.Tools.GetCommandHelp(commandService, context, command.Name);
+					var cmdembed = DiscordUtilities.GetCommandHelp(commandService, context, command.Name);
 					await SendChannelAsync(context.Channel, "You seem to be missing a parameter or 2, here's the help", cmdembed).ConfigureAwait(false);
 					displayerror = false;
 				}
 
 				if (result.Error != CommandError.UnknownCommand && !result.ErrorReason.Contains("Timeout") && displayerror)
 				{
-					await logger.AddToLogsAsync(new Models.LogMessage("CmdHand", "Error with command, Error is: " + result, LogSeverity.Error));
+					await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("CmdHand", "Error with command, Error is: " + result, LogSeverity.Error));
 					await SendChannelAsync(context.Channel, "", new EmbedBuilder { Author = new EmbedAuthorBuilder { Name = "Error with the command" }, Description = Convert.ToString(result.ErrorReason), Color = new Color(255, 0, 0) }.Build()).ConfigureAwait(false);
 				}
 				DogStatsd.Increment("commands.errors");
@@ -288,7 +349,7 @@ namespace Skuld.Services
 				}
 			}
 		}
-				
+
 		//MessageSending
 		public async Task<IUserMessage> SendChannelAsync(IChannel channel, string message)
 		{
@@ -298,12 +359,12 @@ namespace Skuld.Services
 				var mesgChan = (IMessageChannel)channel;
 				if (channel == null || textChan == null || mesgChan == null) { return null; }
 				await mesgChan.TriggerTypingAsync();
-				await logger.AddToLogsAsync(new Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
+				await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
 				return await mesgChan.SendMessageAsync(message);
 			}
 			catch (Exception ex)
 			{
-				await logger.AddToLogsAsync(new Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
+				await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
 				return null;
 			}
 		}
@@ -332,12 +393,12 @@ namespace Skuld.Services
 				{
 					msg = await mesgChan.SendMessageAsync(message, false, embed);
 				}
-				await logger.AddToLogsAsync(new Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
+				await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
 				return msg;
 			}
 			catch (Exception ex)
 			{
-				await logger.AddToLogsAsync(new Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
+				await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
 				return null;
 			}
 		}
@@ -351,12 +412,12 @@ namespace Skuld.Services
 			try
 			{
 				msg = await mesgChan.SendFileAsync(filename, message);
-				await logger.AddToLogsAsync(new Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
+				await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
 				return msg;
 			}
 			catch (Exception ex)
 			{
-				await logger.AddToLogsAsync(new Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
+				await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
 				return null;
 			}
 		}
@@ -370,12 +431,12 @@ namespace Skuld.Services
 				if (channel == null || textChan == null || mesgChan == null) { return; }
 				await mesgChan.TriggerTypingAsync();
 				IUserMessage msg = await mesgChan.SendMessageAsync(message);
-				await logger.AddToLogsAsync(new Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
+				await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
                 await msg.DeleteAfterSecondsAsync((int)timeout);
 			}
 			catch (Exception ex)
 			{
-				await logger.AddToLogsAsync(new Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
+				await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
 			}
 		}
 		public async Task SendChannelAsync(IChannel channel, string message, double timeout, Embed embed)
@@ -403,12 +464,12 @@ namespace Skuld.Services
 				{
 					msg = await mesgChan.SendMessageAsync(message, isTTS: false, embed: embed);
 				}
-				await logger.AddToLogsAsync(new Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
+				await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
                 await msg.DeleteAfterSecondsAsync((int)timeout);
 			}
 			catch (Exception ex)
 			{
-				await logger.AddToLogsAsync(new Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
+				await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
 			}
 		}
 		public async Task SendChannelAsync(IChannel channel, string message, double timeout, string filename)
@@ -420,12 +481,12 @@ namespace Skuld.Services
 			try
 			{
 				IUserMessage msg = await mesgChan.SendFileAsync(filename, message);
-				await logger.AddToLogsAsync(new Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
+				await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
                 await msg.DeleteAfterSecondsAsync((int)timeout);
 			}
 			catch (Exception ex)
 			{
-				await logger.AddToLogsAsync(new Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
+				await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
 			}
 		}
 
@@ -440,7 +501,7 @@ namespace Skuld.Services
 			}
 			catch (Exception ex)
 			{
-				await logger.AddToLogsAsync(new Models.LogMessage("MsgH-DM", "Error dispatching Direct Message to user, sending to channel instead. Printed exception to logs.", LogSeverity.Warning, ex));
+				await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("MsgH-DM", "Error dispatching Direct Message to user, sending to channel instead. Printed exception to logs.", LogSeverity.Warning, ex));
 				await SendChannelAsync(channel, "I couldn't send it to your DMs, so I sent it here instead... I hope you're not mad. <:blobcry:350681079415439361> " + message);
 				return null;
 			}
@@ -456,12 +517,12 @@ namespace Skuld.Services
 			}
 			catch (Exception ex)
 			{
-				await logger.AddToLogsAsync(new Models.LogMessage("MsgH-DM", "Error dispatching Direct Message to user, sending to channel instead. Printed exception to logs.", LogSeverity.Warning, ex));
+				await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("MsgH-DM", "Error dispatching Direct Message to user, sending to channel instead. Printed exception to logs.", LogSeverity.Warning, ex));
 				await SendChannelAsync(channel, "I couldn't send it to your DMs, so I sent it here instead... I hope you're not mad. <:blobcry:350681079415439361> " + message, embed);
 				return null;
 			}
 		}
-		
+
 		private async Task InsertCommand(CommandInfo command, IUser user)
 		{
 			var suser = await database.GetUserAsync(user.Id);

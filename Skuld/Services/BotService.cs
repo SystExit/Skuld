@@ -3,41 +3,44 @@ using System.Threading.Tasks;
 using System.Threading;
 using Discord;
 using Discord.WebSocket;
-using System.IO;
-using System.Net.Http;
-using System.Text;
-using Skuld.Tools;
 using System.Linq;
 using StatsdClient;
-using System.Net;
-using Skuld.Tools.Stats;
+using Skuld.Core.Models;
+using Skuld.Core.Services;
+using Skuld.Core.Utilities.Stats;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Skuld.Services
 {
     public class BotService
     {
+        HostService HostService;
         DiscordShardedClient client;
-        LoggingService logger;
-        Config config;
+        DiscordLogger logger;
+        SkuldConfig config;
         MessageService messageService;
         TwitchService twitch;
-        SoftwareStats softwareStats;
 
         public BotService(DiscordShardedClient shard,
-            LoggingService log,
+            DiscordLogger log,
             MessageService msg,
-            TwitchService twit,
-            SoftwareStats soft)
+            TwitchService twit)
         {
             client = shard;
             logger = log;
             twitch = twit;
-            softwareStats = soft;
             messageService = msg;
         }
-		
-		public void AddConfg(Config conf)
-		{ config = conf; }
+
+		public void AddConfg(SkuldConfig conf)
+		{
+            config = conf;
+        }
+
+        public void AddHostService(HostService host)
+        {
+            HostService = host;
+        }
 
 		public async Task StartAsync()
 		{
@@ -45,110 +48,52 @@ namespace Skuld.Services
 			{
 				await twitch.LoginAsync(config.APIS.TwitchToken);
 
+                logger.RegisterEvents();
+
 				await client.LoginAsync(TokenType.Bot, config.Discord.Token);
 				await client.StartAsync();
 
-				Parallel.Invoke(() => SendDataToDataDog());
+                Parallel.Invoke(() => SendDataToDataDog());
 
-				//await UpdateStatsAsync().ConfigureAwait(false);
+                //await UpdateStatsAsync().ConfigureAwait(false);
 
-				await Task.Delay(-1).ConfigureAwait(false);
+                await Task.Delay(-1).ConfigureAwait(false);
 			}
 			catch (Exception ex)
 			{
-				await logger.AddToLogsAsync(new Models.LogMessage("Strt-Bot", "ERROR WITH THE BOT", LogSeverity.Error, ex));
+				await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("BotService", "ERROR WITH THE BOT", LogSeverity.Error, ex));
 				DogStatsd.Event("FrameWork", $"Bot Crashed on start: {ex}", alertType: "error", hostname: "Skuld");
 				await StopBotAsync("Init-Bt").ConfigureAwait(false);
 			}
 		}
-		
-		public async Task StopBotAsync(string source)
+
+        public async Task StopBotAsync(string source)
 		{
 			logger.UnRegisterEvents();
 			await client.SetStatusAsync(UserStatus.Offline);
-			await logger.AddToLogsAsync(new Models.LogMessage(source, "Skuld is shutting down", LogSeverity.Info));
+			await logger.logger.AddToLogsAsync(new Core.Models.LogMessage(source, "Skuld is shutting down", LogSeverity.Info));
 			DogStatsd.Event("FrameWork", $"Bot Stopped", alertType: "info", hostname: "Skuld");
 
-			await logger.sw.WriteLineAsync("-------------------------------------------").ConfigureAwait(false);
-			logger.sw.Close();
+			await logger.logger.sw.WriteLineAsync("-------------------------------------------").ConfigureAwait(false);
+			logger.logger.sw.Close();
 
 			await Console.Out.WriteLineAsync("Bot shutdown").ConfigureAwait(false);
 			Console.ReadLine();
 			Environment.Exit(0);
-		}
+        }
 
-		Task SendDataToDataDog()
-		{
-			while (true)
-			{
-				int users = 0;
-				foreach (var guild in client.Guilds)
-				{
-					users += guild.MemberCount;
-					Task.Delay(500);
-				}
-				DogStatsd.Gauge("shards.count", client.Shards.Count);
-				DogStatsd.Gauge("shards.connected", client.Shards.Count(x => x.ConnectionState == ConnectionState.Connected));
-				DogStatsd.Gauge("shards.disconnected", client.Shards.Count(x => x.ConnectionState == ConnectionState.Disconnected));
-				DogStatsd.Gauge("commands.count", messageService.commandService.Commands.Count());
-				DogStatsd.Gauge("guilds.total", client.Guilds.Count);
-				DogStatsd.Gauge("users.total", users);
-				Thread.Sleep(TimeSpan.FromSeconds(5));
-			}
-		}
-
-		public async Task<string> UpdateStatsAsync()
-		{
-			System.Collections.Generic.List<Models.API.BotStats> botStats = new System.Collections.Generic.List<Models.API.BotStats>();
-			for (var x = 0; x < client.Shards.Count; x++)
-			{
-				botStats.Add(new Models.API.BotStats
-				{
-					ServerCount = client.GetShard(x).Guilds.Count,
-					ShardCount = client.Shards.Count,
-					ShardID = x
-				});
-				await PublishStatsAsync(x).ConfigureAwait(false);
-			}
-
-			var webclient = (HttpWebRequest)WebRequest.Create(new Uri($"https://skuld.systemexit.co.uk/tools/updateStats.php"));
-			webclient.ContentType = "application/json";
-			webclient.Method = "POST";
-			webclient.Headers.Add(HttpRequestHeader.Authorization, config.BotListing.SysExToken);
-			using (var swriter = new StreamWriter(await webclient.GetRequestStreamAsync()))
-			{
-				swriter.Write(Newtonsoft.Json.JsonConvert.SerializeObject(botStats));
-				await swriter.FlushAsync();
-				swriter.Close();
-			}
-			var response = (HttpWebResponse)await webclient.GetResponseAsync();
-			using (var streamReader = new StreamReader(response.GetResponseStream()))
-			{
-				var result = streamReader.ReadToEnd();
-				return result;
-			}
-		}
-
-		public async Task PublishStatsAsync(int shardid)
-		{
-			var bstats = new Models.API.BotStats()
-			{
-				ServerCount = client.GetShard(shardid).Guilds.Count,
-				ShardCount = client.Shards.Count,
-				ShardID = shardid
-			};
-			using (var webclient = new HttpClient())
-			using (var content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(bstats), Encoding.UTF8, "application/json"))
-			{
-				webclient.DefaultRequestHeaders.Add("Authorization", config.BotListing.DBotsOrgKey);
-				await webclient.PostAsync(new Uri($"https://discordbots.org/api/bots/{client.CurrentUser.Id}/stats"), content);
-			}
-			using (var webclient = new HttpClient())
-			using (var content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(bstats), Encoding.UTF8, "application/json"))
-			{
-				webclient.DefaultRequestHeaders.Add("Authorization", config.BotListing.DiscordPWKey);
-				await webclient.PostAsync(new Uri($"https://bots.discord.pw/api/bots/{client.CurrentUser.Id}/stats"), content);
-			}
-		}
-	}
+        Task SendDataToDataDog()
+        {
+            while (true)
+            {
+                DogStatsd.Gauge("shards.count", client.Shards.Count);
+                DogStatsd.Gauge("shards.connected", client.Shards.Count(x => x.ConnectionState == ConnectionState.Connected));
+                DogStatsd.Gauge("shards.disconnected", client.Shards.Count(x => x.ConnectionState == ConnectionState.Disconnected));
+                DogStatsd.Gauge("commands.count", messageService.commandService.Commands.Count());
+                DogStatsd.Gauge("guilds.total", client.Guilds.Count);
+                HostService.Services.GetRequiredService<HardwareStats>().CPU.Feed();
+                Thread.Sleep(TimeSpan.FromSeconds(5));
+            }
+        }
+    }
 }

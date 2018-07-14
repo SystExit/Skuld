@@ -8,7 +8,9 @@ using Google.Apis.Customsearch.v1;
 using YoutubeExplode;
 using System.Linq;
 using Skuld.Extensions;
-using Skuld.Utilities;
+using Skuld.Core.Services;
+using Skuld.Core.Models;
+using Skuld.Utilities.Discord;
 
 namespace Skuld.Services
 {
@@ -17,7 +19,8 @@ namespace Skuld.Services
         public CustomsearchService GoogleSearchService { get; set; }
         public YoutubeClient Youtube { get; set; }
         public ImgurClient ImgurClient { get; set; }
-        public LoggingService Logger { get; set; }
+        public GenericLogger Logger { get; set; }
+        public SkuldConfig Configuration { get; set; }
 
         public async Task<string> SearchImgurAsync(string query)
         {
@@ -39,7 +42,7 @@ namespace Skuld.Services
             catch (Exception ex)
             {
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "exception" });
-                await Logger.AddToLogsAsync(new Models.LogMessage("ImgrSch", "Error with Imgur search", LogSeverity.Error, ex));
+                await Logger.AddToLogsAsync(new Core.Models.LogMessage("ImgrSch", "Error with Imgur search", LogSeverity.Error, ex));
                 return $"Error with search: {ex.Message}";
             }
         }
@@ -62,7 +65,7 @@ namespace Skuld.Services
             catch (Exception ex)
             {
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "exception" });
-                await Logger.AddToLogsAsync(new Models.LogMessage("YTBSrch", "Error with Youtube Search", LogSeverity.Error, ex));
+                await Logger.AddToLogsAsync(new Core.Models.LogMessage("YTBSrch", "Error with Youtube Search", LogSeverity.Error, ex));
                 return $"Error with search: {ex.Message}";
             }
         }
@@ -72,7 +75,7 @@ namespace Skuld.Services
             try
             {
                 var listRequest = GoogleSearchService.Cse.List(query);
-                listRequest.Cx = Bot.Configuration.APIS.GoogleCx;
+                listRequest.Cx = Configuration.APIS.GoogleCx;
                 listRequest.Safe = CseResource.ListRequest.SafeEnum.High;
                 var search = await listRequest.ExecuteAsync();
                 var items = search.Items;
@@ -123,7 +126,7 @@ namespace Skuld.Services
             catch (Exception ex)
             {
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "exception" });
-                await Logger.AddToLogsAsync(new Models.LogMessage("GogSrch", "Error with google search", LogSeverity.Error, ex));
+                await Logger.AddToLogsAsync(new Core.Models.LogMessage("GogSrch", "Error with google search", LogSeverity.Error, ex));
                 return new EmbedBuilder
                 {
                     Title = "Error with the command",

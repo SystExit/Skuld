@@ -1,44 +1,49 @@
 ﻿using System;
-using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
-using Newtonsoft.Json;
-using System.Xml;
-using System.Xml.Linq;
-using Newtonsoft.Json.Linq;
-using System.Linq;
-using Skuld.Models.API;
-using Skuld.APIS;
-using Skuld.Tools;
-using System.IO;
-using Discord.Addons.Interactive;
+using Skuld.Commands;
+using Skuld.Utilities.Discord;
 using Skuld.Services;
-using PokeSharp;
-using SteamStoreQuery;
-using SteamWebAPI2.Interfaces;
+using System.Threading.Tasks;
+using System.Linq;
+using Skuld.Core.Services;
+using Discord.Addons.Interactive;
 using Skuld.Extensions;
-using Skuld.Models;
-using Skuld.Utilities;
+using PokeSharp;
+using SteamWebAPI2.Interfaces;
+using Skuld.APIS;
+using Skuld.Core.Commands.Attributes;
+using SteamStoreQuery;
+using Skuld.APIS.Pokemon.Models;
+using System.IO;
+using Skuld.Core.Extensions;
+using Skuld.Core.Models;
 
 namespace Skuld.Modules
 {
     [Group]
-    public class Search : InteractiveBase<ShardedCommandContext>
+    public class Search : SkuldBase<ShardedCommandContext>
     {
         public TwitchService Twitch { get; set; }
         public SocialAPIS Social { get; set; }
-        public LoggingService Logger { get; set; }
+        public GenericLogger Logger { get; set; }
         public Random Random { get; set; }
         public PokeSharpClient PokeMonClient { get; set; }
         public SteamStore SteamStoreClient { get; set; }
         public SearchService SearchClient { get; set; }
+        public UrbanDictionaryClient UrbanDictionary { get; set; }
+        public WikipediaClient Wikipedia { get; set; }
+        public GiphyClient Giphy { get; set; }
+        public Stands4Client Stands4 { get; set; }
+        public BaseClient WebHandler { get; set; }
+        public SkuldConfig Configuration { get; set; }
 
         [Command("twitch"), Summary("Finds a twitch user")]
         public async Task TwitchSearch([Remainder]string twitchStreamer)
         {
             var channel = await Twitch.GetUserAsync(twitchStreamer);
 
-            await Context.Channel.ReplyAsync(await channel.GetEmbedAsync());
+            await ReplyAsync(Context.Channel, await channel.GetEmbedAsync());
         }
 
         [Command("instagram"), Alias("insta"), Ratelimit(20, 1, Measure.Minutes)]
@@ -51,7 +56,7 @@ namespace Skuld.Modules
                 {
                     if (data.TimelineMedia.Images.Count() > 0)
                     {
-                        Models.API.Social.Instagram.Image post = data.TimelineMedia.Images.FirstOrDefault().Node;
+                        var post = data.TimelineMedia.Images.FirstOrDefault().Node;
 
                         var embed = new EmbedBuilder
                         {
@@ -72,16 +77,16 @@ namespace Skuld.Modules
                             },
                             Color = EmbedUtils.RandomColor()
                         };
-                        await Context.Channel.ReplyAsync(embed.Build());
+                        await ReplyAsync(Context.Channel, embed.Build());
                     }
                     else
-                        await Context.Channel.ReplyAsync("This account has no images in their feed");
+                        await ReplyAsync(Context.Channel, "This account has no images in their feed");
                 }
                 else
-                    await Context.Channel.ReplyAsync("This account is a Private Account, so I can't access their feed.");
+                    await ReplyAsync(Context.Channel, "This account is a Private Account, so I can't access their feed.");
             }
             else
-                await Context.Channel.ReplyAsync($"I can't find an account named: `{usr}`. Check your spelling and try again.");
+                await ReplyAsync(Context.Channel, $"I can't find an account named: `{usr}`. Check your spelling and try again.");
         }
 
         [Command("steam"), Summary("Searches steam store")]
@@ -106,7 +111,7 @@ namespace Skuld.Modules
                     }
                     else
                     {
-                        await Context.Channel.ReplyAsync("Type the number of what you want:\n" + String.Join("\n", Pages));
+                        await ReplyAsync(Context.Channel, "Type the number of what you want:\n" + String.Join("\n", Pages));
                     }
 
                     var message = await NextMessageAsync();
@@ -114,22 +119,22 @@ namespace Skuld.Modules
                     int.TryParse(message.Content, out int selectedapp);
                     if (selectedapp <= 0)
                     {
-                        await Context.Channel.ReplyAsync("Incorrect input");
+                        await ReplyAsync(Context.Channel, "Incorrect input");
                         return;
                     }
 
                     selectedapp--;
 
-                    await Context.Channel.ReplyAsync(await steam[selectedapp].GetEmbedAsync());
+                    await ReplyAsync(Context.Channel, await steam[selectedapp].GetEmbedAsync());
                 }
                 else
                 {
-                    await Context.Channel.ReplyAsync(await steam[0].GetEmbedAsync());
+                    await ReplyAsync(Context.Channel, await steam[0].GetEmbedAsync());
                 }
             }
             else
             {
-                await Context.Channel.ReplyAsync("I found nothing from steam");
+                await ReplyAsync(Context.Channel, "I found nothing from steam");
             }
         }
 
@@ -140,17 +145,17 @@ namespace Skuld.Modules
             if (platform == "google" || platform == "g")
             {
                 var result = await SearchClient.SearchGoogleAsync(query);
-                await Context.Channel.ReplyAsync(result);
+                await ReplyAsync(Context.Channel, result);
             }
             if (platform == "youtube" || platform == "yt")
             {
                 var result = await SearchClient.SearchYoutubeAsync(query);
-                await Context.Channel.ReplyAsync(result);
+                await ReplyAsync(Context.Channel, result);
             }
             if (platform == "imgur")
             {
                 var result = await SearchClient.SearchImgurAsync(query);
-                await Context.Channel.ReplyAsync(result);
+                await ReplyAsync(Context.Channel, result);
             }
         }
 
@@ -172,10 +177,10 @@ namespace Skuld.Modules
             if (engine == "d" || engine == "duckduckgo")
             { url = url + "?s=d&q=" + query.Replace(" ", "%20"); }
             if (url != "https://lmgtfy.com/")
-                await Context.Channel.ReplyAsync(url);
+                await ReplyAsync(Context.Channel, url);
             else
             {
-                await Context.Channel.ReplyAsync(new EmbedBuilder { Author = new EmbedAuthorBuilder { Name = "Error with command" }, Color = Color.Red, Description = $"Ensure your parameters are correct, example: `{Bot.Configuration.Discord.Prefix}lmgtfy g How to use lmgtfy`" }.Build());
+                await ReplyAsync(Context.Channel, new EmbedBuilder { Author = new EmbedAuthorBuilder { Name = "Error with command" }, Color = Color.Red, Description = $"Ensure your parameters are correct, example: `{Configuration.Discord.Prefix}lmgtfy g How to use lmgtfy`" }.Build());
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new[] { "generic" });
             }
         }
@@ -184,23 +189,15 @@ namespace Skuld.Modules
         public async Task Urban([Remainder]string phrase = null)
         {
             if (phrase == null)
-                await Context.Channel.ReplyAsync((await UrbanDictionary.GetRandomWordAsync()).ToEmbed());
+                await ReplyAsync(Context.Channel, (await UrbanDictionary.GetRandomWordAsync()).ToEmbed());
             else
-                await Context.Channel.ReplyAsync((await UrbanDictionary.GetPhraseAsync(phrase)).ToEmbed());
+                await ReplyAsync(Context.Channel, (await UrbanDictionary.GetPhraseAsync(phrase)).ToEmbed());
         }
 
         [Command("wikipedia"), Summary("Gets wikipedia information, supports all languages that wikipedia offers"), Alias("wiki")]
         public async Task Wiki(string langcode, [Remainder]string query)
         {
-            var jsonresp = JObject.Parse((await WebHandler.ReturnStringAsync(new Uri($"https://{langcode}.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles={query}"))));
-            dynamic item = jsonresp["query"]["pages"].First.First;
-            string desc = Convert.ToString(item["extract"]);
-            var page = new Wiki()
-            {
-                Name = item["title"].ToString(),
-                Description = desc.Remove(500) + "...\nRead more at the article.",
-                Url = $"https://{langcode}.wikipedia.org/wiki/{query}"
-            };
+            var page = await Wikipedia.GetArticleAsync(langcode, query);
             var embed = new EmbedBuilder
             {
                 Author = new EmbedAuthorBuilder
@@ -211,7 +208,7 @@ namespace Skuld.Modules
                 Color = EmbedUtils.RandomColor()
             };
             embed.AddField("Description", page.Description ?? "Not Available", true);
-            await Context.Channel.ReplyAsync(embed.Build());
+            await ReplyAsync(Context.Channel, embed.Build());
         }
 
         [Command("gif"), Summary("Gets a gif")]
@@ -229,20 +226,15 @@ namespace Skuld.Modules
             };
             try
             {
-                query = query.Replace(" ", "%20");
-                var rawresp = await WebHandler.ReturnStringAsync(new Uri($"https://api.giphy.com/v1/gifs/search?q={query}&api_key=dc6zaTOxFJmzC"));
-                var jsonresp = JObject.Parse(rawresp);
-                var photo = (JArray)jsonresp["data"];
-                dynamic item = photo[Random.Next(0, photo.Count)];
-                var gif = new Gif(item["id"].ToString());
+                var gif = await Giphy.GetGifAsync(query);
                 embed.Url = gif.Url;
                 embed.ImageUrl = gif.Url;
-                await Context.Channel.ReplyAsync(embed.Build());
+                await ReplyAsync(Context.Channel, embed.Build());
             }
             catch (Exception ex)
             {
                 if (ex is ArgumentOutOfRangeException)
-                { await Context.Channel.ReplyAsync(Context.User.Mention + " No results found for: `" + query + "`"); }
+                { await ReplyWithMentionAsync(Context.Channel, Context.User, "No results found for: `" + query + "`"); }
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
             }
         }
@@ -250,13 +242,8 @@ namespace Skuld.Modules
         [Command("define"), Summary("Defines a word")]
         public async Task Define([Remainder]string word)
         {
-            var stringifiedxml = await WebHandler.ReturnStringAsync(new Uri($"http://www.stands4.com/services/v2/defs.php?uid={Bot.Configuration.APIS.STANDSUid}&tokenid={Bot.Configuration.APIS.STANDSToken}&word={word}"));
-            var xml = new XmlDocument();
-            xml.LoadXml(stringifiedxml);
-            XObject xNode = XDocument.Parse(xml.InnerXml);
-            var jobject = JObject.Parse(JsonConvert.SerializeXNode(xNode));
-            dynamic item = jobject["results"]["result"].First();
-            var definedword = new Define(word, item["definition"].ToString(), item["example"].ToString(), item["partofspeech"].ToString(), item["term"].ToString());
+            var definedword = await Stands4.GetWordAsync(word);
+
             var embed = new EmbedBuilder
             {
                 Author = new EmbedAuthorBuilder
@@ -269,7 +256,8 @@ namespace Skuld.Modules
             embed.AddField("Example", definedword.Example ?? "Not Available");
             embed.AddField("Part of speech", definedword.PartOfSpeech ?? "Not Available", inline: true);
             embed.AddField("Terms", definedword.Terms ?? "Not Available", inline: true);
-            await Context.Channel.ReplyAsync(embed.Build());
+
+            await ReplyAsync(Context.Channel, embed.Build());
         }
 
         [Command("reddit"), Summary("Gets a subreddit")]
@@ -289,7 +277,7 @@ namespace Skuld.Modules
                 }
             };
 
-            paginatedMessage.Pages = subReddit.Data.Posts.PaginatePosts(channel);            
+            paginatedMessage.Pages = subReddit.Data.Posts.PaginatePosts(channel);
 
             if (paginatedMessage.Pages.Count() > 1)
             {
@@ -308,7 +296,7 @@ namespace Skuld.Modules
                     Color = Color.Blue
                 };
 
-                await Context.Channel.ReplyAsync(embed.Build());
+                await ReplyAsync(Context.Channel, embed.Build());
             }
         }
 
@@ -323,7 +311,7 @@ namespace Skuld.Modules
         {
             if (pokemon == null)
             {
-                await Context.Channel.ReplyAsync(new EmbedBuilder
+                await ReplyAsync(Context.Channel, new EmbedBuilder
                 {
                     Color = Color.Red,
                     Title = "Command Error!",
@@ -361,7 +349,7 @@ namespace Skuld.Modules
                 {
                     embed = pokemon.GetEmbed(PokeSharpGroup.Games);
                 }
-                await Context.Channel.ReplyAsync(embed);
+                await ReplyAsync(Context.Channel, embed);
             }
         }
 
@@ -421,7 +409,7 @@ namespace Skuld.Modules
             { await Context.Channel.SendFileAsync(filepath); }
             else
             {
-                await Context.Channel.ReplyAsync("The user either doesn't exist or they haven't played osu!" + msgmode);
+                await ReplyAsync(Context.Channel, "The user either doesn't exist or they haven't played osu!" + msgmode);
             }
 
             file.Close();

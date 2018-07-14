@@ -1,31 +1,39 @@
 ﻿using System;
-using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Diagnostics;
+using Skuld.Commands;
+using Skuld.Core.Utilities.Stats;
+using Skuld.Utilities.Discord;
 using Skuld.Services;
-using Skuld.Tools.Stats;
-using Skuld.Extensions;
-using Skuld.Utilities;
+using System.Threading.Tasks;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Linq;
 
 namespace Skuld.Modules
 {
     [Group]
-    public class Stats : ModuleBase<ShardedCommandContext>
+    public class Stats : SkuldBase<ShardedCommandContext>
     {
         public HardwareStats HStats { get; set; }
         public SoftwareStats SStats { get; set; }
-        public MessageService MessageService { get; set; }
+        public MessageService messageService { get; set; }
 
         [Command("ping"), Summary("Print Ping")]
-        public async Task Ping() =>
-            await Context.Channel.ReplyAsync("PONG: " + Context.Client.GetShardFor(Context.Guild).Latency + "ms");
+        public async Task Ping()
+            => await ReplyAsync(Context.Channel, $"PONG: {Context.Client.GetShardFor(Context.Guild).Latency}ms");
 
         [Command("uptime"), Summary("Current Uptime")]
-        public async Task Uptime() =>
-            await Context.Channel.ReplyAsync($"Uptime: {string.Format("{0:dd} Days {0:hh} Hours {0:mm} Minutes {0:ss} Seconds", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}");
+        public async Task Uptime()
+            => await ReplyAsync(Context.Channel, $"Uptime: {string.Format("{0:dd} Days {0:hh} Hours {0:mm} Minutes {0:ss} Seconds", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}");
+
+        [Command("netfw"), Summary(".Net Info")]
+        public async Task Netinfo()
+            => await ReplyAsync(Context.Channel, $"{RuntimeInformation.FrameworkDescription} {RuntimeInformation.OSArchitecture}");
+
+        [Command("discord"), Summary("Discord Info")]
+        public async Task Discnet()
+            => await ReplyAsync(Context.Channel, $"Discord.Net Library Version: {DiscordConfig.Version}");
 
         [Command("stats"), Summary("All stats")]
         public async Task StatsAll()
@@ -53,7 +61,7 @@ namespace Skuld.Modules
                 "Ping: " + Context.Client.GetShardFor(Context.Guild).Latency + "ms\n" +
                 "Guilds: " + Context.Client.Guilds.Count + "\n" +
                 "Shards: " + Context.Client.Shards.Count + "\n" +
-                "Commands: " + MessageService.commandService.Commands.Count();
+                "Commands: " + messageService.commandService.Commands.Count();
 
             string systemstats =
                 "CPU Used: " + HStats.CPU.GetCPUUsage + "%\n" +
@@ -64,16 +72,7 @@ namespace Skuld.Modules
             embed.AddField("APIs", apiversions);
             embed.AddField("System", systemstats);
 
-            await Context.Channel.ReplyAsync(embed.Build());
+            await ReplyAsync(Context.Channel, embed.Build());
         }
-
-        [Command("netfw"), Summary(".Net Info")]
-        public async Task Netinfo() =>
-            await Context.Channel.ReplyAsync($"{RuntimeInformation.FrameworkDescription} {RuntimeInformation.OSArchitecture}");
-
-        [Command("discord"), Summary("Discord Info")]
-        public async Task Discnet() =>
-            await Context.Channel.ReplyAsync($"Discord.Net Library Version: {DiscordConfig.Version}");
-
     }
 }

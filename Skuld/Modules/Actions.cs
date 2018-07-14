@@ -1,138 +1,135 @@
 ﻿using System;
-using System.Threading.Tasks;
-using Discord.Commands;
+using System.Collections.Generic;
+using System.Text;
 using Discord;
-using SysEx.Net;
+using Discord.Commands;
+using Skuld.Commands;
+using Skuld.Core.Models;
 using Skuld.Services;
-using Skuld.Utilities;
-using Skuld.Extensions;
+using Skuld.Core.Services;
+using System.Threading.Tasks;
+using SysEx.Net;
+using Skuld.Utilities.Discord;
 
 namespace Skuld.Modules
 {
     [Group]
-    public class Actions : ModuleBase<ShardedCommandContext>
+    public class Actions : SkuldBase<ShardedCommandContext>
     {
         public Random Random { get; set; }
+        public SkuldConfig Configuration { get; set; }
         public DatabaseService Database { get; set; }
+        public GenericLogger Logger { get; set; }
         public SysExClient SysExClient { get; set; }
 
         [Command("slap"), Summary("Slap a user")]
-        public async Task Slap([Remainder]IGuildUser guilduser)
+        public async Task Slap([Remainder]IGuildUser user)
         {
-            var contuser = Context.User as IGuildUser;
             var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
             var gif = await SysExClient.GetWeebActionGifAsync(GifType.Slap).ConfigureAwait(false);
 
-            if (guilduser == contuser)
+            if (user == Context.User as IGuildUser)
             {
-                await SendAsync($"B-Baka.... {botguild.Mention} slapped {contuser.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"B-Baka.... {botguild.Mention} slapped {Context.User.Mention}", gif.URL).ConfigureAwait(false);
             }
             else
             {
-                await SendAsync($"{contuser.Mention} slapped {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} slapped {user.Mention}", gif.URL).ConfigureAwait(false);
             }
         }
 
         [Command("kill"), Summary("Kills a user")]
-        public async Task Kill([Remainder]IGuildUser guilduser)
+        public async Task Kill([Remainder]IGuildUser user)
         {
             var gif = await SysExClient.GetWeebActionGifAsync(GifType.Kill).ConfigureAwait(false);
 
-            var contuser = Context.User as IGuildUser;
-            if (contuser == guilduser)
+            if (user == Context.User as IGuildUser)
             {
-                await SendAsync($"{contuser.Mention} killed themself", "http://i.giphy.com/l2JeiuwmhZlkrVOkU.gif").ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} killed themself", "http://i.giphy.com/l2JeiuwmhZlkrVOkU.gif").ConfigureAwait(false);
             }
             else
             {
-                await SendAsync($"{contuser.Mention} killed {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} killed {user.Mention}", gif.URL).ConfigureAwait(false);
             }
         }
 
         [Command("stab"), Summary("Stabs a user")]
-        public async Task Stab([Remainder]IGuildUser guilduser)
+        public async Task Stab([Remainder]IGuildUser user)
         {
-            var contuser = Context.User as IGuildUser;
-            var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
             var gif = await SysExClient.GetWeebActionGifAsync(GifType.Stab).ConfigureAwait(false);
 
-            if (contuser == guilduser)
+            if (user == Context.User as IGuildUser)
             {
-                await SendAsync($"URUSAI!! {botguild.Mention} stabbed {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
+                await SendAsync($"URUSAI!! {botguild.Mention} stabbed {user.Mention}", gif.URL).ConfigureAwait(false);
+                return;
             }
-            else if (guilduser.IsBot)
+            if (user.IsBot)
             {
-                await SendAsync($"{contuser.Mention} stabbed {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} stabbed {user.Mention}", gif.URL).ConfigureAwait(false);
+                return;
             }
-            else
+            if(Database.CanConnect)
             {
-                if (Database.CanConnect)
+                uint dhp = (uint)Random.Next(0, 100);
+
+                var usr = await Database.GetUserAsync(user.Id).ConfigureAwait(false);
+
+                if (usr != null)
                 {
-                    uint dhp = (uint)Random.Next(0, 100);
-
-                    var usr = await Database.GetUserAsync(guilduser.Id).ConfigureAwait(false);
-
-                    if (usr == null)
+                    if (dhp < usr.HP)
                     {
-                        await InsertUser(guilduser).ConfigureAwait(false);
+                        usr.HP -= dhp;
+
+                        await Database.UpdateUserAsync(usr);
+
+                        await SendAsync($"{Context.User.Mention} just stabbed {user.Mention} for {dhp} HP, they now have {usr.HP} HP left", gif.URL).ConfigureAwait(false);
                     }
                     else
                     {
-                        if (dhp < usr.HP)
-                        {
-                            usr.HP -= dhp;
+                        usr.HP = 0;
+                        await Database.UpdateUserAsync(usr);
 
-                            await Database.UpdateUserAsync(usr);
-
-                            await SendAsync($"{contuser.Mention} just stabbed {guilduser.Mention} for {dhp} HP, they now have {usr.HP} HP left", gif.URL).ConfigureAwait(false);
-                        }
-                        else
-                        {
-                            usr.HP = 0;
-                            await Database.UpdateUserAsync(usr);
-
-                            await SendAsync($"{contuser.Mention} just stabbed {guilduser.Mention} for {dhp} HP, they now have {usr.HP} HP left", gif.URL).ConfigureAwait(false);
-                        }
+                        await SendAsync($"{Context.User.Mention} just stabbed {user.Mention} for {dhp} HP, they now have {usr.HP} HP left", gif.URL).ConfigureAwait(false);
                     }
                 }
-                else
-                {
-                    await SendAsync($"{contuser.Mention} just stabbed {guilduser.Mention}", gif.URL).ConfigureAwait(false);
-                }
+            }
+            else
+            {
+                await SendAsync($"{Context.User.Mention} stabbed {user.Mention}", gif.URL).ConfigureAwait(false);
+                return;
             }
         }
 
         [Command("hug"), Summary("hugs a user")]
-        public async Task Hug([Remainder]IGuildUser guilduser)
+        public async Task Hug([Remainder]IGuildUser user)
         {
-            var contuser = Context.User as IGuildUser;
             var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
             var gif = await SysExClient.GetWeebActionGifAsync(GifType.Hug).ConfigureAwait(false);
 
-            if (guilduser == contuser)
+            if (user == Context.User as IGuildUser)
             {
-                await SendAsync($"{botguild.Mention} hugs {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{botguild.Mention} hugs {user.Mention}", gif.URL).ConfigureAwait(false);
             }
             else
             {
-                await SendAsync($"{contuser.Mention} just hugged {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} just hugged {user.Mention}", gif.URL).ConfigureAwait(false);
             }
         }
 
         [Command("punch"), Summary("Punch a user")]
-        public async Task Punch([Remainder]IGuildUser guilduser)
+        public async Task Punch([Remainder]IGuildUser user)
         {
-            var contuser = Context.User as IGuildUser;
             var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
             var gif = await SysExClient.GetWeebActionGifAsync(GifType.Punch).ConfigureAwait(false);
 
-            if (guilduser == contuser)
+            if (user == Context.User as IGuildUser)
             {
-                await SendAsync($"URUSAI!! {botguild.Mention} just punched {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"URUSAI!! {botguild.Mention} just punched {user.Mention}", gif.URL).ConfigureAwait(false);
             }
             else
             {
-                await SendAsync($"{contuser.Mention} just punched {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} just punched {user.Mention}", gif.URL).ConfigureAwait(false);
             }
         }
 
@@ -145,168 +142,140 @@ namespace Skuld.Modules
         }
 
         [Command("adore"), Summary("Adore a user")]
-        public async Task Adore([Remainder]IGuildUser guilduser)
+        public async Task Adore([Remainder]IGuildUser user)
         {
-            var contuser = Context.User as IGuildUser;
             var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
             var gif = await SysExClient.GetWeebActionGifAsync(GifType.Adore).ConfigureAwait(false);
 
-            if (guilduser == contuser)
+            if (user == Context.User as IGuildUser)
             {
-                await SendAsync($"I-it's not like I like you or anything... {botguild.Mention} adores {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"I-it's not like I like you or anything... {botguild.Mention} adores {user.Mention}", gif.URL).ConfigureAwait(false);
             }
             else
             {
-                await SendAsync($"{contuser.Mention} adores {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} adores {user.Mention}", gif.URL).ConfigureAwait(false);
             }
         }
 
         [Command("kiss"), Summary("Kiss a user")]
-        public async Task Kiss([Remainder]IGuildUser guilduser)
+        public async Task Kiss([Remainder]IGuildUser user)
         {
-            var contuser = Context.User as IGuildUser;
             var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
             var gif = await SysExClient.GetWeebActionGifAsync(GifType.Kiss).ConfigureAwait(false);
 
-            if (guilduser == contuser)
+            if (user == Context.User as IGuildUser)
             {
-                await SendAsync($"I-it's not like I like you or anything... {botguild.Mention} just kissed {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"I-it's not like I like you or anything... {botguild.Mention} just kissed {user.Mention}", gif.URL).ConfigureAwait(false);
             }
             else
             {
-                await SendAsync($"{contuser.Mention} just kissed {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} just kissed {user.Mention}", gif.URL).ConfigureAwait(false);
             }
         }
 
         [Command("grope"), Summary("Grope a user")]
-        public async Task Grope([Remainder]IGuildUser guilduser)
+        public async Task Grope([Remainder]IGuildUser user)
         {
-            var contuser = Context.User as IGuildUser;
             var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
             var gif = await SysExClient.GetWeebActionGifAsync(GifType.Grope).ConfigureAwait(false);
 
-            if (guilduser == contuser)
+            if (user == Context.User as IGuildUser)
             {
-                await SendAsync($"{botguild.Mention} just groped {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{botguild.Mention} just groped {user.Mention}", gif.URL).ConfigureAwait(false);
             }
             else
             {
-                await SendAsync($"{contuser.Mention} just groped {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} just groped {user.Mention}", gif.URL).ConfigureAwait(false);
             }
         }
 
-        [Command("pat"), Summary("Pats a user's head"), Alias("pet", "headpat")]
-        public async Task Pat([Remainder]IGuildUser guilduser)
+        [Command("pat"), Summary("Pat a user"), Alias("pet", "headpat")]
+        public async Task Pat([Remainder]IGuildUser user)
         {
-            var contuser = Context.User as IGuildUser;
-            var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
             var gif = await SysExClient.GetWeebActionGifAsync(GifType.Pet).ConfigureAwait(false);
 
-            if (contuser == guilduser)
+            if (user == Context.User as IGuildUser)
             {
-                await SendAsync($"{botguild.Mention} just headpatted {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
+                await SendAsync($"{botguild.Mention} just headpatted {user.Mention}", gif.URL).ConfigureAwait(false);
+                return;
             }
-            else if (guilduser.IsBot)
+            if (user.IsBot)
             {
-                await SendAsync($"{contuser.Mention} just headpatted {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} just headpatted {user.Mention}", gif.URL).ConfigureAwait(false);
+                return;
+            }
+            if(Database.CanConnect)
+            {
+                var cusr = await Database.GetUserAsync(Context.User.Id).ConfigureAwait(false);
+
+                if (cusr != null)
+                {
+                    cusr.Pats += 1;
+
+                    await Database.UpdateUserAsync(cusr).ConfigureAwait(false);
+
+                    var gusr = await Database.GetUserAsync(user.Id).ConfigureAwait(false);
+                    if (gusr != null)
+                    {
+                        gusr.Patted += 1;
+
+                        await Database.UpdateUserAsync(gusr).ConfigureAwait(false);
+
+                        await SendAsync($"{Context.User.Mention} just headpatted {user.Mention}, they've been petted {gusr.Patted} time(s)!", gif.URL).ConfigureAwait(false);
+                    }
+                }
             }
             else
             {
-                if (Database.CanConnect)
-                {
-                    var cusr = await Database.GetUserAsync(Context.User.Id).ConfigureAwait(false);
-
-                    if (cusr == null)
-                    {
-                        await InsertUser(contuser).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        cusr.Pets += 1;
-
-                        await Database.UpdateUserAsync(cusr).ConfigureAwait(false);
-
-                        var gusr = await Database.GetUserAsync(guilduser.Id).ConfigureAwait(false);
-                        if (gusr == null)
-                        {
-                            await InsertUser(guilduser).ConfigureAwait(false);
-                        }
-                        else
-                        {
-                            gusr.Petted += 1;
-
-                            await Database.UpdateUserAsync(gusr).ConfigureAwait(false);
-
-                            await SendAsync($"{contuser.Mention} just headpatted {guilduser.Mention}, they've been petted {gusr.Petted} time(s)!", gif.URL).ConfigureAwait(false);
-                        }
-                    }
-                }
-                else
-                {
-                    await SendAsync($"{contuser.Mention} just headpatted {guilduser.Mention}", gif.URL).ConfigureAwait(false);
-                }
+                await SendAsync($"{Context.User.Mention} just headpatted {user.Mention}", gif.URL).ConfigureAwait(false);
             }
         }
 
         [Command("glare"), Summary("Glares at a user")]
-        public async Task Glare([Remainder]IGuildUser guilduser)
+        public async Task Glare([Remainder]IGuildUser user)
         {
-            var contuser = Context.User as IGuildUser;
-            var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
             var gif = await SysExClient.GetWeebActionGifAsync(GifType.Glare).ConfigureAwait(false);
 
-            if (contuser == guilduser)
+            if (user == Context.User as IGuildUser)
             {
-                await SendAsync($"{botguild.Mention} glares at {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
+                await SendAsync($"{botguild.Mention} glares at {user.Mention}", gif.URL).ConfigureAwait(false);
             }
-            else if (guilduser.IsBot)
+            if (user.IsBot)
             {
-                await SendAsync($"{contuser.Mention} glares at {guilduser.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} glares at {user.Mention}", gif.URL).ConfigureAwait(false);
+            }
+
+            if (Database.CanConnect)
+            {
+                var usr = await Database.GetUserAsync(Context.User.Id).ConfigureAwait(false);
+
+                if (usr != null)
+                {
+                    usr.Glares += 1;
+
+                    await Database.UpdateUserAsync(usr).ConfigureAwait(false);
+
+                    var usr2 = await Database.GetUserAsync(user.Id).ConfigureAwait(false);
+
+                    if (usr2 != null)
+                    {
+                        usr2.GlaredAt += 1;
+
+                        await Database.UpdateUserAsync(usr2).ConfigureAwait(false);
+
+                        await SendAsync($"{Context.User.Mention} glares at {user.Mention}, they've been glared at {usr2.GlaredAt} time(s)!", gif.URL).ConfigureAwait(false);
+                    }
+                }
             }
             else
             {
-                if (Database.CanConnect)
-                {
-                    var usr = await Database.GetUserAsync(contuser.Id).ConfigureAwait(false);
-
-                    if (usr == null)
-                    {
-                        await InsertUser(contuser).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        usr.Glares += 1;
-
-                        await Database.UpdateUserAsync(usr).ConfigureAwait(false);
-
-                        var usr2 = await Database.GetUserAsync(guilduser.Id).ConfigureAwait(false);
-
-                        if (usr2 == null)
-                        {
-                            await InsertUser(guilduser).ConfigureAwait(false);
-                        }
-                        else
-                        {
-                            usr2.GlaredAt += 1;
-
-                            await Database.UpdateUserAsync(usr2).ConfigureAwait(false);
-
-                            await SendAsync($"{contuser.Mention} glares at {guilduser.Mention}, they've been glared at {usr2.GlaredAt} time(s)!", gif.URL).ConfigureAwait(false);
-                        }
-                    }
-                }
-                else
-                {
-                    await SendAsync($"{contuser.Mention} glares at {guilduser.Mention}", gif.URL).ConfigureAwait(false);
-                }
+                await SendAsync($"{Context.User.Mention} glares at {user.Mention}", gif.URL).ConfigureAwait(false);
             }
         }
 
-        private async Task InsertUser(IUser user)
-        {
-            await Database.InsertUserAsync(user);
-        }
         private async Task SendAsync(string message, string image)
-            => await Context.Channel.ReplyAsync(new EmbedBuilder { Description = message, Color = EmbedUtils.RandomColor(), ImageUrl = image }.Build());
+            => await ReplyAsync(Context.Channel, new EmbedBuilder { Description = message, Color = EmbedUtils.RandomColor(), ImageUrl = image }.Build());
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace Skuld.Models
+﻿namespace Skuld.APIS.Pokemon.Models
 {
     public enum PokeSharpGroup
     {

@@ -1,419 +1,213 @@
-﻿using System;
-using System.Threading.Tasks;
-using Discord.Commands;
+﻿using System.Threading.Tasks;
 using Discord;
+using Discord.Commands;
+using Skuld.Core.Models;
 using Skuld.Services;
-using Skuld.Tools;
-using System.Globalization;
+using Skuld.Core.Services;
+using Skuld.Commands.Preconditions;
+using Skuld.Commands;
 using Skuld.Extensions;
-using Skuld.Utilities;
+using Skuld.Core.Extensions;
+using System;
 
 namespace Skuld.Modules
 {
-    [Group]
-    public class Accounts : ModuleBase<ShardedCommandContext>
+    [Group, RequireDatabase, RequireHuman]
+    public class Profiles : SkuldBase<ShardedCommandContext>
     {
+        public SkuldConfig Configuration { get; set; }
         public DatabaseService Database { get; set; }
-        public LoggingService Logger { get; set; }
+        public GenericLogger Logger { get; set; }
 
-        [Command("money", RunMode = RunMode.Async), Summary("Gets a user's money"), RequireDatabase]
-        public async Task GetMoney([Remainder]IUser user = null)
+        [Command("money"), Summary("Gets a user's money")]
+        public async Task Money([Remainder]IGuildUser user)
         {
-            if (user == null)
-            {
-                user = Context.User;
-            }
+            if (user == null) user = (IGuildUser)Context.User;
 
-            var usr = await Database.GetUserAsync(user.Id);
+            var skuser = await Database.GetUserAsync(user.Id);
 
-            if (Context.User == user)
+            if(skuser != null)
             {
-                await Context.Channel.ReplyAsync($"You have: {Bot.Configuration.Utils.MoneySymbol + usr.Money.ToString("N0")}");
+                if (user == Context.User)
+                    await ReplyAsync(Context.Channel, $"You have: {Configuration.Preferences.MoneySymbol}{skuser.Money.ToString("N0")}");
+                else
+                    await ReplyAsync(Context.Channel, $"{user.Mention} has {Configuration.Preferences.MoneySymbol}{skuser.Money.ToString("N0")}");
             }
             else
             {
-                await Context.Channel.ReplyAsync($"**{user.Username}** has: {Bot.Configuration.Utils.MoneySymbol + usr.Money.ToString("N0")}");
+                await Database.InsertUserAsync(user);
+                await Money(user);
             }
         }
 
-        [Command("profile"), Summary("Get a user's profile"), RequireDatabase]
-        public async Task GetProfile([Remainder]IUser user = null)
+        [Command("profile"), Summary("Get a users profile")]
+        public async Task Profile([Remainder]IGuildUser user = null)
         {
-            if (user == null)
-                user = Context.User;
-            try
+            if (user == null) user = (IGuildUser)Context.User;
+
+            var skuser = await Database.GetUserAsync(user.Id);
+            if(skuser != null)
             {
-                var userLocal = await Database.GetUserAsync(user.Id);
-                if (userLocal != null)
-                {
-                    var embed = new EmbedBuilder
-                    {
-                        Color = EmbedUtils.RandomColor(),
-                        Author = new EmbedAuthorBuilder
-                        {
-                            Name = Context.Client.GetUser(userLocal.ID).Username,
-                            IconUrl = user.GetAvatarUrl() ?? "http://www.emoji.co.uk/files/mozilla-emojis/smileys-people-mozilla/11419-bust-in-silhouette.png"
-                        }
-                    };
-                    embed.AddField(Bot.Configuration.Utils.MoneyName, userLocal.Money.ToString("N0") ?? "No Money", inline: true);
-                    embed.AddField("Luck Factor", userLocal.LuckFactor.ToString("P2") ?? "No LuckFactor", inline: true);
-                    if (userLocal.Daily != null)
-                    { embed.AddField("Daily", userLocal.Daily, inline: true); }
-                    else
-                    { embed.AddField("Daily", "Not used Daily", inline: true); }
-                    if (userLocal.FavCmd != null && userLocal.FavCmdUsg != 0)
-                    { embed.AddField("Favourite Command", $"`{userLocal.FavCmd}` and it has been used {userLocal.FavCmdUsg} times", inline: true); }
-                    else
-                    { embed.AddField("Favourite Command", "No favourite Command", inline: true); }
-                    embed.AddField("Pasta Karma", $"{(await userLocal.GetPastaKarma()).ToString("N0")} Karma");
-                    embed.AddField("Description", userLocal.Description ?? "No Description", inline: false);
-                    await Context.Channel.ReplyAsync(embed.Build());
-                }
-                else
-                {
-                    await Logger.AddToLogsAsync(new Models.LogMessage("CMD-Prof", "User doesn't exist", LogSeverity.Error));
-                    var msg = await Context.Channel.ReplyAsync("Error!! Fixing...");
-                    StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-                    await InsertUser(user).ConfigureAwait(false);
-                    await msg.ModifyAsync(x => x.Content = "Try again now. ~~You may delete this message~~");
-                }
-            }
-            catch (Exception ex)
-            {
-                await Logger.AddToLogsAsync(new Models.LogMessage("CMD-Prof", "Error in Profile", LogSeverity.Error, ex));
-                var msg = await Context.Channel.ReplyAsync("Error!! Fixing...");
-                StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-                await InsertUser(user).ConfigureAwait(false);
-                await msg.ModifyAsync(x => x.Content = "Try again now. ~~You may delete this message~~");
-            }
-        }
+                var embed = await skuser.GetProfileAsync(user, Configuration);
 
-        [Command("profile-ext"), Summary("Gets extended information about a user"), RequireDatabase]
-        public async Task GetProfileExt([Remainder]IUser user = null)
-        {
-            if (user == null)
-            {
-                user = Context.User;
-            }
-            try
-            {
-                var userLocal = await Database.GetUserAsync(user.Id);
-                if (userLocal != null)
-                {
-                    var embed = new EmbedBuilder
-                    {
-                        Author = new EmbedAuthorBuilder { Name = Context.Client.GetUser(userLocal.ID).Username, IconUrl = user.GetAvatarUrl() ?? "http://www.emoji.co.uk/files/mozilla-emojis/smileys-people-mozilla/11419-bust-in-silhouette.png" },
-                        Color = EmbedUtils.RandomColor()
-                    };
-
-                    embed.AddField(Bot.Configuration.Utils.MoneyName, userLocal.Money.ToString("N0") ?? "No Money", inline: true);
-                    embed.AddField("Luck Factor", userLocal.LuckFactor.ToString("P2") ?? "No LuckFactor", inline: true);
-
-                    if (userLocal.Daily != null)
-                    { embed.AddField("Daily", userLocal.Daily, inline: true); }
-                    else
-                    { embed.AddField("Daily", "Not used Daily", inline: true); }
-
-                    if (userLocal.Glares > 0)
-                    { embed.AddField("Glares", userLocal.Glares + " times", inline: true); }
-                    else
-                    { embed.AddField("Glares", "Not glared at anyone", inline: true); }
-
-                    if (userLocal.GlaredAt > 0)
-                    { embed.AddField("Glared At", userLocal.GlaredAt + " times", inline: true); }
-                    else
-                    { embed.AddField("Glared At", "Not been glared at", inline: true); }
-
-                    if (userLocal.Pets > 0)
-                    { embed.AddField("Pets", userLocal.Pets + " times", inline: true); }
-                    else
-                    { embed.AddField("Pets", "Not been petted", inline: true); }
-
-                    if (userLocal.Petted > 0)
-                    { embed.AddField("Petted", userLocal.Petted + " times", inline: true); }
-                    else
-                    { embed.AddField("Petted", "Not petted anyone", inline: true); }
-
-                    if (userLocal.HP > 0)
-                    { embed.AddField("HP", userLocal.HP + " HP", inline: true); }
-                    else
-                    { embed.AddField("HP", "No HP", inline: true); }
-
-                    if (userLocal.FavCmd != null && userLocal.FavCmdUsg != 0)
-                    { embed.AddField("Favourite Command", $"`{userLocal.FavCmd}` and it has been used {userLocal.FavCmdUsg} times", inline: true); }
-                    else
-                    { embed.AddField("Favourite Command", "No favourite Command", inline: true); }
-
-                    embed.AddField("Description", userLocal.Description ?? "No Description", inline: false);
-                    await Context.Channel.ReplyAsync(embed.Build());
-                }
-                else
-                {
-                    await Logger.AddToLogsAsync(new Models.LogMessage("CMD-ProfExt", "User doesn't exist", LogSeverity.Error));
-                    var msg = await Context.Channel.ReplyAsync("Error!! Fixing...");
-                    StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-                    await InsertUser(user).ConfigureAwait(false);
-                    await msg.ModifyAsync(x => x.Content = "Try again now. ~~You may delete this message~~");
-                }
-            }
-            catch (Exception ex)
-            {
-                await Logger.AddToLogsAsync(new Models.LogMessage("CMD-ProfExt", "Error in Profile-Ext", LogSeverity.Error, ex));
-                var msg = await Context.Channel.ReplyAsync("Error!! Fixing...");
-                StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-                await InsertUser(user).ConfigureAwait(false);
-                await msg.ModifyAsync(x => x.Content = "Try again now. ~~You may delete this message~~");
-            }
-        }
-
-        [Command("description"), Summary("Sets description, if no argument is passed, cleans the description"), RequireDatabase]
-        public async Task SetDescription([Remainder]string description = null)
-        {
-            if (description != null)
-            {
-                var user = await Database.GetUserAsync(Context.User.Id);
-                user.Description = description;
-                var result = await Database.UpdateUserAsync(user);
-                if (result.Successful)
-                {
-                    await Context.Channel.ReplyAsync($"Successfully set your description to **{description}**");
-                }
-                else
-                {
-                    await Context.Channel.ReplyAsync($"Something happened <:blobsick:350673776071147521>");
-                }
+                await ReplyAsync(Context.Channel, embed);
             }
             else
             {
-                var user = await Database.GetUserAsync(Context.User.Id);
-                user.Description = "";
-                var result = await Database.UpdateUserAsync(user);
-                if (result.Successful)
-                {
-                    await Context.Channel.ReplyAsync($"Successfully cleared your description.");
-                }
-                else
-                {
-                    await Context.Channel.ReplyAsync("Something happened <:blobsick:350673776071147521>");
-                }
+                await Database.InsertUserAsync(user);
+                await Profile(user);
             }
         }
 
-        private async Task NewDaily(IUser user)
+        [Command("profile-ext"), Summary("Get a users extended profile")]
+        public async Task ExtProfile([Remainder]IGuildUser user = null)
         {
-            var suser = await Database.GetUserAsync(user.Id);
+            if (user == null) user = (IGuildUser)Context.User;
 
-            if (suser != null)
+            var skuser = await Database.GetUserAsync(user.Id);
+            if (skuser != null)
             {
-                suser.Daily = DateTime.UtcNow;
-                suser.Money += Bot.Configuration.Utils.DailyAmount;
-                await Database.UpdateUserAsync(suser);
-                await Context.Channel.ReplyAsync($"You got your daily of: `{Bot.Configuration.Utils.MoneySymbol + Bot.Configuration.Utils.DailyAmount}`, you now have: {Bot.Configuration.Utils.MoneySymbol}{(suser.Money.ToString("N0"))}");
+                var embed = await skuser.GetExtendedProfileAsync(user, Configuration);
+
+                await ReplyAsync(Context.Channel, embed);
             }
             else
             {
-                await InsertUser(user).ConfigureAwait(false);
+                await Database.InsertUserAsync(user);
+                await Profile(user);
             }
         }
-        [Command("daily"), Summary("Daily Money"), RequireDatabase]
-        public async Task Daily([Remainder]IUser user = null)
+
+        [Command("daily"), Summary("Daily Money")]
+        public async Task Daily(IGuildUser user = null)
         {
-            if (user == null)
+            if(user == null)
             {
                 var suser = await Database.GetUserAsync(Context.User.Id);
-                if (suser.Daily != null)
+                if (await suser.DoDailyAsync(Database, Configuration))
                 {
-                    var olddate = suser.Daily.Value;
-                    var newdate = olddate.AddHours(23).AddMinutes(59).AddSeconds(59);
-                    if (DateTime.Compare(newdate, DateTime.UtcNow) == 1)
-                    {
-                        var remain = olddate.AddDays(1).Subtract(DateTime.UtcNow);
-                        string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
-                        await Context.Channel.ReplyAsync($"You must wait `{remaining}`");
-                    }
-                    else
-                    { await NewDaily(Context.User).ConfigureAwait(false); }
+                    suser = await Database.GetUserAsync(Context.User.Id);
+                    await ReplyAsync(Context.Channel, $"You got your daily of: `{Configuration.Preferences.MoneySymbol + Configuration.Preferences.DailyAmount}`, you now have: {Configuration.Preferences.MoneySymbol}{(suser.Money.ToString("N0"))}");
                 }
                 else
-                { await NewDaily(Context.User).ConfigureAwait(false); }
+                {
+                    var remain = suser.Daily.FromEpoch().Subtract(DateTime.UtcNow);
+                    string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
+                    await ReplyAsync(Context.Channel, $"You must wait `{remaining}`");
+                }
             }
             else
             {
-                var csuser = await Database.GetUserAsync(Context.User.Id);
-                if (csuser.Daily != null)
+                var suser = await Database.GetUserAsync(user.Id);
+                if (await suser.DoDailyAsync(Database, Configuration, await Database.GetUserAsync(Context.User.Id)))
                 {
-                    var olddate = csuser.Daily.Value;
-                    var newdate = olddate.AddHours(23).AddMinutes(59).AddSeconds(59);
-                    if (DateTime.Compare(newdate, DateTime.UtcNow) == 1)
-                    {
-                        var remain = olddate.AddDays(1).Subtract(DateTime.UtcNow);
-                        string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
-                        await Context.Channel.ReplyAsync($"You must wait `{remaining}`");
-                    }
-                    else
-                    {
-                        if (user.IsBot)
-                        {
-                            await Context.Channel.ReplyAsync(new EmbedBuilder
-                            {
-                                Author = new EmbedAuthorBuilder
-                                {
-                                    Name = "Error with the command"
-                                },
-                                Description = "Bot Accounts cannot be given any money",
-                                Color = Color.Red
-                            }.Build());
-                            StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-                        }
-                        else
-                        {
-                            if (user != Context.User)
-                            {
-                                var suser = await Database.GetUserAsync(user.Id);
-                                if (suser != null && !user.IsBot)
-                                {
-                                    suser.Money += Bot.Configuration.Utils.DailyAmount;
-                                    await Database.UpdateUserAsync(suser);
-
-                                    csuser.Daily = DateTime.UtcNow;
-                                    await Database.UpdateUserAsync(csuser);
-
-                                    await Context.Channel.ReplyAsync($"Yo, you just gave {user.Username} {Bot.Configuration.Utils.MoneySymbol}{Bot.Configuration.Utils.DailyAmount}! They now have {Bot.Configuration.Utils.MoneySymbol}{suser.Money.ToString("N0")}");
-                                }
-                                else
-                                {
-                                    await InsertUser(user).ConfigureAwait(false);
-                                }
-                            }
-                            else
-                            {
-                                await Daily();
-                            }
-                        }
-                    }
+                    suser = await Database.GetUserAsync(user.Id);
+                    await ReplyAsync(Context.Channel, $"You just gave {user.Mention} your daily of: `{Configuration.Preferences.MoneySymbol + Configuration.Preferences.DailyAmount}`, they now have: {Configuration.Preferences.MoneySymbol}{(suser.Money.ToString("N0"))}");
+                }
+                else
+                {
+                    var remain = suser.Daily.FromEpoch().Subtract(DateTime.UtcNow);
+                    string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
+                    await ReplyAsync(Context.Channel, $"You must wait `{remaining}`");
                 }
             }
         }
 
-        [Command("give"), Summary("Give away ur money"), RequireDatabase]
-        public async Task Give(IUser user, ulong amount)
+        [Command("give"), Summary("Give your money to people")]
+        public async Task Give(IGuildUser user, ulong amount)
         {
-            if (amount == 0)
+            var skuser = await Database.GetUserAsync(Context.User.Id);
+            if(skuser.Money < amount)
             {
-                await Context.Channel.ReplyAsync("Why would you want to give zero money to someone? :thinking:");
+                await ReplyWithMentionAsync(Context.Channel, Context.User, "You can't give more money than you have");
                 return;
             }
-            if (user != Context.User)
+
+            var skuser2 = await Database.GetUserAsync(user.Id);
+
+            skuser.Money -= amount;
+            skuser2.Money += amount;
+
+            var res1 = await Database.UpdateUserAsync(skuser);
+            var res2 = await Database.UpdateUserAsync(skuser2);
+
+            if (res1.Successful && res2.Successful)
             {
-                var oldusergive = await Database.GetUserAsync(user.Id);
-                if (oldusergive != null && !user.IsBot)
-                {
-                    var oldusersend = await Database.GetUserAsync(Context.User.Id);
-
-                    if (oldusersend.Money >= amount)
-                    {
-                        oldusergive.Money += amount;
-                        oldusersend.Money -= amount;
-
-                        var resp = await Database.UpdateUserAsync(oldusergive);
-                        var resp2 = await Database.UpdateUserAsync(oldusersend);
-
-                        if (resp.Successful && resp2.Successful)
-                        {
-                            await Context.Channel.ReplyAsync($"Successfully gave **{user.Username}** {Bot.Configuration.Utils.MoneySymbol + amount}");
-                        }
-                        else
-                        {
-                            await Logger.AddToLogsAsync(new Models.LogMessage("DailyGive", $"{resp.Error}\t{resp2.Error}", LogSeverity.Error));
-                            await Context.Channel.ReplyAsync($"Oops, something happened. :(");
-                            StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-                        }
-                    }
-                }
-                else if (user.IsBot)
-                {
-                    await Context.Channel.ReplyAsync($"Hey, uhhh... Robots aren't supported. :(");
-                }
-                else
-                {
-                    await InsertUser(user);
-                    await Give(user, amount).ConfigureAwait(false);
-                }
+                await ReplyWithMentionAsync(Context.Channel, Context.User, $"You just gave {user.Mention} {Configuration.Preferences.MoneySymbol}{amount.ToString("N0")}");
             }
             else
             {
-                await Context.Channel.ReplyAsync("<:gibeOops:350681606362759173> Can't give money to yourself... Oh, I guess you can... But why would you want to?");
+                await ReplyFailedAsync(Context.Channel);
             }
         }
 
-        [Command("heal"), Summary("Did you run out of health? Here's the healing station"), RequireDatabase]
-        public async Task Heal(uint hp, [Remainder]IUser User = null)
+        [Command("heal"), Summary("Heal yourself or others here")]
+        public async Task Heal(uint hp, [Remainder] IGuildUser user = null)
         {
-            if (User == null)
-                User = Context.User;
-            if (User == Context.User)
+            if (user == null) user = (IGuildUser)Context.User;
+
+            var skuser = await Database.GetUserAsync(user.Id);
+            if(user.Id == Context.User.Id)
             {
-                var user = await Database.GetUserAsync(User.Id);
-                var offset = 10000 - user.HP;
-                if (hp > offset)
+                if(skuser.HP == 10000)
                 {
-                    await Context.Channel.ReplyAsync("You sure you wanna do that? You only need to heal by: `" + offset + "` HP");
+                    await ReplyWithMentionAsync(Context.Channel, Context.User, "You're already at max health");
+                    return;
                 }
-                var cost = GetCostOfHP(hp);
-                if (user.Money >= cost)
+                var amount = GetCostOfHP(hp);
+                if(skuser.Money < amount)
                 {
-                    if (user.HP == 10000)
-                    {
-                        await Context.Channel.ReplyAsync("You're already at max health");
-                        return;
-                    }
-                    user.Money -= cost;
-                    user.HP += hp;
-
-                    if (user.HP > 10000)
-                        user.HP = 10000;
-
-                    await Database.UpdateUserAsync(user);
-
-                    await Context.Channel.ReplyAsync($"You have healed your hp by {hp} for {Bot.Configuration.Utils.MoneySymbol}{cost.ToString("N0")}");
+                    await ReplyWithMentionAsync(Context.Channel, Context.User, "You don't have enough money for this action");
+                    return;
                 }
-                else
+                if(hp > (10000 - skuser.HP))
                 {
-                    await Context.Channel.ReplyAsync("You don't have enough money for this action.");
+                    await ReplyWithMentionAsync(Context.Channel, Context.User, "You only need to heal by: " + (10000 - skuser.HP));
+                    return;
                 }
+
+
+                skuser.Money -= amount;
+                skuser.HP += hp;
+
+                if (skuser.HP > 10000)
+                    skuser.HP = 10000;
+
+                await Database.UpdateUserAsync(skuser);
+
+                await ReplyAsync(Context.Channel, $"You have healed your HP by {hp} for {Configuration.Preferences.MoneySymbol}{amount.ToString("N0")}");
             }
             else
             {
-                var user = await Database.GetUserAsync(User.Id);
-                var you = await Database.GetUserAsync(Context.User.Id);
-                var offset = 10000 - user.HP;
-                if (hp > offset)
+                if (skuser.HP == 10000)
                 {
-                    await Context.Channel.ReplyAsync("You sure you wanna do that? They only need to heal by: `" + offset + "` HP");
+                    await ReplyWithMentionAsync(Context.Channel, Context.User, "They're already at max health");
+                    return;
                 }
-                var cost = GetCostOfHP(hp);
-                if (you.Money >= cost)
+                var amount = GetCostOfHP(hp);
+                if (skuser.Money < amount)
                 {
-                    if (user.HP == 10000)
-                    {
-                        await Context.Channel.ReplyAsync("They're already at max health");
-                        return;
-                    }
-                    user.HP += hp;
-                    you.Money -= cost;
-
-                    if (user.HP > 10000)
-                        user.HP = 10000;
-
-                    await Database.UpdateUserAsync(user);
-                    await Database.UpdateUserAsync(you);
-
-                    await Context.Channel.ReplyAsync($"You have healed {User.Username}'s health by {hp} for {Bot.Configuration.Utils.MoneySymbol}{cost.ToString("N0")}");
+                    await ReplyWithMentionAsync(Context.Channel, Context.User, "You don't have enough money for this action");
+                    return;
                 }
-                else
+                if (hp > (10000 - skuser.HP))
                 {
-                    await Context.Channel.ReplyAsync("You don't have enough money for this action.");
+                    await ReplyWithMentionAsync(Context.Channel, Context.User, "You only need to heal them by: " + (10000 - skuser.HP));
+                    return;
                 }
+
+                var skuser2 = await Database.GetUserAsync(Context.User.Id);
+
+                skuser2.Money -= amount;
+                skuser.HP += hp;
+
+                if (skuser.HP > 10000)
+                    skuser.HP = 10000;
+
+                await Database.UpdateUserAsync(skuser);
+                await Database.UpdateUserAsync(skuser2);
+
+                await ReplyAsync(Context.Channel, $"You have healed {user.Mention}'s HP by {hp} for {Configuration.Preferences.MoneySymbol}{amount.ToString("N0")}");
             }
         }
 
@@ -421,15 +215,52 @@ namespace Skuld.Modules
         {
             return (ulong)(hp / 0.8);
         }
+    }
 
-        private async Task InsertUser(IUser user)
+    [Group("account"), RequireDatabase]
+    public class Account : SkuldBase<ShardedCommandContext>
+    {
+        public SkuldConfig Configuration { get; set; }
+        public DatabaseService Database { get; set; }
+        public GenericLogger Logger { get; set; }
+
+        [Command("set-description"), Summary("Sets Description")]
+        public async Task SetDescription([Remainder]string description)
         {
-            var result = await Database.InsertUserAsync((user as Discord.WebSocket.SocketUser));
-            if (!result.Successful)
+            var user = await Database.GetUserAsync(Context.User.Id);
+
+            user.Description = description;
+
+            var result = await Database.UpdateUserAsync(user);
+            if (result.Successful)
             {
-                await Logger.AddToLogsAsync(new Models.LogMessage("AccountModule", result.Error, LogSeverity.Error));
-                await Context.Channel.ReplyAsync($"I'm sorry there was an issue; `{result.Error}`");
-                StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+                await ReplyAsync(Context.Channel, $"Successfully set your description to **{description}**");
+            }
+            else
+            {
+                await ReplyFailedAsync(Context.Channel);
+
+                await Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("Accounts", result.Error, LogSeverity.Error, result.Exception));
+            }
+        }
+
+        [Command("clear-description"), Summary("Clears Description")]
+        public async Task ClearDescription()
+        {
+            var user = await Database.GetUserAsync(Context.User.Id);
+
+            user.Description = "";
+
+            var result = await Database.UpdateUserAsync(user);
+            if (result.Successful)
+            {
+                await ReplyAsync(Context.Channel, "Successfully cleared your description.");
+            }
+            else
+            {
+                await ReplyFailedAsync(Context.Channel);
+
+                await Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("Accounts", result.Error, LogSeverity.Error, result.Exception));
             }
         }
     }
