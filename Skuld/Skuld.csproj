@@ -6,6 +6,7 @@
     <RootNamespace>Skuld</RootNamespace>
     <StartupObject>Skuld.Program</StartupObject>
     <Version>0.3.9.1</Version>
+    <RuntimeIdentifier>win10-x64</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>

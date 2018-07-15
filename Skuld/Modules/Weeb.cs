@@ -44,7 +44,7 @@ namespace Skuld.Modules
                 {
                     sentmessage = await PagedReplyAsync(new PaginatedMessage
                     {
-                        Title = loc.GetString("SKULD_SEARCH_WEEB_MKSLCTN") + " 30s",
+                        Title = loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s",
                         Color = Color.Purple,
                         Pages = pages
                     }, true);
@@ -53,7 +53,7 @@ namespace Skuld.Modules
                 {
                     sentmessage = await ReplyAsync(Context.Channel, new EmbedBuilder
                     {
-                        Title = loc.GetString("SKULD_SEARCH_WEEB_MKSLCTN") + " 30s",
+                        Title = loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s",
                         Color = Color.Purple,
                         Description = pages[0]
                     }.Build());
