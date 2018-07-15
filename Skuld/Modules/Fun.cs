@@ -221,6 +221,7 @@ namespace Skuld.Modules
         public async Task Pasta(string cmd, string title)
         {
             var pastaLocal = await Database.GetPastaAsync(title);
+            var user = await Database.GetUserAsync(Context.User.Id);
             if (pastaLocal != null)
             {
                 if (cmd == "who" || cmd == "?")
@@ -235,7 +236,7 @@ namespace Skuld.Modules
                         embed.AddField("Author", usr.Username + "#" + usr.Discriminator, inline: true);
                     else
                         embed.AddField("Author", $"Unknown User ({pastaLocal.OwnerID})");
-                    embed.AddField("Created", pastaLocal.Created, inline: true);
+                    embed.AddField("Created", pastaLocal.Created.FromEpoch().ToString(new CultureInfo(user.Language)), inline: true);
                     embed.AddField("UpVotes", ":arrow_double_up: " + pastaLocal.Upvotes, inline: true);
                     embed.AddField("DownVotes", ":arrow_double_down: " + pastaLocal.Downvotes, inline: true);
                     await ReplyAsync(Context.Channel, embed.Build());
