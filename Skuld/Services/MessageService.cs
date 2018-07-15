@@ -99,47 +99,58 @@ namespace Skuld.Services
                                 {
                                     var luxp = (UserExperience)luserexperience;
 
-                                    var gld = luxp.GuildExperiences.First(x => x.GuildID == context.Guild.Id);
-                                    if (gld != null)
+                                    var amount = (ulong)HostService.Services.GetRequiredService<Random>().Next(0, 25);
+
+                                    if (luxp.GuildExperiences.Count()!=0)
                                     {
-                                        if (gld.LastGranted < (60 - DateTime.UtcNow.ToEpoch()))
+                                        var gld = luxp.GuildExperiences.First(x => x.GuildID == context.Guild.Id);
+                                        if (gld != null)
                                         {
-                                            var amount = (ulong)HostService.Services.GetRequiredService<Random>().Next(0, 25);
-
-                                            var xptonextlevel = GetXPRequirement(gld.Level + 1, 1.618); //get next level xp requirement based on phi
-
-                                            if ((gld.XP + amount) >= xptonextlevel) //if over or equal to next level requirement, update accordingly
+                                            if (gld.LastGranted < (60 - DateTime.UtcNow.ToEpoch()))
                                             {
-                                                gld.XP = 0;
-                                                gld.TotalXP += amount;
-                                                gld.Level++;
-                                                gld.LastGranted = DateTime.UtcNow.ToEpoch();
-                                                await context.Channel.SendMessageAsync($"Congratulations {context.User.Mention}!! You're now level **{gld.Level}**");
-                                                await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("MessageService", "User levelled up", LogSeverity.Info));
-                                                DogStatsd.Increment("user.levelup");
+
+                                                var xptonextlevel = GetXPRequirement(gld.Level + 1, 1.618); //get next level xp requirement based on phi
+
+                                                if ((gld.XP + amount) >= xptonextlevel) //if over or equal to next level requirement, update accordingly
+                                                {
+                                                    gld.XP = 0;
+                                                    gld.TotalXP += amount;
+                                                    gld.Level++;
+                                                    gld.LastGranted = DateTime.UtcNow.ToEpoch();
+                                                    await context.Channel.SendMessageAsync($"Congratulations {context.User.Mention}!! You're now level **{gld.Level}**");
+                                                    await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("MessageService", "User levelled up", LogSeverity.Info));
+                                                    DogStatsd.Increment("user.levelup");
+                                                }
+                                                else //otherwise append current status
+                                                {
+                                                    gld.XP += amount;
+                                                    gld.TotalXP += amount;
+                                                    gld.LastGranted = DateTime.UtcNow.ToEpoch();
+                                                }
+                                                await database.UpdateGuildExperienceAsync(context.User, gld, context.Guild);
                                             }
-                                            else //otherwise append current status
-                                            {
-                                                gld.XP += amount;
-                                                gld.TotalXP += amount;
-                                                gld.LastGranted = DateTime.UtcNow.ToEpoch();
-                                            }
-                                            await database.UpdateGuildExperienceAsync(context.User, gld, context.Guild);
+                                        }
+                                        else
+                                        {
+                                            gld = new GuildExperience();
+                                            gld.LastGranted = DateTime.UtcNow.ToEpoch();
+                                            gld.XP = gld.TotalXP = amount;
+                                            await database.InsertGuildExperienceAsync(context.User, context.Guild, gld);
                                         }
                                     }
                                     else
                                     {
-                                        gld = new GuildExperience();
+                                        var gld = new GuildExperience();
                                         gld.LastGranted = DateTime.UtcNow.ToEpoch();
-                                        gld.XP = gld.TotalXP = (ulong)HostService.Services.GetRequiredService<Random>().Next(0, 25);
-                                        await database.UpdateGuildExperienceAsync(context.User, gld, context.Guild);
+                                        gld.XP = gld.TotalXP = amount;
+                                        await database.InsertGuildExperienceAsync(context.User, context.Guild, gld);
                                     }
                                 }
                                 else
                                 {
                                     var gld = new GuildExperience();
                                     gld.LastGranted = DateTime.UtcNow.ToEpoch();
-                                    gld.XP = gld.TotalXP = (ulong)HostService.Services.GetRequiredService<Random>().Next(0, 25);
+                                    gld.XP = gld.TotalXP = amount;
                                     await database.InsertGuildExperienceAsync(context.User, context.Guild, gld);
                                 }
                             }

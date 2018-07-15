@@ -670,10 +670,22 @@ namespace Skuld.Modules
                                 break;
                         }
 
-                        await Database.UpdateGuildAsync(guild);
-
-                        if (value == 0) await ReplyAsync(Context.Channel, $"I disabled the `{module}` feature");
-                        else await ReplyAsync(Context.Channel, $"I enabled the `{module}` feature");
+                        var res = await Database.UpdateGuildAsync(guild);
+                        if(res.All(x=>x.Successful))
+                        {
+                            if (value == 0) await ReplyAsync(Context.Channel, $"I disabled the `{module}` feature");
+                            else await ReplyAsync(Context.Channel, $"I enabled the `{module}` feature");
+                        }
+                        else
+                        {
+                            var msg = "";
+                            foreach(var re in res)
+                            {
+                                if (!re.Successful)
+                                    msg += re.Error + "\n";
+                            }
+                            Console.WriteLine(msg);
+                        }
                     }
                     else await Database.InsertAdvancedSettingsAsync(feature: false, guild: Context.Guild as SocketGuild);
                 }

@@ -1055,22 +1055,40 @@ namespace Skuld.Services
         {
             if (CanConnect)
             {
-                var command = new MySqlCommand(
-                    "UPDATE `guilds` SET " +
-                    "`Prefix` = @prefix, " +
-                    "`MutedRole` = @mutedr, " +
-                    "`JoinableRoles` = @joinableroles " +
-                    "`JoinRole` = @ajr, " +
-                    "`JoinChannel` = @ujc, " +
-                    "`LeaveChannel` = @ulc " +
-                    "`JoinMessage` = @jmsg, " +
-                    "`LeaveMessage` = @lmsg, " +
-                    "WHERE GuildID = @guildID;"
-                );
+                MySqlCommand command = null;
+                if (guild.JoinableRoles != null)
+                {
+                    command = new MySqlCommand(
+                        "UPDATE `guilds` SET " +
+                        "`Prefix` = @prefix, " +
+                        "`MutedRole` = @mutedr, " +
+                        "`JoinableRoles` = @joinableroles, " +
+                        "`JoinRole` = @ajr, " +
+                        "`JoinChannel` = @ujc, " +
+                        "`LeaveChannel` = @ulc, " +
+                        "`JoinMessage` = @jmsg, " +
+                        "`LeaveMessage` = @lmsg " +
+                        "WHERE GuildID = @guildID;"
+                    );
+                    command.Parameters.AddWithValue("@joinableroles", string.Join(",", guild.JoinableRoles) ?? null);
+                }
+                else
+                {
+                    command = new MySqlCommand(
+                        "UPDATE `guilds` SET " +
+                        "`Prefix` = @prefix, " +
+                        "`MutedRole` = @mutedr, " +
+                        "`JoinRole` = @ajr, " +
+                        "`JoinChannel` = @ujc, " +
+                        "`LeaveChannel` = @ulc, " +
+                        "`JoinMessage` = @jmsg, " +
+                        "`LeaveMessage` = @lmsg " +
+                        "WHERE GuildID = @guildID;"
+                    );
+                }
 
                 command.Parameters.AddWithValue("@prefix", guild.Prefix);
                 command.Parameters.AddWithValue("@mutedr", guild.MutedRole);
-                command.Parameters.AddWithValue("@joinableroles", string.Join(",", guild.JoinableRoles));
                 command.Parameters.AddWithValue("@ajr", guild.JoinRole);
                 command.Parameters.AddWithValue("@ujc", guild.UserJoinChannel);
                 command.Parameters.AddWithValue("@ulc", guild.UserLeaveChannel);
@@ -1151,64 +1169,68 @@ namespace Skuld.Services
         {
             if (CanConnect)
             {
-                var command = new MySqlCommand("SELECT * FROM `userguildxp` WHERE UserID = @userID");
-
-                command.Parameters.AddWithValue("@userID", user.Id);
-
-                var userExperience = new UserExperience();
-
-                userExperience.UserID = user.Id;
-
-                using (var conn = new MySqlConnection(ConnectionString))
+                try
                 {
-                    await conn.OpenAsync();
-                    if (conn.State == System.Data.ConnectionState.Open)
+                    var command = new MySqlCommand("SELECT * FROM `userguildxp` WHERE UserID = @userID");
+
+                    command.Parameters.AddWithValue("@userID", user.Id);
+
+                    var userExperience = new UserExperience();
+
+                    userExperience.UserID = user.Id;
+
+                    using (var conn = new MySqlConnection(ConnectionString))
                     {
-                        command.Connection = conn;
-
-                        DogStatsd.Increment("mysql.queries");
-
-                        var reader = await command.ExecuteReaderAsync();
-
-                        int rows = 0;
-
-                        if (reader.HasRows)
+                        await conn.OpenAsync();
+                        if (conn.State == System.Data.ConnectionState.Open)
                         {
-                            while (await reader.ReadAsync())
+                            command.Connection = conn;
+
+                            DogStatsd.Increment("mysql.queries");
+
+                            var reader = await command.ExecuteReaderAsync();
+
+                            int rows = 0;
+
+                            if (reader.HasRows)
                             {
-                                rows++;
+                                while (await reader.ReadAsync())
+                                {
+                                    rows++;
 
-                                var localExperience = new GuildExperience();
+                                    var localExperience = new GuildExperience();
 
-                                localExperience.GuildID = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["GuildID"]));
+                                    localExperience.GuildID = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["GuildID"]));
 
-                                localExperience.Level = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["Level"]));
+                                    localExperience.Level = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["Level"]));
 
-                                localExperience.XP = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["XP"]));
+                                    localExperience.XP = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["XP"]));
 
-                                localExperience.TotalXP = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["TotalXP"]));
+                                    localExperience.TotalXP = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["TotalXP"]));
 
-                                localExperience.LastGranted = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["LastGranted"]));
+                                    localExperience.LastGranted = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["LastGranted"]));
 
-                                userExperience.GuildExperiences.Add(localExperience);
+                                    userExperience.GuildExperiences.Add(localExperience);
+                                }
+
+                                DogStatsd.Increment("mysql.rows_ret", rows);
+
+                                await conn.CloseAsync();
                             }
-
-                            DogStatsd.Increment("mysql.rows_ret", rows);
-
-                            await conn.CloseAsync();
-                        }
-                        else
-                        {
-                            return new SqlResult
-                            {
-                                Error = "Unknown Error",
-                                Successful = false
-                            };
                         }
                     }
-                }
 
-                return userExperience;
+                    return userExperience;
+                }
+                catch(Exception ex)
+                {
+                    return new SqlResult
+                    {
+                        Exception = ex,
+                        Error = ex.Message,
+                        Successful = false
+                    };
+                }
             }
             return new SqlResult
             {
@@ -1221,19 +1243,32 @@ namespace Skuld.Services
         {
             if (CanConnect)
             {
-                var command = new MySqlCommand("UPDATE `userguildxp` SET " +
+                try
+                {
+                    var command = new MySqlCommand("UPDATE `userguildxp` SET " +
                     "`Level` = @lvl, " +
                     "`XP` = @xp, " +
                     "`TotalXP` = @txp " +
                     "WHERE GuildID = @guildID AND UserID = @userID");
 
-                command.Parameters.AddWithValue("@lvl", guildexp.Level);
-                command.Parameters.AddWithValue("@xp", guildexp.XP);
-                command.Parameters.AddWithValue("@txp", guildexp.TotalXP);
-                command.Parameters.AddWithValue("@guildID", guild.Id);
-                command.Parameters.AddWithValue("@userID", user.Id);
+                    command.Parameters.AddWithValue("@lvl", guildexp.Level);
+                    command.Parameters.AddWithValue("@xp", guildexp.XP);
+                    command.Parameters.AddWithValue("@txp", guildexp.TotalXP);
+                    command.Parameters.AddWithValue("@guildID", guild.Id);
+                    command.Parameters.AddWithValue("@userID", user.Id);
 
-                return await SingleQueryAsync(command).ConfigureAwait(false);
+                    return await SingleQueryAsync(command).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    return new SqlResult
+                    {
+                        Error = ex.Message,
+                        Exception = ex,
+                        Successful = false,
+                        Data = null
+                    };
+                }
             }
             return new SqlResult
             {
@@ -1246,16 +1281,29 @@ namespace Skuld.Services
         {
             if (CanConnect)
             {
-                var command = new MySqlCommand("INSERT INTO `userguildxp` (UserID, GuildID, Level, XP, TotalXP, LastGranted) VALUES (@userID, @guildID, @lvl, @xp, @txp, @lgrant);");
+                try
+                {
+                    var command = new MySqlCommand("INSERT INTO `userguildxp` (UserID, GuildID, Level, XP, TotalXP, LastGranted) VALUES (@userID, @guildID, @lvl, @xp, @txp, @lgrant);");
 
-                command.Parameters.AddWithValue("@guildID", guild.Id);
-                command.Parameters.AddWithValue("@userID", user.Id);
-                command.Parameters.AddWithValue("@lvl", experience.Level);
-                command.Parameters.AddWithValue("@xp", experience.XP);
-                command.Parameters.AddWithValue("@txp", experience.TotalXP);
-                command.Parameters.AddWithValue("@lgrant", experience.LastGranted);
+                    command.Parameters.AddWithValue("@guildID", guild.Id);
+                    command.Parameters.AddWithValue("@userID", user.Id);
+                    command.Parameters.AddWithValue("@lvl", experience.Level);
+                    command.Parameters.AddWithValue("@xp", experience.XP);
+                    command.Parameters.AddWithValue("@txp", experience.TotalXP);
+                    command.Parameters.AddWithValue("@lgrant", experience.LastGranted);
 
-                return await SingleQueryAsync(command).ConfigureAwait(false);
+                    return await SingleQueryAsync(command).ConfigureAwait(false);
+                }
+                catch(Exception ex)
+                {
+                    return new SqlResult
+                    {
+                        Error = ex.Message,
+                        Exception = ex,
+                        Successful = false,
+                        Data = null
+                    };
+                }
             }
             return new SqlResult
             {
