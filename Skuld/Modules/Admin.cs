@@ -637,7 +637,7 @@ namespace Skuld.Modules
             }
         }
 
-        [Command("guildfeature"), Summary("Configures guild features"), RequireDatabase]
+        [Command("guild-feature"), Summary("Configures guild features"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task ConfigureGuildFeatures(string module, int value)
         {
@@ -688,7 +688,7 @@ namespace Skuld.Modules
             }
         }
 
-        [Command("guildmodule"), Summary("Configures guild modules"), RequireDatabase]
+        [Command("guild-module"), Summary("Configures guild modules"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task ConfigureGuildModules(string module, int value)
         {
@@ -697,7 +697,7 @@ namespace Skuld.Modules
             else
             {
                 module = module.ToLowerInvariant();
-                string[] modules = { "accounts", "actions", "admin", "fun", "help", "information", "lewd", "search", "stats", "weeb" };
+                string[] modules = { "accounts", "actions", "admin", "fun", "information", "lewd", "search", "stats", "weeb" };
                 if (modules.Contains(module))
                 {
                     var guild = await Database.GetGuildAsync(Context.Guild.Id);
@@ -751,7 +751,6 @@ namespace Skuld.Modules
                 else
                 {
                     string modulelist = string.Join(", ", modules);
-                    modulelist = modulelist.Remove(modulelist.Length - 2);
                     await ReplyAsync(Context.Channel, new EmbedBuilder { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build());
                 }
             }
