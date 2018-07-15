@@ -306,7 +306,8 @@ namespace Skuld.Modules
 
                     pastanames += "\n```";
 
-                    await ReplyAsync(Context.Channel, "I found:\n{pastanames}");
+                    await ReplyAsync(Context.Channel, $"I found:\n{pastanames}");
+                    return;
                 }
                 await ReplyAsync(Context.Channel, "No pastas exist");
             }
