@@ -91,7 +91,8 @@ namespace Skuld.Modules
                 }
                 else
                 {
-                    var remain = suser.Daily.FromEpoch().Subtract(DateTime.UtcNow);
+                    var thing = suser.Daily + 86400;
+                    var remain = thing.FromEpoch().Subtract(DateTime.UtcNow);
                     string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
                     await ReplyAsync(Context.Channel, $"You must wait `{remaining}`");
                 }
@@ -106,7 +107,8 @@ namespace Skuld.Modules
                 }
                 else
                 {
-                    var remain = suser.Daily.FromEpoch().Subtract(DateTime.UtcNow);
+                    var thing = suser.Daily + 86400;
+                    var remain = thing.FromEpoch().Subtract(DateTime.UtcNow);
                     string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
                     await ReplyAsync(Context.Channel, $"You must wait `{remaining}`");
                 }

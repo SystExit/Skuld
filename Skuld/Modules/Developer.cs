@@ -37,6 +37,23 @@ namespace Skuld.Modules
             await HostService.BotService.StopBotAsync("StopCmd").ConfigureAwait(false);
         }
 
+        [Command("bean")]
+        public async Task Bean([Remainder]IGuildUser user)
+        {
+            var usr = await Database.GetUserAsync(user.Id);
+            if(usr.Banned)
+            {
+                usr.Banned = false;
+                await ReplyAsync(Context.Channel, $"Un-beaned {user.Mention}");
+            }
+            else
+            {
+                usr.Banned = true;
+                await ReplyAsync(Context.Channel, $"Beaned {user.Mention}");
+            }
+            await Database.UpdateUserAsync(usr);
+        }
+
         [Command("shardrestart"), Summary("Restarts shard")]
         public async Task ReShard(int shard)
         {

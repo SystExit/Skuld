@@ -113,6 +113,7 @@ namespace Skuld.Services
                         Prefix = Configuration.Discord.Prefix,
                         AltPrefix = Configuration.Discord.AltPrefix
                     }))
+                    .AddSingleton(new ExperienceService(Client, database, logger))
                     .BuildServiceProvider();
 
                 await logger.AddToLogsAsync(new Core.Models.LogMessage("Framework", "Successfully built service provider", LogSeverity.Info));

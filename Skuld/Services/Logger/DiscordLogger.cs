@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Skuld.Utilities.Messaging;
 
 namespace Skuld.Services
 {
@@ -173,7 +174,7 @@ namespace Skuld.Services
                     welcomemessage = welcomemessage.Replace("-s", "**" + arg.Guild.Name + "**");
                     welcomemessage = welcomemessage.Replace("-uc", Convert.ToString(arg.Guild.MemberCount));
                     welcomemessage = welcomemessage.Replace("-u", "**" + arg.Username + "**");
-                    await messageService.SendChannelAsync(channel, welcomemessage);
+                    await MessageTools.SendChannelAsync(channel, welcomemessage, logger);
                 }
                 var discord = client.GetUser(arg.Id);
                 var db = await database.GetUserAsync(arg.Id);
@@ -202,7 +203,7 @@ namespace Skuld.Services
                     leavemessage = leavemessage.Replace("-s", "**" + arg.Guild.Name + "**");
                     leavemessage = leavemessage.Replace("-uc", Convert.ToString(arg.Guild.MemberCount));
                     leavemessage = leavemessage.Replace("-u", "**" + arg.Username + "**");
-                    await messageService.SendChannelAsync(channel, leavemessage);
+                    await MessageTools.SendChannelAsync(channel, leavemessage, logger);
                 }
                 var discord = client.GetUser(arg.Id);
                 var db = await database.GetUserAsync(arg.Id);

@@ -209,22 +209,25 @@ namespace Skuld.Extensions
 
             var embed = new EmbedBuilder
             {
-                Title = attr.CanonicalTitle.CheckEmptyWithLocale(loc)
+                Title = attr.CanonicalTitle.CheckEmptyWithLocale(loc),
+                ImageUrl = attr.PosterImage.Large
             };
 
-            embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_SYNON"), attr.AbbreviatedTitles.CheckEmptyWithLocale(", ", loc), true);
-            embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_EPS"), attr.EpisodeCount.CheckEmptyWithLocale(loc), true);
-            embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_SDATE"), attr.StartDate.CheckEmptyWithLocale(loc), true);
-            embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_EDATE"), attr.EndDate.CheckEmptyWithLocale(loc), true);
-            embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_SCORE"), attr.RatingRank.CheckEmptyWithLocale(loc), true);
+            if(attr.AbbreviatedTitles != null && attr.AbbreviatedTitles.Count() != 0)
+                embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNON"), attr.AbbreviatedTitles.CheckEmptyWithLocale(", ", loc));
+
+            embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_EPS"), attr.EpisodeCount.CheckEmptyWithLocale(loc));
+            embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SDATE"), attr.StartDate.CheckEmptyWithLocale(loc));
+            embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_EDATE"), attr.EndDate.CheckEmptyWithLocale(loc));
+            embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SCORE"), attr.RatingRank.CheckEmptyWithLocale(loc));
 
             if (attr.Synopsis.CheckEmptyWithLocale(loc) != loc.GetString("SKULD_GENERIC_EMPTY"))
             {
                 var syno = attr.Synopsis;
                 if (syno.Length > 1024)
-                    embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), attr.Synopsis.Substring(0, 1021) + "...", true);
+                    embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), attr.Synopsis.Substring(0, 1021) + "...");
                 else
-                    embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), attr.Synopsis, true);
+                    embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), attr.Synopsis);
             }
 
             embed.WithColor(Color.Purple);
@@ -238,22 +241,25 @@ namespace Skuld.Extensions
 
             var embed = new EmbedBuilder
             {
-                Title = attr.CanonicalTitle.CheckEmptyWithLocale(loc)
+                Title = attr.CanonicalTitle.CheckEmptyWithLocale(loc),
+                ImageUrl = attr.PosterImage.Large
             };
 
-            embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_SYNON"), attr.AbbreviatedTitles.CheckEmptyWithLocale(", ", loc), true);
-            embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_EPS"), attr.ChapterCount.CheckEmptyWithLocale(loc), true);
-            embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_SDATE"), attr.StartDate.CheckEmptyWithLocale(loc), true);
-            embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_EDATE"), attr.EndDate.CheckEmptyWithLocale(loc), true);
-            embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_SCORE"), attr.RatingRank.CheckEmptyWithLocale(loc), true);
+            if (attr.AbbreviatedTitles != null && attr.AbbreviatedTitles.Count() != 0)
+                embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNON"), attr.AbbreviatedTitles.CheckEmptyWithLocale(", ", loc));
+
+            embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_EPS"), attr.ChapterCount.CheckEmptyWithLocale(loc));
+            embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SDATE"), attr.StartDate.CheckEmptyWithLocale(loc));
+            embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_EDATE"), attr.EndDate.CheckEmptyWithLocale(loc));
+            embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SCORE"), attr.RatingRank.CheckEmptyWithLocale(loc));
 
             if (attr.Synopsis.CheckEmptyWithLocale(loc) != loc.GetString("SKULD_GENERIC_EMPTY"))
             {
                 var syno = attr.Synopsis;
                 if (syno.Length > 1024)
-                    embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), attr.Synopsis.Substring(0, 1021) + "...", true);
+                    embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), attr.Synopsis.Substring(0, 1021) + "...");
                 else
-                    embed.AddField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), attr.Synopsis, true);
+                    embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), attr.Synopsis);
             }
 
             embed.WithColor(Color.Purple);
