@@ -74,6 +74,13 @@ namespace Skuld.Services
 
                 var twitch = new TwitchService(new TwitchLogger(logger));
 
+                var mess = new MessageService(Client, database, new DiscordLogger(database, Client, logger, Configuration), new Models.MessageServiceConfig
+                {
+                    ArgPos = 0,
+                    Prefix = Configuration.Discord.Prefix,
+                    AltPrefix = Configuration.Discord.AltPrefix
+                });
+
                 Services = new ServiceCollection()
                     .AddSingleton(new BaseClient(logger))
                     .AddSingleton(Configuration)
@@ -107,13 +114,9 @@ namespace Skuld.Services
                     .AddSingleton(twitch)
                     .AddSingleton(new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer { ApiKey = Configuration.APIS.GoogleAPI, ApplicationName = "Skuld" }))
                     //.AddSingleton(weebprovider)
-                    .AddSingleton(new MessageService(Client, database, new DiscordLogger(database, Client, logger, Configuration), new Models.MessageServiceConfig
-                    {
-                        ArgPos = 0,
-                        Prefix = Configuration.Discord.Prefix,
-                        AltPrefix = Configuration.Discord.AltPrefix
-                    }))
+                    .AddSingleton(mess)
                     .AddSingleton(new ExperienceService(Client, database, logger))
+                    .AddSingleton(new CustomCommandService(Client, database, logger, mess))
                     .BuildServiceProvider();
 
                 await logger.AddToLogsAsync(new Core.Models.LogMessage("Framework", "Successfully built service provider", LogSeverity.Info));
