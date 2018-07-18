@@ -382,7 +382,7 @@ namespace Skuld.Services
                                 Error = "User already upvoted"
                             };
                         }
-                        if ((datares == upvote) == false)
+                        if (!(datares == upvote))
                         {
                             return new SqlResult()
                             {

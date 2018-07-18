@@ -20,14 +20,14 @@ namespace Skuld.Extensions
         {
             await guild.DownloadUsersAsync();
 
-            return (await guild.GetUsersAsync(CacheMode.AllowDownload)).Count(x => x.IsBot == true);
+            return (await guild.GetUsersAsync(CacheMode.AllowDownload)).Count(x => x.IsBot);
         }
 
         public static async Task<int> HumanMembersAsync(this IGuild guild)
         {
             await guild.DownloadUsersAsync();
 
-            return (await guild.GetUsersAsync(CacheMode.AllowDownload)).Count(x => x.IsBot == false);
+            return (await guild.GetUsersAsync(CacheMode.AllowDownload)).Count(x => !x.IsBot);
         }
 
         public static async Task<decimal> GetBotUserRatioAsync(this IGuild guild)

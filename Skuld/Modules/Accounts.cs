@@ -20,7 +20,7 @@ namespace Skuld.Modules
         public GenericLogger Logger { get; set; }
 
         [Command("money"), Summary("Gets a user's money")]
-        public async Task Money([Remainder]IGuildUser user)
+        public async Task Money([Remainder]IGuildUser user = null)
         {
             if (user == null) user = (IGuildUser)Context.User;
 
