@@ -265,38 +265,6 @@ namespace Skuld.Modules
             { await ReplyAsync(Context.Channel, message); }
         }
 
-        [Command("rebuildusers")]
-        public async Task RebuildUsers()
-        {
-            string message = "";
-            int count = 0;
-            Thread thd = new Thread(async () =>
-            {
-                foreach (var guild in Context.Client.Guilds)
-                {
-                    await guild.DownloadUsersAsync();
-                    foreach (var user in guild.Users)
-                    {
-                        count++;
-                        var usr = await Database.GetUserAsync(user.Id);
-                        if (usr == null) await Database.InsertUserAsync(user);
-                        else
-                        {
-                            await Database.SingleQueryAsync(new MySql.Data.MySqlClient.MySqlCommand($"UPDATE `users` SET `AvatarUrl` = \"{user.GetAvatarUrl()}\" WHERE `UserID` = {user.Id};"));
-                        }
-                        Thread.Sleep(2000);
-                        message += count + ". Inserted\n";
-                    }
-                }
-            })
-            {
-                IsBackground = true
-            };
-            thd.Start();
-            if (message != "")
-            { await ReplyAsync(Context.Channel, message); }
-        }
-
         [Command("eval"), Summary("no")]
         public async Task EvalStuff([Remainder]string code)
         {

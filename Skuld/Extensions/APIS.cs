@@ -64,7 +64,7 @@ namespace Skuld.Extensions
 
             if (image.ImageUrl.IsVideoFile())
             {
-                message += "(Video)";
+                message += " (Video)";
             }
 
             return message;
@@ -76,7 +76,7 @@ namespace Skuld.Extensions
 
             if (image.ImageUrl.IsVideoFile())
             {
-                message += "(Video)";
+                message += " (Video)";
             }
 
             return message;

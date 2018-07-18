@@ -70,6 +70,13 @@ namespace Skuld.Services
             {
                 SkuldGuild sguild = await MessageTools.GetGuildAsync(context.Guild, database).ConfigureAwait(false);
                 var usr = await MessageTools.GetUserAsync(context.User, database).ConfigureAwait(false);
+                if (database.CanConnect)
+                {
+                    if (usr.AvatarUrl != context.User.GetAvatarUrl())
+                    {
+                        await database.SingleQueryAsync(new MySql.Data.MySqlClient.MySqlCommand($"UPDATE `users` SET `AvatarUrl` = \"{context.User.GetAvatarUrl()}\" WHERE `UserID` = {context.User.Id};"));
+                    }
+                }
 
                 if (usr != null && usr.Banned) return;
 
@@ -80,11 +87,8 @@ namespace Skuld.Services
                 if (cmds == null || cmds.Count == 0) { return; }
 
                 var cmd = cmds.FirstOrDefault().Command;
-                if (database.CanConnect)
-                {
-                    var mods = sguild.GuildSettings.Modules;
-                    if (MessageTools.ModuleDisabled(mods, cmd)) { return; }
-                }
+                var mods = sguild.GuildSettings.Modules;
+                if (MessageTools.ModuleDisabled(mods, cmd)) { return; }
 
                 Thread thd = new Thread(
                     async () =>
