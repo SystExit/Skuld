@@ -55,6 +55,8 @@ namespace Skuld.Services
 
         public async Task OnMessageRecievedAsync(SocketMessage arg)
         {
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
             DogStatsd.Increment("messages.recieved");
 
             if (arg.Author.IsBot) { return; }
@@ -69,26 +71,16 @@ namespace Skuld.Services
             try
             {
                 SkuldGuild sguild = await MessageTools.GetGuildAsync(context.Guild, database).ConfigureAwait(false);
-                var usr = await MessageTools.GetUserAsync(context.User, database).ConfigureAwait(false);
-                if (database.CanConnect)
-                {
-                    if (usr.AvatarUrl != context.User.GetAvatarUrl())
-                    {
-                        await database.SingleQueryAsync(new MySql.Data.MySqlClient.MySqlCommand($"UPDATE `users` SET `AvatarUrl` = \"{context.User.GetAvatarUrl()}\" WHERE `UserID` = {context.User.Id};"));
-                    }
-                }
-
-                if (usr != null && usr.Banned) return;
+                await UserBannedAsync(context.User).ConfigureAwait(false);
 
                 if (sguild != null) { if (!MessageTools.HasPrefix(message, config, sguild.Prefix)) { return; } }
                 else { if (!MessageTools.HasPrefix(message, config)) { return; } }
 
-                var cmds = commandService.Search(context, MessageTools.GetCmdName(message, HostService.Configuration.Discord, database, sguild)).Commands;
+                var cmds = commandService.Search(context, MessageTools.GetCmdName(message, HostService.Configuration.Discord, sguild)).Commands;
                 if (cmds == null || cmds.Count == 0) { return; }
 
                 var cmd = cmds.FirstOrDefault().Command;
-                var mods = sguild.GuildSettings.Modules;
-                if (MessageTools.ModuleDisabled(mods, cmd)) { return; }
+                if (MessageTools.ModuleDisabled(sguild.GuildSettings.Modules, cmd)) { return; }
 
                 Thread thd = new Thread(
                     async () =>
@@ -106,6 +98,23 @@ namespace Skuld.Services
             {
                 await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("CmdDisp", ex.Message, LogSeverity.Error, ex));
             }
+            stopwatch.Stop();
+            Console.WriteLine($"Command Processing took: {stopwatch.ElapsedMilliseconds()}ms");
+        }
+
+        public async Task<bool> UserBannedAsync(IUser user)
+        {
+            var usr = await MessageTools.GetUserAsync(user, database).ConfigureAwait(false);
+            if (await database.CheckConnectionAsync())
+            {
+                if (usr.AvatarUrl != user.GetAvatarUrl())
+                {
+                    await database.SingleQueryAsync(new MySql.Data.MySqlClient.MySqlCommand($"UPDATE `users` SET `AvatarUrl` = \"{user.GetAvatarUrl()}\" WHERE `UserID` = {user.Id};"));
+                }
+            }
+            if (usr != null && usr.Banned) return true;
+
+            return false;
         }
 
         public async Task DispatchCommandAsync(ICommandContext context, CommandInfo command)
@@ -118,7 +127,7 @@ namespace Skuld.Services
             if (result.IsSuccess)
             {
                 DogStatsd.Histogram("commands.latency", watch.ElapsedMilliseconds(), 0.5, new[] { $"module:{command.Module.Name.ToLowerInvariant()}", $"cmd:{command.Name.ToLowerInvariant()}" });
-                if (database.CanConnect)
+                if (await database.CheckConnectionAsync())
                 {
                     await InsertCommand(command, context.User).ConfigureAwait(false);
                 }

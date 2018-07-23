@@ -130,7 +130,33 @@ namespace Skuld.Extensions
 
         public static async Task<bool> DoDailyAsync(this SkuldUser user, DatabaseService db, SkuldConfig config, SkuldUser sender = null)
         {
-            if (sender == null)
+            if(sender != null)
+            {
+                if(sender.Daily != 0)
+                {
+                    if (user.Daily < (DateTime.UtcNow.ToEpoch() - 86400))
+                    {
+                        sender.Daily = DateTime.UtcNow.ToEpoch();
+                        await db.UpdateUserAsync(sender);
+                        user.Money += config.Preferences.DailyAmount;
+                        await db.UpdateUserAsync(user);
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    sender.Daily = DateTime.UtcNow.ToEpoch();
+                    await db.UpdateUserAsync(sender);
+                    user.Money += config.Preferences.DailyAmount;
+                    await db.UpdateUserAsync(user);
+                    return true;
+                }
+            }
+            else
             {
                 if (user.Daily != 0)
                 {
@@ -149,30 +175,6 @@ namespace Skuld.Extensions
                 else
                 {
                     user.Daily = DateTime.UtcNow.ToEpoch();
-                    user.Money += config.Preferences.DailyAmount;
-                    await db.UpdateUserAsync(user);
-                    return true;
-                }
-            }
-            else
-            {
-                if (sender.Daily != 0)
-                {
-                    if (sender.Daily < (DateTime.UtcNow.ToEpoch() - 86400))
-                    {
-                        sender.Daily = DateTime.UtcNow.ToEpoch();
-                        user.Money += config.Preferences.DailyAmount;
-                        await db.UpdateUserAsync(user);
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-                else
-                {
-                    sender.Daily = DateTime.UtcNow.ToEpoch();
                     user.Money += config.Preferences.DailyAmount;
                     await db.UpdateUserAsync(user);
                     return true;

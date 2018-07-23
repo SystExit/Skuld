@@ -107,7 +107,7 @@ namespace Skuld.Services
 
         private async Task Bot_ReactionAdded(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3)
         {
-            if (database.CanConnect)
+            if (await database.CheckConnectionAsync())
             {
                 var gld = client.Guilds.FirstOrDefault(x => x.TextChannels.FirstOrDefault(z => z.Id == arg2.Id) != null);
                 var guild = await database.GetGuildAsync(gld.Id);
@@ -154,7 +154,7 @@ namespace Skuld.Services
         private async Task Bot_UserJoined(SocketGuildUser arg)
         {
             await logger.AddToLogsAsync(new Core.Models.LogMessage("UsrJoin", $"User {arg.Username} joined {arg.Guild.Name}", LogSeverity.Info));
-            if (database.CanConnect)
+            if (await database.CheckConnectionAsync())
             {
                 await database.InsertUserAsync(arg);
 
@@ -192,7 +192,7 @@ namespace Skuld.Services
         private async Task Bot_UserLeft(SocketGuildUser arg)
         {
             await logger.AddToLogsAsync(new Core.Models.LogMessage("UsrLeft", $"User {arg.Username} just left {arg.Guild.Name}", LogSeverity.Info));
-            if (database.CanConnect)
+            if (await database.CheckConnectionAsync())
             {
                 var guild = await database.GetGuildAsync(arg.Guild.Id);
                 string leavemessage = guild.LeaveMessage;

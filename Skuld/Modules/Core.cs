@@ -21,7 +21,7 @@ namespace Skuld.Modules
             {
                 string prefix = MessageService.config.Prefix;
 
-                if (Database.CanConnect)
+                if (await Database.CheckConnectionAsync())
                 {
                     var guild = await Database.GetGuildAsync(Context.Guild.Id);
                     if (guild != null)

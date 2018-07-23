@@ -67,7 +67,7 @@ namespace Skuld.Modules
                 await SendAsync($"{Context.User.Mention} stabbed {user.Mention}", gif.URL).ConfigureAwait(false);
                 return;
             }
-            if (Database.CanConnect)
+            if (await Database.CheckConnectionAsync())
             {
                 uint dhp = (uint)Random.Next(0, 100);
 
@@ -203,7 +203,7 @@ namespace Skuld.Modules
                 await SendAsync($"{Context.User.Mention} just headpatted {user.Mention}", gif.URL).ConfigureAwait(false);
                 return;
             }
-            if (Database.CanConnect)
+            if (await Database.CheckConnectionAsync())
             {
                 var cusr = await Database.GetUserAsync(Context.User.Id).ConfigureAwait(false);
 
@@ -245,7 +245,7 @@ namespace Skuld.Modules
                 await SendAsync($"{Context.User.Mention} glares at {user.Mention}", gif.URL).ConfigureAwait(false);
             }
 
-            if (Database.CanConnect)
+            if (await Database.CheckConnectionAsync())
             {
                 var usr = await Database.GetUserAsync(Context.User.Id).ConfigureAwait(false);
 

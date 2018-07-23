@@ -81,17 +81,17 @@ namespace Skuld.Modules
         [Command("daily"), Summary("Daily Money")]
         public async Task Daily(IGuildUser user = null)
         {
+            var context = await Database.GetUserAsync(Context.User.Id);
             if (user == null)
             {
-                var suser = await Database.GetUserAsync(Context.User.Id);
-                if (await suser.DoDailyAsync(Database, Configuration))
+                if (await context.DoDailyAsync(Database, Configuration))
                 {
-                    suser = await Database.GetUserAsync(Context.User.Id);
-                    await ReplyAsync(Context.Channel, $"You got your daily of: `{Configuration.Preferences.MoneySymbol + Configuration.Preferences.DailyAmount}`, you now have: {Configuration.Preferences.MoneySymbol}{(suser.Money.ToString("N0"))}");
+                    context = await Database.GetUserAsync(Context.User.Id);
+                    await ReplyAsync(Context.Channel, $"You got your daily of: `{Configuration.Preferences.MoneySymbol + Configuration.Preferences.DailyAmount}`, you now have: {Configuration.Preferences.MoneySymbol}{(context.Money.ToString("N0"))}");
                 }
                 else
                 {
-                    var thing = suser.Daily + 86400;
+                    var thing = context.Daily + 86400;
                     var remain = thing.FromEpoch().Subtract(DateTime.UtcNow);
                     string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
                     await ReplyAsync(Context.Channel, $"You must wait `{remaining}`");
@@ -100,14 +100,14 @@ namespace Skuld.Modules
             else
             {
                 var suser = await Database.GetUserAsync(user.Id);
-                if (await suser.DoDailyAsync(Database, Configuration, await Database.GetUserAsync(Context.User.Id)))
+                if (await suser.DoDailyAsync(Database, Configuration, context))
                 {
                     suser = await Database.GetUserAsync(user.Id);
                     await ReplyAsync(Context.Channel, $"You just gave {user.Mention} your daily of: `{Configuration.Preferences.MoneySymbol + Configuration.Preferences.DailyAmount}`, they now have: {Configuration.Preferences.MoneySymbol}{(suser.Money.ToString("N0"))}");
                 }
                 else
                 {
-                    var thing = suser.Daily + 86400;
+                    var thing = context.Daily + 86400;
                     var remain = thing.FromEpoch().Subtract(DateTime.UtcNow);
                     string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
                     await ReplyAsync(Context.Channel, $"You must wait `{remaining}`");

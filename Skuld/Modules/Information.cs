@@ -32,7 +32,7 @@ namespace Skuld.Modules
         public async Task GetServer()
         {
             Embed embed = null;
-            if (DatabaseService.CanConnect)
+            if (await DatabaseService.CheckConnectionAsync())
             {
                 var sguild = await DatabaseService.GetGuildAsync(Context.Guild.Id);
                 embed = await Context.Guild.GetSummaryAsync(Context.Client, sguild);

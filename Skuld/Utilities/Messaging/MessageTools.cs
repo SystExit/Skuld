@@ -19,7 +19,7 @@ namespace Skuld.Utilities.Messaging
 
         public static async Task<CustomCommand> GetCustomCommandAsync(SocketGuild guild, string command, DatabaseService database)
         {
-            if (database.CanConnect)
+            if (await database.CheckConnectionAsync())
             {
                 var cmd = await database.GetCustomCommandAsync(guild.Id, command).ConfigureAwait(false);
                 if (cmd != null) return cmd;
@@ -61,7 +61,7 @@ namespace Skuld.Utilities.Messaging
 
         public static async Task<SkuldGuild> GetGuildAsync(DiscordNet.IGuild guild, DatabaseService database)
         {
-            if (database.CanConnect)
+            if (await database.CheckConnectionAsync())
             {
                 var sguild = await database.GetGuildAsync(guild.Id).ConfigureAwait(false);
                 if (sguild == null)
@@ -81,7 +81,7 @@ namespace Skuld.Utilities.Messaging
 
         public static async Task<SkuldUser> GetUserAsync(DiscordNet.IUser user, DatabaseService database)
         {
-            if (database.CanConnect)
+            if (await database.CheckConnectionAsync())
             {
                 var usr = await database.GetUserAsync(user.Id);
                 if (usr == null) { await database.InsertUserAsync(user).ConfigureAwait(false); usr = await database.GetUserAsync(user.Id); }
@@ -93,13 +93,13 @@ namespace Skuld.Utilities.Messaging
             }
         }
 
-        public static string GetCmdName(DiscordNet.IUserMessage arg, DiscordConfig config, DatabaseService database, SkuldGuild sguild = null)
+        public static string GetCmdName(DiscordNet.IUserMessage arg, DiscordConfig config, SkuldGuild sguild = null)
         {
             string content = "";
             var contentsplit = arg.Content.Split(' ')[0];
             if (config.AltPrefix != null)
             {
-                if (database.CanConnect)
+                if (sguild != null)
                 {
                     if (contentsplit.StartsWith(sguild.Prefix))
                         content = contentsplit.Replace(sguild.Prefix, "");
@@ -118,7 +118,7 @@ namespace Skuld.Utilities.Messaging
             }
             else
             {
-                if (database.CanConnect)
+                if (sguild != null)
                 {
                     if (contentsplit.StartsWith(sguild.Prefix))
                         content = contentsplit.Replace(sguild.Prefix, "");

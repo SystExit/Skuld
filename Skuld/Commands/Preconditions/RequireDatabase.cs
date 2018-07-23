@@ -12,17 +12,17 @@ namespace Skuld.Commands.Preconditions
         {
         }
 
-        public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
+        public override async Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
             var dbserv = HostService.Services.GetRequiredService<DatabaseService>();
 
             if (dbserv != null)
             {
-                if (dbserv.CanConnect)
-                    return Task.FromResult(PreconditionResult.FromSuccess());
+                if (await dbserv.CheckConnectionAsync())
+                    return PreconditionResult.FromSuccess();
             }
 
-            return Task.FromResult(PreconditionResult.FromError("Command requires an active Database Connection"));
+            return PreconditionResult.FromError("Command requires an active Database Connection");
         }
     }
 }

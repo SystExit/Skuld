@@ -24,15 +24,13 @@ namespace Skuld.Services
 
         private string ConnectionString;
 
-        public bool CanConnect = false;
-
         public DatabaseService(GenericLogger log, Locale loc, DiscordShardedClient cli, SkuldConfig config)
         {
             logger = log; local = loc; client = cli; Configuration = config;
             ConnectionString = $@"server={Configuration.SQL.Host};user={Configuration.SQL.Username};password={Configuration.SQL.Password};database={Configuration.SQL.Database};charset=utf8mb4;";
         }
 
-        public async Task CheckConnectionAsync()
+        public async Task<bool> CheckConnectionAsync()
         {
             if (!Configuration.SQL.SSL && !ConnectionString.Contains("SslMode=None;"))
             {
@@ -48,17 +46,14 @@ namespace Skuld.Services
                     if (conn.State == System.Data.ConnectionState.Open)
                     {
                         canconnect = true;
-                        await logger.AddToLogsAsync(new Core.Models.LogMessage("Database", "Connected Successfully", LogSeverity.Info));
                     }
                     else
                     {
                         canconnect = false;
-                        await logger.AddToLogsAsync(new Core.Models.LogMessage("Database", "Can't Connect", LogSeverity.Error));
                     }
                 }
-                catch (Exception ex)
+                catch
                 {
-                    await logger.AddToLogsAsync(new Core.Models.LogMessage("Database", ex.Message, LogSeverity.Error, ex));
                     canconnect = false;
                 }
                 finally
@@ -66,12 +61,12 @@ namespace Skuld.Services
                     await conn.CloseAsync();
                 }
             }
-            CanConnect = canconnect;
+            return canconnect;
         }
 
         public async Task<SqlResult> SingleQueryAsync(MySqlCommand command)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 using (var conn = new MySqlConnection(ConnectionString))
                 {
@@ -134,7 +129,7 @@ namespace Skuld.Services
 
         public async Task<SkuldUser> GetUserAsync(ulong id)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var user = new SkuldUser();
                 var command = new MySqlCommand("SELECT * FROM `users` WHERE UserID = @userid");
@@ -237,7 +232,7 @@ namespace Skuld.Services
 
         public async Task<Pasta> GetPastaAsync(string name)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var pasta = new Pasta();
                 var command = new MySqlCommand("SELECT * FROM `pasta` WHERE Name = @pastaname");
@@ -283,7 +278,7 @@ namespace Skuld.Services
 
         public async Task<IReadOnlyList<Pasta>> GetAllPastasAsync()
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var command = new MySqlCommand("SELECT * FROM `pasta`;");
                 var allpasta = new List<Pasta>();
@@ -340,7 +335,7 @@ namespace Skuld.Services
 
         public async Task<SqlResult> CastPastaVoteAsync(IUser user, string title, bool upvote)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var pasta = await GetPastaAsync(title);
                 if (pasta != null)
@@ -412,7 +407,7 @@ namespace Skuld.Services
 
         public async Task<bool> HasUserVotedOnPastaAsync(IUser user, string title)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var pasta = await GetPastaAsync(title);
                 if (pasta != null)
@@ -439,7 +434,7 @@ namespace Skuld.Services
 
         public async Task<SqlResult> ChangeUserVoteOnPastaAsync(IUser user, string title)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var pasta = await GetPastaAsync(title);
                 if (pasta != null)
@@ -468,7 +463,7 @@ namespace Skuld.Services
 
         public async Task<CustomCommand> GetCustomCommandAsync(ulong GuildID, string Command)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var cmd = new CustomCommand();
                 var command = new MySqlCommand("SELECT * FROM `guildcustomcommands` WHERE GuildID = @guildID AND CommandName = @command");
@@ -519,7 +514,7 @@ namespace Skuld.Services
 
         public async Task<SkuldGuild> GetGuildAsync(ulong id)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var guild = await GetBaseGuildAsync(id).ConfigureAwait(false);
                 if (guild != null)
@@ -541,7 +536,7 @@ namespace Skuld.Services
 
         private async Task<SkuldGuild> GetBaseGuildAsync(ulong id)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 try
                 {
@@ -725,7 +720,7 @@ namespace Skuld.Services
 
         public async Task<SqlResult> InsertAdvancedSettingsAsync(bool feature, IGuild guild)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var command = new MySqlCommand("INSERT IGNORE INTO ");
                 if (feature)
@@ -749,7 +744,7 @@ namespace Skuld.Services
 
         public async Task<SqlResult> InsertUserAsync(IUser user)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 if (!user.IsBot)
                 {
@@ -777,7 +772,7 @@ namespace Skuld.Services
 
         public async Task<SqlResult> InsertCustomCommand(IGuild guild, string command, string content)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var cmd = new MySqlCommand("INSERT INTO `guildcustomcommands` ( `Content`, `GuildID`, `CommandName` ) VALUES ( @newcontent , @guildID , @commandName ) ;");
                 cmd.Parameters.AddWithValue("@newcontent", content);
@@ -794,7 +789,7 @@ namespace Skuld.Services
 
         public async Task<IReadOnlyList<SqlResult>> InsertGuildAsync(IGuild guild)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 List<SqlResult> results = new List<SqlResult>();
 
@@ -819,7 +814,7 @@ namespace Skuld.Services
 
         public async Task<SqlResult> InsertPastaAsync(IUser user, string pastaname, string content)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 content = content.Replace("\'", "\\\'");
                 content = content.Replace("\"", "\\\"");
@@ -841,7 +836,7 @@ namespace Skuld.Services
 
         public async Task<SqlResult> DropGuildAsync(IGuild guild)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `guilds` WHERE `GuildID` = {guild.Id}; DELETE FROM `guildmodules` WHERE `GuildID` = {guild.Id}; DELETE FROM `guildfeatures` WHERE `GuildID` = {guild.Id}; DELETE FROM `guildcustomcommands` WHERE `GuildID` = {guild.Id}; DELETE FROM `guildlevelrewards` WHERE `GuildID` = {guild.Id}; DELETE FROM `userguildxp` WHERE `GuildID` = {guild.Id};")).ConfigureAwait(false);
             }
@@ -854,7 +849,7 @@ namespace Skuld.Services
 
         public async Task<SqlResult> DropUserAsync(IUser user)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `users` WHERE `UserID` = {user.Id}; DELETE FROM `usercommandusage` WHERE `UserID` = {user.Id}; DELETE FROM `pasta` WHERE `OwnerID` = {user.Id}; DELETE FROM `userguildxp` WHERE `UserID` = {user.Id};")).ConfigureAwait(false);
             }
@@ -867,7 +862,7 @@ namespace Skuld.Services
 
         public async Task<SqlResult> DropCustomCommand(IGuild guild, string command)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var cmd = new MySqlCommand("DELETE FROM `guildcustomcommands` WHERE `GuildID` = @guildID AND `CommandName` = @commandName ;");
                 cmd.Parameters.AddWithValue("@guildID", guild.Id);
@@ -883,7 +878,7 @@ namespace Skuld.Services
 
         public async Task<SqlResult> DropPastaAsync(string title)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var cmd = new MySqlCommand("DELETE FROM `pasta` WHERE Name = @pastaname;");
                 cmd.Parameters.AddWithValue("@pastaname", title);
@@ -898,7 +893,7 @@ namespace Skuld.Services
 
         public async Task<SqlResult> UpdateUserAsync(SkuldUser user)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var command = new MySqlCommand(
                     "UPDATE `users` SET " +
@@ -938,7 +933,7 @@ namespace Skuld.Services
 
         public async Task<SqlResult> UpdateUserUsageAsync(SkuldUser user, string command)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var cmd = new MySqlCommand("SELECT `Usage` from `usercommandusage` WHERE UserID = @userID AND Command = @command");
                 cmd.Parameters.AddWithValue("@userID", user.ID);
@@ -980,7 +975,7 @@ namespace Skuld.Services
 
         public async Task<SqlResult> UpdateCustomCommand(IGuild guild, string command, string content)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var cmd = new MySqlCommand("UPDATE `guildcustomcommands` SET `Content` = @newcontent WHERE `GuildID` = @guildID AND `CommandName` = @commandName ;");
                 cmd.Parameters.AddWithValue("@newcontent", content);
@@ -997,7 +992,7 @@ namespace Skuld.Services
 
         public async Task<SqlResult> UpdatePastaAsync(Pasta pasta, IUser user = null)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 if (user == null)
                 {
@@ -1030,7 +1025,7 @@ namespace Skuld.Services
 
         public async Task<IReadOnlyList<SqlResult>> UpdateGuildAsync(SkuldGuild guild)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var results = new List<SqlResult>
                 {
@@ -1053,7 +1048,7 @@ namespace Skuld.Services
 
         private async Task<SqlResult> UpdateBaseGuildAsync(SkuldGuild guild)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 MySqlCommand command = null;
                 if (guild.JoinableRoles != null)
@@ -1107,7 +1102,7 @@ namespace Skuld.Services
 
         private async Task<SqlResult> UpdateCommandModulesAsync(ulong id, GuildCommandModules modules)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var command = new MySqlCommand("UPDATE `guildmodules` SET " +
                         "`Accounts` = @accounts, " +
@@ -1145,7 +1140,7 @@ namespace Skuld.Services
 
         private async Task<SqlResult> UpdateFeaturesAsync(ulong id, GuildFeatureModules features)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var command = new MySqlCommand("UPDATE `guildfeatures` SET " +
                     "`Pinning` = @pin, " +
@@ -1167,7 +1162,7 @@ namespace Skuld.Services
 
         public async Task<object> GetUserExperienceAsync(IUser user)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 try
                 {
@@ -1241,7 +1236,7 @@ namespace Skuld.Services
 
         public async Task<SqlResult> UpdateGuildExperienceAsync(IUser user, GuildExperience guildexp, IGuild guild)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 try
                 {
@@ -1279,7 +1274,7 @@ namespace Skuld.Services
 
         public async Task<SqlResult> InsertGuildExperienceAsync(IUser user, IGuild guild, GuildExperience experience)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 try
                 {
@@ -1314,7 +1309,7 @@ namespace Skuld.Services
 
         public async Task<SqlResult> AddExperienceAsync(IUser user, ulong amount, IGuild guild)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var userExperience = await GetUserExperienceAsync(user);
 
@@ -1341,7 +1336,7 @@ namespace Skuld.Services
 
         public async Task<IReadOnlyList<SqlResult>> CheckGuildUsersAsync(IGuild guild)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var results = new List<SqlResult>();
                 await guild.DownloadUsersAsync();
@@ -1372,7 +1367,7 @@ namespace Skuld.Services
 
         public async Task<IReadOnlyList<SqlResult>> RebuildGuildAsync(IGuild guild)
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var results = new List<SqlResult>();
 
@@ -1394,7 +1389,7 @@ namespace Skuld.Services
 
         public async Task<IReadOnlyList<SqlResult>> PopulateGuildsAsync()
         {
-            if (CanConnect)
+            if (await CheckConnectionAsync())
             {
                 var results = new List<SqlResult>();
                 foreach (var guild in client.Guilds)
@@ -1411,6 +1406,30 @@ namespace Skuld.Services
                     Successful = false
                 }
             };
+        }
+
+        public async Task<IReadOnlyList<UserExperience>> GetGuildXPLeaderboardAsync(IGuild guild, int limit = 25, int start = 0)
+        {
+
+            return null;
+        }
+
+        public async Task<IReadOnlyList<UserExperience>> GetGlobalXPLeaderboardAsync(int limit = 25, int start = 0)
+        {
+
+            return null;
+        }
+
+        public async Task<IReadOnlyList<SkuldUser>> GetGlobalMoneyLeaderboardAsync(int limit = 25, int start = 0)
+        {
+
+            return null;
+        }
+
+        public async Task<IReadOnlyList<SkuldUser>> GetGuildMoneyLeaderboardAsync(IGuild guild, int limit = 25, int start = 0)
+        {
+
+            return null;
         }
     }
 }
