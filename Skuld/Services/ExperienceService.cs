@@ -29,8 +29,6 @@ namespace Skuld.Services
 
         private async Task Client_MessageReceived(SocketMessage arg)
         {
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
             if (arg.Author.IsBot) { return; }
 
             var message = arg as SocketUserMessage;
@@ -138,8 +136,6 @@ namespace Skuld.Services
             {
                 await logger.AddToLogsAsync(new Core.Models.LogMessage("CmdDisp", ex.Message, LogSeverity.Error, ex));
             }
-            stopwatch.Stop();
-            Console.WriteLine($"Experience processing took: {stopwatch.ElapsedMilliseconds()}ms");
         }
         private ulong GetXPRequirement(ulong level, double growthmod)
             => (ulong)((level * 50) * (level * growthmod));

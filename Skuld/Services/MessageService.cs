@@ -55,8 +55,6 @@ namespace Skuld.Services
 
         public async Task OnMessageRecievedAsync(SocketMessage arg)
         {
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
             DogStatsd.Increment("messages.recieved");
 
             if (arg.Author.IsBot) { return; }
@@ -98,8 +96,6 @@ namespace Skuld.Services
             {
                 await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("CmdDisp", ex.Message, LogSeverity.Error, ex));
             }
-            stopwatch.Stop();
-            Console.WriteLine($"Command Processing took: {stopwatch.ElapsedMilliseconds()}ms");
         }
 
         public async Task<bool> UserBannedAsync(IUser user)
