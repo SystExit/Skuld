@@ -28,12 +28,10 @@ namespace Skuld.Services
             {
                 x.OnMessage = async (message) => await HandleMessageAsync(x, message);
             });
-            Logger.AddToLogsAsync(new LogMessage("WebSocket", $"Started WebSocket server on {Server.Location}:{Server.Port}", Discord.LogSeverity.Info)).GetAwaiter();
         }
 
         public async Task HandleMessageAsync(IWebSocketConnection conn, string message)
         {
-            await Logger.AddToLogsAsync(new LogMessage("WebSocket-Conn", "New WebSocket Connection Received from: "+conn.ConnectionInfo.ClientIpAddress, Discord.LogSeverity.Info));
             if (string.IsNullOrEmpty(message)) return;
             if (message.StartsWith("user:"))
             {
@@ -45,8 +43,6 @@ namespace Skuld.Services
                 var cnv = JsonConvert.SerializeObject(usr);
 
                 await conn.Send(cnv);
-
-                await Logger.AddToLogsAsync(new LogMessage("WebSocket-Conn", "Sent response back to: " + conn.ConnectionInfo.ClientIpAddress, Discord.LogSeverity.Info));
             }
             if (message.StartsWith("guild:"))
             {
@@ -64,8 +60,6 @@ namespace Skuld.Services
                 var cnv = JsonConvert.SerializeObject(wsgld);
 
                 await conn.Send(cnv);
-
-                await Logger.AddToLogsAsync(new LogMessage("WebSocket-Conn", "Sent response back to: " + conn.ConnectionInfo.ClientIpAddress, Discord.LogSeverity.Info));
             }
         }
     }
