@@ -82,13 +82,13 @@ namespace Skuld.Services
                 });
 
                 Services = new ServiceCollection()
+                    .AddSingleton(logger)
                     .AddSingleton(new BaseClient(logger))
                     .AddSingleton(Configuration)
                     .AddSingleton<HardwareStats>()
                     .AddSingleton<SoftwareStats>()
                     .AddSingleton(locale)
                     .AddSingleton(new InteractiveService(Client, TimeSpan.FromSeconds(60)))
-                    .AddSingleton(logger)
                     .AddSingleton(database)
                     .AddSingleton<YoutubeClient>()
                     .AddSingleton(new ImgurClient(Configuration.APIS.ImgurClientID, Configuration.APIS.ImgurClientSecret))
@@ -117,6 +117,7 @@ namespace Skuld.Services
                     .AddSingleton(mess)
                     .AddSingleton(new ExperienceService(Client, database, logger))
                     .AddSingleton(new CustomCommandService(Client, database, logger, mess))
+                    .AddSingleton(new WebSocketServerService(Client, logger))
                     .BuildServiceProvider();
 
                 await logger.AddToLogsAsync(new Core.Models.LogMessage("Framework", "Successfully built service provider", LogSeverity.Info));

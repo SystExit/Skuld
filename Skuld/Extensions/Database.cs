@@ -25,7 +25,7 @@ namespace Skuld.Extensions
             embed.AddField(Configuration.Preferences.MoneyName, user.Money.ToString("N0") ?? "No Money", inline: true);
             if (user.Daily != 0)
             {
-                embed.AddField("Daily", user.Daily, inline: true);
+                embed.AddField("Daily", user.Daily.FromEpoch().ToString("dd/MM/yyyy HH:mm:ss"), inline: true);
             }
             else
             {
@@ -61,7 +61,7 @@ namespace Skuld.Extensions
 
             if (user.Daily != 0)
             {
-                embed.AddField("Daily", user.Daily, inline: true);
+                embed.AddField("Daily", user.Daily.FromEpoch().ToString("dd/MM/yyyy HH:mm:ss"), inline: true);
             }
             else
             {

@@ -30,7 +30,7 @@ namespace Skuld.Services
                 var images = await endpoint.SearchGalleryAsync(query);
                 var albm = images.GetRandomItem();
                 var album = (IGalleryAlbum)albm;
-                if (album != null && album.Nsfw != true)
+                if (album != null && album.Nsfw.GetValueOrDefault())
                 {
                     return "I found this:\n" + album.Link;
                 }

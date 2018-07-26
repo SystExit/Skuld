@@ -44,14 +44,19 @@ namespace Skuld.Modules
             if(usr.Banned)
             {
                 usr.Banned = false;
+                await Database.UpdateUserAsync(usr);
+                usr = await Database.GetUserAsync(user.Id);
+                if(!usr.Banned)
                 await ReplyAsync(Context.Channel, $"Un-beaned {user.Mention}");
             }
             else
             {
                 usr.Banned = true;
+                await Database.UpdateUserAsync(usr);
+                usr = await Database.GetUserAsync(user.Id);
+                if(usr.Banned)
                 await ReplyAsync(Context.Channel, $"Beaned {user.Mention}");
             }
-            await Database.UpdateUserAsync(usr);
         }
 
         [Command("shardrestart"), Summary("Restarts shard")]
@@ -270,7 +275,7 @@ namespace Skuld.Modules
         {
             try
             {
-                if (code.ToLowerInvariant().Contains("token") || code.ToLowerInvariant().Contains("config"))
+                if (code.ToLowerInvariant().Contains("token") || code.ToLowerInvariant().Contains("key"))
                 {
                     await ReplyAsync(Context.Channel, "Nope.");
                     return;

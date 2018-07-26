@@ -847,11 +847,11 @@ namespace Skuld.Services
             };
         }
 
-        public async Task<SqlResult> DropUserAsync(IUser user)
+        public async Task<SqlResult> DropUserAsync(ulong ID)
         {
             if (await CheckConnectionAsync())
             {
-                return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `users` WHERE `UserID` = {user.Id}; DELETE FROM `usercommandusage` WHERE `UserID` = {user.Id}; DELETE FROM `pasta` WHERE `OwnerID` = {user.Id}; DELETE FROM `userguildxp` WHERE `UserID` = {user.Id};")).ConfigureAwait(false);
+                return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `users` WHERE `UserID` = {ID}; DELETE FROM `usercommandusage` WHERE `UserID` = {ID}; DELETE FROM `pasta` WHERE `OwnerID` = {ID}; DELETE FROM `userguildxp` WHERE `UserID` = {ID};")).ConfigureAwait(false);
             }
             return new SqlResult
             {
@@ -1346,7 +1346,7 @@ namespace Skuld.Services
                     var db = await GetUserAsync(user.Id).ConfigureAwait(false);
                     if (discord == null && db != null)
                     {
-                        results.Add(await DropUserAsync(user).ConfigureAwait(false));
+                        results.Add(await DropUserAsync(user.Id).ConfigureAwait(false));
                     }
                     else if (discord != null && db == null)
                     {

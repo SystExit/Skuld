@@ -13,7 +13,7 @@ namespace Skuld.Core.Services
     public class GenericLogger
     {
         public StreamWriter sw;
-        private List<LogMessage> Logs;
+        public List<LogMessage> Logs;
         private readonly bool Console;
         private readonly bool File;
         private readonly Random random = new Random();

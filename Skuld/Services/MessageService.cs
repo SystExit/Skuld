@@ -69,7 +69,16 @@ namespace Skuld.Services
             try
             {
                 SkuldGuild sguild = await MessageTools.GetGuildAsync(context.Guild, database).ConfigureAwait(false);
-                await UserBannedAsync(context.User).ConfigureAwait(false);
+
+                var usr = await MessageTools.GetUserAsync(context.User, database).ConfigureAwait(false);
+                if (await database.CheckConnectionAsync())
+                {
+                    if (usr.AvatarUrl != context.User.GetAvatarUrl())
+                    {
+                        await database.SingleQueryAsync(new MySql.Data.MySqlClient.MySqlCommand($"UPDATE `users` SET `AvatarUrl` = \"{context.User.GetAvatarUrl()}\" WHERE `UserID` = {context.User.Id};"));
+                    }
+                }
+                if (usr != null && usr.Banned) return;
 
                 if (sguild != null) { if (!MessageTools.HasPrefix(message, config, sguild.Prefix)) { return; } }
                 else { if (!MessageTools.HasPrefix(message, config)) { return; } }
@@ -96,21 +105,6 @@ namespace Skuld.Services
             {
                 await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("CmdDisp", ex.Message, LogSeverity.Error, ex));
             }
-        }
-
-        public async Task<bool> UserBannedAsync(IUser user)
-        {
-            var usr = await MessageTools.GetUserAsync(user, database).ConfigureAwait(false);
-            if (await database.CheckConnectionAsync())
-            {
-                if (usr.AvatarUrl != user.GetAvatarUrl())
-                {
-                    await database.SingleQueryAsync(new MySql.Data.MySqlClient.MySqlCommand($"UPDATE `users` SET `AvatarUrl` = \"{user.GetAvatarUrl()}\" WHERE `UserID` = {user.Id};"));
-                }
-            }
-            if (usr != null && usr.Banned) return true;
-
-            return false;
         }
 
         public async Task DispatchCommandAsync(ICommandContext context, CommandInfo command)

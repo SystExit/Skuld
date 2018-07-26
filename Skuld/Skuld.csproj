@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Fleck" Version="1.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Skuld.APIS\Skuld.APIS.csproj" />
     <ProjectReference Include="..\Skuld.Core\Skuld.Core.csproj" />
   </ItemGroup>

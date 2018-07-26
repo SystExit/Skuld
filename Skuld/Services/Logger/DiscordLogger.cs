@@ -89,6 +89,8 @@ namespace Skuld.Services
                 {
                     client.MessageReceived += messageService.OnMessageRecievedAsync;
                     await client.SetGameAsync($"{Configuration.Discord.Prefix}help | {random.Next(0, client.Shards.Count) + 1}/{client.Shards.Count}", type: ActivityType.Listening);
+
+                    await client.DownloadUsersAsync(client.Guilds);
                 }
             }
         }
@@ -180,7 +182,7 @@ namespace Skuld.Services
                 var db = await database.GetUserAsync(arg.Id);
                 if (discord == null && db != null)
                 {
-                    await database.DropUserAsync(arg);
+                    await database.DropUserAsync(arg.Id);
                 }
                 else if (discord != null && db == null)
                 {
@@ -209,7 +211,7 @@ namespace Skuld.Services
                 var db = await database.GetUserAsync(arg.Id);
                 if (discord == null && db != null)
                 {
-                    await database.DropUserAsync(arg);
+                    await database.DropUserAsync(arg.Id);
                 }
                 else if (discord != null && db == null)
                 {
