@@ -45,7 +45,10 @@ namespace Skuld.Services
         {
             try
             {
-                await twitch.LoginAsync(config.APIS.TwitchToken);
+                if(HostService.Configuration.Modules.TwitchModule)
+                {
+                    await twitch.LoginAsync(config.APIS.TwitchToken);
+                }
 
                 logger.RegisterEvents();
 

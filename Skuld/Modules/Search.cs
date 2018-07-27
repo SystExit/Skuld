@@ -5,6 +5,7 @@ using PokeSharp;
 using Skuld.APIS;
 using Skuld.APIS.Pokemon.Models;
 using Skuld.Commands;
+using Skuld.Commands.Preconditions;
 using Skuld.Core.Commands.Attributes;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
@@ -38,7 +39,7 @@ namespace Skuld.Modules
         public BaseClient WebHandler { get; set; }
         public SkuldConfig Configuration { get; set; }
 
-        [Command("twitch"), Summary("Finds a twitch user")]
+        [Command("twitch"), Summary("Finds a twitch user"), RequireTwitch]
         public async Task TwitchSearch([Remainder]string twitchStreamer)
         {
             var channel = await Twitch.GetUserAsync(twitchStreamer);
