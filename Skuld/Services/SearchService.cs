@@ -16,7 +16,7 @@ namespace Skuld.Services
 {
     public class SearchService
     {
-        public CustomsearchService GoogleSearchService { get; set; }
+        public CustomsearchService GoogleSearchService { get; internal set; }
         public YoutubeClient Youtube { get; set; }
         public ImgurClient ImgurClient { get; set; }
         public GenericLogger Logger { get; set; }
@@ -29,6 +29,11 @@ namespace Skuld.Services
             Youtube = new YoutubeClient();
             Logger = log;
             Configuration = conf;
+        }
+
+        public void BuildGoogleClient()
+        {
+            GoogleSearchService = new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer { ApiKey = Configuration.APIS.GoogleAPI, ApplicationName = "Skuld" });
         }
 
         public async Task<string> SearchImgurAsync(string query)

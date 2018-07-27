@@ -81,6 +81,7 @@ namespace Skuld.Services
                     AltPrefix = Configuration.Discord.AltPrefix
                 });
 
+
                 Services = new ServiceCollection()
                     .AddSingleton(logger)
                     .AddSingleton(new BaseClient(logger))
@@ -109,15 +110,14 @@ namespace Skuld.Services
                     .AddSingleton<WebComicClients>()
                     .AddSingleton<WikipediaClient>()
                     .AddSingleton<YNWTFClient>()
-                    .AddSingleton(new SearchService(logger, Configuration))
                     .AddSingleton(new BotListingClient(logger, Client))
                     .AddSingleton(twitch)
-                    .AddSingleton(new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer { ApiKey = Configuration.APIS.GoogleAPI, ApplicationName = "Skuld" }))
                     //.AddSingleton(weebprovider)
                     .AddSingleton(mess)
                     .AddSingleton(new ExperienceService(Client, database, logger))
                     .AddSingleton(new CustomCommandService(Client, database, logger, mess))
                     .AddSingleton(new WebSocketServerService(Client, logger))
+                    .AddSingleton(new SearchService(logger, Configuration))
                     .BuildServiceProvider();
 
                 await logger.AddToLogsAsync(new Core.Models.LogMessage("Framework", "Successfully built service provider", LogSeverity.Info));
@@ -154,6 +154,8 @@ namespace Skuld.Services
                 LogLevel = LogSeverity.Verbose,
                 //IgnoreExtraArgs = true
             }, Services);
+
+            Services.GetRequiredService<SearchService>().BuildGoogleClient();
 
             ConfigureStatsCollector();
         }
