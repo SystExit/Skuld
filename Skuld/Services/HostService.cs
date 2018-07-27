@@ -109,7 +109,7 @@ namespace Skuld.Services
                     .AddSingleton<WebComicClients>()
                     .AddSingleton<WikipediaClient>()
                     .AddSingleton<YNWTFClient>()
-                    .AddSingleton<SearchService>()
+                    .AddSingleton(new SearchService(logger, Configuration))
                     .AddSingleton(new BotListingClient(logger, Client))
                     .AddSingleton(twitch)
                     .AddSingleton(new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer { ApiKey = Configuration.APIS.GoogleAPI, ApplicationName = "Skuld" }))

@@ -22,6 +22,15 @@ namespace Skuld.Services
         public GenericLogger Logger { get; set; }
         public SkuldConfig Configuration { get; set; }
 
+        public SearchService(GenericLogger log, SkuldConfig conf)
+        {
+            GoogleSearchService = new CustomsearchService();
+            ImgurClient = new ImgurClient(conf.APIS.ImgurClientID, conf.APIS.ImgurClientSecret);
+            Youtube = new YoutubeClient();
+            Logger = log;
+            Configuration = conf;
+        }
+
         public async Task<string> SearchImgurAsync(string query)
         {
             try

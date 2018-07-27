@@ -134,7 +134,7 @@ namespace Skuld.Extensions
             {
                 if(sender.Daily != 0)
                 {
-                    if (user.Daily < (DateTime.UtcNow.ToEpoch() - 86400))
+                    if (sender.Daily < (DateTime.UtcNow.ToEpoch() - 86400))
                     {
                         sender.Daily = DateTime.UtcNow.ToEpoch();
                         await db.UpdateUserAsync(sender);

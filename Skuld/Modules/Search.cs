@@ -144,18 +144,33 @@ namespace Skuld.Modules
             platform = platform.ToLowerInvariant();
             if (platform == "google" || platform == "g")
             {
+                var msg = await ReplyAsync(Context.Channel, "🔍 Searching Google for: " + query);
                 var result = await SearchClient.SearchGoogleAsync(query);
-                await ReplyAsync(Context.Channel, result);
+                await msg.ModifyAsync(x =>
+                {
+                    x.Embed = result;
+                    x.Content = "";
+                });
             }
             if (platform == "youtube" || platform == "yt")
             {
+                var msg = await ReplyAsync(Context.Channel, "🔍 Searching Youtube for: " + query);
+                var type = Context.Channel.EnterTypingState();
                 var result = await SearchClient.SearchYoutubeAsync(query);
-                await ReplyAsync(Context.Channel, result);
+                await msg.ModifyAsync(x =>
+                {
+                    x.Content = result;
+                });
+                type.Dispose();
             }
             if (platform == "imgur")
             {
+                var msg = await ReplyAsync(Context.Channel, "🔍 Searching Imgur for: " + query);
                 var result = await SearchClient.SearchImgurAsync(query);
-                await ReplyAsync(Context.Channel, result);
+                await msg.ModifyAsync(x =>
+                {
+                    x.Content = result;
+                });
             }
         }
 
