@@ -40,7 +40,15 @@ namespace Skuld.Services
 
                 var usr = Client.GetUser(userid);
 
-                var cnv = JsonConvert.SerializeObject(usr);
+                var wsuser = new WebSocketUser
+                {
+                    Username = usr.Username,
+                    Id = usr.Id,
+                    Discriminator = usr.Discriminator,
+                    UserIconUrl = usr.GetAvatarUrl() ?? usr.GetDefaultAvatarUrl()
+                };
+
+                var cnv = JsonConvert.SerializeObject(wsuser);
 
                 await conn.Send(cnv);
             }
