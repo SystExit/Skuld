@@ -141,7 +141,7 @@ namespace Skuld.Modules
 
             var embed = new EmbedBuilder
             {
-                ImageUrl = gif.URL,
+                ImageUrl = gif,
                 Color = EmbedUtils.RandomColor()
             };
 

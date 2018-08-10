@@ -92,13 +92,6 @@ namespace Skuld.Extensions
             return embed.Build();
         }
 
-        public static string ToString(this Embed embed)
-        {
-            string message = "";
-
-            return message;
-        }
-
         public static string ToMessage(this Embed embed)
         {
             string message = "";
@@ -133,31 +126,13 @@ namespace Skuld.Extensions
         public static async Task<bool> CanEmbedAsync(this IMessageChannel channel, IGuild guild = null)
         {
             if (guild == null) return true;
-            else return (await guild.GetCurrentUserAsync()).GetPermissions(channel as IGuildChannel).EmbedLinks;
-        }
-
-        public static string ToText(this Embed embed)
-        {
-            string message = "";
-            if (embed.Author.HasValue)
-                message += $"**__{embed.Author.Value.Name}__**\n";
-            if (!String.IsNullOrEmpty(embed.Title))
-                message += $"**{embed.Title}**\n";
-            if (!String.IsNullOrEmpty(embed.Description))
-                message += embed.Description + "\n";
-            foreach (var field in embed.Fields)
-                message += $"__{field.Name}__\n{field.Value}\n\n";
-            if (embed.Video.HasValue)
-                message += embed.Video.Value.Url + "\n";
-            if (embed.Thumbnail.HasValue)
-                message += embed.Thumbnail.Value.Url + "\n";
-            if (embed.Image.HasValue)
-                message += embed.Image.Value.Url + "\n";
-            if (embed.Footer.HasValue)
-                message += $"`{embed.Footer.Value.Text}`";
-            if (embed.Timestamp.HasValue)
-                message += " | " + embed.Timestamp.Value.ToString("dd'/'MM'/'yyyy hh:mm:ss tt");
-            return message;
+            else
+            {
+                var curr = await guild.GetCurrentUserAsync();
+                var chan = await guild.GetChannelAsync(channel.Id);
+                var perms = curr.GetPermissions(chan);
+                return perms.EmbedLinks;
+            }
         }
     }
 }

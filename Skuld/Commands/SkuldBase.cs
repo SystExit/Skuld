@@ -11,10 +11,6 @@ using System.Threading.Tasks;
 
 namespace Skuld.Commands
 {
-    public class SkuldBase : InteractiveBase<ShardedCommandContext>
-    {
-    }
-
     public class SkuldBase<T> : InteractiveBase<T>
         where T : ShardedCommandContext
     {
@@ -163,9 +159,14 @@ namespace Skuld.Commands
                 var textChan = (ITextChannel)channel;
                 var mesgChan = (IMessageChannel)channel;
                 if (channel == null || textChan == null || mesgChan == null) { return null; }
+
+                IGuild guild = null;
+                if (textChan.Guild != null)
+                    guild = textChan.Guild;
+
                 await mesgChan.TriggerTypingAsync();
                 await logger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
-                if (await textChan.CanEmbedAsync())
+                if (await textChan.CanEmbedAsync(guild))
                 {
                     return await mesgChan.SendMessageAsync("", false, embed);
                 }

@@ -201,7 +201,7 @@ namespace Skuld.Modules
             }
         }
 
-        [Command("urban"), Summary("Gets a thing from urban dictionary if empty, it gets a random thing")]
+        [Command("urban"), Summary("Gets a thing from urban dictionary if empty, it gets a random thing"), RequireNsfw]
         public async Task Urban([Remainder]string phrase = null)
         {
             if (phrase == null)

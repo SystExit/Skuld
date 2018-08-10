@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Skuld.Core.Services;
-using System.Net;
-using System.Net.Sockets;
+﻿using Skuld.Core.Services;
 using Discord.WebSocket;
-using Skuld.Core.Models;
 using Fleck;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Skuld.Models;
+using Skuld.Models.Database;
 
 namespace Skuld.Services
 {
@@ -17,57 +12,90 @@ namespace Skuld.Services
     {
         public DiscordShardedClient Client { get; set; }
         public GenericLogger Logger { get; set; }
-        private WebSocketServer Server;
+        private readonly WebSocketServer _server;
 
         public WebSocketServerService(DiscordShardedClient cli, GenericLogger log)
         {
             Client = cli;
             Logger = log;
-            Server = new WebSocketServer("ws://127.0.0.1:37821");
-            Server.Start(x =>
+            _server = new WebSocketServer("ws://127.0.0.1:37821");
+            _server.Start(x =>
             {
                 x.OnMessage = async (message) => await HandleMessageAsync(x, message);
             });
         }
+
+        public void ShutdownServer()
+            => _server.Dispose();
 
         public async Task HandleMessageAsync(IWebSocketConnection conn, string message)
         {
             if (string.IsNullOrEmpty(message)) return;
             if (message.StartsWith("user:"))
             {
-                ulong userid = 0;
-                ulong.TryParse(message.Replace("user:", ""), out userid);
+                ulong.TryParse(message.Replace("user:", ""), out var userid);
 
                 var usr = Client.GetUser(userid);
-
-                var wsuser = new WebSocketUser
+                if(usr != null)
                 {
-                    Username = usr.Username,
-                    Id = usr.Id,
-                    Discriminator = usr.Discriminator,
-                    UserIconUrl = usr.GetAvatarUrl() ?? usr.GetDefaultAvatarUrl()
-                };
+                    var wsuser = new WebSocketUser
+                    {
+                        Username = usr.Username,
+                        Id = usr.Id,
+                        Discriminator = usr.Discriminator,
+                        UserIconUrl = usr.GetAvatarUrl() ?? usr.GetDefaultAvatarUrl()
+                    };
 
-                var cnv = JsonConvert.SerializeObject(wsuser);
+                    var res = new SqlResult
+                    {
+                        Successful = true,
+                        Data = wsuser
+                    };
 
-                await conn.Send(cnv);
+                    var cnv = JsonConvert.SerializeObject(res);
+
+                    await conn.Send(cnv);
+                }
+                else
+                {
+                    await conn.Send(JsonConvert.SerializeObject(new SqlResult
+                    {
+                        Successful = false,
+                        Error = "User not found"
+                    }));
+                }
             }
             if (message.StartsWith("guild:"))
             {
-                ulong guildid = 0;
-                ulong.TryParse(message.Replace("guild:", ""), out guildid);
+                ulong.TryParse(message.Replace("guild:", ""), out var guildid);
 
                 var gld = Client.GetGuild(guildid);
-
-                var wsgld = new WebSocketGuild
+                if(gld != null)
                 {
-                    Name = gld.Name,
-                    GuildIconUrl = gld.IconUrl
-                };
+                    var wsgld = new WebSocketGuild
+                    {
+                        Name = gld.Name,
+                        GuildIconUrl = gld.IconUrl
+                    };
 
-                var cnv = JsonConvert.SerializeObject(wsgld);
+                    var res = new SqlResult
+                    {
+                        Successful = true,
+                        Data = wsgld
+                    };
 
-                await conn.Send(cnv);
+                    var cnv = JsonConvert.SerializeObject(res);
+
+                    await conn.Send(cnv);
+                }
+                else
+                {
+                    await conn.Send(JsonConvert.SerializeObject(new SqlResult
+                    {
+                        Successful = false,
+                        Error = "Guild not found"
+                    }));
+                }
             }
         }
     }

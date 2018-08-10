@@ -28,11 +28,11 @@ namespace Skuld.Modules
 
             if (user == Context.User as IGuildUser)
             {
-                await SendAsync($"B-Baka.... {botguild.Mention} slapped {Context.User.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"B-Baka.... {botguild.Mention} slapped {Context.User.Mention}", gif).ConfigureAwait(false);
             }
             else
             {
-                await SendAsync($"{Context.User.Mention} slapped {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} slapped {user.Mention}", gif).ConfigureAwait(false);
             }
         }
 
@@ -47,7 +47,7 @@ namespace Skuld.Modules
             }
             else
             {
-                await SendAsync($"{Context.User.Mention} killed {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} killed {user.Mention}", gif).ConfigureAwait(false);
             }
         }
 
@@ -59,12 +59,12 @@ namespace Skuld.Modules
             if (user == Context.User as IGuildUser)
             {
                 var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
-                await SendAsync($"URUSAI!! {botguild.Mention} stabbed {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"URUSAI!! {botguild.Mention} stabbed {user.Mention}", gif).ConfigureAwait(false);
                 return;
             }
             if (user.IsBot)
             {
-                await SendAsync($"{Context.User.Mention} stabbed {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} stabbed {user.Mention}", gif).ConfigureAwait(false);
                 return;
             }
             if (await Database.CheckConnectionAsync())
@@ -81,20 +81,20 @@ namespace Skuld.Modules
 
                         await Database.UpdateUserAsync(usr);
 
-                        await SendAsync($"{Context.User.Mention} just stabbed {user.Mention} for {dhp} HP, they now have {usr.HP} HP left", gif.URL).ConfigureAwait(false);
+                        await SendAsync($"{Context.User.Mention} just stabbed {user.Mention} for {dhp} HP, they now have {usr.HP} HP left", gif).ConfigureAwait(false);
                     }
                     else
                     {
                         usr.HP = 0;
                         await Database.UpdateUserAsync(usr);
 
-                        await SendAsync($"{Context.User.Mention} just stabbed {user.Mention} for {dhp} HP, they now have {usr.HP} HP left", gif.URL).ConfigureAwait(false);
+                        await SendAsync($"{Context.User.Mention} just stabbed {user.Mention} for {dhp} HP, they now have {usr.HP} HP left", gif).ConfigureAwait(false);
                     }
                 }
             }
             else
             {
-                await SendAsync($"{Context.User.Mention} stabbed {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} stabbed {user.Mention}", gif).ConfigureAwait(false);
                 return;
             }
         }
@@ -107,11 +107,11 @@ namespace Skuld.Modules
 
             if (user == Context.User as IGuildUser)
             {
-                await SendAsync($"{botguild.Mention} hugs {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{botguild.Mention} hugs {user.Mention}", gif).ConfigureAwait(false);
             }
             else
             {
-                await SendAsync($"{Context.User.Mention} just hugged {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} just hugged {user.Mention}", gif).ConfigureAwait(false);
             }
         }
 
@@ -123,11 +123,11 @@ namespace Skuld.Modules
 
             if (user == Context.User as IGuildUser)
             {
-                await SendAsync($"URUSAI!! {botguild.Mention} just punched {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"URUSAI!! {botguild.Mention} just punched {user.Mention}", gif).ConfigureAwait(false);
             }
             else
             {
-                await SendAsync($"{Context.User.Mention} just punched {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} just punched {user.Mention}", gif).ConfigureAwait(false);
             }
         }
 
@@ -136,7 +136,7 @@ namespace Skuld.Modules
         {
             var gif = await SysExClient.GetWeebActionGifAsync(GifType.Shrug).ConfigureAwait(false);
 
-            await SendAsync($"{Context.User.Mention} shrugs.", gif.URL).ConfigureAwait(false);
+            await SendAsync($"{Context.User.Mention} shrugs.", gif).ConfigureAwait(false);
         }
 
         [Command("adore"), Summary("Adore a user")]
@@ -147,11 +147,11 @@ namespace Skuld.Modules
 
             if (user == Context.User as IGuildUser)
             {
-                await SendAsync($"I-it's not like I like you or anything... {botguild.Mention} adores {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"I-it's not like I like you or anything... {botguild.Mention} adores {user.Mention}", gif).ConfigureAwait(false);
             }
             else
             {
-                await SendAsync($"{Context.User.Mention} adores {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} adores {user.Mention}", gif).ConfigureAwait(false);
             }
         }
 
@@ -163,11 +163,11 @@ namespace Skuld.Modules
 
             if (user == Context.User as IGuildUser)
             {
-                await SendAsync($"I-it's not like I like you or anything... {botguild.Mention} just kissed {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"I-it's not like I like you or anything... {botguild.Mention} just kissed {user.Mention}", gif).ConfigureAwait(false);
             }
             else
             {
-                await SendAsync($"{Context.User.Mention} just kissed {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} just kissed {user.Mention}", gif).ConfigureAwait(false);
             }
         }
 
@@ -179,11 +179,11 @@ namespace Skuld.Modules
 
             if (user == Context.User as IGuildUser)
             {
-                await SendAsync($"{botguild.Mention} just groped {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{botguild.Mention} just groped {user.Mention}", gif).ConfigureAwait(false);
             }
             else
             {
-                await SendAsync($"{Context.User.Mention} just groped {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} just groped {user.Mention}", gif).ConfigureAwait(false);
             }
         }
 
@@ -195,12 +195,12 @@ namespace Skuld.Modules
             if (user == Context.User as IGuildUser)
             {
                 var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
-                await SendAsync($"{botguild.Mention} just headpatted {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{botguild.Mention} just headpatted {user.Mention}", gif).ConfigureAwait(false);
                 return;
             }
             if (user.IsBot)
             {
-                await SendAsync($"{Context.User.Mention} just headpatted {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} just headpatted {user.Mention}", gif).ConfigureAwait(false);
                 return;
             }
             if (await Database.CheckConnectionAsync())
@@ -220,13 +220,13 @@ namespace Skuld.Modules
 
                         await Database.UpdateUserAsync(gusr).ConfigureAwait(false);
 
-                        await SendAsync($"{Context.User.Mention} just headpatted {user.Mention}, they've been petted {gusr.Patted} time(s)!", gif.URL).ConfigureAwait(false);
+                        await SendAsync($"{Context.User.Mention} just headpatted {user.Mention}, they've been petted {gusr.Patted} time(s)!", gif).ConfigureAwait(false);
                     }
                 }
             }
             else
             {
-                await SendAsync($"{Context.User.Mention} just headpatted {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} just headpatted {user.Mention}", gif).ConfigureAwait(false);
             }
         }
 
@@ -238,11 +238,11 @@ namespace Skuld.Modules
             if (user == Context.User as IGuildUser)
             {
                 var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
-                await SendAsync($"{botguild.Mention} glares at {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{botguild.Mention} glares at {user.Mention}", gif).ConfigureAwait(false);
             }
             if (user.IsBot)
             {
-                await SendAsync($"{Context.User.Mention} glares at {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} glares at {user.Mention}", gif).ConfigureAwait(false);
             }
 
             if (await Database.CheckConnectionAsync())
@@ -263,13 +263,13 @@ namespace Skuld.Modules
 
                         await Database.UpdateUserAsync(usr2).ConfigureAwait(false);
 
-                        await SendAsync($"{Context.User.Mention} glares at {user.Mention}, they've been glared at {usr2.GlaredAt} time(s)!", gif.URL).ConfigureAwait(false);
+                        await SendAsync($"{Context.User.Mention} glares at {user.Mention}, they've been glared at {usr2.GlaredAt} time(s)!", gif).ConfigureAwait(false);
                     }
                 }
             }
             else
             {
-                await SendAsync($"{Context.User.Mention} glares at {user.Mention}", gif.URL).ConfigureAwait(false);
+                await SendAsync($"{Context.User.Mention} glares at {user.Mention}", gif).ConfigureAwait(false);
             }
         }
 

@@ -6,7 +6,7 @@
     <RootNamespace>Skuld</RootNamespace>
     <StartupObject>Skuld.Program</StartupObject>
     <Version>0.3.9.5</Version>
-    <RuntimeIdentifier>win10-x64</RuntimeIdentifier>
+    <RuntimeIdentifiers>win10-x64; centos.7-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>
