@@ -87,7 +87,7 @@ namespace Skuld.Services
                 if (cmds == null || cmds.Count == 0) { return; }
 
                 var cmd = cmds.FirstOrDefault().Command;
-                if (MessageTools.ModuleDisabled(sguild.GuildSettings.Modules, cmd)) { return; }
+                if (sguild != null) { if (MessageTools.ModuleDisabled(sguild.GuildSettings.Modules, cmd)) { return; } }
 
                 Thread thd = new Thread(
                     async () =>

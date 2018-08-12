@@ -112,8 +112,6 @@ namespace Skuld.Core.Models
 
     public class APIConfig
     {
-        public string MALUName { get; set; }
-        public string MALPassword { get; set; }
         public string GoogleAPI { get; set; }
         public string GoogleCx { get; set; }
         public int STANDSUid { get; set; }
@@ -128,8 +126,6 @@ namespace Skuld.Core.Models
 
         public APIConfig()
         {
-            MALUName = "";
-            MALPassword = "";
             GoogleAPI = "";
             GoogleCx = "";
             STANDSUid = 0;
@@ -145,24 +141,10 @@ namespace Skuld.Core.Models
     public class ModuleOverride
     {
         public bool TwitchModule { get; set; }
-        public bool AccountsModuleEnabled { get; set; }
-        public bool ActionsModuleEnabled { get; set; }
-        public bool AdminModuleEnabled { get; set; }
-        public bool FunModuleEnabled { get; set; }
-        public bool InformationModuleEnabled { get; set; }
-        public bool SearchModuleEnabled { get; set; }
-        public bool StatsModuleEnabled { get; set; }
 
         public ModuleOverride()
         {
             TwitchModule = false;
-            AccountsModuleEnabled = true;
-            ActionsModuleEnabled = true;
-            AdminModuleEnabled = true;
-            FunModuleEnabled = true;
-            InformationModuleEnabled = true;
-            SearchModuleEnabled = true;
-            StatsModuleEnabled = true;
         }
     }
 

@@ -21,7 +21,7 @@
     <PackageReference Include="NTwitch" Version="0.2.1-build-00025" />
     <PackageReference Include="Steam.Models" Version="3.0.8" />
     <PackageReference Include="SteamWebAPI2" Version="4.0.8" />
-    <PackageReference Include="SysEx.Net" Version="1.0.1" />
+    <PackageReference Include="SysEx.Net" Version="1.0.3" />
     <PackageReference Include="System.Drawing.Common" Version="4.5.0" />
     <PackageReference Include="Weeb.net" Version="1.0.7" />
     <PackageReference Include="YoutubeExplode" Version="4.3.0" />
