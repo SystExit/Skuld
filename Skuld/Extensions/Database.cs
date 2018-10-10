@@ -130,9 +130,9 @@ namespace Skuld.Extensions
 
         public static async Task<bool> DoDailyAsync(this SkuldUser user, DatabaseService db, SkuldConfig config, SkuldUser sender = null)
         {
-            if(sender != null)
+            if (sender != null)
             {
-                if(sender.Daily != 0)
+                if (sender.Daily != 0)
                 {
                     if (sender.Daily < (DateTime.UtcNow.ToEpoch() - 86400))
                     {

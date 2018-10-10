@@ -9,17 +9,17 @@ using System.Threading.Tasks;
 namespace Skuld.Modules
 {
     [Group]
-    public class Core : SkuldBase<ShardedCommandContext>
+    public class Core : SkuldBase<SkuldCommandContext>
     {
         public DatabaseService Database { get; set; }
-        public MessageService MessageService { get; set; }
+        private CommandService CommandService { get => HostService.BotService.messageService.commandService; }
 
         [Command("help"), Summary("Gets all commands or a specific command's information")]
         public async Task Help([Remainder]string command = null)
         {
             if (command == null)
             {
-                string prefix = MessageService.config.Prefix;
+                string prefix = HostService.Configuration.Discord.Prefix;
 
                 if (await Database.CheckConnectionAsync())
                 {
@@ -38,7 +38,7 @@ namespace Skuld.Modules
                     Color = EmbedUtils.RandomColor(),
                     Description = $"The prefix of **{Context.Guild.Name}** is: `{prefix}`"
                 };
-                foreach (var module in MessageService.commandService.Modules)
+                foreach (var module in CommandService.Modules)
                 {
                     string desc = "";
                     foreach (var cmd in module.Commands)
@@ -61,7 +61,7 @@ namespace Skuld.Modules
             }
             else
             {
-                var cmd = DiscordUtilities.GetCommandHelp(MessageService.commandService, Context, command);
+                var cmd = DiscordUtilities.GetCommandHelp(CommandService, Context, command);
                 if (cmd == null)
                 {
                     await ReplyAsync(Context.Channel, $"Sorry, I couldn't find a command like **{command}**.");

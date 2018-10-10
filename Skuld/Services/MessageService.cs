@@ -1,10 +1,8 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using Microsoft.Extensions.DependencyInjection;
 using Skuld.Core.Commands.TypeReaders;
-using Skuld.Core.Extensions;
-using Skuld.Extensions;
+using Skuld.Commands;
 using Skuld.Models;
 using Skuld.Models.Database;
 using Skuld.Utilities.Discord;
@@ -13,43 +11,43 @@ using StatsdClient;
 using System;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Skuld.Services
 {
     public class MessageService
     {
-        private readonly DiscordShardedClient client;
         private DatabaseService database;
-        public DiscordLogger logger;
         public MessageServiceConfig config;
         public CommandService commandService;
+        private DiscordShardedClient discord;
+        private CustomCommandService customCommand;
+        private ExperienceService experienceService;
 
-        public MessageService(DiscordShardedClient cli, DatabaseService db, DiscordLogger log, MessageServiceConfig serviceConfig) //inherits from depinjection
+        public MessageService(DiscordShardedClient client, DatabaseService db, MessageServiceConfig serviceConfig)
         {
-            client = cli;
+            discord = client;
             database = db;
             config = serviceConfig;
-            logger = log;
-            logger.AddMessageService(this);
+            customCommand = new CustomCommandService(client, serviceConfig, db);
+            experienceService = new ExperienceService(client, db);
         }
 
-        public async Task ConfigureAsync(CommandServiceConfig config, IServiceProvider services)
+        public async Task ConfigureAsync(CommandServiceConfig config)
         {
             try
             {
                 commandService = new CommandService(config);
 
-                commandService.Log += (arg) =>
-                   logger.logger.AddToLogsAsync(new Core.Models.LogMessage("CommandService - " + arg.Source, arg.Message, arg.Severity, arg.Exception));
+                commandService.Log += async (arg) =>
+                   await HostService.Logger.AddToLogsAsync(new Core.Models.LogMessage("CommandService - " + arg.Source, arg.Message, arg.Severity, arg.Exception));
 
-                await commandService.AddModulesAsync(Assembly.GetEntryAssembly(), services);
+                await commandService.AddModulesAsync(Assembly.GetEntryAssembly(), HostService.Services);
                 commandService.AddTypeReader<Uri>(new UriTypeReader());
             }
             catch (Exception ex)
             {
-                await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("CS-Config", ex.Message, LogSeverity.Critical, ex));
+                await HostService.Logger.AddToLogsAsync(new Core.Models.LogMessage("CS-Config", ex.Message, LogSeverity.Critical, ex));
             }
         }
 
@@ -57,20 +55,29 @@ namespace Skuld.Services
         {
             DogStatsd.Increment("messages.recieved");
 
+#pragma warning disable CS4014
+            Task.Run(() => experienceService.MessageReceivedAsync(arg));
+            Task.Run(() => customCommand.MessageReceivedAsync(arg));
+#pragma warning restore CS4014
+
             if (arg.Author.IsBot) { return; }
 
             var message = arg as SocketUserMessage;
             if (message is null) { return; }
 
-            var context = new ShardedCommandContext(client, message);
+            var gchan = message.Channel as ITextChannel;
+            if (gchan is null) { return; }
 
-            if (!MessageTools.IsEnabledChannel(context.Guild.GetUser(context.User.Id), (ITextChannel)context.Channel)) { return; }
+            if (!MessageTools.IsEnabledChannel(await gchan.Guild.GetUserAsync(message.Author.Id), (ITextChannel)message.Channel)) { return; }
 
             try
             {
-                SkuldGuild sguild = await MessageTools.GetGuildAsync(context.Guild, database).ConfigureAwait(false);
+                SkuldGuild sguild = await MessageTools.GetGuildAsync(gchan.Guild, database).ConfigureAwait(false);
 
-                var usr = await MessageTools.GetUserAsync(context.User, database).ConfigureAwait(false);
+                SkuldUser usr = await MessageTools.GetUserAsync(message.Author, database).ConfigureAwait(false);
+
+                var context = new SkuldCommandContext(discord, message, database, usr, sguild);
+
                 if (await database.CheckConnectionAsync())
                 {
                     if (usr.AvatarUrl != context.User.GetAvatarUrl())
@@ -89,21 +96,13 @@ namespace Skuld.Services
                 var cmd = cmds.FirstOrDefault().Command;
                 if (sguild != null) { if (MessageTools.ModuleDisabled(sguild.GuildSettings.Modules, cmd)) { return; } }
 
-                Thread thd = new Thread(
-                    async () =>
-                    {
-                        DogStatsd.Increment("commands.total.threads", 1, 1, new[] { $"module:{cmd.Module.Name.ToLowerInvariant()}", $"cmd:{cmd.Name.ToLowerInvariant()}" });
-                        await DispatchCommandAsync(context, cmd).ConfigureAwait(false);
-                    })
-                {
-                    IsBackground = true,
-                    Name = $"CommandExecution - module:{cmd.Module.Name.ToLowerInvariant()}|cmd:{cmd.Name.ToLowerInvariant()}"
-                };
-                thd.Start();
+                DogStatsd.Increment("commands.total.threads", 1, 1, new[] { $"module:{cmd.Module.Name.ToLowerInvariant()}", $"cmd:{cmd.Name.ToLowerInvariant()}" });
+
+                await DispatchCommandAsync(context, cmd).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("CmdDisp", ex.Message, LogSeverity.Error, ex));
+                await HostService.Logger.AddToLogsAsync(new Core.Models.LogMessage("CmdDisp", ex.Message, LogSeverity.Error, ex));
             }
         }
 
@@ -130,20 +129,20 @@ namespace Skuld.Services
                 if (result.ErrorReason.Contains("few parameters"))
                 {
                     var cmdembed = DiscordUtilities.GetCommandHelp(commandService, context, command.Name);
-                    await MessageTools.SendChannelAsync(context.Channel, "You seem to be missing a parameter or 2, here's the help", cmdembed, logger.logger).ConfigureAwait(false);
+                    await MessageTools.SendChannelAsync(context.Channel, "You seem to be missing a parameter or 2, here's the help", cmdembed).ConfigureAwait(false);
                     displayerror = false;
                 }
 
                 if (result.Error != CommandError.UnknownCommand && !result.ErrorReason.Contains("Timeout") && displayerror)
                 {
-                    await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("CmdHand", "Error with command, Error is: " + result, LogSeverity.Error));
+                    await HostService.Logger.AddToLogsAsync(new Core.Models.LogMessage("CmdHand", "Error with command, Error is: " + result, LogSeverity.Error));
                     await MessageTools.SendChannelAsync(context.Channel, "",
                         new EmbedBuilder
                         {
                             Author = new EmbedAuthorBuilder { Name = "Error with the command" },
                             Description = Convert.ToString(result.ErrorReason),
-                            Color = new Color(255, 0, 0) }.Build(),
-                        logger.logger).ConfigureAwait(false);
+                            Color = new Color(255, 0, 0)
+                        }.Build()).ConfigureAwait(false);
                 }
                 DogStatsd.Increment("commands.errors");
 

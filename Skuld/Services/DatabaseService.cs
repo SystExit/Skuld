@@ -21,47 +21,56 @@ namespace Skuld.Services
         private GenericLogger logger;
         private Locale local;
         private DiscordShardedClient client;
-
+        private DateTime lastCheck;
+        private bool lastResult;
         private string ConnectionString;
 
         public DatabaseService(GenericLogger log, Locale loc, DiscordShardedClient cli, SkuldConfig config)
         {
             logger = log; local = loc; client = cli; Configuration = config;
-            ConnectionString = $@"server={Configuration.SQL.Host};user={Configuration.SQL.Username};password={Configuration.SQL.Password};database={Configuration.SQL.Database};charset=utf8mb4;";
+            if (Configuration.SQL.Enabled)
+            {
+                ConnectionString = $@"server={Configuration.SQL.Host};user={Configuration.SQL.Username};password={Configuration.SQL.Password};database={Configuration.SQL.Database};charset=utf8mb4;";
+            }
+            else
+            {
+                lastResult = false;
+            }
         }
 
         public async Task<bool> CheckConnectionAsync()
         {
-            if (!Configuration.SQL.SSL && !ConnectionString.Contains("SslMode=None;"))
+            if (Configuration.SQL.Enabled)
             {
-                ConnectionString += "SslMode=None;";
+                if (!Configuration.SQL.SSL && !ConnectionString.Contains("SslMode=None;"))
+                {
+                    ConnectionString += "SslMode=None;";
+                }
+                if (DateTime.UtcNow >= lastCheck.AddMinutes(30))
+                {
+                    bool canconnect = false;
+                    using (var conn = new MySqlConnection(ConnectionString))
+                    {
+                        try
+                        {
+                            await conn.OpenAsync();
+                            if (conn.State == System.Data.ConnectionState.Open)
+                            {
+                                canconnect = true;
+                                await conn.CloseAsync();
+                            }
+                        }
+                        catch
+                        {
+                            canconnect = false;
+                        }
+                    }
+                    lastResult = canconnect;
+                }
             }
+            else lastResult = false;
 
-            bool canconnect = false;
-            using (var conn = new MySqlConnection(ConnectionString))
-            {
-                try
-                {
-                    await conn.OpenAsync();
-                    if (conn.State == System.Data.ConnectionState.Open)
-                    {
-                        canconnect = true;
-                    }
-                    else
-                    {
-                        canconnect = false;
-                    }
-                }
-                catch
-                {
-                    canconnect = false;
-                }
-                finally
-                {
-                    await conn.CloseAsync();
-                }
-            }
-            return canconnect;
+            return lastResult;
         }
 
         public async Task<SqlResult> SingleQueryAsync(MySqlCommand command)
@@ -99,7 +108,7 @@ namespace Skuld.Services
                         }
                         catch (Exception ex)
                         {
-                            await logger.AddToLogsAsync(new Core.Models.LogMessage("SQLSngl", "Error with SQL Command", Discord.LogSeverity.Error, ex));
+                            await logger.AddToLogsAsync(new Core.Models.LogMessage("SQLSngl", "Error with SQL Command", LogSeverity.Error, ex));
                             await conn.CloseAsync();
                             return new SqlResult
                             {
@@ -1217,7 +1226,7 @@ namespace Skuld.Services
 
                     return userExperience;
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     return new SqlResult
                     {
@@ -1289,7 +1298,7 @@ namespace Skuld.Services
 
                     return await SingleQueryAsync(command).ConfigureAwait(false);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     return new SqlResult
                     {
@@ -1410,25 +1419,21 @@ namespace Skuld.Services
 
         public async Task<IReadOnlyList<UserExperience>> GetGuildXPLeaderboardAsync(IGuild guild, int limit = 25, int start = 0)
         {
-
             return null;
         }
 
         public async Task<IReadOnlyList<UserExperience>> GetGlobalXPLeaderboardAsync(int limit = 25, int start = 0)
         {
-
             return null;
         }
 
         public async Task<IReadOnlyList<SkuldUser>> GetGlobalMoneyLeaderboardAsync(int limit = 25, int start = 0)
         {
-
             return null;
         }
 
         public async Task<IReadOnlyList<SkuldUser>> GetGuildMoneyLeaderboardAsync(IGuild guild, int limit = 25, int start = 0)
         {
-
             return null;
         }
     }

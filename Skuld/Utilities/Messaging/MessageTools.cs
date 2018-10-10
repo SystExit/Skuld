@@ -1,14 +1,14 @@
-﻿using DiscordNet = Discord;
+﻿using Discord.Commands;
 using Discord.WebSocket;
 using Skuld.Core.Models;
+using Skuld.Extensions;
+using Skuld.Models;
 using Skuld.Models.Database;
 using Skuld.Services;
-using System.Threading.Tasks;
-using Discord.Commands;
-using Skuld.Core.Services;
 using System;
-using Skuld.Models;
-using Skuld.Extensions;
+using System.Threading.Tasks;
+using DiscordNet = Discord;
+using System.Linq;
 
 namespace Skuld.Utilities.Messaging
 {
@@ -115,6 +115,23 @@ namespace Skuld.Utilities.Messaging
                     if (contentsplit.StartsWith(config.AltPrefix))
                         content = contentsplit.Replace(config.AltPrefix, "");
                 }
+                if (HostService.Configuration.Discord.BotAdmins.Contains(arg.Author.Id) && contentsplit.StartsWith("ayo"))
+                {
+                    var split = arg.Content.Split(' ');
+
+                    var botnamespace = 1;
+
+                    if (split[1] != HostService.Client.CurrentUser.Mention)
+                    {
+                        var splits = HostService.Client.CurrentUser.Username.Split(' ').Length;
+                        if (splits == 0)
+                            botnamespace = 1;
+                        else
+                            botnamespace = splits;
+                    }
+
+                    content = split[1 + botnamespace + 1];
+                }
             }
             else
             {
@@ -130,6 +147,23 @@ namespace Skuld.Utilities.Messaging
                     if (contentsplit.StartsWith(config.Prefix))
                         content = contentsplit.Replace(config.Prefix, "");
                 }
+                if (HostService.Configuration.Discord.BotAdmins.Contains(arg.Author.Id) && contentsplit.StartsWith("ayo"))
+                {
+                    var split = arg.Content.Split(' ');
+
+                    var botnamespace = 1;
+
+                    if (split[1] != HostService.Client.CurrentUser.Mention)
+                    {
+                        var splits = HostService.Client.CurrentUser.Username.Split(' ').Length;
+                        if (splits == 0)
+                            botnamespace = 1;
+                        else
+                            botnamespace = splits;
+                    }
+
+                    content = split[1 + botnamespace + 1];
+                }
             }
             return content;
         }
@@ -142,11 +176,17 @@ namespace Skuld.Utilities.Messaging
                 retn = message.HasStringPrefix(gprefix, ref config.ArgPos) ||
                        message.HasStringPrefix(config.Prefix, ref config.ArgPos) ||
                        message.HasStringPrefix(config.AltPrefix, ref config.ArgPos);
+                if (HostService.Configuration.Discord.BotAdmins.Contains(message.Author.Id))
+                    retn = message.HasStringPrefix($"ayo {HostService.Client.CurrentUser.Username.ToLower()} do ", ref config.ArgPos) ||
+                       message.HasStringPrefix($"ayo {HostService.Client.CurrentUser.Mention} do ", ref config.ArgPos);
             }
             else
             {
                 retn = message.HasStringPrefix(config.Prefix, ref config.ArgPos) ||
                        message.HasStringPrefix(config.AltPrefix, ref config.ArgPos);
+                if (HostService.Configuration.Discord.BotAdmins.Contains(message.Author.Id))
+                    retn = message.HasStringPrefix($"ayo {HostService.Client.CurrentUser.Username.ToLower()} do ", ref config.ArgPos) ||
+                       message.HasStringPrefix($"ayo {HostService.Client.CurrentUser.Mention} do ", ref config.ArgPos);
             }
             return retn;
         }
@@ -175,7 +215,7 @@ namespace Skuld.Utilities.Messaging
             return false;
         }
 
-        public static async Task<DiscordNet.IUserMessage> SendChannelAsync(DiscordNet.IChannel channel, string message, GenericLogger logger)
+        public static async Task<DiscordNet.IUserMessage> SendChannelAsync(DiscordNet.IChannel channel, string message)
         {
             try
             {
@@ -183,17 +223,17 @@ namespace Skuld.Utilities.Messaging
                 var mesgChan = (DiscordNet.IMessageChannel)channel;
                 if (channel == null || textChan == null || mesgChan == null) { return null; }
                 await mesgChan.TriggerTypingAsync();
-                await logger.AddToLogsAsync(new LogMessage("MsgDisp", $"Dispatched message to {(channel as DiscordNet.IGuildChannel).Guild} in {(channel as DiscordNet.IGuildChannel).Name}", DiscordNet.LogSeverity.Info));
+                await HostService.Logger.AddToLogsAsync(new LogMessage("MsgDisp", $"Dispatched message to {(channel as DiscordNet.IGuildChannel).Guild} in {(channel as DiscordNet.IGuildChannel).Name}", DiscordNet.LogSeverity.Info));
                 return await mesgChan.SendMessageAsync(message);
             }
             catch (Exception ex)
             {
-                await logger.AddToLogsAsync(new LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", DiscordNet.LogSeverity.Warning, ex));
+                await HostService.Logger.AddToLogsAsync(new LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", DiscordNet.LogSeverity.Warning, ex));
                 return null;
             }
         }
 
-        public static async Task<DiscordNet.IUserMessage> SendChannelAsync(DiscordNet.IChannel channel, string message, DiscordNet.Embed embed, GenericLogger logger)
+        public static async Task<DiscordNet.IUserMessage> SendChannelAsync(DiscordNet.IChannel channel, string message, DiscordNet.Embed embed)
         {
             try
             {
@@ -218,12 +258,12 @@ namespace Skuld.Utilities.Messaging
                 {
                     msg = await mesgChan.SendMessageAsync(message, false, embed);
                 }
-                await logger.AddToLogsAsync(new LogMessage("MsgDisp", $"Dispatched message to {(channel as DiscordNet.IGuildChannel).Guild} in {(channel as DiscordNet.IGuildChannel).Name}", DiscordNet.LogSeverity.Info));
+                await HostService.Logger.AddToLogsAsync(new LogMessage("MsgDisp", $"Dispatched message to {(channel as DiscordNet.IGuildChannel).Guild} in {(channel as DiscordNet.IGuildChannel).Name}", DiscordNet.LogSeverity.Info));
                 return msg;
             }
             catch (Exception ex)
             {
-                await logger.AddToLogsAsync(new Core.Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", DiscordNet.LogSeverity.Warning, ex));
+                await HostService.Logger.AddToLogsAsync(new Core.Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", DiscordNet.LogSeverity.Warning, ex));
                 return null;
             }
         }

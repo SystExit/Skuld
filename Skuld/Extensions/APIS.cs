@@ -213,7 +213,7 @@ namespace Skuld.Extensions
                 ImageUrl = attr.PosterImage.Large
             };
 
-            if(attr.AbbreviatedTitles != null && attr.AbbreviatedTitles.Count() != 0)
+            if (attr.AbbreviatedTitles != null && attr.AbbreviatedTitles.Count() != 0)
                 embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNON"), attr.AbbreviatedTitles.CheckEmptyWithLocale(", ", loc));
 
             embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_EPS"), attr.EpisodeCount.CheckEmptyWithLocale(loc));

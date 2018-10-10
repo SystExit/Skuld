@@ -11,7 +11,6 @@ using Skuld.Commands.Preconditions;
 using Skuld.Core.Commands.Attributes;
 using Skuld.Core.Extensions;
 using Skuld.Core.Globalization;
-using Skuld.Core.Services;
 using Skuld.Extensions;
 using Skuld.Services;
 using Skuld.Utilities.Discord;
@@ -27,11 +26,9 @@ using System.Threading.Tasks;
 namespace Skuld.Modules
 {
     [Group]
-    public class Fun : SkuldBase<ShardedCommandContext>
+    public class Fun : SkuldBase<SkuldCommandContext>
     {
-        public DatabaseService Database { get; set; }
         public Random Random { get; set; }
-        public GenericLogger Logger { get; set; }
         public AnimalClient Animals { get; set; }
         public Locale Locale { get; set; }
         public WebComicClients ComicClients { get; set; }
@@ -41,7 +38,7 @@ namespace Skuld.Modules
         public BooruClient BooruClient { get; set; }
         public NekosLifeClient NekoLife { get; set; }
         public NASAClient NASAClient { get; set; }
-        public MessageService messageService { get; set; }
+        private CommandService CommandService { get => HostService.BotService.messageService.commandService; }
 
         private static string[] eightball = {
             "SKULD_FUN_8BALL_YES1",
@@ -150,7 +147,7 @@ namespace Skuld.Modules
         [Alias("8ball")]
         public async Task Eightball([Remainder]string question = null)
         {
-            var usr = await Database.GetUserAsync(Context.User.Id);
+            var usr = await Context.Database.GetUserAsync(Context.User.Id);
             var local = Locale.GetLocale(Locale.defaultLocale);
             if (usr != null)
                 local = Locale.GetLocale(usr.Language);
@@ -177,7 +174,7 @@ namespace Skuld.Modules
                 }
                 else
                 {
-                    var pasta = await Database.GetPastaAsync(title);
+                    var pasta = await Context.Database.GetPastaAsync(title);
                     if (pasta != null)
                     {
                         await ReplyAsync(Context.Channel, $"Pasta already exists with name: **{title}**");
@@ -185,7 +182,7 @@ namespace Skuld.Modules
                     }
                     else
                     {
-                        var resp = await Database.InsertPastaAsync(Context.User, title, content);
+                        var resp = await Context.Database.InsertPastaAsync(Context.User, title, content);
                         if (resp.Successful)
                         {
                             await ReplyAsync(Context.Channel, $"Successfully added: **{title}**");
@@ -195,7 +192,7 @@ namespace Skuld.Modules
             }
             if (cmd == "edit" || cmd == "change" || cmd == "modify")
             {
-                var pasta = await Database.GetPastaAsync(title);
+                var pasta = await Context.Database.GetPastaAsync(title);
                 if (pasta.OwnerID == Context.User.Id)
                 {
                     content = content.Replace("\'", "\\\'");
@@ -203,7 +200,7 @@ namespace Skuld.Modules
 
                     pasta.Content = content;
 
-                    var resp = await Database.UpdatePastaAsync(pasta);
+                    var resp = await Context.Database.UpdatePastaAsync(pasta);
                     if (resp.Successful)
                     {
                         await ReplyAsync(Context.Channel, $"Successfully changed the content of **{title}**");
@@ -220,8 +217,8 @@ namespace Skuld.Modules
         [Command("pasta"), Summary("Pastas are nice"), RequireDatabase]
         public async Task Pasta(string cmd, string title)
         {
-            var pastaLocal = await Database.GetPastaAsync(title);
-            var user = await Database.GetUserAsync(Context.User.Id);
+            var pastaLocal = await Context.Database.GetPastaAsync(title);
+            var user = await Context.Database.GetUserAsync(Context.User.Id);
             if (pastaLocal != null)
             {
                 if (cmd == "who" || cmd == "?")
@@ -243,7 +240,7 @@ namespace Skuld.Modules
                 }
                 if (cmd == "upvote")
                 {
-                    var result = await Database.CastPastaVoteAsync(Context.User, title, true);
+                    var result = await Context.Database.CastPastaVoteAsync(Context.User, title, true);
 
                     if (result.Successful)
                     {
@@ -256,7 +253,7 @@ namespace Skuld.Modules
                 }
                 if (cmd == "downvote")
                 {
-                    var result = await Database.CastPastaVoteAsync(Context.User, title, false);
+                    var result = await Context.Database.CastPastaVoteAsync(Context.User, title, false);
 
                     if (result.Successful)
                     {
@@ -271,7 +268,7 @@ namespace Skuld.Modules
                 {
                     if (Convert.ToUInt64(pastaLocal.OwnerID) == Context.User.Id)
                     {
-                        var resp = await Database.DropPastaAsync(title);
+                        var resp = await Context.Database.DropPastaAsync(title);
 
                         if (resp.Successful)
                         {
@@ -292,7 +289,7 @@ namespace Skuld.Modules
         {
             if (title == "list")
             {
-                var pastas = await Database.GetAllPastasAsync();
+                var pastas = await Context.Database.GetAllPastasAsync();
                 if (pastas != null)
                 {
                     string pastanames = "```\n";
@@ -314,12 +311,12 @@ namespace Skuld.Modules
             }
             else if (title == "help")
             {
-                var embed = DiscordUtilities.GetCommandHelp(messageService.commandService, Context, "pasta");
+                var embed = DiscordUtilities.GetCommandHelp(CommandService, Context, "pasta");
                 await ReplyAsync(Context.Channel, embed);
             }
             else
             {
-                var pasta = await Database.GetPastaAsync(title);
+                var pasta = await Context.Database.GetPastaAsync(title);
                 if (pasta != null) await ReplyAsync(Context.Channel, pasta.Content);
                 else
                 {
@@ -487,7 +484,7 @@ namespace Skuld.Modules
             }
             catch (Exception ex)
             {
-                await Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CAH-Cmd", "Error parsing website", LogSeverity.Error, ex));
+                await HostService.Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CAH-Cmd", "Error parsing website", LogSeverity.Error, ex));
             }
         }
 

@@ -1,41 +1,33 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using Skuld.APIS;
-using Skuld.Core.Models;
-using Skuld.Core.Services;
+using Skuld.Utilities.Messaging;
 using StatsdClient;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Skuld.Utilities.Messaging;
 
 namespace Skuld.Services
 {
     public class DiscordLogger
     {
-        private List<DiscordSocketClient> ShardsReady;
-        private SkuldConfig Configuration;
         private DiscordShardedClient client;
-        private MessageService messageService;
+        private BotService botService;
         private DatabaseService database;
         private Random random;
         private BotListingClient botListing;
-        public GenericLogger logger;
 
-        public DiscordLogger(DatabaseService db, DiscordShardedClient cli, GenericLogger log, SkuldConfig config)
+        public DiscordLogger(DatabaseService db, DiscordShardedClient cli)
         {
             client = cli;
             database = db;
-            logger = log;
             random = new Random();
-            Configuration = config;
         }
 
-        public void AddMessageService(MessageService srv)
+        public void AddBotService(BotService srv)
         {
-            messageService = srv;
+            botService = srv;
         }
 
         public void AddBotLister(BotListingClient botlist)
@@ -46,7 +38,6 @@ namespace Skuld.Services
         //DiscordLoging
         public void RegisterEvents()
         {
-            ShardsReady = new List<DiscordSocketClient>();
             /*All Events needed for running Skuld*/
             client.ShardReady += Bot_ShardReady;
             client.JoinedGuild += Bot_JoinedGuild;
@@ -63,7 +54,7 @@ namespace Skuld.Services
         public void UnRegisterEvents()
         {
             client.ShardReady -= Bot_ShardReady;
-            client.MessageReceived -= messageService.OnMessageRecievedAsync;
+            //client.MessageReceived -= botService.OnMessageRecievedAsync;
             client.JoinedGuild -= Bot_JoinedGuild;
             client.LeftGuild -= Bot_LeftGuild;
             client.UserJoined -= Bot_UserJoined;
@@ -73,26 +64,15 @@ namespace Skuld.Services
             client.ShardDisconnected -= Bot_ShardDisconnected;
             client.Log -= Bot_Log;
             client.UserUpdated -= Bot_UserUpdated;
-            ShardsReady = null;
         }
 
-        private async Task Bot_Log(Discord.LogMessage arg)
-            => await logger.AddToLogsAsync(new Core.Models.LogMessage("Discord-Log: " + arg.Source, arg.Message, arg.Severity, arg.Exception));
+        private async Task Bot_Log(LogMessage arg)
+            => await HostService.Logger.AddToLogsAsync(new Core.Models.LogMessage("Discord-Log: " + arg.Source, arg.Message, arg.Severity, arg.Exception));
 
         private async Task Bot_ShardReady(DiscordSocketClient arg)
         {
-            if (!ShardsReady.Contains(arg))
-            {
-                ShardsReady.Add(arg);
-
-                if (ShardsReady.Count == client.Shards.Count)
-                {
-                    client.MessageReceived += messageService.OnMessageRecievedAsync;
-                    await client.SetGameAsync($"{Configuration.Discord.Prefix}help | {random.Next(0, client.Shards.Count) + 1}/{client.Shards.Count}", type: ActivityType.Listening);
-
-                    await client.DownloadUsersAsync(client.Guilds);
-                }
-            }
+            await client.SetGameAsync($"{HostService.Configuration.Discord.Prefix}help | {random.Next(0, client.Shards.Count) + 1}/{client.Shards.Count}", type: ActivityType.Listening);
+            arg.MessageReceived += botService.messageService.OnMessageRecievedAsync;
         }
 
         private async Task Bot_UserUpdated(SocketUser arg1, SocketUser arg2)
@@ -118,20 +98,20 @@ namespace Skuld.Services
                     if (guild.GuildSettings.Features.Pinning)
                     {
                         var dldedmsg = await arg1.GetOrDownloadAsync();
-                        int pinboardThreshold = Configuration.Preferences.PinboardThreshold;
+                        int pinboardThreshold = HostService.Configuration.Preferences.PinboardThreshold;
                         int pinboardReactions = 0;
                         if (arg3.Emote.Name == "📌")
                         { pinboardReactions = dldedmsg.Reactions.FirstOrDefault(x => x.Key.Name == "📌").Value.ReactionCount; }
                         if (pinboardReactions >= pinboardThreshold)
                         {
                             var now = dldedmsg.CreatedAt;
-                            var dt = DateTime.UtcNow.AddDays(-Configuration.Preferences.PinboardDateLimit);
+                            var dt = DateTime.UtcNow.AddDays(-HostService.Configuration.Preferences.PinboardDateLimit);
                             if ((now - dt).TotalDays > 0)
                             {
                                 if (!dldedmsg.IsPinned)
                                 {
                                     await dldedmsg.PinAsync();
-                                    await logger.AddToLogsAsync(new Core.Models.LogMessage("PinBrd", $"Reached or Over Threshold, pinned a message in: {dldedmsg.Channel.Name} from: {gld.Name}", LogSeverity.Info));
+                                    await HostService.Logger.AddToLogsAsync(new Core.Models.LogMessage("PinBrd", $"Reached or Over Threshold, pinned a message in: {dldedmsg.Channel.Name} from: {gld.Name}", LogSeverity.Info));
                                 }
                             }
                         }
@@ -142,7 +122,7 @@ namespace Skuld.Services
 
         private async Task Bot_ShardConnected(DiscordSocketClient arg)
         {
-            await arg.SetGameAsync($"{Configuration.Discord.Prefix}help | {random.Next(0, client.Shards.Count) + 1}/{client.Shards.Count}", type: ActivityType.Listening);
+            await arg.SetGameAsync($"{HostService.Configuration.Discord.Prefix}help | {random.Next(0, client.Shards.Count) + 1}/{client.Shards.Count}", type: ActivityType.Listening);
             DogStatsd.Event("shards.connected", $"Shard {arg.ShardId} Connected", alertType: "info");
         }
 
@@ -155,7 +135,7 @@ namespace Skuld.Services
         //Start Users
         private async Task Bot_UserJoined(SocketGuildUser arg)
         {
-            await logger.AddToLogsAsync(new Core.Models.LogMessage("UsrJoin", $"User {arg.Username} joined {arg.Guild.Name}", LogSeverity.Info));
+            await HostService.Logger.AddToLogsAsync(new Core.Models.LogMessage("UsrJoin", $"User {arg.Username} joined {arg.Guild.Name}", LogSeverity.Info));
             if (await database.CheckConnectionAsync())
             {
                 await database.InsertUserAsync(arg);
@@ -166,7 +146,7 @@ namespace Skuld.Services
                 {
                     var joinrole = arg.Guild.GetRole(guild.JoinRole);
                     await arg.AddRoleAsync(joinrole);
-                    await logger.AddToLogsAsync(new Core.Models.LogMessage("UsrJoin", $"Gave user {arg.Username}, the automatic role as per request of {arg.Guild.Name}.", LogSeverity.Info));
+                    await HostService.Logger.AddToLogsAsync(new Core.Models.LogMessage("UsrJoin", $"Gave user {arg.Username}, the automatic role as per request of {arg.Guild.Name}.", LogSeverity.Info));
                 }
                 if (guild != null && guild.UserJoinChannel != 0 && !String.IsNullOrEmpty(guild.JoinMessage))
                 {
@@ -176,7 +156,7 @@ namespace Skuld.Services
                     welcomemessage = welcomemessage.Replace("-s", "**" + arg.Guild.Name + "**");
                     welcomemessage = welcomemessage.Replace("-uc", Convert.ToString(arg.Guild.MemberCount));
                     welcomemessage = welcomemessage.Replace("-u", "**" + arg.Username + "**");
-                    await MessageTools.SendChannelAsync(channel, welcomemessage, logger);
+                    await MessageTools.SendChannelAsync(channel, welcomemessage);
                 }
                 var discord = client.GetUser(arg.Id);
                 var db = await database.GetUserAsync(arg.Id);
@@ -193,7 +173,7 @@ namespace Skuld.Services
 
         private async Task Bot_UserLeft(SocketGuildUser arg)
         {
-            await logger.AddToLogsAsync(new Core.Models.LogMessage("UsrLeft", $"User {arg.Username} just left {arg.Guild.Name}", LogSeverity.Info));
+            await HostService.Logger.AddToLogsAsync(new Core.Models.LogMessage("UsrLeft", $"User {arg.Username} just left {arg.Guild.Name}", LogSeverity.Info));
             if (await database.CheckConnectionAsync())
             {
                 var guild = await database.GetGuildAsync(arg.Guild.Id);
@@ -205,7 +185,7 @@ namespace Skuld.Services
                     leavemessage = leavemessage.Replace("-s", "**" + arg.Guild.Name + "**");
                     leavemessage = leavemessage.Replace("-uc", Convert.ToString(arg.Guild.MemberCount));
                     leavemessage = leavemessage.Replace("-u", "**" + arg.Username + "**");
-                    await MessageTools.SendChannelAsync(channel, leavemessage, logger);
+                    await MessageTools.SendChannelAsync(channel, leavemessage);
                 }
                 var discord = client.GetUser(arg.Id);
                 var db = await database.GetUserAsync(arg.Id);
@@ -237,7 +217,7 @@ namespace Skuld.Services
                 IsBackground = true
             };
             thd.Start();
-            await botListing.SendDataAsync(Configuration.BotListing.SysExToken, Configuration.BotListing.DiscordPWKey, Configuration.BotListing.DBotsOrgKey);
+            await botListing.SendDataAsync(HostService.Configuration.BotListing.SysExToken, HostService.Configuration.BotListing.DiscordPWKey, HostService.Configuration.BotListing.DBotsOrgKey);
         }
 
         private async Task Bot_JoinedGuild(SocketGuild arg)
@@ -251,7 +231,7 @@ namespace Skuld.Services
                 IsBackground = true
             };
             thd.Start();
-            await botListing.SendDataAsync(Configuration.BotListing.SysExToken, Configuration.BotListing.DiscordPWKey, Configuration.BotListing.DBotsOrgKey);
+            await botListing.SendDataAsync(HostService.Configuration.BotListing.SysExToken, HostService.Configuration.BotListing.DiscordPWKey, HostService.Configuration.BotListing.DBotsOrgKey);
         }
 
         //End Guilds

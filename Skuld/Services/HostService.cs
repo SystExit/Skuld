@@ -1,9 +1,7 @@
 ﻿using Booru.Net;
 using Discord;
 using Discord.Addons.Interactive;
-using Discord.Commands;
 using Discord.WebSocket;
-using Google.Apis.Customsearch.v1;
 using Imgur.API.Authentication.Impl;
 using Microsoft.Extensions.DependencyInjection;
 using PokeSharp;
@@ -28,13 +26,17 @@ namespace Skuld.Services
         public static SkuldConfig Configuration;
         public static IServiceProvider Services;
         public static BotService BotService;
+        public static HardwareStats HardwareStats;
+        public static GenericLogger Logger;
         private static string logfile;
 
         public HostService()
         {
             EnsureConfigExists();
-            logfile = Path.Combine(AppContext.BaseDirectory, "skuld", "logs", DateTime.Now.ToString("dd-MM-yyyy") + ".log");
+            logfile = Path.Combine(AppContext.BaseDirectory, "logs", DateTime.Now.ToString("dd-MM-yyyy") + ".log");
             Configuration = SkuldConfig.Load();
+            HardwareStats = new HardwareStats();
+            Logger = new GenericLogger(Configuration, true, true, logfile);
         }
 
         public async Task CreateAsync()
@@ -42,20 +44,15 @@ namespace Skuld.Services
             await InstallServicesAsync();
             await InitializeServicesAsync();
 
-            var messServ = Services.GetRequiredService<MessageService>();
+            BotService = new BotService(Client, Services.GetRequiredService<DatabaseService>(), /*Services.GetRequiredService<TwitchService>()*/ null);
 
-            BotService = new BotService(Client, messServ.logger, messServ, Services.GetRequiredService<TwitchService>());
-            BotService.AddConfg(Configuration);
-            BotService.AddHostService(this);
-
-            await Services.GetRequiredService<GenericLogger>().AddToLogsAsync(new Core.Models.LogMessage("Framework", "Loaded Skuld v" + Services.GetRequiredService<SoftwareStats>().Skuld.Version, LogSeverity.Info));
+            await Logger.AddToLogsAsync(new Core.Models.LogMessage("Framework", "Loaded Skuld v" + Services.GetRequiredService<SoftwareStats>().Skuld.Version, LogSeverity.Info));
 
             await BotService.StartAsync();
         }
 
         private static async Task InstallServicesAsync()
         {
-            var logger = new GenericLogger(true, true, logfile);
             try
             {
                 Client = new DiscordShardedClient(new DiscordSocketConfig
@@ -66,27 +63,18 @@ namespace Skuld.Services
                     TotalShards = Configuration.Discord.Shards
                 });
 
-                var locale = new Locale(logger);
+                var locale = new Locale(Logger);
 
-                var database = new DatabaseService(logger, locale, Client, Configuration);
+                var database = new DatabaseService(Logger, locale, Client, Configuration);
 
                 //var weebprovider = new WeebClient("Skuld", Assembly.GetEntryAssembly().GetName().Version.ToString());
 
-                var twitch = new TwitchService(new TwitchLogger(logger));
-
-                var mess = new MessageService(Client, database, new DiscordLogger(database, Client, logger, Configuration), new Models.MessageServiceConfig
-                {
-                    ArgPos = 0,
-                    Prefix = Configuration.Discord.Prefix,
-                    AltPrefix = Configuration.Discord.AltPrefix
-                });
-
+                var twitch = new TwitchService(new TwitchLogger(Logger));
 
                 Services = new ServiceCollection()
-                    .AddSingleton(logger)
-                    .AddSingleton(new BaseClient(logger))
+                    .AddSingleton(Logger)
+                    .AddSingleton<BaseClient>()
                     .AddSingleton(Configuration)
-                    .AddSingleton<HardwareStats>()
                     .AddSingleton<SoftwareStats>()
                     .AddSingleton(locale)
                     .AddSingleton(new InteractiveService(Client, TimeSpan.FromSeconds(60)))
@@ -101,41 +89,32 @@ namespace Skuld.Services
                     .AddSingleton<SteamStore>()
                     .AddSingleton<AnimalClient>()
                     .AddSingleton<GiphyClient>()
-                    .AddSingleton(new NASAClient(logger, Configuration.APIS.NASAApiKey))
+                    .AddSingleton(new NASAClient(Logger, Configuration.APIS.NASAApiKey))
                     .AddSingleton<NekosLifeClient>()
                     .AddSingleton<SocialAPIS>()
-                    .AddSingleton(new Stands4Client(Configuration.APIS.STANDSUid, Configuration.APIS.STANDSToken, logger))
+                    .AddSingleton(new Stands4Client(Configuration.APIS.STANDSUid, Configuration.APIS.STANDSToken, Logger))
                     .AddSingleton<StrawPollClient>()
                     .AddSingleton<UrbanDictionaryClient>()
                     .AddSingleton<WebComicClients>()
                     .AddSingleton<WikipediaClient>()
                     .AddSingleton<YNWTFClient>()
-                    .AddSingleton(new BotListingClient(logger, Client))
+                    .AddSingleton(new BotListingClient(Logger, Client))
                     .AddSingleton(twitch)
                     //.AddSingleton(weebprovider)
-                    .AddSingleton(mess)
-                    .AddSingleton(new ExperienceService(Client, database, logger))
-                    .AddSingleton(new CustomCommandService(Client, database, logger, mess))
-                    .AddSingleton(new WebSocketServerService(Client, logger))
-                    .AddSingleton(new SearchService(logger, Configuration))
+                    .AddSingleton(new WebSocketServerService(Client, Logger))
+                    .AddSingleton(new SearchService(Logger, Configuration))
                     .BuildServiceProvider();
 
-                await logger.AddToLogsAsync(new Core.Models.LogMessage("Framework", "Successfully built service provider", LogSeverity.Info));
+                await Logger.AddToLogsAsync(new Core.Models.LogMessage("Framework", "Successfully built service provider", LogSeverity.Info));
             }
             catch (Exception ex)
             {
-                await logger.AddToLogsAsync(new Core.Models.LogMessage("Framework", ex.Message, LogSeverity.Critical, ex));
+                await Logger.AddToLogsAsync(new Core.Models.LogMessage("Framework", ex.Message, LogSeverity.Critical, ex));
             }
         }
 
         private async Task InitializeServicesAsync()
         {
-            var logger = Services.GetRequiredService<MessageService>().logger;
-
-            Services.GetRequiredService<HardwareStats>();
-
-            logger.AddBotLister(Services.GetRequiredService<BotListingClient>());
-
             Services.GetRequiredService<TwitchService>().CreateClient(new NTwitch.Rest.TwitchRestConfig
             {
                 ClientId = Configuration.APIS.TwitchClientID,
@@ -147,14 +126,6 @@ namespace Skuld.Services
 
             await Services.GetRequiredService<Locale>().InitialiseLocalesAsync();
 
-            await Services.GetRequiredService<MessageService>().ConfigureAsync(new CommandServiceConfig
-            {
-                CaseSensitiveCommands = false,
-                DefaultRunMode = RunMode.Async,
-                LogLevel = LogSeverity.Verbose,
-                //IgnoreExtraArgs = true
-            }, Services);
-
             Services.GetRequiredService<SearchService>().BuildGoogleClient();
 
             ConfigureStatsCollector();
@@ -164,20 +135,20 @@ namespace Skuld.Services
         {
             try
             {
-                if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "storage")))
-                    Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "storage"));
+                if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "storage")))
+                    Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "storage"));
 
-                if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "logs")))
-                    Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "logs"));
+                if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs")))
+                    Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs"));
 
-                string loc = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "storage", "configuration.json");
-                logfile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "skuld", "logs") + "/" + String.Format("{0:dd-MM-yyyy}", DateTime.Now.Date) + ".log";
+                string loc = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "configuration.json");
+                logfile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs") + "/" + String.Format("{0:dd-MM-yyyy}", DateTime.Now.Date) + ".log";
 
                 if (!File.Exists(loc))
                 {
                     var config = new SkuldConfig();
                     config.Save();
-                    Console.WriteLine("The Configuration file has been created at '" + AppDomain.CurrentDomain.BaseDirectory + "/skuld/storage/configuration.json'");
+                    Console.WriteLine("The Configuration file has been created at '" + loc + "'");
                     Console.ReadLine();
                     Environment.Exit(0);
                 }

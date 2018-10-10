@@ -1,9 +1,9 @@
 ﻿using Discord;
 using Discord.Addons.Interactive;
-using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using Skuld.Core.Services;
+using Skuld.Core.Utilities;
 using Skuld.Extensions;
 using Skuld.Services;
 using System;
@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace Skuld.Commands
 {
     public class SkuldBase<T> : InteractiveBase<T>
-        where T : ShardedCommandContext
+        where T : SkuldCommandContext
     {
         public async Task<IUserMessage> ReplyFailableAsync(IDMChannel channel, string message)
         {
@@ -65,48 +65,57 @@ namespace Skuld.Commands
         public async Task<IUserMessage> ReplyAsync(IDMChannel channel, ISocketMessageChannel backupchannel, string message)
         {
             var logger = HostService.Services.GetRequiredService<GenericLogger>();
+            IUserMessage msg = null;
             try
             {
                 await channel.TriggerTypingAsync();
                 await logger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {channel.Recipient} in DMs", LogSeverity.Info));
+                msg = await backupchannel.SendMessageAsync(DiscordEmotes.Ok + " Check your DMs");
                 return await channel.SendMessageAsync(message);
             }
             catch (Exception ex)
             {
                 await logger.AddToLogsAsync(new Core.Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
-                return await ReplyAsync(backupchannel, "I couldn't send the message to your DMs, so I sent it here instead\n\n" + message).ConfigureAwait(false);
+                await msg.ModifyAsync(x => x.Content = "I couldn't send the message to your DMs, so I sent it here instead\n\n" + message);
+                return msg;
             }
         }
 
         public async Task<IUserMessage> ReplyAsync(IDMChannel channel, ISocketMessageChannel backupchannel, string message, Embed embed)
         {
             var logger = HostService.Services.GetRequiredService<GenericLogger>();
+            IUserMessage msg = null;
             try
             {
                 await channel.TriggerTypingAsync();
                 await logger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {channel.Recipient} in DMs", LogSeverity.Info));
+                msg = await backupchannel.SendMessageAsync(DiscordEmotes.Ok + " Check your DMs");
                 return await channel.SendMessageAsync(message, false, embed);
             }
             catch (Exception ex)
             {
                 await logger.AddToLogsAsync(new Core.Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
-                return await ReplyAsync(backupchannel, "I couldn't send the message to your DMs, so I sent it here instead\n\n" + message, embed).ConfigureAwait(false);
+                await msg.ModifyAsync(x => { x.Embed = embed; x.Content = "I couldn't send the message to your DMs, so I sent it here instead\n\n" + message; });
+                return msg;
             }
         }
 
         public async Task<IUserMessage> ReplyAsync(IDMChannel channel, ISocketMessageChannel backupchannel, Embed embed)
         {
             var logger = HostService.Services.GetRequiredService<GenericLogger>();
+            IUserMessage msg = null;
             try
             {
                 await channel.TriggerTypingAsync();
                 await logger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {channel.Recipient} in DMs", LogSeverity.Info));
+                msg = await backupchannel.SendMessageAsync(DiscordEmotes.Ok + " Check your DMs");
                 return await channel.SendMessageAsync("", false, embed);
             }
             catch (Exception ex)
             {
                 await logger.AddToLogsAsync(new Core.Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
-                return await ReplyAsync(backupchannel, "I couldn't send the message to your DMs, so I sent it here instead", embed).ConfigureAwait(false);
+                await msg.ModifyAsync(x => { x.Embed = embed; x.Content = "I couldn't send the message to your DMs, so I sent it here instead."; });
+                return msg;
             }
         }
 
@@ -271,6 +280,15 @@ namespace Skuld.Commands
         }
 
         public async Task ReplyFailedAsync(ISocketMessageChannel channel)
-            => await channel.SendMessageAsync("Something happened <:blobsick:350673776071147521>");
+            => await ReplyAsync(channel, DiscordEmotes.Failed +" Command Execution failed with reason: \"Unknown\"");
+
+        public async Task ReplyFailedAsync(ISocketMessageChannel channel, string reason)
+            => await ReplyAsync(channel, DiscordEmotes.Failed + " Command Execution failed with reason: \"" + reason + "\"");
+
+        public async Task ReplySuccessAsync(ISocketMessageChannel channel)
+            => await ReplyAsync(channel, DiscordEmotes.Successful + " Command Execution was successful");
+
+        public async Task ReplySuccessAsync(ISocketMessageChannel channel, string reason)
+            => await ReplyAsync(channel, DiscordEmotes.Successful + " Command Execution was successful. Extra Information: \"" + reason + "\"");
     }
 }

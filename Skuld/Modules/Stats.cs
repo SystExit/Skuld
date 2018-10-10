@@ -13,11 +13,10 @@ using System.Threading.Tasks;
 namespace Skuld.Modules
 {
     [Group]
-    public class Stats : SkuldBase<ShardedCommandContext>
+    public class Stats : SkuldBase<SkuldCommandContext>
     {
-        public HardwareStats HStats { get; set; }
+        public HardwareStats HStats { get => HostService.HardwareStats; }
         public SoftwareStats SStats { get; set; }
-        public MessageService messageService { get; set; }
 
         [Command("ping"), Summary("Print Ping")]
         public async Task Ping()
@@ -60,11 +59,11 @@ namespace Skuld.Modules
                 "Uptime: " + string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime)) + "\n" +
                 "Ping: " + Context.Client.GetShardFor(Context.Guild).Latency + "ms\n" +
                 "Guilds: " + Context.Client.Guilds.Count + "\n" +
+                "Users: " + HostService.BotService.Users + "\n" +
                 "Shards: " + Context.Client.Shards.Count + "\n" +
-                "Commands: " + messageService.commandService.Commands.Count();
+                "Commands: " + HostService.BotService.messageService.commandService.Commands.Count();
 
             string systemstats =
-                "CPU Used: " + HStats.CPU.GetCPUUsage + "%\n" +
                 "Memory Used: " + HStats.Memory.GetMBUsage + "MB\n" +
                 "Operating System: " + SStats.WindowsVersion;
 

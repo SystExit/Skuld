@@ -6,15 +6,15 @@ using System.Threading.Tasks;
 
 namespace Skuld.Commands.Preconditions
 {
-    public class RequireDeveloper : PreconditionAttribute
+    public class RequireBotAdmin : PreconditionAttribute
     {
-        public RequireDeveloper()
+        public RequireBotAdmin()
         {
         }
 
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
-            if (HostService.Configuration.Discord.Owners.Contains(context.User.Id) || (context.Client.GetApplicationInfoAsync().Result).Owner.Id == context.User.Id)
+            if (HostService.Configuration.Discord.BotAdmins.Contains(context.User.Id) || (context.Client.GetApplicationInfoAsync().Result).Owner.Id == context.User.Id)
             { return Task.FromResult(PreconditionResult.FromSuccess()); }
             else
                 return Task.FromResult(PreconditionResult.FromError("Not a bot owner/developer"));

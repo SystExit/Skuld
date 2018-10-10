@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Skuld.Models
+﻿namespace Skuld.Models
 {
     public class WebSocketUser
     {
@@ -11,5 +7,6 @@ namespace Skuld.Models
         public string Discriminator { get; internal set; }
         public string FullName { get => Username + "#" + Discriminator; }
         public ulong Id { get; internal set; }
+        public string Status { get; internal set; }
     }
 }

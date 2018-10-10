@@ -7,7 +7,6 @@ using Skuld.Commands;
 using Skuld.Core.Extensions;
 using Skuld.Core.Globalization;
 using Skuld.Core.Models;
-using Skuld.Core.Services;
 using Skuld.Core.Utilities;
 using Skuld.Extensions;
 using Skuld.Services;
@@ -20,10 +19,8 @@ using System.Threading.Tasks;
 namespace Skuld.Modules
 {
     [Group]
-    public class Information : SkuldBase<ShardedCommandContext>
+    public class Information : SkuldBase<SkuldCommandContext>
     {
-        public GenericLogger Logger { get; set; }
-        public DatabaseService DatabaseService { get; set; }
         public SkuldConfig Configuration { get; set; }
         public BaseClient WebHandler { get; set; }
         public Locale Locale { get; set; }
@@ -32,10 +29,9 @@ namespace Skuld.Modules
         public async Task GetServer()
         {
             Embed embed = null;
-            if (await DatabaseService.CheckConnectionAsync())
+            if (await Context.Database.CheckConnectionAsync())
             {
-                var sguild = await DatabaseService.GetGuildAsync(Context.Guild.Id);
-                embed = await Context.Guild.GetSummaryAsync(Context.Client, sguild);
+                embed = await Context.Guild.GetSummaryAsync(Context.Client, await Context.Database.GetGuildAsync(Context.Guild.Id));
             }
             else
             {
@@ -224,7 +220,7 @@ namespace Skuld.Modules
             }
             catch (Exception ex)
             {
-                await Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("Cmd", "Error Encountered Parsing Whois", LogSeverity.Error, ex));
+                await HostService.Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("Cmd", "Error Encountered Parsing Whois", LogSeverity.Error, ex));
             }
         }
 

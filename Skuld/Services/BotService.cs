@@ -1,8 +1,6 @@
 ﻿using Discord;
+using Discord.Commands;
 using Discord.WebSocket;
-using Microsoft.Extensions.DependencyInjection;
-using Skuld.Core.Models;
-using Skuld.Core.Utilities.Stats;
 using StatsdClient;
 using System;
 using System.Linq;
@@ -13,73 +11,98 @@ namespace Skuld.Services
 {
     public class BotService
     {
-        private HostService HostService;
         private DiscordShardedClient client;
-        private DiscordLogger logger;
-        private SkuldConfig config;
-        private MessageService messageService;
         private TwitchService twitch;
+        private DiscordLogger logger;
+        public MessageService messageService;
+        private CustomCommandService customCommandService;
+        private ExperienceService experienceService;
+        public int Users { get; private set; }
 
-        public BotService(DiscordShardedClient shard,
-            DiscordLogger log,
-            MessageService msg,
-            TwitchService twit)
+        public BotService(DiscordShardedClient shardclient, DatabaseService db, TwitchService twit)
         {
-            client = shard;
-            logger = log;
+            client = shardclient;
             twitch = twit;
-            messageService = msg;
-        }
-
-        public void AddConfg(SkuldConfig conf)
-        {
-            config = conf;
-        }
-
-        public void AddHostService(HostService host)
-        {
-            HostService = host;
+            Users = 0;
+            logger = new DiscordLogger(db, client);
+            messageService = new MessageService(client, db, new Models.MessageServiceConfig
+            {
+                ArgPos = 0,
+                Prefix = HostService.Configuration.Discord.Prefix,
+                AltPrefix = HostService.Configuration.Discord.AltPrefix
+            });
+            customCommandService = new CustomCommandService(client, messageService.config, db);
+            experienceService = new ExperienceService(client, db);
         }
 
         public async Task StartAsync()
         {
             try
             {
-                if(HostService.Configuration.Modules.TwitchModule)
+                await messageService.ConfigureAsync(new CommandServiceConfig
                 {
-                    await twitch.LoginAsync(config.APIS.TwitchToken);
+                    CaseSensitiveCommands = false,
+                    DefaultRunMode = RunMode.Async,
+                    LogLevel = LogSeverity.Verbose,
+                    IgnoreExtraArgs = true
+                });
+
+                if (HostService.Configuration.Modules.TwitchModule)
+                {
+                    await twitch.LoginAsync(HostService.Configuration.APIS.TwitchToken).ConfigureAwait(false);
                 }
 
+                //logger.AddBotLister(HostService.Services.GetRequiredService<BotListingClient>());
+                logger.AddBotService(this);
                 logger.RegisterEvents();
 
-                await client.LoginAsync(TokenType.Bot, config.Discord.Token);
+                await client.LoginAsync(TokenType.Bot, HostService.Configuration.Discord.Token);
                 await client.StartAsync();
 
-                Parallel.Invoke(() => SendDataToDataDog());
+                BackgroundTasks();
 
                 await Task.Delay(-1).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                await logger.logger.AddToLogsAsync(new Core.Models.LogMessage("BotService", "ERROR WITH THE BOT", LogSeverity.Error, ex));
+                await HostService.Logger.AddToLogsAsync(new Core.Models.LogMessage("BotService", "ERROR WITH THE BOT", LogSeverity.Error, ex));
                 DogStatsd.Event("FrameWork", $"Bot Crashed on start: {ex}", alertType: "error", hostname: "Skuld");
-                await StopBotAsync("Init-Bt").ConfigureAwait(false);
+                await StopBotAsync("Init-Bot").ConfigureAwait(false);
             }
         }
 
         public async Task StopBotAsync(string source)
         {
             logger.UnRegisterEvents();
+
             await client.SetStatusAsync(UserStatus.Offline);
-            await logger.logger.AddToLogsAsync(new Core.Models.LogMessage(source, "Skuld is shutting down", LogSeverity.Info));
+            await HostService.Logger.AddToLogsAsync(new Core.Models.LogMessage(source, "Skuld is shutting down", LogSeverity.Info));
             DogStatsd.Event("FrameWork", $"Bot Stopped", alertType: "info", hostname: "Skuld");
 
-            await logger.logger.sw.WriteLineAsync("-------------------------------------------").ConfigureAwait(false);
-            logger.logger.sw.Close();
+            await HostService.Logger.sw.WriteLineAsync("-------------------------------------------").ConfigureAwait(false);
+            HostService.Logger.sw.Close();
 
             await Console.Out.WriteLineAsync("Bot shutdown").ConfigureAwait(false);
             Console.ReadLine();
             Environment.Exit(0);
+        }
+
+        private void BackgroundTasks()
+        {
+            new Thread(
+                async () =>
+                {
+                    Thread.CurrentThread.IsBackground = true;
+                    await SendDataToDataDog().ConfigureAwait(false);
+                }
+            ).Start();
+            new Thread(
+                async () =>
+                {
+                    Thread.CurrentThread.IsBackground = true;
+                    await FeedUsersAsync().ConfigureAwait(false);
+                }
+            ).Start();
         }
 
         private Task SendDataToDataDog()
@@ -91,8 +114,24 @@ namespace Skuld.Services
                 DogStatsd.Gauge("shards.disconnected", client.Shards.Count(x => x.ConnectionState == ConnectionState.Disconnected));
                 DogStatsd.Gauge("commands.count", messageService.commandService.Commands.Count());
                 DogStatsd.Gauge("guilds.total", client.Guilds.Count);
-                HostService.Services.GetRequiredService<HardwareStats>().CPU.Feed();
                 Thread.Sleep(TimeSpan.FromSeconds(5));
+            }
+        }
+
+        private async Task FeedUsersAsync()
+        {
+            while (true)
+            {
+                if (client.Shards.All(x => x.ConnectionState == ConnectionState.Connected))
+                {
+                    Users = 0;
+                    await client.DownloadUsersAsync(client.Guilds);
+                    foreach (var gld in client.Guilds)
+                    {
+                        Users += gld.Users.Count;
+                    }
+                    await Task.Delay(TimeSpan.FromHours(1));
+                }
             }
         }
     }

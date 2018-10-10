@@ -1,32 +1,29 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using Skuld.Models;
 using Skuld.Models.Database;
 using Skuld.Utilities.Messaging;
 using StatsdClient;
 using System;
 using System.Threading.Tasks;
-using Skuld.Core.Services;
 
 namespace Skuld.Services
 {
     public class CustomCommandService
     {
-        private readonly DiscordShardedClient client;
-        private DatabaseService database;
-        private GenericLogger logger;
-        private MessageService messageService;
+        private DiscordShardedClient client;
+        private MessageServiceConfig messageConfig;
+        private DatabaseService databaseService;
 
-        public CustomCommandService(DiscordShardedClient cli, DatabaseService db, GenericLogger log, MessageService mess) //inherits from depinjection
+        public CustomCommandService(DiscordShardedClient cli, MessageServiceConfig messconf, DatabaseService db)
         {
             client = cli;
-            database = db;
-            logger = log;
-            messageService = mess;
-            client.MessageReceived += Client_MessageReceived;
+            messageConfig = messconf;
+            databaseService = db;
         }
 
-        private async Task Client_MessageReceived(SocketMessage arg)
+        public async Task MessageReceivedAsync(SocketMessage arg)
         {
             if (arg.Author.IsBot) { return; }
 
@@ -39,19 +36,19 @@ namespace Skuld.Services
 
             try
             {
-                SkuldGuild sguild = await MessageTools.GetGuildAsync(context.Guild, database).ConfigureAwait(false);
-                var usr = await MessageTools.GetUserAsync(context.User, database).ConfigureAwait(false);
+                SkuldGuild sguild = await MessageTools.GetGuildAsync(context.Guild, databaseService).ConfigureAwait(false);
+                var usr = await MessageTools.GetUserAsync(context.User, databaseService).ConfigureAwait(false);
 
                 if (usr != null && usr.Banned) return;
 
-                if (sguild != null) { if (!MessageTools.HasPrefix(message, messageService.config, sguild.Prefix)) { return; } }
-                else { if (!MessageTools.HasPrefix(message, messageService.config)) { return; } }
+                if (sguild != null) { if (!MessageTools.HasPrefix(message, messageConfig, sguild.Prefix)) { return; } }
+                else { if (!MessageTools.HasPrefix(message, messageConfig)) { return; } }
 
                 if (sguild != null && sguild.GuildSettings.Modules.CustomEnabled)
                 {
                     var customcommand = await MessageTools.GetCustomCommandAsync(context.Guild,
                         MessageTools.GetCommandName(MessageTools.GetPrefixFromCommand(sguild, arg.Content, HostService.Configuration),
-                        0, arg), database);
+                        0, arg), databaseService);
 
                     if (customcommand != null)
                     {
@@ -62,7 +59,7 @@ namespace Skuld.Services
             }
             catch (Exception ex)
             {
-                await logger.AddToLogsAsync(new Core.Models.LogMessage("CmdDisp", ex.Message, LogSeverity.Error, ex));
+                await HostService.Logger.AddToLogsAsync(new Core.Models.LogMessage("CmdDisp", ex.Message, LogSeverity.Error, ex));
             }
         }
 
@@ -70,7 +67,7 @@ namespace Skuld.Services
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
-            await MessageTools.SendChannelAsync(context.Channel, command.Content, logger).ConfigureAwait(false);
+            await MessageTools.SendChannelAsync(context.Channel, command.Content).ConfigureAwait(false);
             stopwatch.Stop();
 
             DogStatsd.Histogram("commands.latency", stopwatch.ElapsedMilliseconds(), 0.5, new[] { $"module:custom", $"cmd:{command.CommandName.ToLowerInvariant()}" });
@@ -82,11 +79,11 @@ namespace Skuld.Services
 
         private async Task InsertCommand(CustomCommand command, IUser user)
         {
-            var suser = await database.GetUserAsync(user.Id);
-            if (suser != null) { await database.UpdateUserUsageAsync(suser, command.CommandName); }
+            var suser = await databaseService.GetUserAsync(user.Id);
+            if (suser != null) { await databaseService.UpdateUserUsageAsync(suser, command.CommandName); }
             else
             {
-                await database.InsertUserAsync(user).ConfigureAwait(false);
+                await databaseService.InsertUserAsync(user).ConfigureAwait(false);
                 await InsertCommand(command, user).ConfigureAwait(false);
             }
         }
