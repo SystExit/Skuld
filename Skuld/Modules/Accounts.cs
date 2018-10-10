@@ -4,7 +4,6 @@ using Skuld.Commands;
 using Skuld.Commands.Preconditions;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
-using Skuld.Core.Services;
 using Skuld.Extensions;
 using Skuld.Services;
 using System;
@@ -13,18 +12,16 @@ using System.Threading.Tasks;
 namespace Skuld.Modules
 {
     [Group, RequireDatabase, RequireHuman]
-    public class Profiles : SkuldBase<ShardedCommandContext>
+    public class Profiles : SkuldBase<SkuldCommandContext>
     {
         public SkuldConfig Configuration { get; set; }
-        public DatabaseService Database { get; set; }
-        public GenericLogger Logger { get; set; }
 
         [Command("money"), Summary("Gets a user's money")]
         public async Task Money([Remainder]IGuildUser user = null)
         {
             if (user == null) user = (IGuildUser)Context.User;
 
-            var skuser = await Database.GetUserAsync(user.Id);
+            var skuser = await Context.Database.GetUserAsync(user.Id);
 
             if (skuser != null)
             {
@@ -35,7 +32,7 @@ namespace Skuld.Modules
             }
             else
             {
-                await Database.InsertUserAsync(user);
+                await Context.Database.InsertUserAsync(user);
                 await Money(user);
             }
         }
@@ -45,7 +42,7 @@ namespace Skuld.Modules
         {
             if (user == null) user = (IGuildUser)Context.User;
 
-            var skuser = await Database.GetUserAsync(user.Id);
+            var skuser = await Context.Database.GetUserAsync(user.Id);
             if (skuser != null)
             {
                 var embed = await skuser.GetProfileAsync(user, Configuration);
@@ -54,7 +51,7 @@ namespace Skuld.Modules
             }
             else
             {
-                await Database.InsertUserAsync(user);
+                await Context.Database.InsertUserAsync(user);
                 await Profile(user);
             }
         }
@@ -64,7 +61,7 @@ namespace Skuld.Modules
         {
             if (user == null) user = (IGuildUser)Context.User;
 
-            var skuser = await Database.GetUserAsync(user.Id);
+            var skuser = await Context.Database.GetUserAsync(user.Id);
             if (skuser != null)
             {
                 var embed = await skuser.GetExtendedProfileAsync(user, Configuration);
@@ -73,7 +70,7 @@ namespace Skuld.Modules
             }
             else
             {
-                await Database.InsertUserAsync(user);
+                await Context.Database.InsertUserAsync(user);
                 await Profile(user);
             }
         }
@@ -81,12 +78,12 @@ namespace Skuld.Modules
         [Command("daily"), Summary("Daily Money")]
         public async Task Daily(IGuildUser user = null)
         {
-            var context = await Database.GetUserAsync(Context.User.Id);
+            var context = await Context.Database.GetUserAsync(Context.User.Id);
             if (user == null)
             {
-                if (await context.DoDailyAsync(Database, Configuration))
+                if (await context.DoDailyAsync(Context.Database, Configuration))
                 {
-                    context = await Database.GetUserAsync(Context.User.Id);
+                    context = await Context.Database.GetUserAsync(Context.User.Id);
                     await ReplyAsync(Context.Channel, $"You got your daily of: `{Configuration.Preferences.MoneySymbol + Configuration.Preferences.DailyAmount}`, you now have: {Configuration.Preferences.MoneySymbol}{(context.Money.ToString("N0"))}");
                 }
                 else
@@ -99,10 +96,10 @@ namespace Skuld.Modules
             }
             else
             {
-                var suser = await Database.GetUserAsync(user.Id);
-                if (await suser.DoDailyAsync(Database, Configuration, context))
+                var suser = await Context.Database.GetUserAsync(user.Id);
+                if (await suser.DoDailyAsync(Context.Database, Configuration, context))
                 {
-                    suser = await Database.GetUserAsync(user.Id);
+                    suser = await Context.Database.GetUserAsync(user.Id);
                     await ReplyAsync(Context.Channel, $"You just gave {user.Mention} your daily of: `{Configuration.Preferences.MoneySymbol + Configuration.Preferences.DailyAmount}`, they now have: {Configuration.Preferences.MoneySymbol}{(suser.Money.ToString("N0"))}");
                 }
                 else
@@ -118,20 +115,20 @@ namespace Skuld.Modules
         [Command("give"), Summary("Give your money to people")]
         public async Task Give(IGuildUser user, ulong amount)
         {
-            var skuser = await Database.GetUserAsync(Context.User.Id);
+            var skuser = await Context.Database.GetUserAsync(Context.User.Id);
             if (skuser.Money < amount)
             {
                 await ReplyWithMentionAsync(Context.Channel, Context.User, "You can't give more money than you have");
                 return;
             }
 
-            var skuser2 = await Database.GetUserAsync(user.Id);
+            var skuser2 = await Context.Database.GetUserAsync(user.Id);
 
             skuser.Money -= amount;
             skuser2.Money += amount;
 
-            var res1 = await Database.UpdateUserAsync(skuser);
-            var res2 = await Database.UpdateUserAsync(skuser2);
+            var res1 = await Context.Database.UpdateUserAsync(skuser);
+            var res2 = await Context.Database.UpdateUserAsync(skuser2);
 
             if (res1.Successful && res2.Successful)
             {
@@ -143,12 +140,27 @@ namespace Skuld.Modules
             }
         }
 
+        [Command("heal"), Summary("Shows you how much you can heal by")]
+        public async Task HealAmount()
+        {
+            if(Context.DBUser != null)
+            {
+                var amnt = Context.DBUser.Money * 0.8;
+                await ReplyAsync(Context.Channel, $"You can heal for: `{Math.Floor(amnt)}`HP");
+            }
+            else
+            {
+                await Context.Database.InsertUserAsync(Context.User);
+                await HealAmount();
+            }
+        }
+
         [Command("heal"), Summary("Heal yourself or others here")]
         public async Task Heal(uint hp, [Remainder] IGuildUser user = null)
         {
             if (user == null) user = (IGuildUser)Context.User;
 
-            var skuser = await Database.GetUserAsync(user.Id);
+            var skuser = await Context.Database.GetUserAsync(user.Id);
             if (user.Id == Context.User.Id)
             {
                 if (skuser.HP == 10000)
@@ -174,7 +186,7 @@ namespace Skuld.Modules
                 if (skuser.HP > 10000)
                     skuser.HP = 10000;
 
-                await Database.UpdateUserAsync(skuser);
+                await Context.Database.UpdateUserAsync(skuser);
 
                 await ReplyAsync(Context.Channel, $"You have healed your HP by {hp} for {Configuration.Preferences.MoneySymbol}{amount.ToString("N0")}");
             }
@@ -197,7 +209,7 @@ namespace Skuld.Modules
                     return;
                 }
 
-                var skuser2 = await Database.GetUserAsync(Context.User.Id);
+                var skuser2 = await Context.Database.GetUserAsync(Context.User.Id);
 
                 skuser2.Money -= amount;
                 skuser.HP += hp;
@@ -205,8 +217,8 @@ namespace Skuld.Modules
                 if (skuser.HP > 10000)
                     skuser.HP = 10000;
 
-                await Database.UpdateUserAsync(skuser);
-                await Database.UpdateUserAsync(skuser2);
+                await Context.Database.UpdateUserAsync(skuser);
+                await Context.Database.UpdateUserAsync(skuser2);
 
                 await ReplyAsync(Context.Channel, $"You have healed {user.Mention}'s HP by {hp} for {Configuration.Preferences.MoneySymbol}{amount.ToString("N0")}");
             }
@@ -218,21 +230,19 @@ namespace Skuld.Modules
         }
     }
 
-    [Group("account"), Name("Accounts"), RequireDatabase]
-    public class Account : SkuldBase<ShardedCommandContext>
+    [Group, Name("Accounts"), RequireDatabase]
+    public class Account : SkuldBase<SkuldCommandContext>
     {
         public SkuldConfig Configuration { get; set; }
-        public DatabaseService Database { get; set; }
-        public GenericLogger Logger { get; set; }
 
         [Command("set-description"), Summary("Sets Description")]
         public async Task SetDescription([Remainder]string description)
         {
-            var user = await Database.GetUserAsync(Context.User.Id);
+            var user = await Context.Database.GetUserAsync(Context.User.Id);
 
             user.Description = description;
 
-            var result = await Database.UpdateUserAsync(user);
+            var result = await Context.Database.UpdateUserAsync(user);
             if (result.Successful)
             {
                 await ReplyAsync(Context.Channel, $"Successfully set your description to **{description}**");
@@ -241,18 +251,18 @@ namespace Skuld.Modules
             {
                 await ReplyFailedAsync(Context.Channel);
 
-                await Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("Accounts", result.Error, LogSeverity.Error, result.Exception));
+                await HostService.Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("Accounts", result.Error, LogSeverity.Error, result.Exception));
             }
         }
 
         [Command("clear-description"), Summary("Clears Description")]
         public async Task ClearDescription()
         {
-            var user = await Database.GetUserAsync(Context.User.Id);
+            var user = await Context.Database.GetUserAsync(Context.User.Id);
 
             user.Description = "";
 
-            var result = await Database.UpdateUserAsync(user);
+            var result = await Context.Database.UpdateUserAsync(user);
             if (result.Successful)
             {
                 await ReplyAsync(Context.Channel, "Successfully cleared your description.");
@@ -261,7 +271,7 @@ namespace Skuld.Modules
             {
                 await ReplyFailedAsync(Context.Channel);
 
-                await Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("Accounts", result.Error, LogSeverity.Error, result.Exception));
+                await HostService.Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("Accounts", result.Error, LogSeverity.Error, result.Exception));
             }
         }
     }

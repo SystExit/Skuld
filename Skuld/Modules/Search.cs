@@ -9,7 +9,6 @@ using Skuld.Commands.Preconditions;
 using Skuld.Core.Commands.Attributes;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
-using Skuld.Core.Services;
 using Skuld.Extensions;
 using Skuld.Services;
 using Skuld.Utilities.Discord;
@@ -23,11 +22,10 @@ using System.Threading.Tasks;
 namespace Skuld.Modules
 {
     [Group]
-    public class Search : SkuldBase<ShardedCommandContext>
+    public class Search : SkuldBase<SkuldCommandContext>
     {
         public TwitchService Twitch { get; set; }
         public SocialAPIS Social { get; set; }
-        public GenericLogger Logger { get; set; }
         public Random Random { get; set; }
         public PokeSharpClient PokeMonClient { get; set; }
         public SteamStore SteamStoreClient { get; set; }

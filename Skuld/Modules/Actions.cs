@@ -2,7 +2,6 @@
 using Discord.Commands;
 using Skuld.Commands;
 using Skuld.Core.Models;
-using Skuld.Core.Services;
 using Skuld.Services;
 using Skuld.Utilities.Discord;
 using SysEx.Net;
@@ -12,12 +11,11 @@ using System.Threading.Tasks;
 namespace Skuld.Modules
 {
     [Group]
-    public class Actions : SkuldBase<ShardedCommandContext>
+    public class Actions : SkuldBase<SkuldCommandContext>
     {
         public Random Random { get; set; }
         public SkuldConfig Configuration { get; set; }
         public DatabaseService Database { get; set; }
-        public GenericLogger Logger { get; set; }
         public SysExClient SysExClient { get; set; }
 
         [Command("slap"), Summary("Slap a user")]

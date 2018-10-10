@@ -7,7 +7,6 @@ using Skuld.APIS;
 using Skuld.Commands;
 using Skuld.Commands.Preconditions;
 using Skuld.Core.Models;
-using Skuld.Core.Services;
 using Skuld.Core.Utilities;
 using Skuld.Services;
 using Skuld.Utilities.Discord;
@@ -20,13 +19,11 @@ using System.Threading.Tasks;
 
 namespace Skuld.Modules
 {
-    [Group, RequireDeveloper]
-    public class Developer : SkuldBase<ShardedCommandContext>
+    [Group, RequireBotAdmin]
+    public class Developer : SkuldBase<SkuldCommandContext>
     {
-        public MessageService MessageService { get; set; }
         public Random Random { get; set; }
         public DatabaseService Database { get; set; }
-        public GenericLogger Logger { get; set; }
         public SkuldConfig Configuration { get; set; }
         public BotListingClient BotListing { get; set; }
 
@@ -41,21 +38,21 @@ namespace Skuld.Modules
         public async Task Bean([Remainder]IGuildUser user)
         {
             var usr = await Database.GetUserAsync(user.Id);
-            if(usr.Banned)
+            if (usr.Banned)
             {
                 usr.Banned = false;
                 await Database.UpdateUserAsync(usr);
                 usr = await Database.GetUserAsync(user.Id);
-                if(!usr.Banned)
-                await ReplyAsync(Context.Channel, $"Un-beaned {user.Mention}");
+                if (!usr.Banned)
+                    await ReplyAsync(Context.Channel, $"Un-beaned {user.Mention}");
             }
             else
             {
                 usr.Banned = true;
                 await Database.UpdateUserAsync(usr);
                 usr = await Database.GetUserAsync(user.Id);
-                if(usr.Banned)
-                await ReplyAsync(Context.Channel, $"Beaned {user.Mention}");
+                if (usr.Banned)
+                    await ReplyAsync(Context.Channel, $"Beaned {user.Mention}");
             }
         }
 
@@ -86,7 +83,7 @@ namespace Skuld.Modules
         {
             try
             {
-                await Context.Client.SetGameAsync($"{MessageService.config.Prefix}help | {Random.Next(0, Context.Client.Shards.Count) + 1}/{Context.Client.Shards.Count}");
+                await Context.Client.SetGameAsync($"{HostService.Configuration.Discord.Prefix}help | {Random.Next(0, Context.Client.Shards.Count) + 1}/{Context.Client.Shards.Count}");
                 await Context.Message.DeleteAsync();
             }
             catch
@@ -234,12 +231,21 @@ namespace Skuld.Modules
         [Command("sql")]
         public async Task Sql(string query)
         {
+            if (query.ToUpper().Contains("DROP"))
+            {
+                var nxt = await NextMessageAsync();
+                if (nxt.Content.ToLowerInvariant().StartsWith("y"))
+                {
+                    await HostService.Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("SQLCMD", $"{Context.User.Username}#{Context.User.Discriminator} - {Context.User.Id} just used a DROP statement", LogSeverity.Critical));
+                }
+                else { return; }
+            }
             var command = new MySql.Data.MySqlClient.MySqlCommand(query);
             var result = await Database.SingleQueryAsync(command);
 
             if (result.Successful)
             {
-                await ReplyAsync(Context.Channel, $"Success!\n\nResponce: {result.Data ?? "No Responce Available"}");
+                await ReplyAsync(Context.Channel, $"Success!\n\nResponse: {result.Data ?? "No Response Available"}");
             }
             else
             {
@@ -331,7 +337,7 @@ namespace Skuld.Modules
                     Color = Color.Red,
                     Description = $"{ex.Message}"
                 };
-                await Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("EvalCMD", "Error with eval command " + ex.Message, LogSeverity.Error, ex));
+                await HostService.Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("EvalCMD", "Error with eval command " + ex.Message, LogSeverity.Error, ex));
                 await ReplyAsync(Context.Channel, embed.Build());
             }
         }

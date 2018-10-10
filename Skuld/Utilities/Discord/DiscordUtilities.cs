@@ -7,8 +7,6 @@ namespace Skuld.Utilities.Discord
 {
     public class DiscordUtilities
     {
-        private static readonly Random random = new Random();
-
         public static Embed GetCommandHelp(CommandService commandService, ICommandContext context, string commandname)
         {
             if (commandname.ToLower() != "pasta")

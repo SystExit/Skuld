@@ -1,7 +1,7 @@
 ﻿using Discord.Commands;
+using Skuld.Services;
 using System;
 using System.Threading.Tasks;
-using Skuld.Services;
 
 namespace Skuld.Commands.Preconditions
 {
@@ -9,7 +9,6 @@ namespace Skuld.Commands.Preconditions
     {
         public RequireTwitch()
         {
-
         }
 
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)

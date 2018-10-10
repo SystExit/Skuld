@@ -5,9 +5,7 @@ using Kitsu.Anime;
 using Kitsu.Manga;
 using Skuld.Commands;
 using Skuld.Core.Globalization;
-using Skuld.Core.Services;
 using Skuld.Extensions;
-using Skuld.Services;
 using Skuld.Utilities.Discord;
 using SysEx.Net;
 using System;
@@ -17,17 +15,15 @@ using System.Threading.Tasks;
 namespace Skuld.Modules
 {
     [Group]
-    public class Weeb : SkuldBase<ShardedCommandContext>
+    public class Weeb : SkuldBase<SkuldCommandContext>
     {
-        public DatabaseService Database { get; set; }
         public Locale Locale { get; set; }
         public SysExClient SysExClient { get; set; }
-        public GenericLogger Logger { get; set; }
 
         [Command("anime"), Summary("Gets information about an anime")]
         public async Task GetAnime([Remainder]string animetitle)
         {
-            var usr = await Database.GetUserAsync(Context.User.Id);
+            var usr = await Context.Database.GetUserAsync(Context.User.Id);
             var loc = Locale.GetLocale(Locale.defaultLocale);
             if (usr != null)
                 loc = Locale.GetLocale(usr.Language);
@@ -82,7 +78,7 @@ namespace Skuld.Modules
         [Command("manga"), Summary("Gets information about a manga")]
         public async Task GetMangaAsync([Remainder]string mangatitle)
         {
-            var usr = await Database.GetUserAsync(Context.User.Id);
+            var usr = await Context.Database.GetUserAsync(Context.User.Id);
             var loc = Locale.GetLocale(Locale.defaultLocale);
             if (usr != null)
                 loc = Locale.GetLocale(usr.Language);

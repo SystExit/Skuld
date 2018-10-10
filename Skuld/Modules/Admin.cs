@@ -6,7 +6,6 @@ using Skuld.Commands.Preconditions;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Core.Models.Discord;
-using Skuld.Core.Services;
 using Skuld.Services;
 using StatsdClient;
 using System;
@@ -18,12 +17,11 @@ using System.Threading.Tasks;
 namespace Skuld.Modules
 {
     [Group, RequireRole(AccessLevel.ServerMod)]
-    public class Admin : SkuldBase<ShardedCommandContext>
+    public class Admin : SkuldBase<SkuldCommandContext>
     {
-        public MessageService MessageService { get; set; }
         public DatabaseService Database { get; set; }
-        public GenericLogger Logger { get; set; }
         public SkuldConfig Configuration { get; set; }
+        private CommandService CommandService { get => HostService.BotService.messageService.commandService; }
 
         [Command("say"), Summary("Say something to a channel")]
         public async Task Say(ITextChannel channel, [Remainder]string message) => await ReplyAsync(channel, message);
@@ -86,7 +84,7 @@ namespace Skuld.Modules
                     {
                         msg += res.Exception + "\n";
                     }
-                    await Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("MuteCMD", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
+                    await HostService.Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("MuteCMD", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
                 }
             }
             else
@@ -169,13 +167,8 @@ namespace Skuld.Modules
                     if (await guild.GetUserAsync(user.Id) == null)
                     {
                         await ReplyAsync(Context.Channel, $"Successfully kicked: `{user.Username}`\tResponsible Moderator:  {Context.User.Username}#{Context.User.Discriminator}");
-                        try
-                        {
-                            var dmchan = await user.GetOrCreateDMChannelAsync();
-                            await ReplyFailableAsync(dmchan, msg);
-                        }
-                        catch
-                        { /*Can be Ignored lol*/ }
+                        var dmchan = await user.GetOrCreateDMChannelAsync();
+                        await ReplyFailableAsync(dmchan, msg);
                     }
                 }
                 else
@@ -347,7 +340,7 @@ namespace Skuld.Modules
                         string msg = "";
                         foreach (var res in resp)
                             msg += res.Exception + "\n";
-                        await Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("AJClCmd", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
+                        await HostService.Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("AJClCmd", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
                     }
                 }
             }
@@ -364,7 +357,7 @@ namespace Skuld.Modules
                     string msg = "";
                     foreach (var res in resp)
                         msg += res.Exception + "\n";
-                    await Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("AJClCmd", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
+                    await HostService.Logger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("AJClCmd", "Unsuccessful", LogSeverity.Error, new Exception(msg)));
                 }
             }
         }
@@ -562,10 +555,10 @@ namespace Skuld.Modules
             }
             else
             {
-                var cmdsearch = MessageService.commandService.Search(Context, name);
+                var cmdsearch = CommandService.Search(Context, name);
                 if (cmdsearch.Commands != null)
                 {
-                    await ReplyWithTimedMessage(Context.Channel, "The bot already has this command", 5);
+                    await ReplyFailedAsync(Context.Channel, "The bot already has this command");
                 }
                 else
                 {
@@ -671,7 +664,7 @@ namespace Skuld.Modules
                         }
 
                         var res = await Database.UpdateGuildAsync(guild);
-                        if(res.All(x=>x.Successful))
+                        if (res.All(x => x.Successful))
                         {
                             if (value == 0) await ReplyAsync(Context.Channel, $"I disabled the `{module}` feature");
                             else await ReplyAsync(Context.Channel, $"I enabled the `{module}` feature");
@@ -679,7 +672,7 @@ namespace Skuld.Modules
                         else
                         {
                             var msg = "";
-                            foreach(var re in res)
+                            foreach (var re in res)
                             {
                                 if (!re.Successful)
                                     msg += re.Error + "\n";

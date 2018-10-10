@@ -16,10 +16,11 @@ namespace Skuld.Core.Services
         public List<LogMessage> Logs;
         private readonly bool Console;
         private readonly bool File;
-        private readonly Random random = new Random();
+        private readonly SkuldConfig config;
 
-        public GenericLogger(string logfile)
+        public GenericLogger(SkuldConfig con, string logfile)
         {
+            config = con;
             Logs = new List<LogMessage>();
             Console = false;
             File = true;
@@ -29,8 +30,9 @@ namespace Skuld.Core.Services
             };
         }
 
-        public GenericLogger(bool OutputToConsole, bool OutputToFile, string logfile)
+        public GenericLogger(SkuldConfig con, bool OutputToConsole, bool OutputToFile, string logfile)
         {
+            config = con;
             Logs = new List<LogMessage>();
             Console = OutputToConsole;
             File = OutputToFile;
@@ -42,7 +44,7 @@ namespace Skuld.Core.Services
 
         public async Task AddToLogsAsync(LogMessage message)
         {
-            if (message.Severity == Discord.LogSeverity.Verbose) return;
+            if (message.Severity > config.LogLevel) return;
 
             Logs.Add(message);
 

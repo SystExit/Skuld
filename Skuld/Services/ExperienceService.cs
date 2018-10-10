@@ -9,7 +9,6 @@ using StatsdClient;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Skuld.Core.Services;
 
 namespace Skuld.Services
 {
@@ -17,17 +16,14 @@ namespace Skuld.Services
     {
         private readonly DiscordShardedClient client;
         private DatabaseService database;
-        private GenericLogger logger;
 
-        public ExperienceService(DiscordShardedClient cli, DatabaseService db, GenericLogger log) //inherits from depinjection
+        public ExperienceService(DiscordShardedClient cli, DatabaseService db)
         {
             client = cli;
             database = db;
-            logger = log;
-            client.MessageReceived += Client_MessageReceived;
         }
 
-        private async Task Client_MessageReceived(SocketMessage arg)
+        public async Task MessageReceivedAsync(SocketMessage arg)
         {
             if (arg.Author.IsBot) { return; }
 
@@ -77,7 +73,6 @@ namespace Skuld.Services
                                         {
                                             if (gld.LastGranted < (DateTime.UtcNow.ToEpoch() - 60))
                                             {
-
                                                 var xptonextlevel = GetXPRequirement(gld.Level + 1, 1.618); //get next level xp requirement based on phi
 
                                                 if ((gld.XP + amount) >= xptonextlevel) //if over or equal to next level requirement, update accordingly
@@ -87,7 +82,7 @@ namespace Skuld.Services
                                                     gld.Level++;
                                                     gld.LastGranted = DateTime.UtcNow.ToEpoch();
                                                     await context.Channel.SendMessageAsync($"Congratulations {context.User.Mention}!! You're now level **{gld.Level}**");
-                                                    await logger.AddToLogsAsync(new Core.Models.LogMessage("MessageService", "User levelled up", LogSeverity.Info));
+                                                    await HostService.Logger.AddToLogsAsync(new Core.Models.LogMessage("MessageService", "User levelled up", LogSeverity.Info));
                                                     DogStatsd.Increment("user.levels.levelup");
                                                     DogStatsd.Increment("user.levels.processed");
                                                 }
@@ -134,9 +129,10 @@ namespace Skuld.Services
             }
             catch (Exception ex)
             {
-                await logger.AddToLogsAsync(new Core.Models.LogMessage("CmdDisp", ex.Message, LogSeverity.Error, ex));
+                await HostService.Logger.AddToLogsAsync(new Core.Models.LogMessage("CmdDisp", ex.Message, LogSeverity.Error, ex));
             }
         }
+
         private ulong GetXPRequirement(ulong level, double growthmod)
             => (ulong)((level * 50) * (level * growthmod));
     }

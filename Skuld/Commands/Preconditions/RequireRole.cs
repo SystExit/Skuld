@@ -31,7 +31,7 @@ namespace Skuld.Commands.Preconditions
         {
             if (c.User.IsBot)
             { return AccessLevel.Blocked; }
-            if (Services.HostService.Configuration.Discord.Owners.Contains(c.User.Id) || (client.GetApplicationInfoAsync().Result).Owner.Id == c.User.Id)
+            if (Services.HostService.Configuration.Discord.BotAdmins.Contains(c.User.Id) || (client.GetApplicationInfoAsync().Result).Owner.Id == c.User.Id)
             { return AccessLevel.BotOwner; }
             IGuildUser user = (IGuildUser)c.User;
             if (user != null)
