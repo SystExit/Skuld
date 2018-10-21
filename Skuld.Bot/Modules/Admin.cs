@@ -534,6 +534,23 @@ namespace Skuld.Bot.Commands
             }
         }
 
+        [Command("setlevelup"), Summary("Sets the level up message"), RequireDatabase]
+        [RequireRole(AccessLevel.ServerMod)]
+        public async Task SetLevelUp(string message)
+        {
+            var gld = Context.DBGuild;
+            gld.LevelUpMessage = message;
+            var resp = await DatabaseClient.UpdateGuildAsync(gld);
+            if(resp.All(x=>x.Successful))
+            {
+                await ReplySuccessAsync(Context.Channel);
+            }
+            else
+            {
+                await ReplyFailedAsync(Context.Channel, resp[0].Error);
+            }
+        }
+
         [Command("addcommand"), Summary("Adds a custom command"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task AddCustomCommand(string name, [Remainder]string content)
