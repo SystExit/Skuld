@@ -372,6 +372,8 @@ namespace Skuld.Database
                                     guild.UserJoinChannel = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["JoinChannel"]));
 
                                     guild.UserLeaveChannel = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["LeaveChannel"]));
+
+                                    guild.LevelUpMessage = Convert.ToString(reader["LevelUpMessage"]);
                                 }
 
                                 DogStatsd.Increment("mysql.rows_ret", rows);

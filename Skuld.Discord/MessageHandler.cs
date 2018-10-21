@@ -126,10 +126,16 @@ namespace Skuld.Discord
                                 gld.TotalXP += amount;
                                 gld.Level++;
                                 gld.LastGranted = DateTime.UtcNow.ToEpoch();
-                                await context.Channel.SendMessageAsync($"Congratulations {context.User.Mention}!! You're now level **{gld.Level}**");
-                                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MessageService", "User levelled up", LogSeverity.Info));
+                                if(string.IsNullOrEmpty(context.DBGuild.LevelUpMessage))
+                                    await context.Channel.SendMessageAsync($"Congratulations {context.User.Mention}!! You're now level **{gld.Level}**");
+                                else
+                                {
+                                    string msg = context.DBGuild.LevelUpMessage;
+                                    msg.Replace("-m", context.User.Mention).Replace("-u", context.User.Username).Replace("-l", $"{gld.Level}");
+                                    await context.Channel.SendMessageAsync(msg);
+                                }
+                                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MessageService", "User leveled up", LogSeverity.Info));
                                 DogStatsd.Increment("user.levels.levelup");
-                                DogStatsd.Increment("user.levels.processed");
                             }
                             else //otherwise append current status
                             {
