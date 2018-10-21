@@ -55,13 +55,13 @@ namespace Skuld.Bot.Commands
                     }.Build());
                 }
 
-                var responce = await NextMessageAsync(true, true, TimeSpan.FromSeconds(30));
-                if (responce == null)
+                var response = await NextMessageAsync(true, true, TimeSpan.FromSeconds(30));
+                if (response == null)
                 {
                     await sentmessage.DeleteAsync();
                 }
 
-                var selection = Convert.ToInt32(responce.Content);
+                var selection = Convert.ToInt32(response.Content);
 
                 var anime = data[selection - 1];
 
@@ -108,13 +108,13 @@ namespace Skuld.Bot.Commands
                     }.Build());
                 }
 
-                var responce = await NextMessageAsync(true, true, TimeSpan.FromSeconds(30));
-                if (responce == null)
+                var response = await NextMessageAsync(true, true, TimeSpan.FromSeconds(30));
+                if (response == null)
                 {
                     await sentmessage.DeleteAsync();
                 }
 
-                var selection = Convert.ToInt32(responce.Content);
+                var selection = Convert.ToInt32(response.Content);
 
                 var manga = data[selection - 1];
 

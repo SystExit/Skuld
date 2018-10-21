@@ -1171,6 +1171,113 @@ namespace Skuld.Database
             }
             return NoSqlConnection;
         }
+        public static async Task<EventResult> GetGuildExperienceAsync(ulong GuildID)
+        {
+            if (await CheckConnectionAsync())
+            {
+                try
+                {
+                    var command = new MySqlCommand("SELECT * FROM `userguildxp` WHERE GuildID = @guildID ORDER BY TotalXP DESC");
+                    command.Parameters.AddWithValue("@guildID", GuildID);
+
+                    var results = new List<GuildLeaderboardEntry>();
+
+                    using (var conn = new MySqlConnection(ConnectionString))
+                    {
+                        await conn.OpenAsync();
+                        if (conn.State == System.Data.ConnectionState.Open)
+                        {
+                            command.Connection = conn;
+
+                            DogStatsd.Increment("mysql.queries");
+
+                            var reader = await command.ExecuteReaderAsync();
+
+                            int rows = 0;
+
+                            if (reader.HasRows)
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    rows++;
+
+                                    results.Add(new GuildLeaderboardEntry
+                                    {
+                                        ID = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["UserID"])),
+                                        Level = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["Level"])),
+                                        TotalXP = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["TotalXP"])),
+                                        XP = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["XP"]))
+                                    });
+                                }
+
+                                DogStatsd.Increment("mysql.rows_ret", rows);
+
+                                await conn.CloseAsync();
+                            }
+                        }
+                    }
+
+                    return EventResult.FromSuccess(results.AsReadOnly());
+                }
+                catch (Exception ex)
+                {
+                    return EventResult.FromFailureException(ex.Message, ex);
+                }
+            }
+            return NoSqlConnection;
+        }
+        public static async Task<EventResult> GetMoneyLeaderboardAsync(int limit = 25)
+        {
+            if (await CheckConnectionAsync())
+            {
+                try
+                {
+                    var command = new MySqlCommand("SELECT * FROM `users` ORDER BY Money DESC LIMIT "+limit);
+
+                    var results = new List<MoneyLeaderboardEntry>();
+
+                    using (var conn = new MySqlConnection(ConnectionString))
+                    {
+                        await conn.OpenAsync();
+                        if (conn.State == System.Data.ConnectionState.Open)
+                        {
+                            command.Connection = conn;
+
+                            DogStatsd.Increment("mysql.queries");
+
+                            var reader = await command.ExecuteReaderAsync();
+
+                            int rows = 0;
+
+                            if (reader.HasRows)
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    rows++;
+
+                                    results.Add(new MoneyLeaderboardEntry
+                                    {
+                                        ID = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["UserID"])),
+                                        Money = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["Money"]))
+                                    });
+                                }
+
+                                DogStatsd.Increment("mysql.rows_ret", rows);
+
+                                await conn.CloseAsync();
+                            }
+                        }
+                    }
+
+                    return EventResult.FromSuccess(results.AsReadOnly());
+                }
+                catch (Exception ex)
+                {
+                    return EventResult.FromFailureException(ex.Message, ex);
+                }
+            }
+            return NoSqlConnection;
+        }
 
         public static async Task<IReadOnlyList<EventResult>> CheckGuildUsersAsync(DiscordShardedClient client, IGuild guild)
         {
