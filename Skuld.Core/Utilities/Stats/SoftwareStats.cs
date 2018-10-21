@@ -6,21 +6,12 @@ using Weeb.net;
 
 namespace Skuld.Core.Utilities.Stats
 {
-    public class SoftwareStats
+    public static class SoftwareStats
     {
-        public readonly OperatingSystem WindowsVersion;
-        public readonly AssemblyName Skuld;
-        public readonly AssemblyName SysEx;
-        public readonly AssemblyName Booru;
-        public readonly AssemblyName Weebsh;
-
-        public SoftwareStats()
-        {
-            Skuld = Assembly.GetEntryAssembly().GetName();
-            SysEx = Assembly.GetAssembly(typeof(SysExClient)).GetName();
-            Booru = Assembly.GetAssembly(typeof(BooruClient)).GetName();
-            Weebsh = Assembly.GetAssembly(typeof(WeebClient)).GetName();
-            WindowsVersion = Environment.OSVersion;
-        }
+        public static readonly OperatingSystem WindowsVersion = Environment.OSVersion;
+        public static readonly AssemblyName Skuld = Assembly.GetEntryAssembly().GetName();
+        public static readonly AssemblyName SysEx = Assembly.GetAssembly(typeof(SysExClient)).GetName();
+        public static readonly AssemblyName Booru = Assembly.GetAssembly(typeof(BooruClient)).GetName();
+        public static readonly AssemblyName Weebsh = Assembly.GetAssembly(typeof(WeebClient)).GetName();
     }
 }

@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 using Skuld.APIS.Utilities;
 using Skuld.APIS.Wikipedia.Models;
-using Skuld.Core.Services;
 using System;
 using System.Threading.Tasks;
 
@@ -11,7 +10,7 @@ namespace Skuld.APIS
     {
         private readonly RateLimiter rateLimiter;
 
-        public WikipediaClient(GenericLogger log) : base(log)
+        public WikipediaClient() : base()
         {
             rateLimiter = new RateLimiter();
         }

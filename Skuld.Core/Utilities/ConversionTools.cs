@@ -28,11 +28,5 @@ namespace Skuld.Core.Utilities
             else
                 return 0;
         }
-
-        public static Color HexToDiscordColor(string hex)
-        {
-            var col = System.Drawing.ColorTranslator.FromHtml(hex);
-            return new Color(col.R, col.G, col.B);
-        }
     }
 }

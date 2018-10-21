@@ -2,10 +2,10 @@
 using Newtonsoft.Json;
 using Skuld.APIS.BotListing.Models;
 using Skuld.APIS.Utilities;
-using Skuld.Core.Services;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -16,7 +16,7 @@ namespace Skuld.APIS
         private readonly RateLimiter rateLimiter;
         private readonly DiscordShardedClient client;
 
-        public BotListingClient(GenericLogger log, DiscordShardedClient cli) : base(log)
+        public BotListingClient(DiscordShardedClient cli) : base()
         {
             client = cli;
             rateLimiter = new RateLimiter();
@@ -41,6 +41,7 @@ namespace Skuld.APIS
                     {
                         webclient.DefaultRequestHeaders.Add("UserAgent", UAGENT);
                         webclient.DefaultRequestHeaders.Add("Authorization", dbltoken);
+                        content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
                         await webclient.PostAsync(new Uri($"https://discordbots.org/api/bots/{client.CurrentUser.Id}/stats"), content);
                     }
                 }
@@ -51,6 +52,7 @@ namespace Skuld.APIS
                     {
                         webclient.DefaultRequestHeaders.Add("UserAgent", UAGENT);
                         webclient.DefaultRequestHeaders.Add("Authorization", discordpwtoken);
+                        content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
                         await webclient.PostAsync(new Uri($"https://bots.discord.pw/api/bots/{client.CurrentUser.Id}/stats"), content);
                     }
                 }
@@ -64,6 +66,7 @@ namespace Skuld.APIS
                 {
                     webclient.DefaultRequestHeaders.Add("UserAgent", UAGENT);
                     webclient.DefaultRequestHeaders.Add("Authorization", sysextoken);
+                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
                     await webclient.PostAsync(new Uri($"https://skuld.systemexit.co.uk/tools/updateStats.php"), content).ConfigureAwait(false);
                 }
             }

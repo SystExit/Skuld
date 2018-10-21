@@ -2,7 +2,7 @@
 using Newtonsoft.Json.Linq;
 using Skuld.APIS.Utilities;
 using Skuld.APIS.WebComics.XKCD.Models;
-using Skuld.Core.Services;
+using Skuld.Core;
 using System;
 using System.Threading.Tasks;
 
@@ -11,14 +11,12 @@ namespace Skuld.APIS.WebComics.XKCD
     public class XKCDClient : BaseClient
     {
         private readonly Random random;
-        private readonly GenericLogger logger;
         private readonly RateLimiter rateLimiter;
         private int? XKCDLastPage;
 
-        public XKCDClient(Random ran, GenericLogger log) : base(log)
+        public XKCDClient(Random ran) : base()
         {
             random = ran;
-            logger = log;
             rateLimiter = new RateLimiter();
             GetLastPageAsync().GetAwaiter().GetResult();
         }
@@ -68,7 +66,7 @@ namespace Skuld.APIS.WebComics.XKCD
             }
             else
             {
-                await logger.AddToLogsAsync(new Core.Models.LogMessage("XKCDClient", "Ratelimited", Discord.LogSeverity.Error));
+                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("XKCDClient", "Ratelimited", Discord.LogSeverity.Error));
                 return null;
             }
         }
