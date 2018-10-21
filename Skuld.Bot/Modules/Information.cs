@@ -3,6 +3,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using NodaTime;
 using Skuld.APIS;
+using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Globalization;
@@ -13,6 +14,7 @@ using Skuld.Discord;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Utilities;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -23,7 +25,7 @@ namespace Skuld.Bot.Commands
     [Group]
     public class Information : SkuldBase<SkuldCommandContext>
     {
-        public SkuldConfig Configuration { get; set; }
+        public SkuldConfig Configuration { get => HostSerivce.Configuration; }
         public BaseClient WebHandler { get; set; }
         public Locale Locale { get; set; }
 
@@ -235,6 +237,91 @@ namespace Skuld.Bot.Commands
             var userroles = user.RoleIds;
             var roles = userroles.Select(query => guild.GetRole(query).Name).Aggregate((current, next) => current.TrimStart('@') + ", " + next);
             await ReplyAsync(Context.Channel, $"Roles of __**{user.Username}#{user.Discriminator} ({user.Nickname})**__ ({userroles.Count})\n\n`" + (roles ?? "No roles") + "`");
+        }
+
+        [Command("leaderboard"), Summary("Get the guilds XP Leaderboard, use \"money\" for the global money leaderboard")]
+        [Alias("lb")]
+        public async Task GetLeaderboard(string arg = null)
+        {
+            if(arg != null && arg.ToLowerInvariant() == "money")
+            {
+                var moneylbresp = await DatabaseClient.GetMoneyLeaderboardAsync();
+                if(moneylbresp.Successful)
+                {
+                    var moneylb = moneylbresp.Data as IReadOnlyList<MoneyLeaderboardEntry>;
+                    string response = "";
+                    int count = 1;
+                    int maxnum = moneylb.Count();
+                    foreach(var entry in moneylb)
+                    {
+                        var usr = Context.Client.GetUser(entry.ID);
+
+                        if (usr != null)
+                        {
+                            string bse = $"{count}/{maxnum}. {usr.Username} - {Configuration.Preferences.MoneySymbol + entry.Money.ToString("N0")}";
+
+                            if (entry == moneylb.Last())
+                                response += bse;
+                            else
+                                response += bse + "\n";
+                            count++;
+                        }
+                        else
+                        {
+                            response += $"??/??. User not found";
+                            await DatabaseClient.DropUserAsync(entry.ID);
+                        }
+                    }
+                    await ReplyAsync(Context.Channel, response);
+                }
+                else
+                {
+                    await ReplyFailedAsync(Context.Channel, $"Either no user has any money, or error with sql statement.");
+                }
+            }
+            else if(arg == null)
+            {
+                var guildCountResp = await DatabaseClient.GetGuildExperienceCountAsync(Context.Guild.Id).ConfigureAwait(false);
+                int guildCount = -1;
+                if (guildCountResp.Successful)
+                    guildCount = ConversionTools.ParseInt32OrDefault(Convert.ToString(guildCountResp.Data));
+
+                var gldxpresp = await DatabaseClient.GetGuildExperienceAsync(Context.Guild.Id);
+                if(gldxpresp.Successful)
+                {
+                    var gldlb = gldxpresp.Data as IReadOnlyList<GuildLeaderboardEntry>;
+                    string response = "";
+                    int count = 1;
+                    foreach (var entry in gldlb)
+                    {
+                        var usr = Context.Guild.GetUser(entry.ID);
+                        if(usr != null)
+                        {
+                            string bse = $"{count}/{gldlb.Count()}. {usr.Username} - TotalXP: {entry.TotalXP} | Level: {entry.Level} | XP: {entry.XP}/{DiscordUtilities.GetXPLevelRequirement(entry.Level + 1, DiscordUtilities.PHI)}";
+
+                            if (entry == gldlb.Last())
+                                response += bse;
+                            else
+                                response += bse + "\n";
+                            count++;
+                        }
+                        else
+                        {
+                            response += $"??/??. User not found";
+                            await DatabaseClient.DropUserAsync(entry.ID);
+                        }
+                    }
+                    await ReplyAsync(Context.Channel, response);
+                }
+                else
+                {
+                    await ReplyFailedAsync(Context.Channel, $"Guild not opted into Experience module. Use: `{Context.DBGuild.Prefix}guild-feature levels 1`");
+                }
+            }
+            else
+            {
+                await ReplyFailedAsync(Context.Channel, $"Unknown argument: {arg}");
+            }
         }
 
         [Command("epoch"), Summary("Gets a DateTime DD/MM/YYYY HH:MM:SS (24 Hour) or the current time in POSIX/Unix Epoch time")]
