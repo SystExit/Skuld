@@ -33,7 +33,8 @@ namespace Skuld.Core.Extensions
             ".jpg",
             ".bmp",
             ".gif",
-            ".png"
+            ".png",
+            ".apng"
         };
 
         public static LogSeverity ToDiscord(this NTwitch.LogSeverity logSeverity)
@@ -57,7 +58,7 @@ namespace Skuld.Core.Extensions
         public static ConsoleColor SeverityToColor(this LogSeverity sev)
         {
             if (sev == LogSeverity.Critical)
-                return ConsoleColor.DarkRed;
+                return ConsoleColor.Red;
             if (sev == LogSeverity.Error)
                 return ConsoleColor.Red;
             if (sev == LogSeverity.Info)
@@ -86,6 +87,9 @@ namespace Skuld.Core.Extensions
         public static MemoryStream ToMemoryStream(this string value)
             => new MemoryStream(Encoding.UTF8.GetBytes(value ?? ""));
 
+        public static Uri ToUri(this string value)
+            => new Uri(value);
+
         public static bool IsImageExtension(this string input)
         {
             foreach (var ext in ImageExtensions)
@@ -111,13 +115,18 @@ namespace Skuld.Core.Extensions
 
         public static bool IsWebsite(this string input)
         {
-            if (input.Contains('.') || input.Contains("www.") ||
-                input.Contains("http://") || input.Contains("https://"))
+            try
             {
-                return true;
+                if (new Uri(input) != null)
+                {
+                    return true;
+                }
+                return false;
             }
-
-            return false;
+            catch
+            {
+                return false;
+            }
         }
 
         public static bool IsValidOsuSig(this FileStream fs)
@@ -208,13 +217,9 @@ namespace Skuld.Core.Extensions
 
                 if ((x + 1) % 10 == 0 || (x + 1) == list.Count())
                 {
-                    pages.Add("```");
-                    pagetext = "";
-
-                    if ((x + 1) % 10 == 0)
-                    {
-                        pages.Add("```cs\n");
-                    }
+                    pagetext += "```";
+                    pages.Add(pagetext);
+                    pagetext = "```cs\n";
                 }
             }
 

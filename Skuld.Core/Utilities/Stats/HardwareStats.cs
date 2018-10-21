@@ -2,14 +2,9 @@
 
 namespace Skuld.Core.Utilities.Stats
 {
-    public class HardwareStats
+    public static class HardwareStats
     {
-        public readonly MemoryStats Memory;
-
-        public HardwareStats()
-        {
-            Memory = new MemoryStats();
-        }
+        public static readonly MemoryStats Memory = new MemoryStats();
     }
 
     public class MemoryStats

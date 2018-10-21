@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Skuld.APIS.Social.Instagram.Models;
 using Skuld.APIS.Utilities;
-using Skuld.Core.Services;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,7 +12,7 @@ namespace Skuld.APIS.Social.Instagram
         private static string BaseURL = "https://www.instagram.com/{{USERNAME}}";
         private readonly RateLimiter rateLimiter;
 
-        public InstagramClient(GenericLogger log) : base(log)
+        public InstagramClient() : base()
         {
             rateLimiter = new RateLimiter();
         }

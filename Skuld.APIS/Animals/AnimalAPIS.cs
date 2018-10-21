@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Skuld.APIS.Animals.Models;
 using Skuld.APIS.Utilities;
-using Skuld.Core.Services;
+using Skuld.Core;
 using System;
 using System.Net;
 using System.Threading.Tasks;
@@ -19,7 +19,7 @@ namespace Skuld.APIS
         private readonly RateLimiter birdrateLimiter;
         private readonly RateLimiter dograteLimiter;
 
-        public AnimalClient(GenericLogger log) : base(log)
+        public AnimalClient() : base()
         {
             cat1rateLimiter = new RateLimiter();
             cat2rateLimiter = new RateLimiter();
@@ -69,7 +69,7 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                await loggingService.AddToLogsAsync(new Core.Models.LogMessage("RandomCat", ex.Message, Discord.LogSeverity.Error, ex));
+                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("RandomCat", ex.Message, Discord.LogSeverity.Error, ex));
                 try
                 {
                     if (cat2rateLimiter.IsRatelimited()) return null;
@@ -87,7 +87,7 @@ namespace Skuld.APIS
                 }
                 catch (Exception ex2)
                 {
-                    await loggingService.AddToLogsAsync(new Core.Models.LogMessage("RandomCat", ex2.Message, Discord.LogSeverity.Error, ex2));
+                    await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("RandomCat", ex2.Message, Discord.LogSeverity.Error, ex2));
                     return "https://i.ytimg.com/vi/29AcbY5ahGo/hqdefault.jpg";
                 }
             }
@@ -105,7 +105,7 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                await loggingService.AddToLogsAsync(new Core.Models.LogMessage("RandomDog", ex.Message, Discord.LogSeverity.Error, ex));
+                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("RandomDog", ex.Message, Discord.LogSeverity.Error, ex));
                 return "https://i.imgur.com/ZSMi3Zt.jpg";
             }
         }
