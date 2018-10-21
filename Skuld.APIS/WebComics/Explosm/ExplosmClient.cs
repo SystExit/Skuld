@@ -1,6 +1,5 @@
 ﻿using Skuld.APIS.Utilities;
 using Skuld.APIS.WebComics.Explosm.Models;
-using Skuld.Core.Services;
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -10,12 +9,10 @@ namespace Skuld.APIS.WebComics.Explosm
 {
     public class ExplosmClient : BaseClient
     {
-        private readonly GenericLogger logger;
         private readonly RateLimiter rateLimiter;
 
-        public ExplosmClient(GenericLogger log) : base(log)
+        public ExplosmClient() : base()
         {
-            logger = log;
             rateLimiter = new RateLimiter();
         }
 

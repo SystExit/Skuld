@@ -1,5 +1,5 @@
 ﻿using HtmlAgilityPack;
-using Skuld.Core.Services;
+using Skuld.Core;
 using System;
 using System.IO;
 using System.Net;
@@ -13,11 +13,9 @@ namespace Skuld.APIS
 {
     public class BaseClient
     {
-        public static GenericLogger loggingService { get; set; }
-
-        public BaseClient(GenericLogger logger)
+        public BaseClient()
         {
-            loggingService = logger;
+
         }
 
         public string UAGENT = "Mozilla/5.0 (compatible; SkuldBot/" + Assembly.GetEntryAssembly().GetName().Version.ToString().Substring(0, 3) + "; +https://github.com/exsersewo/Skuld/)";
@@ -63,7 +61,7 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                await loggingService.AddToLogsAsync(new Core.Models.LogMessage("WebHandler", ex.Message, Discord.LogSeverity.Error, ex));
+                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("WebHandler", ex.Message, Discord.LogSeverity.Error, ex));
                 return null;
             }
         }
@@ -106,7 +104,7 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                await loggingService.AddToLogsAsync(new Core.Models.LogMessage("WebHandler", ex.Message, Discord.LogSeverity.Error, ex));
+                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("WebHandler", ex.Message, Discord.LogSeverity.Error, ex));
                 return null;
             }
         }

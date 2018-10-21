@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Skuld.APIS.StrawPoll.Models;
 using Skuld.APIS.Utilities;
-using Skuld.Core.Services;
+using Skuld.Core;
 using System;
 using System.Net.Http;
 using System.Text;
@@ -11,12 +11,10 @@ namespace Skuld.APIS
 {
     public class StrawPollClient : BaseClient
     {
-        private readonly GenericLogger logger;
         private readonly RateLimiter rateLimiter;
 
-        public StrawPollClient(GenericLogger log) : base(log)
+        public StrawPollClient() : base()
         {
-            logger = log;
             rateLimiter = new RateLimiter();
         }
 
@@ -38,7 +36,7 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                await logger.AddToLogsAsync(new Core.Models.LogMessage("StrwPoll", "Error: " + ex.Message, Discord.LogSeverity.Error, ex));
+                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("StrwPoll", "Error: " + ex.Message, Discord.LogSeverity.Error, ex));
             }
             return null;
         }
@@ -70,7 +68,7 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                await logger.AddToLogsAsync(new Core.Models.LogMessage("StrwPoll", "Error: " + ex.Message, Discord.LogSeverity.Error, ex));
+                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("StrwPoll", "Error: " + ex.Message, Discord.LogSeverity.Error, ex));
             }
             return null;
         }

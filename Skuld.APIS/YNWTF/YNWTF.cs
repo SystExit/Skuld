@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Skuld.APIS.Utilities;
 using Skuld.APIS.YNWTF.Models;
-using Skuld.Core.Services;
 using System;
 using System.Threading.Tasks;
 
@@ -11,7 +10,7 @@ namespace Skuld.APIS
     {
         private readonly RateLimiter rateLimiter;
 
-        public YNWTFClient(GenericLogger log) : base(log)
+        public YNWTFClient() : base()
         {
             rateLimiter = new RateLimiter();
         }

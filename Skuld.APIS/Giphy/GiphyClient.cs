@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 using Skuld.APIS.Giphy.Models;
 using Skuld.APIS.Utilities;
-using Skuld.Core.Services;
 using System;
 using System.Threading.Tasks;
 
@@ -12,7 +11,7 @@ namespace Skuld.APIS
         private readonly RateLimiter rateLimiter;
         private readonly Random random;
 
-        public GiphyClient(GenericLogger log) : base(log)
+        public GiphyClient() : base()
         {
             rateLimiter = new RateLimiter();
             random = new Random();

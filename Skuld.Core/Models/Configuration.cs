@@ -1,6 +1,8 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.IO;
+using Discor = Discord;
 
 namespace Skuld.Core.Models
 {
@@ -27,6 +29,9 @@ namespace Skuld.Core.Models
         //Module Management
         public ModuleOverride Modules { get; set; }
 
+        [JsonConverter(typeof(StringEnumConverter))]
+        public Discor.LogSeverity LogLevel { get; set; }
+
         public SkuldConfig()
         {
             //Bot
@@ -46,12 +51,15 @@ namespace Skuld.Core.Models
 
             //BotListing
             BotListing = new BotListingAPI();
+
+            //Logger
+            LogLevel = Discor.LogSeverity.Verbose;
         }
 
-        public void Save(string dir = "skuld/storage/configuration.json")
+        public void Save(string dir = "configuration.json")
             => File.WriteAllText(Path.Combine(appdir, dir), JsonConvert.SerializeObject(this, Formatting.Indented));
 
-        public static SkuldConfig Load(string dir = "skuld/storage/configuration.json")
+        public static SkuldConfig Load(string dir = "configuration.json")
             => JsonConvert.DeserializeObject<SkuldConfig>(File.ReadAllText(Path.Combine(appdir, dir)));
     }
 
@@ -60,7 +68,7 @@ namespace Skuld.Core.Models
         public string Token { get; set; }
         public string Prefix { get; set; }
         public string AltPrefix { get; set; }
-        public ulong[] Owners { get; set; }
+        public ulong[] BotAdmins { get; set; }
         public ushort Shards { get; set; }
 
         public DiscordConfig()
@@ -68,13 +76,14 @@ namespace Skuld.Core.Models
             Token = "";
             Prefix = "";
             AltPrefix = "";
-            Owners = new ulong[] { 0 };
+            BotAdmins = new ulong[] { 160256824099078144 };
             Shards = 0;
         }
     }
 
     public class DatabaseConfig
     {
+        public bool Enabled { get; set; }
         public string Host { get; set; }
         public ushort Port { get; set; }
         public string Username { get; set; }
@@ -84,6 +93,7 @@ namespace Skuld.Core.Models
 
         public DatabaseConfig()
         {
+            Enabled = false;
             Host = "";
             Port = 3306;
             Username = "";
@@ -112,8 +122,6 @@ namespace Skuld.Core.Models
 
     public class APIConfig
     {
-        public string MALUName { get; set; }
-        public string MALPassword { get; set; }
         public string GoogleAPI { get; set; }
         public string GoogleCx { get; set; }
         public int STANDSUid { get; set; }
@@ -128,8 +136,6 @@ namespace Skuld.Core.Models
 
         public APIConfig()
         {
-            MALUName = "";
-            MALPassword = "";
             GoogleAPI = "";
             GoogleCx = "";
             STANDSUid = 0;
@@ -145,24 +151,10 @@ namespace Skuld.Core.Models
     public class ModuleOverride
     {
         public bool TwitchModule { get; set; }
-        public bool AccountsModuleEnabled { get; set; }
-        public bool ActionsModuleEnabled { get; set; }
-        public bool AdminModuleEnabled { get; set; }
-        public bool FunModuleEnabled { get; set; }
-        public bool InformationModuleEnabled { get; set; }
-        public bool SearchModuleEnabled { get; set; }
-        public bool StatsModuleEnabled { get; set; }
 
         public ModuleOverride()
         {
             TwitchModule = false;
-            AccountsModuleEnabled = true;
-            ActionsModuleEnabled = true;
-            AdminModuleEnabled = true;
-            FunModuleEnabled = true;
-            InformationModuleEnabled = true;
-            SearchModuleEnabled = true;
-            StatsModuleEnabled = true;
         }
     }
 

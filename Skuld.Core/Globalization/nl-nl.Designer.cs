@@ -40,7 +40,7 @@ namespace Skuld.Core.Globalization
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Skuld.Globalization.nl-nl", typeof(nl_nl).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Skuld.Core.Globalization.nl-nl", typeof(nl_nl).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;

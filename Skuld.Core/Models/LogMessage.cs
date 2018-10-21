@@ -3,7 +3,7 @@ using System;
 
 namespace Skuld.Core.Models
 {
-    public class LogMessage
+    public struct LogMessage
     {
         public DateTime TimeStamp { get; set; }
         public string Source { get; set; }
