@@ -28,6 +28,7 @@ namespace Skuld.Bot.Services
     public class HostSerivce
     {
         public static SkuldConfig Configuration;
+        public static WebSocketService WebSocket;
         public static IServiceProvider Services;
         private static string logfile;
 
@@ -65,9 +66,13 @@ namespace Skuld.Bot.Services
 
             await BotService.DiscordClient.StartAsync();
 
+            WebSocket = new WebSocketService();
+
             BotService.BackgroundTasks();
 
             await Task.Delay(-1);
+
+            WebSocket.ShutdownServer();
         }
 
         private static void CreateStaticClients()

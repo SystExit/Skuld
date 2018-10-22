@@ -18,12 +18,11 @@ namespace Skuld.Bot.Services
 {
     public class WebSocketService
     {
-        public DiscordShardedClient Client { get; set; }
+        public DiscordShardedClient Client { get => BotService.DiscordClient; }
         private readonly WebSocketServer _server;
 
-        public WebSocketService(DiscordShardedClient cli)
+        public WebSocketService()
         {
-            Client = cli;
             _server = new WebSocketServer("ws://127.0.0.1:37821");
             _server.Start(x =>
             {
