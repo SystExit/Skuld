@@ -536,7 +536,7 @@ namespace Skuld.Bot.Commands
 
         [Command("setlevelup"), Summary("Sets the level up message"), RequireDatabase]
         [RequireRole(AccessLevel.ServerMod)]
-        public async Task SetLevelUp(string message)
+        public async Task SetLevelUp([Remainder]string message)
         {
             var gld = Context.DBGuild;
             gld.LevelUpMessage = message;
