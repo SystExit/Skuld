@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Skuld.APIS;
 using Skuld.Core;
+using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Database;
@@ -84,7 +85,10 @@ namespace Skuld.Bot.Commands
         {
             try
             {
-                await Context.Client.SetGameAsync($"{SkuldConfig.Load().Discord.Prefix}help | {Random.Next(0, Context.Client.Shards.Count) + 1}/{Context.Client.Shards.Count}", null, ActivityType.Listening);
+                foreach(var shard in Context.Client.Shards)
+                {
+                    await shard.SetGameAsync($"{Configuration.Discord.Prefix}help | {shard.ShardId + 1}/{Context.Client.Shards.Count}", type: ActivityType.Listening);
+                }
                 await Context.Message.DeleteAsync();
             }
             catch
@@ -146,9 +150,10 @@ namespace Skuld.Bot.Commands
                 Timestamp = DateTime.Now,
                 Color = EmbedUtils.RandomColor()
             };
-            embed.AddField("Guilds", shard.Guilds.Count.ToString(), true);
-            embed.AddField("Status", shard.ConnectionState, true);
-            embed.AddField("Latencty", shard.Latency + "ms", true);
+            embed.AddInlineField("Guilds", shard.Guilds.Count.ToString());
+            embed.AddInlineField("Status", shard.ConnectionState);
+            embed.AddInlineField("Latency", shard.Latency + "ms");
+            embed.AddField("Game", shard.Activity.Name);
             await ReplyAsync(Context.Channel, embed.Build());
         }
 
