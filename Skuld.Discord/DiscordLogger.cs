@@ -6,6 +6,7 @@ using Skuld.Core.Models;
 using Skuld.Database;
 using StatsdClient;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +19,7 @@ namespace Skuld.Discord
         private static Random random = new Random();
         private static BotListingClient botListing;
         private static readonly SkuldConfig Configuration = SkuldConfig.Load();
+        private static List<int> ShardsReady = new List<int>();
 
         public static void AddBotLister(BotListingClient botlist)
         {
@@ -60,8 +62,12 @@ namespace Skuld.Discord
 
         private static async Task Bot_ShardReady(DiscordSocketClient arg)
         {
-            await BotService.DiscordClient.SetGameAsync($"{Configuration.Discord.Prefix}help | {random.Next(0, BotService.DiscordClient.Shards.Count) + 1}/{BotService.DiscordClient.Shards.Count}", type: DiscordNet.ActivityType.Listening);
-            arg.MessageReceived += MessageHandler.HandleCommandAsync;
+            await BotService.DiscordClient.SetGameAsync($"{Configuration.Discord.Prefix}help | {arg.ShardId + 1}/{BotService.DiscordClient.Shards.Count}", type: DiscordNet.ActivityType.Listening);
+            if(!ShardsReady.Contains(arg.ShardId))
+            {
+                arg.MessageReceived += MessageHandler.HandleCommandAsync;
+                ShardsReady.Add(arg.ShardId);
+            }
         }
 
         private static async Task Bot_UserUpdated(SocketUser arg1, SocketUser arg2)
