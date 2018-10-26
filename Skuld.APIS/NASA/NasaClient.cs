@@ -149,20 +149,26 @@ namespace Skuld.APIS
                 var stringifiedresp = await sr.ReadToEndAsync().ConfigureAwait(false);
                 var data = JsonConvert.DeserializeObject<RoverPhotoWrapper>(stringifiedresp);
 
-                switch (rover)
+                if(data != null)
                 {
-                    case NasaRover.Curiosity:
-                        CuriosityMaxSOL = data.Photos[0].Rover.MaxSOL;
-                        break;
-                    case NasaRover.Opportunity:
-                        OpportunityMaxSOL = data.Photos[0].Rover.MaxSOL;
-                        break;
-                    case NasaRover.Spirit:
-                        SpiritMaxSOL = data.Photos[0].Rover.MaxSOL;
-                        break;
+                    switch (rover)
+                    {
+                        case NasaRover.Curiosity:
+                            CuriosityMaxSOL = data.Photos[0].Rover.MaxSOL;
+                            break;
+                        case NasaRover.Opportunity:
+                            OpportunityMaxSOL = data.Photos[0].Rover.MaxSOL;
+                            break;
+                        case NasaRover.Spirit:
+                            SpiritMaxSOL = data.Photos[0].Rover.MaxSOL;
+                            break;
+                    }
+                    return data;
                 }
-
-                return data;
+                else
+                {
+                    return null;
+                }
             }
             else
             {

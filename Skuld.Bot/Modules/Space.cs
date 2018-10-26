@@ -48,9 +48,13 @@ namespace Skuld.Bot.Modules
         }
 
         [Command("curiosity"), Summary("Gets stuff from NASA's Curiosity Rover"), Ratelimit(20, 1, Measure.Minutes)]
-        public async Task Curiosity(int SOL = 2199, string camera = "")
+        public async Task Curiosity(int SOL = 2199, string camera = null)
         {
-            Enum.TryParse(camera, out NasaRoverCamera cam);
+            NasaRoverCamera cam;
+            if (camera != null)
+                Enum.TryParse(camera.ToUpperInvariant(), out cam);
+            else
+                cam = NasaRoverCamera.PANCAM;
 
             var image = await GetRoverAsync(NasaRover.Curiosity, cam, SOL);
 
@@ -58,7 +62,7 @@ namespace Skuld.Bot.Modules
             {
                 var imgdata = image.Data as RoverPhotoWrapper;
 
-                if (imgdata.Photos.Count() == 0)
+                if (imgdata != null || imgdata.Photos.Count() == 0)
                 { await ReplyFailedAsync(Context.Channel, $"No images found for camera: **{camera}** at SOL: **{SOL}**"); return; }
 
                 var photo = imgdata.Photos.FirstOrDefault();
@@ -83,9 +87,13 @@ namespace Skuld.Bot.Modules
         }
 
         [Command("opportunity"), Summary("Gets stuff from NASA's Opportunity Rover"), Ratelimit(20, 1, Measure.Minutes)]
-        public async Task Opportunity(int SOL = 2199, string camera = "")
+        public async Task Opportunity(int SOL = 5111, string camera = null)
         {
-            Enum.TryParse(camera.ToUpperInvariant(), out NasaRoverCamera cam);
+            NasaRoverCamera cam;
+            if (camera != null)
+                Enum.TryParse(camera.ToUpperInvariant(), out cam);
+            else
+                cam = NasaRoverCamera.PANCAM;
 
             var image = await GetRoverAsync(NasaRover.Opportunity, cam, SOL);
 
@@ -93,7 +101,7 @@ namespace Skuld.Bot.Modules
             {
                 var imgdata = image.Data as RoverPhotoWrapper;
 
-                if (imgdata.Photos.Count() == 0)
+                if (imgdata != null || imgdata.Photos.Count() == 0)
                 { await ReplyFailedAsync(Context.Channel, $"No images found for camera: **{camera}** at SOL: **{SOL}**"); return; }
 
                 var photo = imgdata.Photos.FirstOrDefault();
@@ -120,7 +128,11 @@ namespace Skuld.Bot.Modules
         [Command("spirit"), Summary("Gets stuff from NASA's Spirit Rover"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Spirit(int SOL = 2199, string camera = "")
         {
-            Enum.TryParse(camera, out NasaRoverCamera cam);
+            NasaRoverCamera cam;
+            if (camera != null)
+                Enum.TryParse(camera.ToUpperInvariant(), out cam);
+            else
+                cam = NasaRoverCamera.PANCAM;
 
             var image = await GetRoverAsync(NasaRover.Spirit, cam, SOL);
 
@@ -128,7 +140,7 @@ namespace Skuld.Bot.Modules
             {
                 var imgdata = image.Data as RoverPhotoWrapper;
 
-                if (imgdata.Photos.Count() == 0)
+                if (imgdata != null || imgdata.Photos.Count() == 0)
                 { await ReplyFailedAsync(Context.Channel, $"No images found for camera: **{camera}** at SOL: **{SOL}**"); return; }
 
                 var photo = imgdata.Photos.FirstOrDefault();
@@ -206,12 +218,19 @@ namespace Skuld.Bot.Modules
                 }
             }
 
-            var resp = await NASAClient.GetRoverPhotoAsync(rover, camera, SOL);
+            try
+            {
+                var resp = await NASAClient.GetRoverPhotoAsync(rover, camera, SOL);
 
-            if (resp == null)
-                return EventResult.FromFailure("Error parsing JSON");
+                if (resp == null)
+                    return EventResult.FromFailure("Error parsing JSON");
 
-            return EventResult.FromSuccess(resp);
+                return EventResult.FromSuccess(resp);
+            }
+            catch(Exception ex)
+            {
+                return EventResult.FromFailureException(ex.Message, ex);
+            }
         }
     }
 }
