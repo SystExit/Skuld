@@ -138,7 +138,7 @@ namespace Skuld.Discord
                                 else
                                 {
                                     string msg = context.DBGuild.LevelUpMessage;
-                                    msg.Replace("-m", context.User.Mention).Replace("-u", context.User.Username).Replace("-l", $"{gld.Level}");
+                                    msg = msg.Replace("-m", context.User.Mention).Replace("-u", context.User.Username).Replace("-l", $"{gld.Level}");
                                     await context.Channel.SendMessageAsync(msg);
                                 }
                                 await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MessageService", "User leveled up", LogSeverity.Info));
