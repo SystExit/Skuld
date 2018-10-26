@@ -41,35 +41,101 @@ namespace Skuld.Bot.Commands
         [Alias("dan")]
         public async Task Danbooru(params string[] tags)
         {
-            var post = await GetBooruPostAsync(BooruBoards.Danb, tags);
+            if (tags.ContainsBlacklistedTags())
+            {
+                await ReplyFailedAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+                return;
+            }
+            var cleantags = tags.AddBlacklistedTags();
 
-            await ReplyAsync(Context.Channel, post);
+            var posts = await BooruClient.GetDanbooruImagesAsync(cleantags);
+            StatsdClient.DogStatsd.Increment("web.get");
+
+            if (posts == null)
+            {
+                await ReplyFailedAsync(Context.Channel, "Couldn't find an image.");
+                return;
+            }
+
+            var post = posts.GetRandomEntry();
+
+            await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
         }
 
         [Command("gelbooru"), Summary("Gets stuff from gelbooru"), Ratelimit(20, 1, Measure.Minutes)]
         [Alias("gel")]
         public async Task Gelbooru(params string[] tags)
         {
-            var post = await GetBooruPostAsync(BooruBoards.Gelb, tags);
+            if (tags.ContainsBlacklistedTags())
+            {
+                await ReplyFailedAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+                return;
+            }
+            var cleantags = tags.AddBlacklistedTags();
 
-            await ReplyAsync(Context.Channel, post);
+            var posts = await BooruClient.GetGelbooruImagesAsync(cleantags);
+            StatsdClient.DogStatsd.Increment("web.get");
+
+            if (posts == null)
+            {
+                await ReplyFailedAsync(Context.Channel, "Couldn't find an image.");
+                return;
+            }
+
+            var post = posts.GetRandomEntry();
+
+            await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
         }
 
         [Command("rule34"), Summary("Gets stuff from rule34"), Ratelimit(20, 1, Measure.Minutes)]
         [Alias("r34")]
         public async Task R34(params string[] tags)
         {
-            var post = await GetBooruPostAsync(BooruBoards.Ru34, tags);
+            if (tags.ContainsBlacklistedTags())
+            {
+                await ReplyFailedAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+                return;
+            }
+            var cleantags = tags.AddBlacklistedTags();
 
-            await ReplyAsync(Context.Channel, post);
+            var posts = await BooruClient.GetRule34ImagesAsync(cleantags);
+
+            StatsdClient.DogStatsd.Increment("web.get");
+
+            if (posts == null)
+            {
+                await ReplyFailedAsync(Context.Channel, "Couldn't find an image.");
+                return;
+            }
+
+            var post = posts.GetRandomEntry();
+
+            await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
         }
 
         [Command("e621"), Summary("Gets stuff from e621"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task E621(params string[] tags)
         {
-            var post = await GetBooruPostAsync(BooruBoards.E621, tags);
+            if (tags.ContainsBlacklistedTags())
+            {
+                await ReplyFailedAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+                return;
+            }
+            var cleantags = tags.AddBlacklistedTags();
 
-            await ReplyAsync(Context.Channel, post);
+            var posts = await BooruClient.GetE621ImagesAsync(cleantags);
+
+            StatsdClient.DogStatsd.Increment("web.get");
+
+            if (posts == null)
+            {
+                await ReplyFailedAsync(Context.Channel, "Couldn't find an image.");
+                return;
+            }
+
+            var post = posts.GetRandomEntry();
+
+            await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
         }
 
         [Command("konachan"), Summary("Gets stuff from konachan"), Ratelimit(20, 1, Measure.Minutes)]
@@ -101,17 +167,51 @@ namespace Skuld.Bot.Commands
         [Command("yandere"), Summary("Gets stuff from yandere"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Yandere(params string[] tags)
         {
-            var post = await GetBooruPostAsync(BooruBoards.Yand, tags);
+            if (tags.ContainsBlacklistedTags())
+            {
+                await ReplyFailedAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+                return;
+            }
+            var cleantags = tags.AddBlacklistedTags();
 
-            await ReplyAsync(Context.Channel, post);
+            var posts = await BooruClient.GetYandereImagesAsync(cleantags);
+
+            StatsdClient.DogStatsd.Increment("web.get");
+
+            if (posts == null)
+            {
+                await ReplyFailedAsync(Context.Channel, "Couldn't find an image.");
+                return;
+            }
+
+            var post = posts.GetRandomEntry();
+
+            await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
         }
 
         [Command("real"), Summary("Gets stuff from Realbooru"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Realbooru(params string[] tags)
         {
-            var post = await GetBooruPostAsync(BooruBoards.Real, tags);
+            if (tags.ContainsBlacklistedTags())
+            {
+                await ReplyFailedAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+                return;
+            }
+            var cleantags = tags.AddBlacklistedTags();
 
-            await ReplyAsync(Context.Channel, post);
+            var posts = await BooruClient.GetRealBooruImagesAsync(cleantags);
+
+            StatsdClient.DogStatsd.Increment("web.get");
+
+            if (posts == null)
+            {
+                await ReplyFailedAsync(Context.Channel, "Couldn't find an image.");
+                return;
+            }
+
+            var post = posts.GetRandomEntry();
+
+            await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
         }
 
         [Command("hentaibomb"), Summary("images from all hentai booru's"), Ratelimit(20, 1, Measure.Minutes)]
@@ -119,7 +219,7 @@ namespace Skuld.Bot.Commands
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await ReplyAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+                await ReplyFailedAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
             }
             else
             {
@@ -130,7 +230,7 @@ namespace Skuld.Bot.Commands
                 StatsdClient.DogStatsd.Increment("web.get");
                 if (posts != null)
                 {
-                    var post = posts.GetRandomImage();
+                    var post = posts.GetRandomEntry();
                     if (post != null)
                     {
                         msg += post.GetMessage(post.PostUrl)+"\n";
@@ -142,7 +242,7 @@ namespace Skuld.Bot.Commands
                 StatsdClient.DogStatsd.Increment("web.get");
                 if (posts2 != null)
                 {
-                    var post = posts2.GetRandomImage();
+                    var post = posts2.GetRandomEntry();
                     if (post != null)
                     {
                         msg += post.GetMessage(post.PostUrl) + "\n";
@@ -154,7 +254,7 @@ namespace Skuld.Bot.Commands
                 StatsdClient.DogStatsd.Increment("web.get");
                 if (posts3 != null)
                 {
-                    var post = posts3.GetRandomImage();
+                    var post = posts3.GetRandomEntry();
                     if (post != null)
                     {
                         msg += post.GetMessage(post.PostUrl) + "\n";
@@ -166,7 +266,7 @@ namespace Skuld.Bot.Commands
                 StatsdClient.DogStatsd.Increment("web.get");
                 if (posts4 != null)
                 {
-                    var post = posts4.GetRandomImage();
+                    var post = posts4.GetRandomEntry();
                     if (post != null)
                     {
                         msg += post.GetMessage(post.PostUrl) + "\n";
@@ -178,7 +278,7 @@ namespace Skuld.Bot.Commands
                 StatsdClient.DogStatsd.Increment("web.get");
                 if (posts5 != null)
                 {
-                    var post = posts5.GetRandomImage();
+                    var post = posts5.GetRandomEntry();
                     if (post != null)
                     {
                         msg += post.GetMessage(post.PostUrl) + "\n";
@@ -190,7 +290,7 @@ namespace Skuld.Bot.Commands
                 StatsdClient.DogStatsd.Increment("web.get");
                 if (posts6 != null)
                 {
-                    var post = posts6.GetRandomImage();
+                    var post = posts6.GetRandomEntry();
                     if (post != null)
                     {
                         msg += post.GetMessage(post.PostUrl) + "\n";
@@ -202,7 +302,7 @@ namespace Skuld.Bot.Commands
                 StatsdClient.DogStatsd.Increment("web.get");
                 if (posts7 != null)
                 {
-                    var post = posts7.GetRandomImage();
+                    var post = posts7.GetRandomEntry();
                     if (post != null)
                     {
                         msg += post.GetMessage(post.PostUrl) + "\n";
@@ -210,56 +310,8 @@ namespace Skuld.Bot.Commands
                     }
                 }
 
-                await ReplyAsync(msg);
+                await ReplyAsync(Context.Channel, msg);
             }
-        }
-
-        private async Task<string> GetBooruPostAsync(BooruBoards booru, string[] tags)
-        {
-            if (tags.ContainsBlacklistedTags()) return "Your tags contains a banned tag, please remove it.";
-
-            var cleantags = tags.AddBlacklistedTags();
-
-            dynamic posts = null;
-
-            switch(booru)
-            {
-                case BooruBoards.Danb:
-                    posts = await BooruClient.GetDanbooruImagesAsync(tags);
-                    break;
-
-                case BooruBoards.E621:
-                    posts = await BooruClient.GetE621ImagesAsync(tags);
-                    break;
-
-                case BooruBoards.Gelb:
-                    posts = await BooruClient.GetGelbooruImagesAsync(tags);
-                    break;
-
-                case BooruBoards.Kona:
-                    posts = await BooruClient.GetKonaChanImagesAsync(tags);
-                    break;
-
-                case BooruBoards.Real:
-                    posts = await BooruClient.GetRealBooruImagesAsync(tags);
-                    break;
-
-                case BooruBoards.Ru34:
-                    posts = await BooruClient.GetRule34ImagesAsync(tags);
-                    break;
-
-                case BooruBoards.Yand:
-                    posts = await BooruClient.GetYandereImagesAsync(tags);
-                    break;
-            }
-
-            StatsdClient.DogStatsd.Increment("web.get");
-
-            if (posts == null) return "Couldn't find an image.";
-
-            var post = posts.GetRandomImage();
-
-            return post.GetMessage(post.PostUrl);
         }
     }
 }
