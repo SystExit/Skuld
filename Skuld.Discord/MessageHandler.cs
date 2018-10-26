@@ -95,7 +95,14 @@ namespace Skuld.Discord
             if (cmds == null || cmds.Count == 0) { return; }
 
             var cmd = cmds.FirstOrDefault().Command;
-            if (sguild != null) { if (MessageTools.ModuleDisabled(sguild.GuildSettings.Modules, cmd)) { return; } }
+            if (sguild != null)
+            {
+                if (MessageTools.ModuleDisabled(sguild.GuildSettings.Modules, cmd))
+                {
+                    await context.Client.SendChannelAsync(context.Channel, $"The module: `{cmd.Module.Name}` is disabled, contact a server administrator to enable it");
+                    return;
+                }
+            }
 
             DogStatsd.Increment("commands.total.threads", 1, 1, new[] { $"module:{cmd.Module.Name.ToLowerInvariant()}", $"cmd:{cmd.Name.ToLowerInvariant()}" });
 

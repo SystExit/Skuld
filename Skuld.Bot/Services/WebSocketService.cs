@@ -28,7 +28,6 @@ namespace Skuld.Bot.Services
             {
                 x.OnMessage = async (message) => await HandleMessageAsync(x, message);
             });
-            Console.Clear();
             GenericLogger.AddToLogsAsync(new Core.Models.LogMessage
             {
                 Source = "WebSocketService - Ctr",
