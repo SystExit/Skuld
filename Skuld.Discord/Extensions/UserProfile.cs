@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Database.Extensions;
@@ -22,7 +23,7 @@ namespace Skuld.Discord.Extensions
             embed.AddField(Configuration.Preferences.MoneyName, user.Money.ToString("N0") ?? "No Money", inline: true);
             if (user.Daily != 0)
             {
-                embed.AddField("Daily", user.Daily, inline: true);
+                embed.AddField("Daily", user.Daily.FromEpoch().ToString("dd/MM/yyyy HH:mm:ss"), inline: true);
             }
             else
             {
@@ -58,7 +59,7 @@ namespace Skuld.Discord.Extensions
 
             if (user.Daily != 0)
             {
-                embed.AddField("Daily", user.Daily, inline: true);
+                embed.AddField("Daily", user.Daily.ToString("dd/MM/yyyy HH:mm:ss"), inline: true);
             }
             else
             {
