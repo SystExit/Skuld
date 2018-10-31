@@ -76,6 +76,7 @@ namespace Skuld.Discord
                 {
                     DogStatsd.Gauge("guilds.total", DiscordClient.Guilds.Count);
                 }
+                DogStatsd.Gauge("users.total", Users);
                 Thread.Sleep(TimeSpan.FromSeconds(5));
             }
         }
