@@ -59,7 +59,7 @@ namespace Skuld.Discord.Extensions
 
             if (user.Daily != 0)
             {
-                embed.AddField("Daily", user.Daily.ToString("dd/MM/yyyy HH:mm:ss"), inline: true);
+                embed.AddField("Daily", user.Daily.FromEpoch().ToString("dd/MM/yyyy HH:mm:ss"), inline: true);
             }
             else
             {
