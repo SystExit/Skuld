@@ -2,8 +2,10 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using Skuld.Core;
+using Skuld.Database;
 using StatsdClient;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,10 +17,13 @@ namespace Skuld.Discord
         public static DiscordShardedClient DiscordClient;
         public static CommandService CommandService { get => MessageHandler.CommandService; }
         public static IServiceProvider Services;
-        public static int Users { get; internal set; }
+        static List<ulong> UserIDs;
+        public static int Users { get => UserIDs.Count(); }
 
         public static void ConfigureBot(DiscordSocketConfig config)
         {
+            UserIDs = new List<ulong>();
+
             DiscordClient = new DiscordShardedClient(config);
 
             DiscordLogger.RegisterEvents();
@@ -62,6 +67,13 @@ namespace Skuld.Discord
                     await FeedUsersAsync().ConfigureAwait(false);
                 }
             ).Start();
+            new Thread(
+                async () =>
+                {
+                    Thread.CurrentThread.IsBackground = true;
+                    await CleanDatabaseAsync();
+                }
+            ).Start();
         }
 
         private static Task SendDataToDataDog()
@@ -72,12 +84,57 @@ namespace Skuld.Discord
                 DogStatsd.Gauge("shards.connected", DiscordClient.Shards.Count(x => x.ConnectionState == ConnectionState.Connected));
                 DogStatsd.Gauge("shards.disconnected", DiscordClient.Shards.Count(x => x.ConnectionState == ConnectionState.Disconnected));
                 DogStatsd.Gauge("commands.count", CommandService.Commands.Count());
-                if (DiscordClient.Shards.All(x=>x.ConnectionState == ConnectionState.Connected))
+                if (DiscordClient.Shards.All(x => x.ConnectionState == ConnectionState.Connected))
                 {
                     DogStatsd.Gauge("guilds.total", DiscordClient.Guilds.Count);
                 }
                 DogStatsd.Gauge("users.total", Users);
                 Thread.Sleep(TimeSpan.FromSeconds(5));
+            }
+        }
+
+        private static async Task CleanDatabaseAsync()
+        {
+            while (true)
+            {
+                if (DiscordClient.Shards.All(x => x.ConnectionState == ConnectionState.Connected))
+                {
+                    if (DatabaseClient.Enabled)
+                    {
+                        /*var res = await DatabaseClient.GetAllUserIDsAsync();
+                        if (res.Successful)
+                        {
+                            var ids = res.Data as List<ulong>;
+
+                            foreach (var id in ids)
+                            {
+                                if (DiscordClient.GetUser(id) == null)
+                                {
+                                    await DatabaseClient.DropUserAsync(id);
+                                }
+                            }
+                        }*/
+
+                        res = await DatabaseClient.GetAllGuildIDsAsync();
+                        if (res.Successful)
+                        {
+                            var ids = res.Data as List<ulong>;
+
+                            foreach (var id in ids)
+                            {
+                                if (DiscordClient.GetGuild(id) == null)
+                                {
+                                    await DatabaseClient.DropGuildAsync(id);
+                                }
+                            }
+                        }
+                    }
+                    await Task.Delay(TimeSpan.FromMinutes(30));
+                }
+                else
+                {
+                    await Task.Delay(TimeSpan.FromMinutes(1));
+                }
             }
         }
 
@@ -87,13 +144,21 @@ namespace Skuld.Discord
             {
                 if (DiscordClient.Shards.All(x => x.ConnectionState == ConnectionState.Connected))
                 {
-                    Users = 0;
                     await DiscordClient.DownloadUsersAsync(DiscordClient.Guilds);
                     foreach (var gld in DiscordClient.Guilds)
                     {
-                        Users += gld.Users.Count;
+                        var humans = gld.Users.Where(x => x.IsBot == false);
+                        foreach(var human in humans)
+                        {
+                            if (!UserIDs.Contains(human.Id))
+                                UserIDs.Add(human.Id);
+                        }
                     }
-                    await Task.Delay(TimeSpan.FromHours(1));
+                    await Task.Delay(TimeSpan.FromMinutes(15));
+                }
+                else
+                {
+                    await Task.Delay(TimeSpan.FromMinutes(1));
                 }
             }
         }

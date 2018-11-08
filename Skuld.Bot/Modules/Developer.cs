@@ -262,13 +262,40 @@ namespace Skuld.Bot.Commands
             }
         }
 
+        [Command("rebuildusers")]
+        public async Task RebuildUsers()
+        {
+            Thread thd = new Thread(async () =>
+            {
+                Thread.CurrentThread.IsBackground = true;
+                string message = "";
+                int count = 0;
+                foreach (var guild in Context.Client.Guilds)
+                {
+                    await guild.DownloadUsersAsync();
+                    foreach (var user in guild.Users)
+                    {
+                        count++;
+                        await DatabaseClient.InsertUserAsync(user, "en-GB");
+                        Thread.Sleep(2000);
+                        message += count + ". Inserted\n";
+                    }
+                }
+                await ReplyAsync(Context.Channel, message);
+            })
+            {
+                IsBackground = true
+            };
+            thd.Start();
+        }
+
         [Command("rebuildguilds")]
         public async Task RebuildGuilds()
         {
-            string message = "";
-            int count = 0;
             Thread thd = new Thread(async () =>
             {
+                string message = "";
+                int count = 0;
                 foreach (var guild in Context.Client.Guilds)
                 {
                     count++;
@@ -276,13 +303,12 @@ namespace Skuld.Bot.Commands
                     Thread.Sleep(2000);
                     message += count + ". Inserted\n";
                 }
+                await ReplyAsync(Context.Channel, message);
             })
             {
                 IsBackground = true
             };
             thd.Start();
-            if (message != "")
-            { await ReplyAsync(Context.Channel, message); }
         }
 
         [Command("eval"), Summary("no")]
@@ -306,11 +332,15 @@ namespace Skuld.Bot.Commands
                 }
 
                 var embed = new EmbedBuilder();
-                var globals = new Globals().Context = Context as ShardedCommandContext;
+                var globals = new Globals().Context = Context as SkuldCommandContext;
                 var soptions = ScriptOptions
                     .Default
-                    .WithReferences(typeof(ShardedCommandContext).Assembly, typeof(SocketGuildUser).Assembly, typeof(Task).Assembly, typeof(Queryable).Assembly)
-                    .WithImports(typeof(ShardedCommandContext).FullName, typeof(SocketGuildUser).FullName, typeof(Task).FullName, typeof(Queryable).FullName);
+                    .WithReferences(typeof(SkuldCommandContext).Assembly, typeof(ShardedCommandContext).Assembly,
+                    typeof(SocketGuildUser).Assembly, typeof(Task).Assembly, typeof(Queryable).Assembly,
+                    typeof(BotService).Assembly)
+                    .WithImports(typeof(SkuldCommandContext).FullName, typeof(ShardedCommandContext).FullName,
+                    typeof(SocketGuildUser).FullName, typeof(Task).FullName, typeof(Queryable).FullName,
+                    typeof(BotService).FullName);
 
                 var script = CSharpScript.Create(code, soptions, globalsType: typeof(ShardedCommandContext));
                 script.Compile();

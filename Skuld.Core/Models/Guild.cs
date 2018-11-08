@@ -14,15 +14,13 @@ namespace Skuld.Core.Models
         public string JoinMessage { get; set; }
         public string LeaveMessage { get; set; }
         public string LevelUpMessage { get; set; }
+        public ulong LevelUpChannel { get; set; }
 
-        public GuildSettings GuildSettings { get; set; }
-    }
+        public List<CustomCommand> CustomCommands { get; set; }
 
-    public class GuildSettings
-    {
         public GuildCommandModules Modules { get; set; }
         public GuildFeatureModules Features { get; set; }
-        public IReadOnlyList<GuildLevelRewards> LevelRewards { get; set; }
+        public List<GuildLevelRewards> LevelRewards { get; set; }
     }
 
     public class GuildCommandModules

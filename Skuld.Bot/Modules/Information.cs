@@ -243,84 +243,94 @@ namespace Skuld.Bot.Commands
         [Alias("lb")]
         public async Task GetLeaderboard(string arg = null)
         {
-            if(arg != null && arg.ToLowerInvariant() == "money")
+            if (arg != null)
             {
-                var moneylbresp = await DatabaseClient.GetMoneyLeaderboardAsync();
-                if(moneylbresp.Successful)
+                if (arg.ToLowerInvariant() == "money")
                 {
-                    var moneylb = moneylbresp.Data as IReadOnlyList<MoneyLeaderboardEntry>;
-                    string response = "";
-                    int count = 1;
-                    int maxnum = moneylb.Count();
-                    foreach(var entry in moneylb)
+                    var moneylbresp = await DatabaseClient.GetMoneyLeaderboardAsync();
+                    if (moneylbresp.Successful)
                     {
-                        var usr = Context.Client.GetUser(entry.ID);
-
-                        if (usr != null)
+                        var moneylb = moneylbresp.Data as IReadOnlyList<MoneyLeaderboardEntry>;
+                        string response = "";
+                        int count = 1;
+                        int maxnum = moneylb.Count();
+                        foreach (var entry in moneylb)
                         {
-                            string bse = $"{count}/{maxnum}. {usr.Username} - {Configuration.Preferences.MoneySymbol + entry.Money.ToString("N0")}";
+                            var usr = Context.Client.GetUser(entry.ID);
 
-                            if (entry == moneylb.Last())
-                                response += bse;
+                            if (usr != null)
+                            {
+                                string bse = $"{count}/{maxnum}. {usr.Username} - {Configuration.Preferences.MoneySymbol + entry.Money.ToString("N0")}";
+
+                                if (entry == moneylb.Last())
+                                    response += bse;
+                                else
+                                    response += bse + "\n";
+                                count++;
+                            }
                             else
-                                response += bse + "\n";
-                            count++;
+                            {
+                                response += $"??/??. User not found";
+                                await DatabaseClient.DropUserAsync(entry.ID);
+                            }
                         }
-                        else
-                        {
-                            response += $"??/??. User not found";
-                            await DatabaseClient.DropUserAsync(entry.ID);
-                        }
+                        await ReplyAsync(Context.Channel, response);
                     }
-                    await ReplyAsync(Context.Channel, response);
+                    else
+                    {
+                        await ReplyFailedAsync(Context.Channel, $"Either no user has any money, or error with sql statement.");
+                    }
                 }
                 else
                 {
-                    await ReplyFailedAsync(Context.Channel, $"Either no user has any money, or error with sql statement.");
-                }
-            }
-            else if(arg == null)
-            {
-                var guildCountResp = await DatabaseClient.GetGuildExperienceCountAsync(Context.Guild.Id).ConfigureAwait(false);
-                int guildCount = -1;
-                if (guildCountResp.Successful)
-                    guildCount = ConversionTools.ParseInt32OrDefault(Convert.ToString(guildCountResp.Data));
-
-                var gldxpresp = await DatabaseClient.GetGuildExperienceAsync(Context.Guild.Id);
-                if(gldxpresp.Successful)
-                {
-                    var gldlb = gldxpresp.Data as IReadOnlyList<GuildLeaderboardEntry>;
-                    string response = "";
-                    int count = 1;
-                    foreach (var entry in gldlb)
-                    {
-                        var usr = Context.Guild.GetUser(entry.ID);
-                        if(usr != null)
-                        {
-                            string bse = $"{count}/{gldlb.Count()}. {usr.Username} - TotalXP: {entry.TotalXP} | Level: {entry.Level} | XP: {entry.XP}/{DiscordUtilities.GetXPLevelRequirement(entry.Level + 1, DiscordUtilities.PHI)}";
-
-                            if (entry == gldlb.Last())
-                                response += bse;
-                            else
-                                response += bse + "\n";
-                            count++;
-                        }
-                        else
-                        {
-                            response += $"??/??. User not found";
-                            await DatabaseClient.DropUserAsync(entry.ID);
-                        }
-                    }
-                    await ReplyAsync(Context.Channel, response);
-                }
-                else
-                {
-                    await ReplyFailedAsync(Context.Channel, $"Guild not opted into Experience module. Use: `{Context.DBGuild.Prefix}guild-feature levels 1`");
+                    await ReplyFailedAsync(Context.Channel, $"Unknown argument: {arg}");
+                    return;
                 }
             }
             else
             {
-                await ReplyFailedAsync(Context.Channel, $"Unknown argument: {arg}");
+                if (Context.DBGuild.Features.Experience)
+                {
+                    var guildCountResp = await DatabaseClient.GetGuildExperienceCountAsync(Context.Guild.Id).ConfigureAwait(false);
+                    int guildCount = -1;
+                    if (guildCountResp.Successful && guildCountResp.Data != null)
+                        guildCount = ConversionTools.ParseInt32OrDefault(Convert.ToString(guildCountResp.Data));
+                    else
+                    {
+                        await ReplyFailedAsync(Context.Channel, $"Guild not opted into Experience module. Use: `{Context.DBGuild.Prefix}guild-feature levels 1`");
+                        return;
+                    }
+
+                    var gldxpresp = await DatabaseClient.GetGuildExperienceAsync(Context.Guild.Id);
+                    if (gldxpresp.Successful && gldxpresp.Data != null)
+                    {
+                        var gldlb = gldxpresp.Data as IReadOnlyList<GuildLeaderboardEntry>;
+                        string response = "";
+                        int count = 1;
+                        foreach (var entry in gldlb)
+                        {
+                            var usr = Context.Guild.GetUser(entry.ID);
+                            if (usr != null)
+                            {
+                                string bse = $"{count}/{gldlb.Count()}. {usr.Username} - TotalXP: {entry.TotalXP} | Level: {entry.Level} | XP: {entry.XP}/{DiscordUtilities.GetXPLevelRequirement(entry.Level + 1, DiscordUtilities.PHI)}";
+
+                                if (entry == gldlb.Last())
+                                    response += bse;
+                                else
+                                    response += bse + "\n";
+                                count++;
+                            }
+                            else
+                            {
+                                response += $"??/??. User not found";
+                                await DatabaseClient.DropUserAsync(entry.ID);
+                            }
+                        }
+                        await ReplyAsync(Context.Channel, response);
+                        return;
+                    }
+                }
+                await ReplyFailedAsync(Context.Channel, $"Guild not opted into Experience module. Use: `{Context.DBGuild.Prefix}guild-feature levels 1`");
             }
         }
 
