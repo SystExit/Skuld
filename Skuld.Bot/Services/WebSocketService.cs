@@ -111,7 +111,7 @@ namespace Skuld.Bot.Services
                     $"\"Users\":{BotService.Users}," +
                     $"\"Shards\":{Client.Shards.Count}," +
                     $"\"Commands\":{BotService.CommandService.Commands.Count()}," +
-                    $"\"Memory Used\":\"{mem}\"}}";
+                    $"\"MemoryUsed\":\"{mem}\"}}";
 
                 await conn.Send(JsonConvert.SerializeObject(rawjson));
             }

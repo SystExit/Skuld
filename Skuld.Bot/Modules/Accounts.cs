@@ -222,7 +222,7 @@ namespace Skuld.Bot.Commands
         {
             if(Context.DBUser != null)
             {
-                var amnt = Context.DBUser.Money * 0.8;
+                var amnt = Context.DBUser.HP / 0.8;
                 await ReplyAsync(Context.Channel, $"You can heal for: `{Math.Floor(amnt)}`HP");
             }
             else
@@ -232,7 +232,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("heal"), Summary("Heal yourself or others here")]
+        [Command("heal"), Summary("Heal yourself or others here"), Priority(0)]
         public async Task Heal(uint hp, [Remainder] IGuildUser user = null)
         {
             var skuser = Context.DBUser;

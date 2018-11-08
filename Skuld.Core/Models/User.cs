@@ -1,4 +1,6 @@
-﻿namespace Skuld.Core.Models
+﻿using System.Collections.Generic;
+
+namespace Skuld.Core.Models
 {
     public class SkuldUser
     {
@@ -15,7 +17,10 @@
         public uint Glares { get; set; }
         public ulong Daily { get; set; }
         public string AvatarUrl { get; set; }
-        public string FavCmd { get; set; }
-        public ulong FavCmdUsg { get; set; }
+
+        public List<GuildExperience> GuildExperience { get; set; }
+        public List<int> UpvotedPastas { get; set; }
+        public List<int> DownvotedPastas { get; set; }
+        public List<CommandUsage> CommandUsage { get; set; }
     }
 }

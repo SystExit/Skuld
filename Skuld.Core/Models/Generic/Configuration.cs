@@ -37,8 +37,8 @@ namespace Skuld.Core.Models
             //Bot
             Discord = new DiscordConfig();
 
-            //Sql
-            SQL = new DatabaseConfig();
+            //Raven Configuration
+            SQL = new RavenConfig();
 
             //Variables
             Preferences = new BotPreferences();
@@ -81,24 +81,20 @@ namespace Skuld.Core.Models
         }
     }
 
-    public class DatabaseConfig
+    public class RavenConfig
     {
         public bool Enabled { get; set; }
-        public string Host { get; set; }
-        public ushort Port { get; set; }
-        public string Username { get; set; }
-        public string Password { get; set; }
-        public string Database { get; set; }
+        public string ServerURL { get; set; }
+        public string CertificatePath { get; set; }
+        public string CertificatePassword { get; set; }
         public bool SSL { get; set; }
 
-        public DatabaseConfig()
+        public RavenConfig()
         {
             Enabled = false;
-            Host = "";
-            Port = 3306;
-            Username = "";
-            Password = "";
-            Database = "";
+            ServerURL = "";
+            CertificatePath = "";
+            CertificatePassword = "";
         }
     }
 

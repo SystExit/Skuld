@@ -65,7 +65,8 @@ namespace Skuld.Discord.Utilities
             if (channel.Topic.Contains(ModAdminBypass))
             {
                 if (user.GuildPermissions.Administrator) return true;
-                if (user.GuildPermissions.RawValue == DiscordUtilities.ModeratorPermissions.RawValue) return true;
+                else if (user.GuildPermissions.RawValue == DiscordUtilities.ModeratorPermissions.RawValue) return true;
+                else return false;
             }
             if (channel.Topic.Contains(NoOneCommands)) return false;
             return true;
