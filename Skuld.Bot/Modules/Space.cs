@@ -25,7 +25,7 @@ namespace Skuld.Bot.Modules
             var aPOD = await NASAClient.GetAPODAsync();
             DogStatsd.Increment("web.get");
 
-            if (!aPOD.HDUrl.IsVideoFile() || (!aPOD.HDUrl.Contains("youtube") || aPOD.HDUrl.Contains("youtu.be")))
+            if (aPOD.HDUrl != null && (!aPOD.HDUrl.IsVideoFile() || (!aPOD.Url.Contains("youtube") || !aPOD.Url.Contains("youtu.be"))))
             {
                 var embed = new EmbedBuilder
                 {
@@ -43,7 +43,7 @@ namespace Skuld.Bot.Modules
             }
             else
             {
-                await ReplyAsync(Context.Channel, aPOD.HDUrl);
+                await ReplyAsync(Context.Channel, aPOD.Url);
             }
         }
 
@@ -54,16 +54,20 @@ namespace Skuld.Bot.Modules
             if (camera != null)
                 Enum.TryParse(camera.ToUpperInvariant(), out cam);
             else
-                cam = NasaRoverCamera.PANCAM;
+            {
+                cam = NasaRoverCamera.FHAZ;
+                camera = "FHAZ";
+            }
 
             var image = await GetRoverAsync(NasaRover.Curiosity, cam, SOL);
 
             if (image.Successful)
             {
-                var imgdata = image.Data as RoverPhotoWrapper;
-
-                if (imgdata != null || imgdata.Photos.Count() == 0)
-                { await ReplyFailedAsync(Context.Channel, $"No images found for camera: **{camera}** at SOL: **{SOL}**"); return; }
+                if (!(image.Data is RoverPhotoWrapper imgdata) || imgdata.Photos.Count() == 0)
+                {
+                    await ReplyFailedAsync(Context.Channel, $"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**");
+                    return;
+                }
 
                 var photo = imgdata.Photos.FirstOrDefault();
 
@@ -93,16 +97,20 @@ namespace Skuld.Bot.Modules
             if (camera != null)
                 Enum.TryParse(camera.ToUpperInvariant(), out cam);
             else
+            {
                 cam = NasaRoverCamera.PANCAM;
+                camera = "pancam";
+            }
 
             var image = await GetRoverAsync(NasaRover.Opportunity, cam, SOL);
 
             if (image.Successful)
             {
-                var imgdata = image.Data as RoverPhotoWrapper;
-
-                if (imgdata != null || imgdata.Photos.Count() == 0)
-                { await ReplyFailedAsync(Context.Channel, $"No images found for camera: **{camera}** at SOL: **{SOL}**"); return; }
+                if (!(image.Data is RoverPhotoWrapper imgdata) || imgdata.Photos.Count() == 0)
+                {
+                    await ReplyFailedAsync(Context.Channel, $"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**");
+                    return;
+                }
 
                 var photo = imgdata.Photos.FirstOrDefault();
 
@@ -126,22 +134,26 @@ namespace Skuld.Bot.Modules
         }
 
         [Command("spirit"), Summary("Gets stuff from NASA's Spirit Rover"), Ratelimit(20, 1, Measure.Minutes)]
-        public async Task Spirit(int SOL = 2199, string camera = "")
+        public async Task Spirit(int SOL = 2199, string camera = null)
         {
             NasaRoverCamera cam;
             if (camera != null)
                 Enum.TryParse(camera.ToUpperInvariant(), out cam);
             else
+            {
                 cam = NasaRoverCamera.PANCAM;
+                camera = "pancam";
+            }
 
             var image = await GetRoverAsync(NasaRover.Spirit, cam, SOL);
 
             if (image.Successful)
             {
-                var imgdata = image.Data as RoverPhotoWrapper;
-
-                if (imgdata != null || imgdata.Photos.Count() == 0)
-                { await ReplyFailedAsync(Context.Channel, $"No images found for camera: **{camera}** at SOL: **{SOL}**"); return; }
+                if (!(image.Data is RoverPhotoWrapper imgdata) || imgdata.Photos.Count() == 0)
+                {
+                    await ReplyFailedAsync(Context.Channel, $"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**");
+                    return;
+                }
 
                 var photo = imgdata.Photos.FirstOrDefault();
 

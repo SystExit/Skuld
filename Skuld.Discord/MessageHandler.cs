@@ -24,7 +24,7 @@ namespace Skuld.Discord
         private static SkuldConfig SkuldConfig;
         public static CommandService CommandService;
         public static MessageServiceConfig cmdConfig;
-        private static Random rnd = new Random();
+        private static readonly Random rnd = new Random();
 
         public static async Task<EventResult> ConfigureCommandServiceAsync(CommandServiceConfig Config, MessageServiceConfig cmdConf, SkuldConfig conf, Assembly ModuleAssembly, IServiceProvider ServiceProvider = null)
         {
@@ -77,14 +77,14 @@ namespace Skuld.Discord
 
             var context = new SkuldCommandContext(BotService.DiscordClient, message, suser, sguild);
 
-            if (sguild.GuildSettings.Features.Experience)
+            /*if (sguild.GuildSettings.Features.Experience)
             {
                 var _ = HandleExperienceAsync(context);
             }
             if (sguild.GuildSettings.Modules.CustomEnabled)
             {
                 var _ = HandleCustomCommandAsync(context);
-            }
+            }*/
 
             if (!MessageTools.IsEnabledChannel(await gchan.Guild.GetUserAsync(message.Author.Id), (ITextChannel)message.Channel)) { return; }
 
@@ -95,20 +95,20 @@ namespace Skuld.Discord
             if (cmds == null || cmds.Count == 0) { return; }
 
             var cmd = cmds.FirstOrDefault().Command;
-            if (sguild != null)
+            /*if (sguild != null)
             {
                 if (MessageTools.ModuleDisabled(sguild.GuildSettings.Modules, cmd))
                 {
                     await context.Client.SendChannelAsync(context.Channel, $"The module: `{cmd.Module.Name}` is disabled, contact a server administrator to enable it");
                     return;
                 }
-            }
+            }*/
 
             DogStatsd.Increment("commands.total.threads", 1, 1, new[] { $"module:{cmd.Module.Name.ToLowerInvariant()}", $"cmd:{cmd.Name.ToLowerInvariant()}" });
 
             await DispatchCommandAsync(context, cmd).ConfigureAwait(false);
         }
-        public static async Task HandleExperienceAsync(SkuldCommandContext context)
+        /*public static async Task HandleExperienceAsync(SkuldCommandContext context)
         {
             var luserexperienceResp = await DatabaseClient.GetUserExperienceAsync(context.User.Id);
 
@@ -204,7 +204,7 @@ namespace Skuld.Discord
                 return;
             }
             return;
-        }
+        }*/
 
         public static async Task DispatchCommandAsync(SkuldCommandContext context, CommandInfo command)
         {

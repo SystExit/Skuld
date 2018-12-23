@@ -642,7 +642,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("guild-feature"), Summary("Configures guild features"), RequireDatabase]
+        /*[Command("guild-feature"), Summary("Configures guild features"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task ConfigureGuildFeatures(string module, int value)
         {
@@ -702,9 +702,9 @@ namespace Skuld.Bot.Commands
                     await ReplyAsync(Context.Channel, new EmbedBuilder { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules (raw name in brackets). \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build());
                 }
             }
-        }
+        }*/
 
-        [Command("guild-module"), Summary("Configures guild modules"), RequireDatabase]
+        /*[Command("guild-module"), Summary("Configures guild modules"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task ConfigureGuildModules(string module, int value)
         {
@@ -769,7 +769,7 @@ namespace Skuld.Bot.Commands
                     await ReplyAsync(Context.Channel, new EmbedBuilder { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build());
                 }
             }
-        }
+        }*/
 
         [Command("configurechannel"), Summary("Some features require channels to be set"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]

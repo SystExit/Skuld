@@ -37,7 +37,7 @@ namespace Skuld.Bot.Commands
                 }
             }
 
-            if (user == Context.User)
+            if (user == null)
                 await ReplyAsync(Context.Channel, $"You have: {Configuration.Preferences.MoneySymbol}{skuser.Money.ToString("N0")}");
             else
                 await ReplyAsync(Context.Channel, $"{user.Mention} has {Configuration.Preferences.MoneySymbol}{skuser.Money.ToString("N0")}");
@@ -170,7 +170,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("rank"), Summary("Gets your or someone's current level"), RequireDatabase]
+        /*[Command("rank"), Summary("Gets your or someone's current level"), RequireDatabase]
         public async Task Level(IGuildUser user = null)
         {
             var guildCountResp = await DatabaseClient.GetGuildExperienceCountAsync(Context.Guild.Id).ConfigureAwait(false);
@@ -215,7 +215,7 @@ namespace Skuld.Bot.Commands
             embed.AddField("XP", $"{guildexperience.XP}/{DiscordUtilities.GetXPLevelRequirement(guildexperience.Level+1, DiscordUtilities.PHI)}");
 
             await ReplyAsync(Context.Channel, embed.Build());
-        }
+        }*/
 
         [Command("heal"), Summary("Shows you how much you can heal by")]
         public async Task HealAmount()
@@ -232,7 +232,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("heal"), Summary("Heal yourself or others here"), Priority(0)]
+        [Command("heal"), Summary("Heal yourself or others here")]
         public async Task Heal(uint hp, [Remainder] IGuildUser user = null)
         {
             var skuser = Context.DBUser;
@@ -246,6 +246,7 @@ namespace Skuld.Bot.Commands
                 {
                     await DatabaseClient.InsertUserAsync(user);
                     await Heal(hp, user);
+                    return;
                 }
             }
 
@@ -301,11 +302,11 @@ namespace Skuld.Bot.Commands
                 if (skuser2resp.Data is SkuldUser)
                 {
                     var skuser2 = skuser2resp.Data as SkuldUser;
-                    skuser2.Money -= amount;
-                    skuser.HP += hp;
+                    skuser.Money -= amount;
+                    skuser2.HP += hp;
 
-                    if (skuser.HP > 10000)
-                        skuser.HP = 10000;
+                    if (skuser2.HP > 10000)
+                        skuser2.HP = 10000;
 
                     await DatabaseClient.UpdateUserAsync(skuser);
                     await DatabaseClient.UpdateUserAsync(skuser2);

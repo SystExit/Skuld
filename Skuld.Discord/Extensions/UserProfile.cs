@@ -29,14 +29,14 @@ namespace Skuld.Discord.Extensions
             {
                 embed.AddField("Daily", "Not used Daily", inline: true);
             }
-            if (user.FavCmd != null && user.FavCmdUsg != 0)
+            /*if (user.FavCmd != null && user.FavCmdUsg != 0)
             {
                 embed.AddField("Favourite Command", $"`{user.FavCmd}` and it has been used {user.FavCmdUsg} times", inline: true);
             }
             else
             {
                 embed.AddField("Favourite Command", "No favourite Command", inline: true);
-            }
+            }*/
             embed.AddField("Pasta Karma", $"{(await user.GetPastaKarma()).ToString("N0")} Karma");
             embed.AddField("Description", user.Description, inline: false);
 
@@ -111,14 +111,14 @@ namespace Skuld.Discord.Extensions
                 embed.AddField("HP", "No HP", inline: true);
             }
 
-            if (user.FavCmd != null && user.FavCmdUsg != 0)
+            /*if (user.FavCmd != null && user.FavCmdUsg != 0)
             {
                 embed.AddField("Favourite Command", $"`{user.FavCmd}` and it has been used {user.FavCmdUsg} times", inline: true);
             }
             else
             {
                 embed.AddField("Favourite Command", "No favourite Command", inline: true);
-            }
+            }*/
 
             embed.AddField("Pasta Karma", $"{(await user.GetPastaKarma()).ToString("N0")} Karma");
             embed.AddField("Description", user.Description, inline: false);

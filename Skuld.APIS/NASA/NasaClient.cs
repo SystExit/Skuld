@@ -11,11 +11,11 @@ namespace Skuld.APIS
     public class NASAClient : BaseClient
     {
         private readonly RateLimiter rateLimiter;
-        private string token;
+        private readonly string token;
 
-        private string CuriosityEndpoint = "https://api.nasa.gov/mars-photos/api/v1/rovers/curiosity";
-        private string OpportunityEndpoint = "https://api.nasa.gov/mars-photos/api/v1/rovers/opportunity";
-        private string SpiritEndpoint = "https://api.nasa.gov/mars-photos/api/v1/rovers/spirit";
+        private readonly string CuriosityEndpoint = "https://api.nasa.gov/mars-photos/api/v1/rovers/curiosity";
+        private readonly string OpportunityEndpoint = "https://api.nasa.gov/mars-photos/api/v1/rovers/opportunity";
+        private readonly string SpiritEndpoint = "https://api.nasa.gov/mars-photos/api/v1/rovers/spirit";
 
         private int CuriosityMaxSOL = 0;
         private int OpportunityMaxSOL = 0;

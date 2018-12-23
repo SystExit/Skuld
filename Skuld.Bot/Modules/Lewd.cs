@@ -7,6 +7,8 @@ using Skuld.APIS.NekoLife.Models;
 using Skuld.Discord;
 using Skuld.Discord.Attributes;
 using SysEx.Net;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -214,104 +216,98 @@ namespace Skuld.Bot.Commands
             await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
         }
 
-        [Command("hentaibomb"), Summary("images from all hentai booru's"), Ratelimit(20, 1, Measure.Minutes)]
+        [Command("hentaibomb"), Summary("\"bombs\" the chat with images from all boorus"), Ratelimit(20, 1, Measure.Minutes), Priority(2)]
+        public async Task HentaiBomb()
+            => await HentaiBomb(null);
+
+        [Command("hentaibomb"), Summary("\"bombs\" the chat with images from all boorus"), Ratelimit(20, 1, Measure.Minutes), Priority(1)]
         public async Task HentaiBomb(params string[] tags)
         {
-            if (tags.ContainsBlacklistedTags())
+            List<string> localTags;
+            if (tags != null)
             {
-                await ReplyFailedAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+                localTags = tags.ToList();
+                if (tags.ContainsBlacklistedTags())
+                {
+                    await ReplyFailedAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+                    return;
+                }
             }
             else
             {
-                string msg = "";
-                var cleantags = tags.AddBlacklistedTags();
-
-                var posts = await BooruClient.GetYandereImagesAsync(cleantags);
-                StatsdClient.DogStatsd.Increment("web.get");
-                if (posts != null)
-                {
-                    var post = posts.GetRandomEntry();
-                    if (post != null)
-                    {
-                        msg += post.GetMessage(post.PostUrl)+"\n";
-                        return;
-                    }
-                }
-
-                var posts2 = await BooruClient.GetKonaChanImagesAsync(cleantags);
-                StatsdClient.DogStatsd.Increment("web.get");
-                if (posts2 != null)
-                {
-                    var post = posts2.GetRandomEntry();
-                    if (post != null)
-                    {
-                        msg += post.GetMessage(post.PostUrl) + "\n";
-                        return;
-                    }
-                }
-
-                var posts3 = await BooruClient.GetE621ImagesAsync(cleantags);
-                StatsdClient.DogStatsd.Increment("web.get");
-                if (posts3 != null)
-                {
-                    var post = posts3.GetRandomEntry();
-                    if (post != null)
-                    {
-                        msg += post.GetMessage(post.PostUrl) + "\n";
-                        return;
-                    }
-                }
-
-                var posts4 = await BooruClient.GetRule34ImagesAsync(cleantags);
-                StatsdClient.DogStatsd.Increment("web.get");
-                if (posts4 != null)
-                {
-                    var post = posts4.GetRandomEntry();
-                    if (post != null)
-                    {
-                        msg += post.GetMessage(post.PostUrl) + "\n";
-                        return;
-                    }
-                }
-
-                var posts5 = await BooruClient.GetGelbooruImagesAsync(cleantags);
-                StatsdClient.DogStatsd.Increment("web.get");
-                if (posts5 != null)
-                {
-                    var post = posts5.GetRandomEntry();
-                    if (post != null)
-                    {
-                        msg += post.GetMessage(post.PostUrl) + "\n";
-                        return;
-                    }
-                }
-
-                var posts6 = await BooruClient.GetDanbooruImagesAsync(cleantags);
-                StatsdClient.DogStatsd.Increment("web.get");
-                if (posts6 != null)
-                {
-                    var post = posts6.GetRandomEntry();
-                    if (post != null)
-                    {
-                        msg += post.GetMessage(post.PostUrl) + "\n";
-                        return;
-                    }
-                }
-
-                var posts7 = await BooruClient.GetRealBooruImagesAsync(cleantags);
-                StatsdClient.DogStatsd.Increment("web.get");
-                if (posts7 != null)
-                {
-                    var post = posts7.GetRandomEntry();
-                    if (post != null)
-                    {
-                        msg += post.GetMessage(post.PostUrl) + "\n";
-                        return;
-                    }
-                }
-
-                await ReplyAsync(Context.Channel, msg);
+                localTags = new List<string>();
             }
+            string msg = "";
+
+            var cleantags = localTags.AddBlacklistedTags();
+
+            var posts = await BooruClient.GetYandereImagesAsync(cleantags);
+            StatsdClient.DogStatsd.Increment("web.get");
+            if (posts != null)
+            {
+                var post = posts.GetRandomEntry();
+                if (post != null)
+                {
+                    msg += post.GetMessage(post.PostUrl) + "\n";
+                }
+            }
+
+            var posts2 = await BooruClient.GetKonaChanImagesAsync(cleantags);
+            StatsdClient.DogStatsd.Increment("web.get");
+            if (posts2 != null)
+            {
+                var post = posts2.GetRandomEntry();
+                if (post != null)
+                {
+                    msg += post.GetMessage(post.PostUrl) + "\n";
+                }
+            }
+
+            var posts3 = await BooruClient.GetE621ImagesAsync(cleantags);
+            StatsdClient.DogStatsd.Increment("web.get");
+            if (posts3 != null)
+            {
+                var post = posts3.GetRandomEntry();
+                if (post != null)
+                {
+                    msg += post.GetMessage(post.PostUrl) + "\n";
+                }
+            }
+
+            var posts4 = await BooruClient.GetRule34ImagesAsync(cleantags);
+            StatsdClient.DogStatsd.Increment("web.get");
+            if (posts4 != null)
+            {
+                var post = posts4.GetRandomEntry();
+                if (post != null)
+                {
+                    msg += post.GetMessage(post.PostUrl) + "\n";
+                }
+            }
+
+            var posts5 = await BooruClient.GetGelbooruImagesAsync(cleantags);
+            StatsdClient.DogStatsd.Increment("web.get");
+            if (posts5 != null)
+            {
+                var post = posts5.GetRandomEntry();
+                if (post != null)
+                {
+                    msg += post.GetMessage(post.PostUrl) + "\n";
+                }
+            }
+
+            var posts6 = await BooruClient.GetDanbooruImagesAsync(cleantags);
+            StatsdClient.DogStatsd.Increment("web.get");
+            if (posts6 != null)
+            {
+                var post = posts6.GetRandomEntry();
+                if (post != null)
+                {
+                    msg += post.GetMessage(post.PostUrl) + "\n";
+                }
+            }
+
+            await ReplyAsync(Context.Channel, msg);
         }
     }
 }
