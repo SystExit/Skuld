@@ -229,7 +229,7 @@ namespace Skuld.Bot.Commands
             await ReplyAsync(Context.Channel, "Ok, publishing stats to the Discord Bot lists.");
             string list = "";
             int shardcount = Context.Client.Shards.Count;
-            await BotListing.SendDataAsync(Configuration.BotListing.SysExToken, Configuration.BotListing.DiscordPWKey, Configuration.BotListing.DBotsOrgKey);
+            await BotListing.SendDataAsync(Configuration.BotListing.SysExToken, Configuration.BotListing.DiscordGGKey, Configuration.BotListing.DBotsOrgKey, Configuration.BotListing.B4DToken);
             foreach (var shard in Context.Client.Shards)
             {
                 list += $"I sent ShardID: {shard.ShardId} Guilds: {shard.Guilds.Count} Shards: {shardcount}\n";

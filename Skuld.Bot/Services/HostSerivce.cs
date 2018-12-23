@@ -40,11 +40,13 @@ namespace Skuld.Bot.Services
 
             GenericLogger.Configure(Configuration, true, true, logfile);
 
-            CreateStaticClients();
+            InitializeStaticClients();
 
             await InstallServicesAsync();
 
             await InitializeServicesAsync();
+
+            BotService.AddBotLister(Services.GetRequiredService<BotListingClient>());
 
             BotService.AddServices(Services);
 
@@ -75,7 +77,7 @@ namespace Skuld.Bot.Services
             WebSocket.ShutdownServer();
         }
 
-        private static void CreateStaticClients()
+        private static void InitializeStaticClients()
         {
             BotService.ConfigureBot(new DiscordSocketConfig
             {
@@ -101,6 +103,7 @@ namespace Skuld.Bot.Services
             try
             {
                 var locale = new Locale();
+                await locale.InitialiseLocalesAsync();
 
                 //var weebprovider = new WeebClient("Skuld", Assembly.GetEntryAssembly().GetName().Version.ToString());
 
@@ -144,8 +147,6 @@ namespace Skuld.Bot.Services
 
         private static async Task InitializeServicesAsync()
         {
-            await Services.GetRequiredService<Locale>().InitialiseLocalesAsync();
-
             ConfigureStatsCollector();
 
             await DatabaseClient.CheckConnectionAsync();

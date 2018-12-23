@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using Skuld.APIS;
 using Skuld.Core;
 using Skuld.Database;
 using StatsdClient;
@@ -31,6 +32,9 @@ namespace Skuld.Discord
 
         public static void AddServices(IServiceProvider services)
             => Services = services;
+
+        public static void AddBotLister(BotListingClient botLister)
+            => DiscordLogger.AddBotLister(botLister);
 
         public static async Task StopBotAsync(string source)
         {
@@ -101,7 +105,7 @@ namespace Skuld.Discord
                 {
                     if (DatabaseClient.Enabled)
                     {
-                        /*var res = await DatabaseClient.GetAllUserIDsAsync();
+                        var res = await DatabaseClient.GetAllUserIDsAsync();
                         if (res.Successful)
                         {
                             var ids = res.Data as List<ulong>;
@@ -113,12 +117,12 @@ namespace Skuld.Discord
                                     await DatabaseClient.DropUserAsync(id);
                                 }
                             }
-                        }*/
+                        }
 
-                        res = await DatabaseClient.GetAllGuildIDsAsync();
-                        if (res.Successful)
+                        var res2 = await DatabaseClient.GetAllGuildIDsAsync();
+                        if (res2.Successful)
                         {
-                            var ids = res.Data as List<ulong>;
+                            var ids = res2.Data as List<ulong>;
 
                             foreach (var id in ids)
                             {

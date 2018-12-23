@@ -2,20 +2,20 @@
 
 namespace Skuld.APIS.BotListing.Models
 {
-    public class BotStats
+    public class DBGGStats
     {
-        [JsonProperty(PropertyName = "server_count")]
+        [JsonProperty(PropertyName = "guildCount")]
         public int ServerCount { get; set; }
 
-        [JsonProperty(PropertyName = "shard_id", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty(PropertyName = "shardId", NullValueHandling = NullValueHandling.Ignore)]
         public int? ShardID { get; set; }
 
-        [JsonProperty(PropertyName = "shard_count", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty(PropertyName = "shardCount", NullValueHandling = NullValueHandling.Ignore)]
         public int? ShardCount { get; set; }
 
-        public static explicit operator DBGGStats(BotStats stats)
+        public static explicit operator BotStats(DBGGStats stats)
         {
-            return new DBGGStats
+            return new BotStats
             {
                 ServerCount = stats.ServerCount,
                 ShardID = stats.ShardID,

@@ -14,7 +14,7 @@ namespace Skuld.Core.Models
         //Bot Configuration
         public DiscordConfig Discord { get; set; }
 
-        //Database Information
+        //SQL Information
         public DatabaseConfig SQL { get; set; }
 
         //Variables
@@ -37,8 +37,8 @@ namespace Skuld.Core.Models
             //Bot
             Discord = new DiscordConfig();
 
-            //Raven Configuration
-            SQL = new RavenConfig();
+            //SQL Configuration
+            SQL = new DatabaseConfig();
 
             //Variables
             Preferences = new BotPreferences();
@@ -81,20 +81,24 @@ namespace Skuld.Core.Models
         }
     }
 
-    public class RavenConfig
+    public class DatabaseConfig
     {
         public bool Enabled { get; set; }
-        public string ServerURL { get; set; }
-        public string CertificatePath { get; set; }
-        public string CertificatePassword { get; set; }
+        public string Host { get; set; }
+        public ushort Port { get; set; }
+        public string Username { get; set; }
+        public string Password { get; set; }
+        public string Database { get; set; }
         public bool SSL { get; set; }
 
-        public RavenConfig()
+        public DatabaseConfig()
         {
             Enabled = false;
-            ServerURL = "";
-            CertificatePath = "";
-            CertificatePassword = "";
+            Host = "";
+            Port = 3306;
+            Username = "";
+            Password = "";
+            Database = "";
         }
     }
 
@@ -157,13 +161,16 @@ namespace Skuld.Core.Models
     public class BotListingAPI
     {
         public string DBotsOrgKey { get; set; }
-        public string DiscordPWKey { get; set; }
+        public string DiscordGGKey { get; set; }
         public string SysExToken { get; set; }
+        public string B4DToken { get; set; }
 
         public BotListingAPI()
         {
             DBotsOrgKey = "";
-            DiscordPWKey = "";
+            DiscordGGKey = "";
+            SysExToken = null;
+            B4DToken = "";
         }
     }
 }
