@@ -2,7 +2,6 @@
 using Skuld.APIS.Social.Instagram.Models;
 using Skuld.APIS.Social.Reddit;
 using Skuld.APIS.Social.Reddit.Models;
-using Skuld.Core.Services;
 using System.Threading.Tasks;
 
 namespace Skuld.APIS
@@ -12,10 +11,10 @@ namespace Skuld.APIS
         private RedditClient RedditClient;
         private InstagramClient InstagramClient;
 
-        public SocialAPIS(GenericLogger log)
+        public SocialAPIS()
         {
-            RedditClient = new RedditClient(log);
-            InstagramClient = new InstagramClient(log);
+            RedditClient = new RedditClient();
+            InstagramClient = new InstagramClient();
         }
 
         //reddit

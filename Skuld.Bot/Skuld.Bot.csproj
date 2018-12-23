@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <Version>0.3.9.5</Version>
+    <StartupObject>Skuld.Bot.Program</StartupObject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FIGlet.Net" Version="1.1.1" />
+    <PackageReference Include="IqdbApi" Version="1.4.0" />
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="7.8.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Skuld.APIS\Skuld.APIS.csproj" />
+    <ProjectReference Include="..\Skuld.Core\Skuld.Core.csproj" />
+    <ProjectReference Include="..\Skuld.Database\Skuld.Database.csproj" />
+    <ProjectReference Include="..\Skuld.Discord\Skuld.Discord.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Discord.Addons.Interactive">
+      <HintPath>..\References\Discord.Addons.Interactive.dll</HintPath>
+    </Reference>
+    <Reference Include="PokeSharp">
+      <HintPath>..\References\PokeSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="SteamStoreQuery">
+      <HintPath>..\References\SteamStoreQuery.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
