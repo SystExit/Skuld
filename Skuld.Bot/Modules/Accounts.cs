@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
+using Skuld.APIS;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Core;
@@ -10,18 +11,20 @@ using Skuld.Database.Extensions;
 using Skuld.Discord.Commands;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
-using System;
-using System.Threading.Tasks;
 using Skuld.Discord.Utilities;
+using System;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
-    [Group, RequireDatabase, RequireEnabledModule]
+    [Group, RequireEnabledModule]
     public class Profiles : InteractiveBase<SkuldCommandContext>
     {
         public SkuldConfig Configuration { get; set; }
+        public BaseClient WebHandler { get; set; }
 
-        [Command("money"), Summary("Gets a user's money")]
+        [Command("money"), Summary("Gets a user's money"), RequireDatabase]
         public async Task Money([Remainder]IGuildUser user = null)
         {
             try
@@ -55,34 +58,35 @@ namespace Skuld.Bot.Commands
         [Command("profile"), Summary("Get a users profile")]
         public async Task Profile([Remainder]IGuildUser user = null)
         {
-            try
-            {
-                var skuser = Context.DBUser;
+            var baseAPIEndpoint = "https://api.skuldbot.uk/profile/";
+            var folder = AppContext.BaseDirectory + "/storage/profiles/";
 
-                if (user != null)
+            if (!Directory.Exists(folder))
+                Directory.CreateDirectory(folder);
+
+            if (user == null)
+            {
+                user = Context.User as IGuildUser;
+            }
+
+            if (await DatabaseClient.CheckConnectionAsync())
+            {
+                var resp = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
+                if (!resp.Successful)
                 {
-                    var resp = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
-                    if (resp.Successful)
-                        skuser = resp.Data as SkuldUser;
-                    else
-                    {
-                        await DatabaseClient.InsertUserAsync(user);
-                        await Profile(user);
-                    }
+                    await DatabaseClient.InsertUserAsync(user);
                 }
-
-                var embed = await skuser.GetProfileAsync(user ?? (IGuildUser)Context.User, Configuration);
-
-                await embed.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
-            catch (Exception ex)
-            {
-                await ex.Message.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel, null, ex);
-                await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-PROFILE", ex.Message, LogSeverity.Error, ex));
-            }
+
+            var filepath = folder + user.Id + ".png";
+            await WebHandler.DownloadFileAsync(new Uri(baseAPIEndpoint+user.Id), filepath);
+
+            await "".QueueMessage(Discord.Models.MessageType.File, Context.User, Context.Channel, filepath);
+
+            File.Delete(filepath);
         }
 
-        [Command("profile-ext"), Summary("Get a users extended profile")]
+        [Command("profile-ext"), Summary("Get a users extended profile"), RequireDatabase]
         public async Task ExtProfile([Remainder]IGuildUser user = null)
         {
             try
@@ -112,7 +116,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("daily"), Summary("Daily Money")]
+        [Command("daily"), Summary("Daily Money"), RequireDatabase]
         public async Task Daily(IGuildUser user = null)
         {
             try
@@ -159,7 +163,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("give"), Summary("Give your money to people")]
+        [Command("give"), Summary("Give your money to people"), RequireDatabase]
         public async Task Give(IGuildUser user, ulong amount)
         {
             try
@@ -266,7 +270,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("heal"), Summary("Shows you how much you can heal by")]
+        [Command("heal"), Summary("Shows you how much you can heal by"), RequireDatabase]
         public async Task HealAmount()
         {
             try
@@ -289,7 +293,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("heal"), Summary("Heal yourself or others here")]
+        [Command("heal"), Summary("Heal yourself or others here"), RequireDatabase]
         public async Task Heal(uint hp, [Remainder] IGuildUser user = null)
         {
             var contextDB = Context.DBUser;
