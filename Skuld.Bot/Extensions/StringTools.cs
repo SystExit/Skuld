@@ -40,32 +40,62 @@ namespace Skuld.Bot.Extensions
 
         private static readonly string[] alphaDance =
         {
-            "<a:adance:531506829470203914>",
-            "<a:bdance:531506829965000745>",
-            "<a:cdance:531506829541376000>",
-            "<a:ddance:531506829516210180>",
-            "<a:edance:531506829646364673>",
-            "<a:fdance:531506829667205130>",
-            "<a:gdance:531506831189868544>",
-            "<a:hdance:531506831248326663>",
-            "<a:idance:531506831869214740>",
-            "<a:jdance:531506831403778058>",
-            "<a:kdance:531506831932260362>",
-            "<a:ldance:531506831441526795>",
-            "<a:mdance:531506835962986534>",
-            "<a:ndance:531506832254959636>",
-            "<a:odance:531506833677090817>",
-            "<a:pdance:531506833400266754>",
-            "<a:qdance:531506833265786880>",
-            "<a:rdance:534392649025585153>",
-            "<a:sdance:531506832859201550>",
-            "<a:tdance:531506833328701451>",
-            "<a:udance:531506833328701440>",
-            "<a:vdance:531506833911971864>",
-            "<a:wdance:531506833874092072>",
-            "<a:xdance:531506833362255883>",
-            "<a:ydance:531506833471438848>",
-            "<a:zdance:531506835123863574>"
+            "<a:ad:531506829470203914>",
+            "<a:bd:531506829965000745>",
+            "<a:cd:531506829541376000>",
+            "<a:dd:531506829516210180>",
+            "<a:ed:531506829646364673>",
+            "<a:fd:531506829667205130>",
+            "<a:gd:531506831189868544>",
+            "<a:hd:531506831248326663>",
+            "<a:id:531506831869214740>",
+            "<a:jd:531506831403778058>",
+            "<a:kd:531506831932260362>",
+            "<a:ld:531506831441526795>",
+            "<a:md:531506835962986534>",
+            "<a:nd:531506832254959636>",
+            "<a:od:531506833677090817>",
+            "<a:pd:531506833400266754>",
+            "<a:qd:531506833265786880>",
+            "<a:rd:534392649025585153>",
+            "<a:sd:531506832859201550>",
+            "<a:td:531506833328701451>",
+            "<a:ud:531506833328701440>",
+            "<a:vd:531506833911971864>",
+            "<a:wd:531506833874092072>",
+            "<a:xd:531506833362255883>",
+            "<a:yd:531506833471438848>",
+            "<a:zd:531506835123863574>"
+        };
+
+        private static readonly string[] regionalIndicator =
+        {
+            "🇦",
+            "🇧",
+            "🇨",
+            "🇩",
+            "🇪",
+            "🇫",
+            "🇬",
+            "🇭",
+            "🇮",
+            "🇯",
+            "🇰",
+            "🇱",
+            "🇲",
+            "🇳",
+            "🇴",
+            "🇵",
+            "🇶",
+            "🇷",
+            "🇸",
+            "🇹",
+            "🇺",
+            "🇻",
+            "🇼",
+            "🇽",
+            "🇾",
+            "🇿"
         };
 
         private static readonly Regex symbols = new Regex("^[a-zA-Z0-9 ]*$");
@@ -74,15 +104,25 @@ namespace Skuld.Bot.Extensions
         {
             string ret = "";
 
-            foreach (var character in value)
+            foreach (var chr in value)
             {
-                if (!symbols.IsMatch(Convert.ToString(character)))
-                    ret += character;
-                else if (!Char.IsWhiteSpace(character))
-                    ret += ":regional_indicator_" + character + ": ";
+                if (!char.IsWhiteSpace(chr))
+                {
+                    if (!char.IsLetter(chr))
+                    {
+                        ret += chr;
+                        continue;
+                    }
+
+                    ret += regionalIndicator[alphabet.FirstOrDefault(x => x.Key == chr.ToString().ToLower()).Value]+" ";
+                }
                 else
-                    ret += " ";
+                {
+                    ret += "  ";
+                    continue;
+                }
             }
+            Console.WriteLine(ret.Count());
 
             return ret;
         }
@@ -93,21 +133,23 @@ namespace Skuld.Bot.Extensions
 
             foreach(var chr in value)
             {
-                if(!symbols.IsMatch(Convert.ToString(chr)))
+                if (!char.IsWhiteSpace(chr))
                 {
-                    ret += chr;
-                    continue;
-                }
-                if(!char.IsWhiteSpace(chr))
-                {
+                    if (!char.IsLetter(chr))
+                    {
+                        ret += chr;
+                        continue;
+                    }
+
                     ret += alphaDance[alphabet.FirstOrDefault(x => x.Key == chr.ToString().ToLower()).Value];
                 }
                 else
                 {
-                    ret += ' ';
+                    ret += "  ";
+                    continue;
                 }
             }
-
+            Console.WriteLine(ret.Count());
             return ret;
         }
     }

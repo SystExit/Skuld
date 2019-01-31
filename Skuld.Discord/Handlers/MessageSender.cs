@@ -11,35 +11,19 @@ namespace Skuld.Discord.Handlers
     {
         public static async Task<IUserMessage> ReplyAsync(IMessageChannel channel, string message, Embed embed = null)
         {
-            try
-            {
-                if (channel == null) { return null; }
+            if (channel == null) { return null; }
 
-                await channel.TriggerTypingAsync();
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
-                return await channel.SendMessageAsync(message, false, embed ?? null);
-            }
-            catch (Exception ex)
-            {
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
-                return null;
-            }
+            await channel.TriggerTypingAsync();
+            await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
+            return await channel.SendMessageAsync(message, false, embed ?? null);
         }
         public static async Task<IUserMessage> ReplyWithFileAsync(IMessageChannel channel, string message, string filepath)
         {
-            try
-            {
-                if (channel == null) return null;
+            if (channel == null) return null;
 
-                await channel.TriggerTypingAsync();
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
-                return await channel.SendFileAsync(filepath, message);
-            }
-            catch (Exception ex)
-            {
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
-                return null;
-            }
+            await channel.TriggerTypingAsync();
+            await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
+            return await channel.SendFileAsync(filepath, message);
         }
 
         public static async Task<IUserMessage> ReplyWithMentionAsync(IMessageChannel channel, IUser user, string message, Embed embed = null)
@@ -68,34 +52,18 @@ namespace Skuld.Discord.Handlers
 
         public static async Task<IUserMessage> ReplyDMFailableAsync(IDMChannel channel, string message, Embed embed = null)
         {
-            try
-            {
-                await channel.TriggerTypingAsync();
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {channel.Recipient} in DMs", LogSeverity.Info));
-                return await channel.SendMessageAsync(message, false, embed ?? null);
-            }
-            catch (Exception ex)
-            {
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
-                return null;
-            }
+            await channel.TriggerTypingAsync();
+            await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {channel.Recipient} in DMs", LogSeverity.Info));
+            return await channel.SendMessageAsync(message, false, embed ?? null);
         }
 
         public static async Task ReplyWithTimedMessage(IMessageChannel channel, string message, Embed embed, double timeout)
         {
-            try
-            {
-                if (channel == null) { return; }
-                await channel.TriggerTypingAsync();
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {channel}", LogSeverity.Info));
-                var msg = await channel.SendMessageAsync(message, false, embed);
-                await msg.DeleteAfterSecondsAsync((int)timeout);
-            }
-            catch (Exception ex)
-            {
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", LogSeverity.Warning, ex));
-                return;
-            }
+            if (channel == null) { return; }
+            await channel.TriggerTypingAsync();
+            await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {channel}", LogSeverity.Info));
+            var msg = await channel.SendMessageAsync(message, false, embed);
+            await msg.DeleteAfterSecondsAsync((int)timeout);
         }
 
         public static async Task ReplyFailedAsync(IMessageChannel channel)

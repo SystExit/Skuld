@@ -30,7 +30,7 @@ namespace Skuld.Bot.Commands
             {
                 if (command == null)
                 {
-                    string prefix = Context.DBGuild.Prefix ?? Configuration.Discord.Prefix;
+                    string prefix = (Context.DBGuild != null ? Context.DBGuild.Prefix : Configuration.Discord.Prefix);
 
                     string title = $"Commands of: {Context.Client.CurrentUser.Username}#{Context.Client.CurrentUser.DiscriminatorValue} that can be invoked in: ";
 

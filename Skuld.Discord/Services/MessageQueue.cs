@@ -60,6 +60,7 @@ namespace Skuld.Discord.Services
                         catch(Exception ex)
                         {
                             await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MsgQueue", ex.Message, LogSeverity.Critical, ex));
+                            await MessageSender.ReplyFailedAsync(message.Channel, ex.Message);
                         }
                     }
                 }
