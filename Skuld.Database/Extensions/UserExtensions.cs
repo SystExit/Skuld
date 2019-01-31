@@ -38,17 +38,17 @@ namespace Skuld.Database.Extensions
             return returnkarma;
         }
 
-        /*public static async Task<UserExperience> GetUserExperienceAsync(this SkuldUser user)
+        public static async Task<UserExperience> GetUserExperienceAsync(this SkuldUser user)
         {
             var result = await DatabaseClient.GetUserExperienceAsync(user.ID).ConfigureAwait(false);
             if (result.Successful && result.Data is UserExperience)
                 return result.Data as UserExperience;
 
             return null;
-        }*/
+        }
 
-        /*public static GuildExperience GetGuildExperience(this UserExperience xp, ulong GuildID)
-            => xp.GuildExperiences.FirstOrDefault(x => x.GuildID == GuildID);*/
+        public static GuildExperience GetGuildExperience(this UserExperience xp, ulong GuildID)
+            => xp.GuildExperiences.FirstOrDefault(x => x.GuildID == GuildID);
 
         public static async Task<bool> DoDailyAsync(this SkuldUser user, SkuldConfig config, SkuldUser sender = null)
         {

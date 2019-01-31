@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using Skuld.APIS;
 using Skuld.Core;
 using Skuld.Database;
+using Skuld.Discord.Handlers;
 using StatsdClient;
 using System;
 using System.Collections.Generic;
@@ -11,7 +12,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Skuld.Discord
+namespace Skuld.Discord.Services
 {
     public static class BotService
     {
@@ -109,8 +110,9 @@ namespace Skuld.Discord
                         if (res.Successful)
                         {
                             var ids = res.Data as List<ulong>;
+                            var sanitized = ids.Except(UserIDs).ToList();
 
-                            foreach (var id in ids)
+                            foreach (var id in sanitized)
                             {
                                 if (DiscordClient.GetUser(id) == null)
                                 {
@@ -123,8 +125,14 @@ namespace Skuld.Discord
                         if (res2.Successful)
                         {
                             var ids = res2.Data as List<ulong>;
+                            List<ulong> guildIDs = new List<ulong>();
+                            foreach(var gld in DiscordClient.Guilds)
+                            {
+                                guildIDs.Add(gld.Id);
+                            }
+                            var sanitized = ids.Except(guildIDs).ToList();
 
-                            foreach (var id in ids)
+                            foreach (var id in sanitized)
                             {
                                 if (DiscordClient.GetGuild(id) == null)
                                 {

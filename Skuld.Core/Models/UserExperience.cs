@@ -1,11 +1,15 @@
-﻿namespace Skuld.Core.Models
+﻿using System.Collections.Generic;
+
+namespace Skuld.Core.Models
 {
-    public class GuildExperience
+    public class UserExperience
     {
-        public ulong GuildID { get; set; }
-        public ulong Level { get; set; }
-        public ulong XP { get; set; }
-        public ulong TotalXP { get; set; }
-        public ulong LastGranted { get; set; }
+        public ulong UserID { get; set; }
+        public List<GuildExperience> GuildExperiences { get; set; }
+
+        public UserExperience()
+        {
+            GuildExperiences = new List<GuildExperience>();
+        }
     }
 }

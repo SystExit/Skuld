@@ -104,7 +104,9 @@ namespace Skuld.Database
                             DogStatsd.Increment("mysql.queries");
                             if (resp == null)
                             {
-                                DogStatsd.Increment("mysql.insert");
+                                if(command.CommandText.StartsWith("INSERT INTO"))
+                                    DogStatsd.Increment("mysql.insert");
+
                                 await conn.CloseAsync();
                                 return EventResult.FromSuccess();
                             }
@@ -812,7 +814,7 @@ namespace Skuld.Database
 
                 if (resp.Successful)
                 {
-                    if (!string.IsNullOrEmpty(Convert.ToString(resp.Data)))
+                    if (resp.Data != null)
                     {
                         var cmdusg = Convert.ToInt32(resp.Data);
                         cmdusg = cmdusg + 1;

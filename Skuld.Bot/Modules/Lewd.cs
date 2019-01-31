@@ -1,11 +1,14 @@
 ﻿using Booru.Net;
 using Discord;
+using Discord.Addons.Interactive;
 using Discord.Commands;
 using Skuld.APIS;
 using Skuld.APIS.Extensions;
 using Skuld.APIS.NekoLife.Models;
-using Skuld.Discord;
 using Skuld.Discord.Attributes;
+using Skuld.Discord.Commands;
+using Skuld.Discord.Extensions;
+using Skuld.Discord.Preconditions;
 using SysEx.Net;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,8 +17,8 @@ using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
-    [Group, RequireNsfw]
-    public class Lewd : SkuldBase<SkuldCommandContext>
+    [Group, RequireNsfw, RequireEnabledModule]
+    public class Lewd : InteractiveBase<SkuldCommandContext>
     {
         public SysExClient SysExClient { get; set; }
         public BooruClient BooruClient { get; set; }
@@ -26,9 +29,9 @@ namespace Skuld.Bot.Commands
         {
             var neko = await NekosLifeClient.GetAsync(NekoImageType.LewdNeko);
             if (neko != null)
-                await ReplyAsync(Context.Channel, new EmbedBuilder { ImageUrl = neko }.Build());
+                await new EmbedBuilder { ImageUrl = neko }.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             else
-                await ReplyAsync(Context.Channel, "Hmmm <:Thunk:350673785923567616>, I got an empty response.");
+                await "Hmmm <:Thunk:350673785923567616>, I got an empty response.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
         }
 
         [Command("lewdkitsune"), Summary("Lewd Kitsunemimi Grill"), Ratelimit(20, 1, Measure.Minutes)]
@@ -36,7 +39,7 @@ namespace Skuld.Bot.Commands
         {
             var kitsu = await SysExClient.GetLewdKitsuneAsync();
             StatsdClient.DogStatsd.Increment("web.get");
-            await ReplyAsync(Context.Channel, new EmbedBuilder { ImageUrl = kitsu }.Build());
+            await new EmbedBuilder { ImageUrl = kitsu }.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
 
         [Command("danbooru"), Summary("Gets stuff from danbooru"), Ratelimit(20, 1, Measure.Minutes)]
@@ -45,7 +48,7 @@ namespace Skuld.Bot.Commands
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await ReplyFailedAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+                await "Your tags contains a banned tag, please remove it.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
@@ -55,13 +58,13 @@ namespace Skuld.Bot.Commands
 
             if (posts == null)
             {
-                await ReplyFailedAsync(Context.Channel, "Couldn't find an image.");
+                await "Couldn't find an image.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                 return;
             }
 
             var post = posts.GetRandomEntry();
 
-            await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
+            await post.GetMessage(post.PostUrl).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
 
         [Command("gelbooru"), Summary("Gets stuff from gelbooru"), Ratelimit(20, 1, Measure.Minutes)]
@@ -70,7 +73,7 @@ namespace Skuld.Bot.Commands
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await ReplyFailedAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+                await "Your tags contains a banned tag, please remove it.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
@@ -80,13 +83,13 @@ namespace Skuld.Bot.Commands
 
             if (posts == null)
             {
-                await ReplyFailedAsync(Context.Channel, "Couldn't find an image.");
+                await "Couldn't find an image.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                 return;
             }
 
             var post = posts.GetRandomEntry();
 
-            await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
+            await post.GetMessage(post.PostUrl).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
 
         [Command("rule34"), Summary("Gets stuff from rule34"), Ratelimit(20, 1, Measure.Minutes)]
@@ -95,24 +98,23 @@ namespace Skuld.Bot.Commands
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await ReplyFailedAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+                await "Your tags contains a banned tag, please remove it.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
 
             var posts = await BooruClient.GetRule34ImagesAsync(cleantags);
-
             StatsdClient.DogStatsd.Increment("web.get");
 
             if (posts == null)
             {
-                await ReplyFailedAsync(Context.Channel, "Couldn't find an image.");
+                await "Couldn't find an image.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                 return;
             }
 
             var post = posts.GetRandomEntry();
 
-            await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
+            await post.GetMessage(post.PostUrl).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
 
         [Command("e621"), Summary("Gets stuff from e621"), Ratelimit(20, 1, Measure.Minutes)]
@@ -120,24 +122,23 @@ namespace Skuld.Bot.Commands
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await ReplyFailedAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+                await "Your tags contains a banned tag, please remove it.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
 
             var posts = await BooruClient.GetE621ImagesAsync(cleantags);
-
             StatsdClient.DogStatsd.Increment("web.get");
 
             if (posts == null)
             {
-                await ReplyFailedAsync(Context.Channel, "Couldn't find an image.");
+                await "Couldn't find an image.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                 return;
             }
 
             var post = posts.GetRandomEntry();
 
-            await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
+            await post.GetMessage(post.PostUrl).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
 
         [Command("konachan"), Summary("Gets stuff from konachan"), Ratelimit(20, 1, Measure.Minutes)]
@@ -146,24 +147,23 @@ namespace Skuld.Bot.Commands
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await ReplyAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+                await "Your tags contains a banned tag, please remove it.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                return;
             }
-            else
+            var cleantags = tags.AddBlacklistedTags();
+
+            var posts = await BooruClient.GetKonaChanImagesAsync(cleantags);
+            StatsdClient.DogStatsd.Increment("web.get");
+
+            if (posts == null)
             {
-                var cleantags = tags.AddBlacklistedTags();
-                var posts = await BooruClient.GetKonaChanImagesAsync(cleantags);
-                StatsdClient.DogStatsd.Increment("web.get");
-                if (posts != null)
-                {
-                    var post = posts.GetRandomImage();
-                    if (post != null)
-                    {
-                        await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
-                        return;
-                    }
-                }
-                await ReplyAsync(Context.Channel, "Couldn't find an image");
+                await "Couldn't find an image.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                return;
             }
+
+            var post = posts.GetRandomEntry();
+
+            await post.GetMessage(post.PostUrl).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
 
         [Command("yandere"), Summary("Gets stuff from yandere"), Ratelimit(20, 1, Measure.Minutes)]
@@ -171,24 +171,23 @@ namespace Skuld.Bot.Commands
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await ReplyFailedAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+                await "Your tags contains a banned tag, please remove it.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
 
             var posts = await BooruClient.GetYandereImagesAsync(cleantags);
-
             StatsdClient.DogStatsd.Increment("web.get");
 
             if (posts == null)
             {
-                await ReplyFailedAsync(Context.Channel, "Couldn't find an image.");
+                await "Couldn't find an image.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                 return;
             }
 
             var post = posts.GetRandomEntry();
 
-            await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
+            await post.GetMessage(post.PostUrl).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
 
         [Command("real"), Summary("Gets stuff from Realbooru"), Ratelimit(20, 1, Measure.Minutes)]
@@ -196,24 +195,23 @@ namespace Skuld.Bot.Commands
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await ReplyFailedAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+                await "Your tags contains a banned tag, please remove it.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
 
             var posts = await BooruClient.GetRealBooruImagesAsync(cleantags);
-
             StatsdClient.DogStatsd.Increment("web.get");
 
             if (posts == null)
             {
-                await ReplyFailedAsync(Context.Channel, "Couldn't find an image.");
+                await "Couldn't find an image.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                 return;
             }
 
             var post = posts.GetRandomEntry();
 
-            await ReplyAsync(Context.Channel, post.GetMessage(post.PostUrl));
+            await post.GetMessage(post.PostUrl).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
 
         [Command("hentaibomb"), Summary("\"bombs\" the chat with images from all boorus"), Ratelimit(20, 1, Measure.Minutes), Priority(2)]
@@ -229,7 +227,7 @@ namespace Skuld.Bot.Commands
                 localTags = tags.ToList();
                 if (tags.ContainsBlacklistedTags())
                 {
-                    await ReplyFailedAsync(Context.Channel, "Your tags contains a banned tag, please remove it.");
+                    await "Your tags contains a banned tag, please remove it.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                     return;
                 }
             }
@@ -307,7 +305,7 @@ namespace Skuld.Bot.Commands
                 }
             }
 
-            await ReplyAsync(Context.Channel, msg);
+            await msg.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
     }
 }

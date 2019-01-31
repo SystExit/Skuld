@@ -4,6 +4,7 @@ using Skuld.APIS;
 using Skuld.Core;
 using Skuld.Core.Models;
 using Skuld.Database;
+using Skuld.Discord.Handlers;
 using StatsdClient;
 using System;
 using System.Collections.Generic;
@@ -11,7 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Skuld.Discord.Utilities;
 
-namespace Skuld.Discord
+namespace Skuld.Discord.Services
 {
     public static class DiscordLogger
     {

@@ -117,7 +117,7 @@ namespace Skuld.Core.Extensions
         {
             await Task.Delay((timeout * 1000));
             await message.DeleteAsync();
-            await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Deleted a timed message", LogSeverity.Info));
+            await GenericLogger.AddToLogsAsync(new Models.LogMessage("MsgDisp", $"Deleted a timed message", LogSeverity.Info));
         }
 
         public static async Task<bool> CanEmbedAsync(this IMessageChannel channel, IGuild guild = null)

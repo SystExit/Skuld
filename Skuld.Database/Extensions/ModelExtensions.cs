@@ -133,13 +133,14 @@ namespace Skuld.Database.Extensions
         public static MySqlCommand GetMySqlCommand(this Pasta pasta)
         {
             var command = new MySqlCommand(
-                "UPDATE `pasta`  SET " +
+                "UPDATE `pasta` SET " +
                 "`Content` = @content, " +
                 "`OwnerID` = @ownerid, " +
                 "`Upvotes` = @upvotes, " +
                 "`Downvotes` = @downvotes, " +
                 "`Name` = @name, " +
-                "`Created` = @created");
+                "`Created` = @created " +
+                "WHERE PastaID = @pastaID ");
 
             command.Parameters.AddWithValue("@content", pasta.Content);
             command.Parameters.AddWithValue("@ownerid", pasta.OwnerID);
@@ -147,6 +148,7 @@ namespace Skuld.Database.Extensions
             command.Parameters.AddWithValue("@downvotes", pasta.Downvotes);
             command.Parameters.AddWithValue("@name", pasta.Name);
             command.Parameters.AddWithValue("@created", pasta.Created);
+            command.Parameters.AddWithValue("@pastaID", pasta.PastaID);
 
             return command;
         }

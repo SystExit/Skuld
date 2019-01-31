@@ -1,40 +1,49 @@
 ﻿using Skuld.Core.Extensions;
 using SteamStoreQuery;
+using System.Linq;
 
 namespace Skuld.APIS.Utilities
 {
     public static class SteamUtilities
     {
-        private static string BaseSteamRunUrl = "https://skuld.systemexit.co.uk/tools/steam.php?action=run&appid=";
-        private static string BaseSteamStoreUrl = "https://skuld.systemexit.co.uk/tools/steam.php?action=store&appid=";
+        private static readonly string BaseSteamRunUrl = "https://skuldbot.uk/tools/steam.php?action=run&appid=";
+        private static readonly string BaseSteamStoreUrl = "https://skuldbot.uk/tools/steam.php?action=store&appid=";
 
         public static string GetSteamGameDescription(Listing game, Steam.Models.SteamStore.StoreAppDetailsDataModel appdata)
         {
-            var launchurl = BaseSteamRunUrl += appdata.SteamAppId;
-            var storeurl = BaseSteamStoreUrl += appdata.SteamAppId;
+            var launchurl = BaseSteamRunUrl + appdata.SteamAppId;
+            var storeurl = BaseSteamStoreUrl + appdata.SteamAppId;
 
             var fulldesc = appdata.AboutTheGame;
-            var clean = fulldesc.Replace("<br /> ", "").Replace("<br/> ", "").Replace("<br />", "").Replace("<br/>", "").Replace("<br> ", "\n").Replace("<br>", "\n");
-            var split = clean.Split('\n');
+            string desc = "";
 
-            int count = 0;
-            while (count < split.Length)
+            if(fulldesc.Contains("<br"))
             {
-                if (count == split.Length - 1)
-                {
-                    count = -1; break;
-                }
-                if (split[count] == "")
-                {
-                    count++;
-                }
-                else
-                {
-                    break;
-                }
-            }
+                var clean = fulldesc.Replace("<br /> ", "").Replace("<br/> ", "").Replace("<br />", "").Replace("<br/>", "").Replace("<br> ", "\n").Replace("<br>", "\n");
+                var split = clean.Split('\n');
 
-            var desc = split[count].StripHtml();
+                int count = 0;
+                while (count < split.Length)
+                {
+                    if (count == split.Length - 1)
+                    {
+                        count = -1; break;
+                    }
+                    if (split[count] == "")
+                    {
+                        count++;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                desc = split[count].StripHtml();
+            }
+            else
+            {
+                desc = string.Join(" ", fulldesc.Split(' ').Take(250));
+            }
 
             string returnstring = "";
             //Description

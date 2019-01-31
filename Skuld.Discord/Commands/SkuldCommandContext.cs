@@ -2,7 +2,7 @@
 using Discord.WebSocket;
 using Skuld.Core.Models;
 
-namespace Skuld.Discord
+namespace Skuld.Discord.Commands
 {
     public class SkuldCommandContext : ShardedCommandContext
     {

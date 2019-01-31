@@ -7,7 +7,8 @@ using Skuld.APIS.Extensions;
 using Skuld.Core.Extensions;
 using Skuld.Core.Globalization;
 using Skuld.Core.Utilities;
-using Skuld.Discord;
+using Skuld.Discord.Commands;
+using Skuld.Discord.Extensions;
 using SysEx.Net;
 using System;
 using System.Linq;
@@ -17,7 +18,7 @@ using System.Threading.Tasks;
 namespace Skuld.Bot.Commands
 {
     [Group]
-    public class Weeb : SkuldBase<SkuldCommandContext>
+    public class Weeb : InteractiveBase<SkuldCommandContext>
     {
         public Locale Locale { get; set; }
         public SysExClient SysExClient { get; set; }
@@ -47,7 +48,7 @@ namespace Skuld.Bot.Commands
                 }
                 else
                 {
-                    sentmessage = await ReplyAsync(Context.Channel, new EmbedBuilder
+                    sentmessage = await ReplyAsync(null, false, new EmbedBuilder
                     {
                         Title = loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s",
                         Color = Color.Purple,
@@ -65,13 +66,13 @@ namespace Skuld.Bot.Commands
 
                 var anime = data[selection - 1];
 
-                await ReplyAsync(Context.Channel, anime.ToEmbed(loc));
+                await anime.ToEmbed(loc).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
             else
             {
                 var anime = data[0];
 
-                await ReplyAsync(Context.Channel, anime.ToEmbed(loc));
+                await anime.ToEmbed(loc).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
         }
 
@@ -100,7 +101,7 @@ namespace Skuld.Bot.Commands
                 }
                 else
                 {
-                    sentmessage = await ReplyAsync(Context.Channel, new EmbedBuilder
+                    sentmessage = await ReplyAsync(null, false, new EmbedBuilder
                     {
                         Title = loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s",
                         Color = Color.Purple,
@@ -118,13 +119,13 @@ namespace Skuld.Bot.Commands
 
                 var manga = data[selection - 1];
 
-                await ReplyAsync(Context.Channel, manga.ToEmbed(loc));
+                await manga.ToEmbed(loc).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
             else
             {
                 var manga = data[0];
 
-                await ReplyAsync(Context.Channel, manga.ToEmbed(loc));
+                await manga.ToEmbed(loc).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
         }
 
@@ -133,13 +134,11 @@ namespace Skuld.Bot.Commands
         {
             var gif = await SysExClient.GetWeebReactionGifAsync();
 
-            var embed = new EmbedBuilder
+            await new EmbedBuilder
             {
                 ImageUrl = gif,
                 Color = EmbedUtils.RandomColor()
-            };
-
-            await ReplyAsync(Context.Channel, embed.Build());
+            }.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
     }
 }

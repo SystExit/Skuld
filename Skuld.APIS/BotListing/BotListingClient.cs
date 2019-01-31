@@ -76,7 +76,7 @@ namespace Skuld.APIS
                     webclient.DefaultRequestHeaders.Add("UserAgent", UAGENT);
                     webclient.DefaultRequestHeaders.Add("Authorization", sysextoken);
                     content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                    var _ = await webclient.PostAsync(new Uri($"https://skuld.systemexit.co.uk/tools/updateStats.php"), content).ConfigureAwait(false);
+                    var _ = await webclient.PostAsync(new Uri($"https://skuldbot.uk/tools/updateStats.php"), content).ConfigureAwait(false);
                     if (_.IsSuccessStatusCode)
                         await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("BLC", "Successfully sent data to SysEx", Discord.LogSeverity.Info));
                     else

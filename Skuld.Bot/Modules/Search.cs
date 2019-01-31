@@ -10,6 +10,8 @@ using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord;
 using Skuld.Discord.Attributes;
+using Skuld.Discord.Commands;
+using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
 using SteamStoreQuery;
 using SteamWebAPI2.Interfaces;
@@ -21,8 +23,8 @@ using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
-    [Group]
-    public class Search : SkuldBase<SkuldCommandContext>
+    [Group, RequireEnabledModule]
+    public class Search : InteractiveBase<SkuldCommandContext>
     {
         public SocialAPIS Social { get; set; }
         public Random Random { get; set; }
@@ -40,7 +42,7 @@ namespace Skuld.Bot.Commands
         {
             var channel = await TwitchClient.GetUserAsync(twitchStreamer);
 
-            await ReplyAsync(Context.Channel, await channel.GetEmbedAsync());
+            await (await channel.GetEmbedAsync()).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
 
         [Command("instagram"), Alias("insta"), Ratelimit(20, 1, Measure.Minutes)]
@@ -74,16 +76,16 @@ namespace Skuld.Bot.Commands
                             },
                             Color = EmbedUtils.RandomColor()
                         };
-                        await ReplyAsync(Context.Channel, embed.Build());
+                        await embed.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                     }
                     else
-                        await ReplyAsync(Context.Channel, "This account has no images in their feed");
+                        await "This account has no images in their feed".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
                 else
-                    await ReplyAsync(Context.Channel, "This account is a Private Account, so I can't access their feed.");
+                    await "This account is a Private Account, so I can't access their feed.".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
             else
-                await ReplyAsync(Context.Channel, $"I can't find an account named: `{usr}`. Check your spelling and try again.");
+                await $"I can't find an account named: `{usr}`. Check your spelling and try again.".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
 
         [Command("steam"), Summary("Searches steam store")]
@@ -108,7 +110,7 @@ namespace Skuld.Bot.Commands
                     }
                     else
                     {
-                        await ReplyAsync(Context.Channel, "Type the number of what you want:\n" + String.Join("\n", Pages));
+                        await $"Type the number of what you want:\n{string.Join("\n", Pages)}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                     }
 
                     var message = await NextMessageAsync();
@@ -116,22 +118,22 @@ namespace Skuld.Bot.Commands
                     int.TryParse(message.Content, out int selectedapp);
                     if (selectedapp <= 0)
                     {
-                        await ReplyAsync(Context.Channel, "Incorrect input");
+                        await "Incorrect input".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                         return;
                     }
 
                     selectedapp--;
 
-                    await ReplyAsync(Context.Channel, await steam[selectedapp].GetEmbedAsync());
+                    await (await steam[selectedapp].GetEmbedAsync()).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
                 else
                 {
-                    await ReplyAsync(Context.Channel, await steam[0].GetEmbedAsync());
+                    await (await steam[0].GetEmbedAsync()).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
             }
             else
             {
-                await ReplyAsync(Context.Channel, "I found nothing from steam");
+                await "I found nothing from steam".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
             }
         }
 
@@ -141,33 +143,22 @@ namespace Skuld.Bot.Commands
             platform = platform.ToLowerInvariant();
             if (platform == "google" || platform == "g")
             {
-                var msg = await ReplyAsync(Context.Channel, "🔍 Searching Google for: " + query);
+                await $"🔍 Searching Google for: {query}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 var result = await SearchClient.SearchGoogleAsync(query);
-                await msg.ModifyAsync(x =>
-                {
-                    x.Embed = result;
-                    x.Content = "";
-                });
+                await result.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
             if (platform == "youtube" || platform == "yt")
             {
-                var msg = await ReplyAsync(Context.Channel, "🔍 Searching Youtube for: " + query);
+                await $"🔍 Searching Youtube for: {query}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 var type = Context.Channel.EnterTypingState();
                 var result = await SearchClient.SearchYoutubeAsync(query);
-                await msg.ModifyAsync(x =>
-                {
-                    x.Content = result;
-                });
-                type.Dispose();
+                await result.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
             if (platform == "imgur")
             {
-                var msg = await ReplyAsync(Context.Channel, "🔍 Searching Imgur for: " + query);
+                await "🔍 Searching Imgur for: {query}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 var result = await SearchClient.SearchImgurAsync(query);
-                await msg.ModifyAsync(x =>
-                {
-                    x.Content = result;
-                });
+                await result.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
         }
 
@@ -189,10 +180,10 @@ namespace Skuld.Bot.Commands
             if (engine == "d" || engine == "duckduckgo")
             { url = url + "?s=d&q=" + query.Replace(" ", "%20"); }
             if (url != "https://lmgtfy.com/")
-                await ReplyAsync(Context.Channel, url);
+                await url.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             else
             {
-                await ReplyAsync(Context.Channel, new EmbedBuilder { Author = new EmbedAuthorBuilder { Name = "Error with command" }, Color = Color.Red, Description = $"Ensure your parameters are correct, example: `{Configuration.Discord.Prefix}lmgtfy g How to use lmgtfy`" }.Build());
+                await new EmbedBuilder { Author = new EmbedAuthorBuilder { Name = "Error with command" }, Color = Color.Red, Description = $"Ensure your parameters are correct, example: `{Configuration.Discord.Prefix}lmgtfy g How to use lmgtfy`" }.Build().QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new[] { "generic" });
             }
         }
@@ -201,9 +192,9 @@ namespace Skuld.Bot.Commands
         public async Task Urban([Remainder]string phrase = null)
         {
             if (phrase == null)
-                await ReplyAsync(Context.Channel, (await UrbanDictionary.GetRandomWordAsync()).ToEmbed());
+                await (await UrbanDictionary.GetRandomWordAsync()).ToEmbed().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             else
-                await ReplyAsync(Context.Channel, (await UrbanDictionary.GetPhraseAsync(phrase)).ToEmbed());
+                await (await UrbanDictionary.GetPhraseAsync(phrase)).ToEmbed().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
 
         [Command("wikipedia"), Summary("Gets wikipedia information, supports all languages that wikipedia offers"), Alias("wiki")]
@@ -220,35 +211,7 @@ namespace Skuld.Bot.Commands
                 Color = EmbedUtils.RandomColor()
             };
             embed.AddField("Description", page.Description ?? "Not Available", true);
-            await ReplyAsync(Context.Channel, embed.Build());
-        }
-
-        [Command("gif"), Summary("Gets a gif")]
-        public async Task Gifcommand([Remainder]string query)
-        {
-            var embed = new EmbedBuilder
-            {
-                Author = new EmbedAuthorBuilder
-                {
-                    Name = "Giphy",
-                    IconUrl = "https://giphy.com/favicon.ico",
-                    Url = "https://giphy.com/"
-                },
-                Color = EmbedUtils.RandomColor()
-            };
-            try
-            {
-                var gif = await Giphy.GetGifAsync(query);
-                embed.Url = gif.Url;
-                embed.ImageUrl = gif.Url;
-                await ReplyAsync(Context.Channel, embed.Build());
-            }
-            catch (Exception ex)
-            {
-                if (ex is ArgumentOutOfRangeException)
-                { await ReplyWithMentionAsync(Context.Channel, Context.User, "No results found for: `" + query + "`"); }
-                StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-            }
+            await embed.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
 
         [Command("define"), Summary("Defines a word")]
@@ -269,7 +232,7 @@ namespace Skuld.Bot.Commands
             embed.AddField("Part of speech", definedword.PartOfSpeech ?? "Not Available", inline: true);
             embed.AddField("Terms", definedword.Terms ?? "Not Available", inline: true);
 
-            await ReplyAsync(Context.Channel, embed.Build());
+            await embed.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
 
         [Command("reddit"), Summary("Gets a subreddit")]
@@ -308,28 +271,28 @@ namespace Skuld.Bot.Commands
                     Color = Color.Blue
                 };
 
-                await ReplyAsync(Context.Channel, embed.Build());
+                await embed.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
         }
 
         [Command("pokemon"), Summary("Gets information about a pokemon id")]
-        public async Task Getpokemon(string pokemon, string group = null) =>
-    await SendPokemonAsync(await PokeMonClient.GetPocketMonsterAsync(pokemon.ToLowerInvariant()), group ?? "default").ConfigureAwait(false);
+        public async Task Getpokemon(string pokemon, string group = null)
+            => await SendPokemonAsync(await PokeMonClient.GetPocketMonsterAsync(pokemon.ToLowerInvariant()), group ?? "default").ConfigureAwait(false);
 
         [Command("pokemon"), Summary("Gets information about a pokemon id")]
-        public async Task Getpokemon(int pokemonid, string group = null) =>
-            await SendPokemonAsync(await PokeMonClient.GetPocketMonsterAsync(pokemonid), group ?? "default").ConfigureAwait(false);
+        public async Task Getpokemon(int pokemonid, string group = null)
+            => await SendPokemonAsync(await PokeMonClient.GetPocketMonsterAsync(pokemonid), group ?? "default").ConfigureAwait(false);
 
         public async Task SendPokemonAsync(PokeSharp.Models.PocketMonster pokemon, string group)
         {
             if (pokemon == null)
             {
-                await ReplyAsync(Context.Channel, new EmbedBuilder
+                await new EmbedBuilder
                 {
                     Color = Color.Red,
                     Title = "Command Error!",
                     Description = "This pokemon doesn't exist. Please try again.\nIf it is a Generation 7, pokeapi.co hasn't updated for it yet."
-                }.Build());
+                }.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
             }
             else
@@ -362,7 +325,7 @@ namespace Skuld.Bot.Commands
                 {
                     embed = pokemon.GetEmbed(PokeSharpGroup.Games);
                 }
-                await ReplyAsync(Context.Channel, embed);
+                await embed.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
         }
 
@@ -382,7 +345,7 @@ namespace Skuld.Bot.Commands
         {
             Uri url = null;
 
-            var folder = AppContext.BaseDirectory + "/skuld/storage/OsuSigs/";
+            var folder = AppContext.BaseDirectory + "/storage/OsuSigs/";
 
             string msgmode = "";
 
@@ -419,10 +382,12 @@ namespace Skuld.Bot.Commands
             var file = File.OpenRead(filepath);
 
             if (file.IsValidOsuSig())
-            { await Context.Channel.SendFileAsync(filepath); }
+            {
+                await "".QueueMessage(Discord.Models.MessageType.File, Context.User, Context.Channel, filepath);
+            }
             else
             {
-                await ReplyAsync(Context.Channel, "The user either doesn't exist or they haven't played osu!" + msgmode);
+                await $"The user either doesn't exist or they haven't played osu!{msgmode}".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
             }
 
             file.Close();

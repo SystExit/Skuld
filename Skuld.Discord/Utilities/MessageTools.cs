@@ -207,6 +207,20 @@ namespace Skuld.Discord.Utilities
             }
         }
 
+        public static string GetPrefix(DiscordNet.IUserMessage message, DiscordShardedClient client, SkuldConfig sconf, MessageServiceConfig config, string gprefix = null)
+        {
+            if (message.Content.StartsWith(config.Prefix))
+                return config.Prefix;
+            if (message.Content.StartsWith(config.AltPrefix))
+                return config.AltPrefix;
+
+            if(gprefix != null)
+                if (message.Content.StartsWith(gprefix))
+                    return gprefix;
+
+            return null;
+        }
+
         public static bool ModuleDisabled(GuildCommandModules cmdmods, CommandInfo command)
         {
             if (!cmdmods.AccountsEnabled && command.Module.Name.ToLowerInvariant() == "accounts")

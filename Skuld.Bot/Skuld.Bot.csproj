@@ -10,7 +10,7 @@
   <ItemGroup>
     <PackageReference Include="FIGlet.Net" Version="1.1.1" />
     <PackageReference Include="IqdbApi" Version="1.4.0" />
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="7.8.0" />
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="7.10.2" />
   </ItemGroup>
 
   <ItemGroup>

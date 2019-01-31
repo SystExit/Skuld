@@ -8,12 +8,15 @@ using IqdbApi;
 using Microsoft.Extensions.DependencyInjection;
 using PokeSharp;
 using Skuld.APIS;
+using Skuld.Bot.Commands;
 using Skuld.Core;
 using Skuld.Core.Globalization;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities.Stats;
 using Skuld.Database;
 using Skuld.Discord;
+using Skuld.Discord.Handlers;
+using Skuld.Discord.Services;
 using StatsdClient;
 using SteamWebAPI2.Interfaces;
 using SysEx.Net;
@@ -29,6 +32,7 @@ namespace Skuld.Bot.Services
     {
         public static SkuldConfig Configuration;
         public static WebSocketService WebSocket;
+        public static MessageQueue MessageQueue;
         public static IServiceProvider Services;
         private static string logfile;
 
@@ -72,6 +76,8 @@ namespace Skuld.Bot.Services
 
             BotService.BackgroundTasks();
 
+            MessageQueue.Run();
+
             await Task.Delay(-1);
 
             WebSocket.ShutdownServer();
@@ -87,11 +93,14 @@ namespace Skuld.Bot.Services
                 TotalShards = Configuration.Discord.Shards
             });
 
-            TwitchClient.ConfigureAndStartAsync(new NTwitch.Rest.TwitchRestConfig
+            if (Configuration.Modules.TwitchModule)
             {
-                ClientId = Configuration.APIS.TwitchClientID,
-                LogLevel = NTwitch.LogSeverity.Verbose
-            }, Configuration.APIS.TwitchToken);
+                TwitchClient.ConfigureAndStartAsync(new NTwitch.Rest.TwitchRestConfig
+                {
+                    ClientId = Configuration.APIS.TwitchClientID,
+                    LogLevel = NTwitch.LogSeverity.Verbose
+                }, Configuration.APIS.TwitchToken);
+            }
 
             SearchClient.Configure(Configuration);
 
@@ -148,6 +157,8 @@ namespace Skuld.Bot.Services
         private static async Task InitializeServicesAsync()
         {
             ConfigureStatsCollector();
+
+            MessageQueue = new MessageQueue();
 
             await DatabaseClient.CheckConnectionAsync();
         }
