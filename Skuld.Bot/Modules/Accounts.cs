@@ -361,6 +361,76 @@ namespace Skuld.Bot.Commands
             }
         }
 
+        [Command("set-hexbg"), Summary("Sets your background to a Hex Color"), RequireDatabase]
+        public async Task SetHexBG(string Hex = null)
+        {
+            if (Hex != null)
+            {
+                if (int.TryParse(Hex, System.Globalization.NumberStyles.HexNumber, null, out int result))
+                {
+                    Context.DBUser.Background = Hex;
+                    var res = await DatabaseClient.UpdateUserAsync(Context.DBUser);
+                    if (res.Successful)
+                    {
+                        await "Set your Background".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
+                    }
+                    else
+                    {
+                        await res.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                    }
+                }
+                else
+                {
+                    await $"Malformed Entry".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                    return;
+                }
+            }
+            else
+            {
+                await $"Your CustomBackground Image/Hex is: {Context.DBUser.Background}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            }
+        }
+
+        [Command("buy-custombg"), Summary("Buy permanent custom backgrounds"), RequireDatabase]
+        public async Task BuyCBG()
+        {
+            if(!Context.DBUser.UnlockedCustBG)
+            {
+                if(Context.DBUser.Money > 40000)
+                {
+                    Context.DBUser.Money -= 40000;
+                    Context.DBUser.UnlockedCustBG = true;
+                    var res = await DatabaseClient.UpdateUserAsync(Context.DBUser);
+                    if(res.Successful)
+                    {
+                        await $"You've successfully unlocked custom backgrounds, use: {Context.DBGuild.Prefix??Configuration.Discord.Prefix}set-custombg [URL] to set your background".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    }
+                }
+            }
+        }
+
+        [Command("set-custombg"), Summary("Sets your custom background Image"), RequireDatabase]
+        public async Task SetCBG(Uri link = null)
+        {
+            if(link != null)
+            {
+                Context.DBUser.Background = link.OriginalString;
+                var res = await DatabaseClient.UpdateUserAsync(Context.DBUser);
+                if(res.Successful)
+                {
+                    await "Set your Background".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
+                }
+                else
+                {
+                    await res.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                }
+            }
+            else
+            {
+                await $"Your CustomBackground Image/Hex is: {Context.DBUser.Background}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            }
+        }
+
         private ulong GetCostOfHP(uint hp)
             => (ulong)Math.Round(Math.Ceiling(hp / 0.8));
     }
