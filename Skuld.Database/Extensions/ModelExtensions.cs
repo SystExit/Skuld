@@ -16,8 +16,10 @@ namespace Skuld.Database.Extensions
                     "Language = @language, " +
                     "HP = @hp, " +
                     "Patted = @petted, Pats = @pets, " +
-                    "GlaredAt = @glaredat, Glares = @glares, " +
-                    "LastDaily = @daily " +
+                    "LastDaily = @daily, " +
+                    "RecurringBlock = @recurBlock, " +
+                    "UnlockedCustBG = @unlockBG, " +
+                    "Background = @bg " +
                     "WHERE UserID = @userID "
                 );
 
@@ -29,9 +31,10 @@ namespace Skuld.Database.Extensions
             command.Parameters.AddWithValue("@petted", user.Patted);
             command.Parameters.AddWithValue("@pets", user.Pats);
             command.Parameters.AddWithValue("@hp", user.HP);
-            command.Parameters.AddWithValue("@glaredat", user.GlaredAt);
-            command.Parameters.AddWithValue("@glares", user.Glares);
             command.Parameters.AddWithValue("@banned", user.Banned);
+            command.Parameters.AddWithValue("@recurBlock", user.RecurringBlock);
+            command.Parameters.AddWithValue("@unlockBG", user.UnlockedCustBG);
+            command.Parameters.AddWithValue("@bg", user.Background);
             command.Parameters.AddWithValue("@userID", user.ID);
 
             return command;
@@ -93,8 +96,8 @@ namespace Skuld.Database.Extensions
                 "`Experience` = @xp " +
                 "WHERE GuildID = @guildID");
 
-            /*command.Parameters.AddWithValue("@pin", guild.GuildSettings.Features.Pinning);
-            command.Parameters.AddWithValue("@xp", guild.GuildSettings.Features.Experience);*/
+            command.Parameters.AddWithValue("@pin", guild.Features.Pinning);
+            command.Parameters.AddWithValue("@xp", guild.Features.Experience);
             command.Parameters.AddWithValue("@guildID", guild.ID);
 
             return command;
@@ -115,16 +118,16 @@ namespace Skuld.Database.Extensions
                 "`Weeb` = @weeb " +
                 "WHERE GuildID = @guildID;");
 
-            /*command.Parameters.AddWithValue("@accounts", guild.GuildSettings.Modules.AccountsEnabled);
-            command.Parameters.AddWithValue("@actions", guild.GuildSettings.Modules.ActionsEnabled);
-            command.Parameters.AddWithValue("@admin", guild.GuildSettings.Modules.AdminEnabled);
-            command.Parameters.AddWithValue("@custom", guild.GuildSettings.Modules.CustomEnabled);
-            command.Parameters.AddWithValue("@fun", guild.GuildSettings.Modules.FunEnabled);
-            command.Parameters.AddWithValue("@info", guild.GuildSettings.Modules.InformationEnabled);
-            command.Parameters.AddWithValue("@lewd", guild.GuildSettings.Modules.LewdEnabled);
-            command.Parameters.AddWithValue("@search", guild.GuildSettings.Modules.SearchEnabled);
-            command.Parameters.AddWithValue("@stats", guild.GuildSettings.Modules.StatsEnabled);
-            command.Parameters.AddWithValue("@weeb", guild.GuildSettings.Modules.WeebEnabled);*/
+            command.Parameters.AddWithValue("@accounts", guild.Modules.AccountsEnabled);
+            command.Parameters.AddWithValue("@actions", guild.Modules.ActionsEnabled);
+            command.Parameters.AddWithValue("@admin", guild.Modules.AdminEnabled);
+            command.Parameters.AddWithValue("@custom", guild.Modules.CustomEnabled);
+            command.Parameters.AddWithValue("@fun", guild.Modules.FunEnabled);
+            command.Parameters.AddWithValue("@info", guild.Modules.InformationEnabled);
+            command.Parameters.AddWithValue("@lewd", guild.Modules.LewdEnabled);
+            command.Parameters.AddWithValue("@search", guild.Modules.SearchEnabled);
+            command.Parameters.AddWithValue("@stats", guild.Modules.StatsEnabled);
+            command.Parameters.AddWithValue("@weeb", guild.Modules.WeebEnabled);
             command.Parameters.AddWithValue("@guildID", guild.ID);
 
             return command;

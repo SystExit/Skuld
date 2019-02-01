@@ -427,5 +427,20 @@ namespace Skuld.Bot.Commands
                 await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-CDESC", ex.Message, LogSeverity.Error, ex));
             }
         }
+
+        [Command("recurring-block"), Summary("Blocks people from patting you on recurring digits")]
+        public async Task BlockRecurring(bool action)
+        {
+            Context.DBUser.RecurringBlock = action;
+            var res = await DatabaseClient.UpdateUserAsync(Context.DBUser);
+            if(res.Successful)
+            {
+                await $"Set RecurringBlock to: {action}".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
+            }
+            else
+            {
+                await res.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+            }
+        }
     }
 }

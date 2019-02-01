@@ -248,9 +248,11 @@ namespace Skuld.Database
 
                                 user.HP = ConversionTools.ParseUInt32OrDefault(Convert.ToString(reader["HP"]));
 
-                                user.GlaredAt = ConversionTools.ParseUInt32OrDefault(Convert.ToString(reader["GlaredAt"]));
+                                user.RecurringBlock = Convert.ToBoolean(reader["RecurringBlock"]);
 
-                                user.Glares = ConversionTools.ParseUInt32OrDefault(Convert.ToString(reader["Glares"]));
+                                user.UnlockedCustBG = Convert.ToBoolean(reader["UnlockedCustBG"]);
+
+                                user.Background = Convert.ToString(reader["Background"]);
 
                                 user.AvatarUrl = Convert.ToString(reader["AvatarUrl"]);
                             }
@@ -282,20 +284,26 @@ namespace Skuld.Database
 
                         int rows = 0;
 
+                        List<CommandUsage> cmds = new List<CommandUsage>();
+
                         if (reader.HasRows)
                         {
                             while (await reader.ReadAsync())
                             {
                                 rows++;
 
-                                //user.FavCmd = Convert.ToString(reader["command"]);
-
-                                //user.FavCmdUsg = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["Usage"]));
+                                cmds.Add(new CommandUsage
+                                {
+                                    Command = Convert.ToString(reader["command"]),
+                                    Usage = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["Usage"]))
+                                });
                             }
                             DogStatsd.Increment("mysql.rows_ret", rows);
 
                             await conn.CloseAsync();
                         }
+
+                        user.CommandUsage = cmds;
                     }
                 }
 
@@ -380,8 +388,6 @@ namespace Skuld.Database
                                 DogStatsd.Increment("mysql.rows_ret", rows);
 
                                 await conn.CloseAsync();
-
-                                //guild.GuildSettings = new GuildSettings();
                             }
                         }
                     }
@@ -390,8 +396,6 @@ namespace Skuld.Database
 
                 if (guild != null)
                 {
-                    /*var guildSetts = new GuildSettings();
-
                     GuildCommandModules comSetts = new GuildCommandModules();
                     var command = new MySqlCommand("SELECT * FROM `guildmodules` WHERE GuildID = @guildid");
                     command.Parameters.AddWithValue("@guildid", GuildID);
@@ -475,11 +479,10 @@ namespace Skuld.Database
                         }
                     }
 
-                    guildSetts.Modules = comSetts;
-                    guildSetts.Features = featSetts;
-                    //guild.GuildSettings = guildSetts;*/
+                    guild.Modules = comSetts;
+                    guild.Features = featSetts;
 
-                    return EventResult.FromSuccess(null/*guild*/);
+                    return EventResult.FromSuccess(guild);
                 }
             }
             return NoSqlConnection;
@@ -1162,7 +1165,7 @@ namespace Skuld.Database
             {
                 var userExperienceResp = await GetUserExperienceAsync(UserID).ConfigureAwait(false);
 
-                /*if (userExperienceResp.Data is UserExperience)
+                if (userExperienceResp.Data is UserExperience)
                 {
                     var guildExp = (userExperienceResp.Data as UserExperience).GetGuildExperience(GuildID);
 
@@ -1174,8 +1177,7 @@ namespace Skuld.Database
                 else
                 {
                     return userExperienceResp;
-                }*/
-                return EventResult.FromSuccess(null);
+                }
             }
             return NoSqlConnection;
         }

@@ -289,19 +289,26 @@ namespace Skuld.Bot.Commands
                     if (usrResp.Successful)
                     {
                         var usr = usrResp.Data as SkuldUser;
-                        usr.Pats += 1;
-
-                        await DatabaseClient.UpdateUserAsync(usr).ConfigureAwait(false);
-
-                        var gusrResp = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
-                        if (gusrResp.Successful)
+                        if(!usr.RecurringBlock)
                         {
-                            var gusr = gusrResp.Data as SkuldUser;
-                            gusr.Patted += 1;
+                            usr.Pats += 1;
 
-                            await DatabaseClient.UpdateUserAsync(gusr).ConfigureAwait(false);
+                            await DatabaseClient.UpdateUserAsync(usr).ConfigureAwait(false);
 
-                            await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} just headpatted {user.Mention}, they've been petted {gusr.Patted} time(s)!").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                            var gusrResp = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
+                            if (gusrResp.Successful)
+                            {
+                                var gusr = gusrResp.Data as SkuldUser;
+                                gusr.Patted += 1;
+
+                                await DatabaseClient.UpdateUserAsync(gusr).ConfigureAwait(false);
+
+                                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} just headpatted {user.Mention}, they've been petted {gusr.Patted} time(s)!").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                            }
+                        }
+                        else
+                        {
+                            await $"{user.Mention} doged your pet, try again next time. (They've blocked users from petting them)".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                         }
                     }
                 }
@@ -320,54 +327,9 @@ namespace Skuld.Bot.Commands
         [Command("glare"), Summary("Glares at a user")]
         public async Task Glare([Remainder]IGuildUser user)
         {
-            try
-            {
-                var gif = await SysExClient.GetWeebActionGifAsync(GifType.Glare).ConfigureAwait(false);
+            var gif = await SysExClient.GetWeebActionGifAsync(GifType.Glare).ConfigureAwait(false);
 
-                if (user == Context.User as IGuildUser)
-                {
-                    var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
-                    await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{botguild.Mention} glares at {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                }
-                if (user.IsBot)
-                {
-                    await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} glares at {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                }
-
-                if (await DatabaseClient.CheckConnectionAsync())
-                {
-                    var usrResp = await DatabaseClient.GetUserAsync(Context.User.Id).ConfigureAwait(false);
-
-                    if (usrResp.Successful)
-                    {
-                        var usr = usrResp.Data as SkuldUser;
-                        usr.Glares += 1;
-
-                        await DatabaseClient.UpdateUserAsync(usr).ConfigureAwait(false);
-
-                        var usr2Resp = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
-
-                        if (usr2Resp.Successful)
-                        {
-                            var usr2 = usr2Resp.Data as SkuldUser;
-                            usr2.GlaredAt += 1;
-
-                            await DatabaseClient.UpdateUserAsync(usr2).ConfigureAwait(false);
-
-                            await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} glares at {user.Mention}, they've been glared at {usr2.GlaredAt} time(s)!").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                        }
-                    }
-                }
-                else
-                {
-                    await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} glares at {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                }
-            }
-            catch (Exception ex)
-            {
-                await ex.Message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel, null, ex);
-                await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-GLARE", ex.Message, LogSeverity.Error, ex));
-            }
+            await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} glares at {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
     }
 }
