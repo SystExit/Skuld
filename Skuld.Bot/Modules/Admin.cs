@@ -676,12 +676,12 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        /*[Command("guild-feature"), Summary("Configures guild features"), RequireDatabase]
+        [Command("guild-feature"), Summary("Configures guild features"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task ConfigureGuildFeatures(string module, int value)
         {
-            if (value > 1) await ReplyAsync(Context.Channel, new EmbedBuilder { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build());
-            if (value < 0) await ReplyAsync(Context.Channel, new EmbedBuilder { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build());
+            if (value > 1) await new EmbedBuilder { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build().QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+            if (value < 0) await new EmbedBuilder { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build().QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
             else
             {
                 module = module.ToLowerInvariant();
@@ -694,26 +694,26 @@ namespace Skuld.Bot.Commands
                 {
                     var guild = Context.DBGuild;
 
-                    if (guild.GuildSettings.Modules != null)
+                    if (guild.Modules != null)
                     {
                         var setting = settings.FirstOrDefault(x => x.Key == module || x.Value == module);
 
                         switch (setting.Value)
                         {
                             case "pinning":
-                                guild.GuildSettings.Features.Pinning = Convert.ToBoolean(value);
+                                guild.Features.Pinning = Convert.ToBoolean(value);
                                 break;
 
                             case "experience":
-                                guild.GuildSettings.Features.Experience = Convert.ToBoolean(value);
+                                guild.Features.Experience = Convert.ToBoolean(value);
                                 break;
                         }
 
                         var res = await DatabaseClient.UpdateGuildAsync(guild);
                         if (res.All(x => x.Successful))
                         {
-                            if (value == 0) await ReplyAsync(Context.Channel, $"I disabled the `{module}` feature");
-                            else await ReplyAsync(Context.Channel, $"I enabled the `{module}` feature");
+                            if (value == 0) await $"I disabled the `{module}` feature".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                            else await $"I enabled the `{module}` feature".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                         }
                         else
                         {
@@ -733,17 +733,17 @@ namespace Skuld.Bot.Commands
                     foreach (var mod in settings) modulelist += mod.Key + " (" + mod.Value + ")" + ", ";
 
                     modulelist = modulelist.Remove(modulelist.Length - 2);
-                    await ReplyAsync(Context.Channel, new EmbedBuilder { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules (raw name in brackets). \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build());
+                    await new EmbedBuilder { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules (raw name in brackets). \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build().QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                 }
             }
-        }*/
+        }
 
-        /*[Command("guild-module"), Summary("Configures guild modules"), RequireDatabase]
+        [Command("guild-module"), Summary("Configures guild modules"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task ConfigureGuildModules(string module, int value)
         {
-            if (value > 1) await ReplyAsync(Context.Channel, new EmbedBuilder { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build());
-            if (value < 0) await ReplyAsync(Context.Channel, new EmbedBuilder { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build());
+            if (value > 1) await new EmbedBuilder { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build().QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+            if (value < 0) await new EmbedBuilder { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build().QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
             else
             {
                 module = module.ToLowerInvariant();
@@ -751,59 +751,59 @@ namespace Skuld.Bot.Commands
                 if (modules.Contains(module))
                 {
                     var guild = Context.DBGuild;
-                    if (guild.GuildSettings.Modules != null)
+                    if (guild.Modules != null)
                     {
                         switch (module)
                         {
                             case "accounts":
-                                guild.GuildSettings.Modules.AccountsEnabled = Convert.ToBoolean(value);
+                                guild.Modules.AccountsEnabled = Convert.ToBoolean(value);
                                 break;
 
                             case "actions":
-                                guild.GuildSettings.Modules.ActionsEnabled = Convert.ToBoolean(value);
+                                guild.Modules.ActionsEnabled = Convert.ToBoolean(value);
                                 break;
 
                             case "admin":
-                                guild.GuildSettings.Modules.AdminEnabled = Convert.ToBoolean(value);
+                                guild.Modules.AdminEnabled = Convert.ToBoolean(value);
                                 break;
 
                             case "fun":
-                                guild.GuildSettings.Modules.FunEnabled = Convert.ToBoolean(value);
+                                guild.Modules.FunEnabled = Convert.ToBoolean(value);
                                 break;
 
                             case "information":
-                                guild.GuildSettings.Modules.InformationEnabled = Convert.ToBoolean(value);
+                                guild.Modules.InformationEnabled = Convert.ToBoolean(value);
                                 break;
 
                             case "lewd":
-                                guild.GuildSettings.Modules.LewdEnabled = Convert.ToBoolean(value);
+                                guild.Modules.LewdEnabled = Convert.ToBoolean(value);
                                 break;
 
                             case "search":
-                                guild.GuildSettings.Modules.SearchEnabled = Convert.ToBoolean(value);
+                                guild.Modules.SearchEnabled = Convert.ToBoolean(value);
                                 break;
 
                             case "stats":
-                                guild.GuildSettings.Modules.StatsEnabled = Convert.ToBoolean(value);
+                                guild.Modules.StatsEnabled = Convert.ToBoolean(value);
                                 break;
 
                             case "weeb":
-                                guild.GuildSettings.Modules.WeebEnabled = Convert.ToBoolean(value);
+                                guild.Modules.WeebEnabled = Convert.ToBoolean(value);
                                 break;
                         }
 
                         await DatabaseClient.UpdateGuildAsync(guild);
-                        if (value == 0) await ReplyAsync(Context.Channel, $"I disabled the `{module}` module");
-                        else await ReplyAsync(Context.Channel, $"I enabled the `{module}` module");
+                        if (value == 0) await $"I disabled the `{module}` module".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                        else await $"I enabled the `{module}` module".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                     }
                 }
                 else
                 {
                     string modulelist = string.Join(", ", modules);
-                    await ReplyAsync(Context.Channel, new EmbedBuilder { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build());
+                    await new EmbedBuilder { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build().QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                 }
             }
-        }*/
+        }
 
         [Command("configurechannel"), Summary("Some features require channels to be set"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]

@@ -132,8 +132,7 @@ namespace Skuld.Bot.Commands
                     }
                     else
                     {
-                        var thing = ((SkuldUser)context.Data).Daily + 86400;
-                        var remain = thing.FromEpoch().Subtract(DateTime.UtcNow);
+                        var remain = new TimeSpan((DateTime.UtcNow.AddDays(1).Date.ToEpoch() - DateTime.UtcNow.ToEpoch()).FromEpoch().Ticks);
                         string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
                         await $"You must wait `{remaining}`".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                     }
@@ -149,8 +148,7 @@ namespace Skuld.Bot.Commands
                     }
                     else
                     {
-                        var thing = ((SkuldUser)context.Data).Daily + 86400;
-                        var remain = thing.FromEpoch().Subtract(DateTime.UtcNow);
+                        var remain = new TimeSpan((DateTime.UtcNow.AddDays(1).Date.ToEpoch() - DateTime.UtcNow.ToEpoch()).FromEpoch().Ticks);
                         string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
                         await $"You must wait `{remaining}`".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                     }
@@ -366,23 +364,31 @@ namespace Skuld.Bot.Commands
         {
             if (Hex != null)
             {
-                if (int.TryParse(Hex, System.Globalization.NumberStyles.HexNumber, null, out int result))
+                if (Context.DBUser.Money > 300)
                 {
-                    Context.DBUser.Background = Hex;
-                    var res = await DatabaseClient.UpdateUserAsync(Context.DBUser);
-                    if (res.Successful)
+                    Context.DBUser.Money -= 300;
+                    if (int.TryParse(Hex, System.Globalization.NumberStyles.HexNumber, null, out int result))
                     {
-                        await "Set your Background".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
+                        Context.DBUser.Background = Hex;
+                        var res = await DatabaseClient.UpdateUserAsync(Context.DBUser);
+                        if (res.Successful)
+                        {
+                            await "Set your Background".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
+                        }
+                        else
+                        {
+                            await res.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                        }
                     }
                     else
                     {
-                        await res.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                        await $"Malformed Entry".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                        return;
                     }
                 }
                 else
                 {
-                    await $"Malformed Entry".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                    return;
+                    await $"You need at least {Configuration.Preferences.MoneySymbol}300 to change your background".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
             }
             else
@@ -414,15 +420,23 @@ namespace Skuld.Bot.Commands
         {
             if(link != null)
             {
-                Context.DBUser.Background = link.OriginalString;
-                var res = await DatabaseClient.UpdateUserAsync(Context.DBUser);
-                if(res.Successful)
+                if(Context.DBUser.Money > 900)
                 {
-                    await "Set your Background".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
+                    Context.DBUser.Money -= 900;
+                    Context.DBUser.Background = link.OriginalString;
+                    var res = await DatabaseClient.UpdateUserAsync(Context.DBUser);
+                    if (res.Successful)
+                    {
+                        await "Set your Background".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
+                    }
+                    else
+                    {
+                        await res.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                    }
                 }
                 else
                 {
-                    await res.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                    await $"You need at least {Configuration.Preferences.MoneySymbol}900 to change your background".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
             }
             else

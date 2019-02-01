@@ -55,7 +55,8 @@ namespace Skuld.Database.Extensions
                     "`LeaveChannel` = @ulc, " +
                     "`JoinMessage` = @jmsg, " +
                     "`LeaveMessage` = @lmsg, " +
-                    "`LevelUpMessage` = @lupmsg " +
+                    "`LevelUpMessage` = @lupmsg, " +
+                    "`LevelNotification` = @lNotif " +
                     "WHERE GuildID = @guildID;"
                 );
                 command.Parameters.AddWithValue("@joinableroles", string.Join(",", guild.JoinableRoles) ?? null);
@@ -71,7 +72,8 @@ namespace Skuld.Database.Extensions
                     "`LeaveChannel` = @ulc, " +
                     "`JoinMessage` = @jmsg, " +
                     "`LeaveMessage` = @lmsg, " +
-                    "`LevelUpMessage` = @lupmsg " +
+                    "`LevelUpMessage` = @lupmsg, " +
+                    "`LevelNotification` = @lNotif " +
                     "WHERE GuildID = @guildID;"
                 );
             }
@@ -84,6 +86,7 @@ namespace Skuld.Database.Extensions
             command.Parameters.AddWithValue("@jmsg", guild.JoinMessage);
             command.Parameters.AddWithValue("@lmsg", guild.LeaveMessage);
             command.Parameters.AddWithValue("@lupmsg", guild.LevelUpMessage);
+            command.Parameters.AddWithValue("@lNotif", (int)guild.LevelNotification);
             command.Parameters.AddWithValue("@guildID", guild.ID);
 
             return command;

@@ -56,7 +56,7 @@ namespace Skuld.Database.Extensions
             {
                 if (user.Daily != 0)
                 {
-                    if (user.Daily < (86400 - DateTime.UtcNow.ToEpoch()))
+                    if (user.Daily < DateTime.UtcNow.Date.ToEpoch())
                     {
                         user.Daily = DateTime.UtcNow.ToEpoch();
                         user.Money += config.Preferences.DailyAmount;
@@ -80,7 +80,7 @@ namespace Skuld.Database.Extensions
             {
                 if (sender.Daily != 0)
                 {
-                    if (sender.Daily < (86400 - DateTime.UtcNow.ToEpoch()))
+                    if (sender.Daily < DateTime.UtcNow.Date.ToEpoch())
                     {
                         sender.Daily = DateTime.UtcNow.ToEpoch();
                         user.Money += config.Preferences.DailyAmount;

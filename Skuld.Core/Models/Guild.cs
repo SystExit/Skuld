@@ -13,6 +13,7 @@ namespace Skuld.Core.Models
         public ulong UserLeaveChannel { get; set; }
         public string JoinMessage { get; set; }
         public string LeaveMessage { get; set; }
+        public LevelNotification LevelNotification { get; set; }
         public string LevelUpMessage { get; set; }
         public ulong LevelUpChannel { get; set; }
 

@@ -383,6 +383,10 @@ namespace Skuld.Database
                                     guild.UserLeaveChannel = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["LeaveChannel"]));
 
                                     guild.LevelUpMessage = Convert.ToString(reader["LevelUpMessage"]);
+
+                                    guild.LevelUpChannel = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["LevelUpChannel"]));
+
+                                    guild.LevelNotification = (LevelNotification)Enum.Parse(typeof(LevelNotification), Convert.ToString(reader["LevelNotification"]));
                                 }
 
                                 DogStatsd.Increment("mysql.rows_ret", rows);
