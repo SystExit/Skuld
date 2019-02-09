@@ -103,9 +103,9 @@ namespace Skuld.Bot.Commands
                 profileuser = res.Data as SkuldUser;
             }
 
-            var imagickCache = Path.Combine(AppContext.BaseDirectory, "/storage/imagickCache/");
-            var folder = Path.Combine(AppContext.BaseDirectory, "/storage/profiles/");
-            var fontsFolder = Path.Combine(AppContext.BaseDirectory, "/storage/fonts/");
+            var imagickCache = Path.Combine(AppContext.BaseDirectory, "storage/imagickCache/");
+            var folder = Path.Combine(AppContext.BaseDirectory, "storage/profiles/");
+            var fontsFolder = Path.Combine(AppContext.BaseDirectory, "storage/fonts/");
             var fontFile = Path.Combine(fontsFolder, "NotoSans-Regular.ttf");
 
             if (!Directory.Exists(fontsFolder))
