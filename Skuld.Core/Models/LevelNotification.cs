@@ -2,8 +2,8 @@
 {
     public enum LevelNotification
     {
-        DM = 0,
+        None = 0,
         Channel = 1,
-        None = 2
+        DM = 2
     }
 }

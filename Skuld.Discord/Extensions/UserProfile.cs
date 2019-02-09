@@ -28,11 +28,10 @@ namespace Skuld.Discord.Extensions
             embed.AddField("Patted", user.Patted > 0 ? user.Patted + " times" : "Not patted anyone", inline: true);
             embed.AddField("HP", user.HP > 0 ? user.HP + " HP" : "No HP", inline: true);
 
-            var topcmd = user.CommandUsage.Aggregate((x, y) => x.Usage > y.Usage ? x : y);
+            var topcmd = user.GetFavouriteCommand();
             embed.AddField("Favourite Command", topcmd != null ? $"`{topcmd.Command}` and it has been used {topcmd.Usage} times" : "No favourite Command", inline: true);
 
-            embed.AddField("Pasta Karma", $"{(await user.GetPastaKarma()).ToString("N0")} Karma");
-            embed.AddField("Description", user.Description, inline: false);
+            embed.AddField("Pasta Karma", $"{(await user.GetPastaKarmaAsync()).ToString("N0")} Karma");
 
             return embed.Build();
         }

@@ -34,6 +34,7 @@ namespace Skuld.Core.Models
         public bool InformationEnabled { get; set; }
         public bool LewdEnabled { get; set; }
         public bool SearchEnabled { get; set; }
+        public bool SpaceEnabled { get; set; }
         public bool StatsEnabled { get; set; }
         public bool WeebEnabled { get; set; }
     }

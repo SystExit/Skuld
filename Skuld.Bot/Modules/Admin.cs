@@ -563,7 +563,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("setlevelup"), Summary("Sets the level up message"), RequireDatabase]
+        [Command("setlevelupmessage"), Summary("Sets the level up message, -u says the users name, -m mentions the user, -l shows the level they achieved"), RequireDatabase]
         [RequireRole(AccessLevel.ServerMod)]
         public async Task SetLevelUp([Remainder]string message)
         {
@@ -738,6 +738,77 @@ namespace Skuld.Bot.Commands
             }
         }
 
+        [Command("levelchannel"), Summary("Sets the levelup channel")]
+        [RequireUserPermission(GuildPermission.Administrator)]
+        public async Task ConfigureLevelChannel(IGuildChannel channel = null)
+        {
+            if(channel == null)
+            {
+                Context.DBGuild.LevelUpChannel = 0;
+                var resp = await DatabaseClient.UpdateGuildAsync(Context.DBGuild);
+                if(resp.All(x=>x.Successful))
+                {
+                    await "Removed Levelup Channel".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
+                }
+                else
+                {
+                    var reason = "";
+                    foreach (var r in resp)
+                    {
+                        if (!r.Successful)
+                        {
+                            reason += r.Error + "\n";
+                        }
+                    }
+                    await reason.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                }
+            }
+            else
+            {
+                Context.DBGuild.LevelUpChannel = 0;
+                var resp = await DatabaseClient.UpdateGuildAsync(Context.DBGuild);
+                if (resp.All(x => x.Successful))
+                {
+                    await $"Set Levelup Channel to <#{channel.Id}>".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
+                }
+                else
+                {
+                    var reason = "";
+                    foreach(var r in resp)
+                    {
+                        if(!r.Successful)
+                        {
+                            reason += r.Error + "\n";
+                        }
+                    }
+                    await reason.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                }
+            }
+        }
+
+        [Command("levelnotif"), Summary("Sets the levelup notification")]
+        public async Task ConfigureLevelNotif(LevelNotification level)
+        {
+            Context.DBGuild.LevelNotification = level;
+            var resp = await DatabaseClient.UpdateGuildAsync(Context.DBGuild);
+            if (resp.All(x => x.Successful))
+            {
+                await $"Set Levelup Notification to {level.ToString()}".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
+            }
+            else
+            {
+                var reason = "";
+                foreach (var r in resp)
+                {
+                    if (!r.Successful)
+                    {
+                        reason += r.Error + "\n";
+                    }
+                }
+                await reason.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+            }
+        }
+
         [Command("guild-module"), Summary("Configures guild modules"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task ConfigureGuildModules(string module, int value)
@@ -781,6 +852,10 @@ namespace Skuld.Bot.Commands
 
                             case "search":
                                 guild.Modules.SearchEnabled = Convert.ToBoolean(value);
+                                break;
+
+                            case "space":
+                                guild.Modules.SpaceEnabled = Convert.ToBoolean(value);
                                 break;
 
                             case "stats":

@@ -5,6 +5,7 @@ using StatsdClient;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Database;
+using Skuld.Discord.Extensions;
 using Skuld.Discord.TypeReaders;
 using Skuld.Discord.Utilities;
 using System;
@@ -141,9 +142,10 @@ namespace Skuld.Discord.Handlers
             var message = arg as SocketUserMessage;
             if (message is null) { return; }
 
-            SkuldUser suser = await MessageTools.GetUserAsync(message.Author).ConfigureAwait(false);
+            SkuldUser suser = null;
             if (await DatabaseClient.CheckConnectionAsync())
             {
+                suser = await MessageTools.GetUserOrInsertAsync(message.Author).ConfigureAwait(false);
                 if (suser.AvatarUrl != message.Author.GetAvatarUrl())
                 {
                     await DatabaseClient.SingleQueryAsync(new MySql.Data.MySqlClient.MySqlCommand($"UPDATE `users` SET `AvatarUrl` = \"{message.Author.GetAvatarUrl()}\" WHERE `UserID` = {message.Author.Id};"));
@@ -154,18 +156,24 @@ namespace Skuld.Discord.Handlers
 
             if (!MessageTools.IsEnabledChannel(await (message.Channel as ITextChannel).Guild.GetUserAsync(message.Author.Id), (ITextChannel)message.Channel)) { return; }
 
-            var context = new SkuldCommandContext(BotService.DiscordClient, message, suser, await MessageTools.GetGuildAsync((message.Channel as ITextChannel).Guild).ConfigureAwait(false));
+            SkuldGuild sguild = await MessageTools.GetGuildOrInsertAsync((message.Channel as ITextChannel).Guild).ConfigureAwait(false);
 
-            if (context.DBGuild != null) { if (!MessageTools.HasPrefix(message, BotService.DiscordClient, SkuldConfig, cmdConfig, context.DBGuild.Prefix)) { return; } }
+            if (sguild != null)
+            {
+                if (sguild.Features.Experience)
+                {
+                    var _ = HandleExperienceAsync(message.Author, ((message.Channel as ITextChannel).Guild), sguild, message.Channel);
+                }
+            }
+
+            var context = new SkuldCommandContext(BotService.DiscordClient, message, suser, sguild);
+
+            if (sguild != null) { if (!MessageTools.HasPrefix(message, BotService.DiscordClient, SkuldConfig, cmdConfig, context.DBGuild.Prefix)) { return; } }
             else { if (!MessageTools.HasPrefix(message, BotService.DiscordClient, SkuldConfig, cmdConfig)) { return; } }
 
-            if(context.DBGuild != null)
+            if(sguild != null)
             {
-                if (context.DBGuild.Features.Experience)
-                {
-                    var _ = HandleExperienceAsync(context);
-                }
-                if (context.DBGuild.Modules.CustomEnabled)
+                if (sguild.Modules.CustomEnabled)
                 {
                     var _ = HandleCustomCommandAsync(context);
                 }
@@ -173,19 +181,19 @@ namespace Skuld.Discord.Handlers
 
             await DispatchCommandAsync(context).ConfigureAwait(false);
         }
-        public static async Task HandleExperienceAsync(SkuldCommandContext context)
+        public static async Task HandleExperienceAsync(IUser user, IGuild guild, SkuldGuild sguild, IMessageChannel backupChannel)
         {
-            var luserexperienceResp = await DatabaseClient.GetUserExperienceAsync(context.User.Id);
+            var luserexperienceResp = await DatabaseClient.GetUserExperienceAsync(user.Id);
+
+            ulong amount = (ulong)rnd.Next(0, 25);
 
             if (luserexperienceResp.Data is UserExperience)
             {
                 var luxp = luserexperienceResp.Data as UserExperience;
 
-                ulong amount = (ulong)rnd.Next(0, 25);
-
                 if (luxp.GuildExperiences.Count() != 0)
                 {
-                    var gld = luxp.GuildExperiences.FirstOrDefault(x => x.GuildID == context.DBGuild.ID);
+                    var gld = luxp.GuildExperiences.FirstOrDefault(x => x.GuildID == guild.Id);
                     if (gld != null)
                     {
                         if (gld.LastGranted < (DateTime.UtcNow.ToEpoch() - 60))
@@ -198,14 +206,38 @@ namespace Skuld.Discord.Handlers
                                 gld.TotalXP += amount;
                                 gld.Level++;
                                 gld.LastGranted = DateTime.UtcNow.ToEpoch();
-                                if(string.IsNullOrEmpty(context.DBGuild.LevelUpMessage))
-                                    await context.Channel.SendMessageAsync($"Congratulations {context.User.Mention}!! You're now level **{gld.Level}**");
-                                else
+
+                                if(sguild.LevelNotification == LevelNotification.Channel)
                                 {
-                                    string msg = context.DBGuild.LevelUpMessage;
-                                    msg = msg.Replace("-m", context.User.Mention).Replace("-u", context.User.Username).Replace("-l", $"{gld.Level}");
-                                    await context.Channel.SendMessageAsync(msg);
+                                    ulong ChannelID = 0;
+                                    if (sguild.LevelUpChannel != 0)
+                                        ChannelID = sguild.LevelUpChannel;
+                                    else
+                                        ChannelID = backupChannel.Id;
+
+                                    if (string.IsNullOrEmpty(sguild.LevelUpMessage))
+                                        await $"Congratulations {user.Mention}!! You're now level **{gld.Level}**".QueueMessage(Models.MessageType.Standard, user, (IMessageChannel)await guild.GetChannelAsync(ChannelID));
+                                    else
+                                    {
+                                        string msg = sguild.LevelUpMessage;
+                                        msg = msg.Replace("-m", user.Mention).Replace("-u", user.Username).Replace("-l", $"{gld.Level}");
+
+                                        await msg.QueueMessage(Models.MessageType.Standard, user, (IMessageChannel)await guild.GetChannelAsync(ChannelID));
+                                    }
                                 }
+                                else if(sguild.LevelNotification == LevelNotification.DM)
+                                {
+                                    if (string.IsNullOrEmpty(sguild.LevelUpMessage))
+                                        await $"Congratulations {user.Mention}!! You're now level **{gld.Level}**".QueueMessage(Models.MessageType.DMFail, user, backupChannel);
+                                    else
+                                    {
+                                        string msg = sguild.LevelUpMessage;
+                                        msg = msg.Replace("-m", user.Mention).Replace("-u", user.Username).Replace("-l", $"{gld.Level}");
+
+                                        await msg.QueueMessage(Models.MessageType.DMFail, user, backupChannel);
+                                    }
+                                }
+
                                 await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MessageService", "User leveled up", LogSeverity.Info));
                                 DogStatsd.Increment("user.levels.levelup");
                             }
@@ -215,7 +247,7 @@ namespace Skuld.Discord.Handlers
                                 gld.TotalXP += amount;
                                 gld.LastGranted = DateTime.UtcNow.ToEpoch();
                             }
-                            await DatabaseClient.UpdateGuildExperienceAsync(context.User.Id, gld, context.Guild.Id);
+                            await DatabaseClient.UpdateGuildExperienceAsync(user.Id, gld, guild.Id);
                             DogStatsd.Increment("user.levels.processed");
                         }
                     }
@@ -227,7 +259,7 @@ namespace Skuld.Discord.Handlers
                             XP = amount
                         };
                         gld.TotalXP = gld.XP;
-                        await DatabaseClient.InsertGuildExperienceAsync(context.User.Id, context.Guild.Id, gld);
+                        await DatabaseClient.InsertGuildExperienceAsync(user.Id, guild.Id, gld);
                         DogStatsd.Increment("user.levels.processed");
                     }
                 }
@@ -239,7 +271,7 @@ namespace Skuld.Discord.Handlers
                         XP = amount
                     };
                     gld.TotalXP = gld.XP;
-                    await DatabaseClient.InsertGuildExperienceAsync(context.User.Id, context.Guild.Id, gld);
+                    await DatabaseClient.InsertGuildExperienceAsync(user.Id, guild.Id, gld);
                     DogStatsd.Increment("user.levels.processed");
                 }
             }
@@ -248,10 +280,10 @@ namespace Skuld.Discord.Handlers
                 var gld = new GuildExperience
                 {
                     LastGranted = DateTime.UtcNow.ToEpoch(),
-                    XP = (ulong)rnd.Next(0, 25)
+                    XP = amount
                 };
                 gld.TotalXP = gld.XP;
-                await DatabaseClient.InsertGuildExperienceAsync(context.User.Id, context.Guild.Id, gld);
+                await DatabaseClient.InsertGuildExperienceAsync(user.Id, guild.Id, gld);
                 DogStatsd.Increment("user.levels.processed");
             }
 

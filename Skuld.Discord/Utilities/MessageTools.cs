@@ -72,7 +72,7 @@ namespace Skuld.Discord.Utilities
             return true;
         }
 
-        public static async Task<SkuldGuild> GetGuildAsync(DiscordNet.IGuild guild)
+        public static async Task<SkuldGuild> GetGuildOrInsertAsync(DiscordNet.IGuild guild)
         {
             var resp = await DatabaseClient.GetGuildAsync(guild.Id).ConfigureAwait(false);
             if(resp.Successful && resp.Data is SkuldGuild)
@@ -88,7 +88,7 @@ namespace Skuld.Discord.Utilities
             }
         }
 
-        public static async Task<SkuldUser> GetUserAsync(DiscordNet.IUser user)
+        public static async Task<SkuldUser> GetUserOrInsertAsync(DiscordNet.IUser user)
         {
             var resp = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
             if (resp.Successful && resp.Data is SkuldUser)
@@ -236,6 +236,8 @@ namespace Skuld.Discord.Utilities
             if (!cmdmods.LewdEnabled && command.Module.Name.ToLowerInvariant() == "lewd")
             { return true; }
             if (!cmdmods.SearchEnabled && command.Module.Name.ToLowerInvariant() == "search")
+            { return true; }
+            if (!cmdmods.SpaceEnabled && command.Module.Name.ToLowerInvariant() == "space")
             { return true; }
             if (!cmdmods.StatsEnabled && command.Module.Name.ToLowerInvariant() == "stats")
             { return true; }

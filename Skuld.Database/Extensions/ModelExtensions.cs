@@ -1,5 +1,6 @@
 ﻿using MySql.Data.MySqlClient;
 using Skuld.Core.Models;
+using System;
 
 namespace Skuld.Database.Extensions
 {
@@ -10,7 +11,7 @@ namespace Skuld.Database.Extensions
             var command = new MySqlCommand(
                     "UPDATE `users` SET " +
                     "Banned = @banned, " +
-                    "Description = @description, " +
+                    "Title = @title, " +
                     "CanDM = @dmenabled, " +
                     "Money = @money, " +
                     "Language = @language, " +
@@ -20,11 +21,11 @@ namespace Skuld.Database.Extensions
                     "RecurringBlock = @recurBlock, " +
                     "UnlockedCustBG = @unlockBG, " +
                     "Background = @bg " +
-                    "WHERE UserID = @userID "
+                    "WHERE UserID = @userID; "
                 );
 
             command.Parameters.AddWithValue("@money", user.Money);
-            command.Parameters.AddWithValue("@description", user.Description);
+            command.Parameters.AddWithValue("@title", user.Title);
             command.Parameters.AddWithValue("@daily", user.Daily);
             command.Parameters.AddWithValue("@language", user.Language);
             command.Parameters.AddWithValue("@dmenabled", user.CanDM);
@@ -32,7 +33,7 @@ namespace Skuld.Database.Extensions
             command.Parameters.AddWithValue("@pets", user.Pats);
             command.Parameters.AddWithValue("@hp", user.HP);
             command.Parameters.AddWithValue("@banned", user.Banned);
-            command.Parameters.AddWithValue("@recurBlock", user.RecurringBlock);
+            command.Parameters.AddWithValue("@recurBlock", Convert.ToInt32(user.RecurringBlock));
             command.Parameters.AddWithValue("@unlockBG", user.UnlockedCustBG);
             command.Parameters.AddWithValue("@bg", user.Background);
             command.Parameters.AddWithValue("@userID", user.ID);
@@ -73,6 +74,7 @@ namespace Skuld.Database.Extensions
                     "`JoinMessage` = @jmsg, " +
                     "`LeaveMessage` = @lmsg, " +
                     "`LevelUpMessage` = @lupmsg, " +
+                    "`LevelUpChannel` = @lupchan, " +
                     "`LevelNotification` = @lNotif " +
                     "WHERE GuildID = @guildID;"
                 );
@@ -86,6 +88,7 @@ namespace Skuld.Database.Extensions
             command.Parameters.AddWithValue("@jmsg", guild.JoinMessage);
             command.Parameters.AddWithValue("@lmsg", guild.LeaveMessage);
             command.Parameters.AddWithValue("@lupmsg", guild.LevelUpMessage);
+            command.Parameters.AddWithValue("@lupchan", guild.LevelUpChannel);
             command.Parameters.AddWithValue("@lNotif", (int)guild.LevelNotification);
             command.Parameters.AddWithValue("@guildID", guild.ID);
 
@@ -117,6 +120,7 @@ namespace Skuld.Database.Extensions
                 "`Information` = @info, " +
                 "`Lewd` = @lewd, " +
                 "`Search` = @search, " +
+                "`Space` = @space, " +
                 "`Stats` = @stats, " +
                 "`Weeb` = @weeb " +
                 "WHERE GuildID = @guildID;");
@@ -129,6 +133,7 @@ namespace Skuld.Database.Extensions
             command.Parameters.AddWithValue("@info", guild.Modules.InformationEnabled);
             command.Parameters.AddWithValue("@lewd", guild.Modules.LewdEnabled);
             command.Parameters.AddWithValue("@search", guild.Modules.SearchEnabled);
+            command.Parameters.AddWithValue("@space", guild.Modules.SpaceEnabled);
             command.Parameters.AddWithValue("@stats", guild.Modules.StatsEnabled);
             command.Parameters.AddWithValue("@weeb", guild.Modules.WeebEnabled);
             command.Parameters.AddWithValue("@guildID", guild.ID);

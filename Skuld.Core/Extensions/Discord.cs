@@ -194,5 +194,24 @@ namespace Skuld.Core.Extensions
             var col = System.Drawing.ColorTranslator.FromHtml(hex);
             return new Color(col.R, col.G, col.B);
         }
+
+        public static string HexFromStatus(this UserStatus status)
+        {
+            switch(status)
+            {
+                case UserStatus.Online:
+                    return "#43b581";
+                case UserStatus.AFK:
+                case UserStatus.Idle:
+                    return "#faa61a";
+                case UserStatus.DoNotDisturb:
+                    return "#f04747";
+                case UserStatus.Invisible:
+                case UserStatus.Offline:
+                    return "#747f8d";
+                default:
+                    return "#fff";
+            }
+        }
     }
 }

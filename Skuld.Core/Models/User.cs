@@ -6,7 +6,7 @@ namespace Skuld.Core.Models
     {
         public ulong ID { get; set; }
         public bool Banned { get; set; }
-        public string Description { get; set; }
+        public string Title { get; set; }
         public bool CanDM { get; set; }
         public ulong Money { get; set; }
         public string Language { get; set; }
@@ -23,5 +23,6 @@ namespace Skuld.Core.Models
         public List<int> UpvotedPastas { get; set; }
         public List<int> DownvotedPastas { get; set; }
         public List<CommandUsage> CommandUsage { get; set; }
+        public List<Reputation> Reputation { get; set; }
     }
 }

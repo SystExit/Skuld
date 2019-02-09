@@ -7,6 +7,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "References", "References", 
 		References\Booru.Net.dll = References\Booru.Net.dll
 		References\Discord.Addons.Interactive.dll = References\Discord.Addons.Interactive.dll
 		GCop.json = GCop.json
+		References\NotoSans-Regular.ttf = References\NotoSans-Regular.ttf
 		References\PokeSharp.dll = References\PokeSharp.dll
 		References\SteamStoreQuery.dll = References\SteamStoreQuery.dll
 	EndProjectSection

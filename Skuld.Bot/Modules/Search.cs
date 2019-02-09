@@ -391,8 +391,6 @@ namespace Skuld.Bot.Commands
             }
 
             file.Close();
-
-            File.Delete(filepath);
         }
     }
 }

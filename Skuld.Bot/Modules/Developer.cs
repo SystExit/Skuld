@@ -199,7 +199,7 @@ namespace Skuld.Bot.Commands
 
                     await DatabaseClient.UpdateUserAsync(suser);
 
-                    await "User {user.Username} now has: {Configuration.Preferences.MoneySymbol + suser.Money}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel); ;
+                    await $"User {user.Username} now has: {Configuration.Preferences.MoneySymbol}{suser.Money}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel); ;
                 }
                 else
                 {

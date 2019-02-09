@@ -6,6 +6,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -21,6 +22,12 @@ namespace Skuld.Discord.Services
             {
                 if(!messageQueue.IsEmpty)
                 {
+                    await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage
+                    {
+                        Message = $"Queue Length: {messageQueue.Count} Est. Time till completion: {(messageQueue.Count * 250) / 1000}sec",
+                        Severity = LogSeverity.Info,
+                        Source = "MQ-Exec"
+                    }).ConfigureAwait(false);
                     if(messageQueue.TryDequeue(out SkuldMessage message))
                     {
                         try
@@ -55,6 +62,12 @@ namespace Skuld.Discord.Services
                                     await MessageSender.ReplyWithMentionAndFileAsync(message.Channel, message.Content.User, message.Content.Message, message.Content.File);
                                     break;
                             }
+
+                            if (message.Meta.Type == (Models.MessageType.File | Models.MessageType.MentionFile))
+                            {
+                                File.Delete(message.Content.File);
+                            }
+
                             await Task.Delay(250);
                         }
                         catch(Exception ex)
@@ -72,7 +85,15 @@ namespace Skuld.Discord.Services
         }
 
         public static void AddMessage(SkuldMessage message)
-            => messageQueue.Enqueue(message);
+        {
+            messageQueue.Enqueue(message);
+            GenericLogger.AddToLogsAsync(new Core.Models.LogMessage
+            {
+                Source = "MQ-Queue",
+                Message = $"Queued a command in: {message.Channel}/{((IGuildChannel)message.Channel).Guild} for {message.Content.User}",
+                Severity = LogSeverity.Info
+            }).ConfigureAwait(false);
+        }
 
         public static void Run()
             => Task.Run(async () => await ExecuteAsync());
