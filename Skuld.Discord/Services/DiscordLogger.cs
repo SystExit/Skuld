@@ -4,19 +4,19 @@ using Skuld.APIS;
 using Skuld.Core;
 using Skuld.Core.Models;
 using Skuld.Database;
+using Skuld.Discord.Handlers;
 using StatsdClient;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Skuld.Discord.Utilities;
 
-namespace Skuld.Discord
+namespace Skuld.Discord.Services
 {
     public static class DiscordLogger
     {
-        private static Random random = new Random();
+        private static readonly Random random = new Random();
         private static BotListingClient botListing;
         private static readonly SkuldConfig Configuration = SkuldConfig.Load();
         private static List<int> ShardsReady = new List<int>();
@@ -91,7 +91,7 @@ namespace Skuld.Discord
 
         private static async Task Bot_ReactionAdded(DiscordNet.Cacheable<DiscordNet.IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3)
         {
-            if(arg3.User.IsSpecified)
+            /*if(arg3.User.IsSpecified)
             {
                 var usr = arg3.User.GetValueOrDefault(null);
                 if (usr != null)
@@ -130,7 +130,7 @@ namespace Skuld.Discord
                         }
                     }
                 }
-            }
+            }*/
         }
 
         private static async Task Bot_ShardConnected(DiscordSocketClient arg)
@@ -242,7 +242,7 @@ namespace Skuld.Discord
                 IsBackground = true
             };
             thd.Start();
-            await botListing.SendDataAsync(Configuration.BotListing.SysExToken, Configuration.BotListing.DiscordPWKey, Configuration.BotListing.DBotsOrgKey);
+            await botListing.SendDataAsync(Configuration.BotListing.SysExToken, Configuration.BotListing.DiscordGGKey, Configuration.BotListing.DBotsOrgKey, Configuration.BotListing.B4DToken);
         }
 
         private static async Task Bot_JoinedGuild(SocketGuild arg)
@@ -256,7 +256,7 @@ namespace Skuld.Discord
                 IsBackground = true
             };
             thd.Start();
-            await botListing.SendDataAsync(Configuration.BotListing.SysExToken, Configuration.BotListing.DiscordPWKey, Configuration.BotListing.DBotsOrgKey);
+            await botListing.SendDataAsync(Configuration.BotListing.SysExToken, Configuration.BotListing.DiscordGGKey, Configuration.BotListing.DBotsOrgKey, Configuration.BotListing.B4DToken);
         }
         //End Guilds
     }

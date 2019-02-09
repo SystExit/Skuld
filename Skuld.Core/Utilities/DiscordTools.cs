@@ -15,9 +15,10 @@ namespace Skuld.Core.Utilities
         public static readonly string Confused_Emote = "<:blobconfused:350681076588478474>";
 
         public static readonly string Ok_Emoji = "👌";
-        public static readonly string Successful_Emoji = "☑";
-        public static readonly string Failed_Emoji = "☒";
+        public static readonly string Successful_Emoji = "✅";
+        public static readonly string Failed_Emoji = "❎";
         public static readonly string Question_Emoji = "❓";
+        public static readonly string NoBotsString = "Bots are not supported.";
 
         public static readonly Color Ok_Color = "#339966".FromHex();
         public static readonly Color Warning_Color = "#FFFF00".FromHex();

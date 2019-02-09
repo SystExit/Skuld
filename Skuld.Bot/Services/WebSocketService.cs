@@ -1,18 +1,18 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using Fleck;
-using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Skuld.Core;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities.Stats;
+using Skuld.Bot.Models;
 using Skuld.Bot.Models.WebSocket;
-using Skuld.Database;
+using Skuld.Discord.Services;
 using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Skuld.Discord;
+using System.Collections.Generic;
 
 namespace Skuld.Bot.Services
 {
@@ -111,9 +111,40 @@ namespace Skuld.Bot.Services
                     $"\"Users\":{BotService.Users}," +
                     $"\"Shards\":{Client.Shards.Count}," +
                     $"\"Commands\":{BotService.CommandService.Commands.Count()}," +
-                    $"\"Memory Used\":\"{mem}\"}}";
+                    $"\"MemoryUsed\":\"{mem}\"}}";
 
                 await conn.Send(JsonConvert.SerializeObject(rawjson));
+            }
+            if(message.ToLower() == "commands")
+            {
+                var Modules = new List<ModuleSkuld>();
+
+                foreach (var module in BotService.CommandService.Modules)
+                {
+
+                    ModuleSkuld mod = new ModuleSkuld
+                    {
+                        Name = module.Name,
+                        Commands = new List<CommandSkuld>()
+                    };
+
+                    List<CommandSkuld> comm = new List<CommandSkuld>();
+
+                    foreach (var cmd in module.Commands)
+                    {
+
+                        mod.Commands.Add(new CommandSkuld
+                        {
+                            Name = cmd.Name,
+                            Description = cmd.Summary,
+                            Aliases = cmd.Aliases.ToArray()
+                        });
+
+                    }
+                    Modules.Add(mod);
+                }
+
+                await conn.Send(JsonConvert.SerializeObject(Modules));
             }
         }
     }

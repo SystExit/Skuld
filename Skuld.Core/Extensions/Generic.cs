@@ -235,6 +235,23 @@ namespace Skuld.Core.Extensions
             return rtnstrng + "ago";
         }
 
+        public static double Remap(this double value, double a0, double a1, double b0, double b1)
+            => b0 + (b1 - b0) * ((value - a0) / (a1 - a0));
+
+        public static bool IsRecurring(this uint val, int startLimit)
+        {
+            var str = Convert.ToString(val);
+            var iarr = new List<int>();
+            foreach(var ch in str)
+            {
+                iarr.Add(Convert.ToInt32(Convert.ToString(ch)));
+            }
+
+            var same = iarr.All(x=>x == iarr[0]);
+
+            return (same && iarr.Count() > startLimit);
+        }
+
         //https://gist.github.com/starquake/8d72f1e55c0176d8240ed336f92116e3
         public static string StripHtml(this string value)
         {

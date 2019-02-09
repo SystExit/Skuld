@@ -1,5 +1,8 @@
-﻿using Skuld.Core.Extensions;
+﻿using Discord;
+using MySql.Data.MySqlClient;
+using Skuld.Core.Extensions;
 using Skuld.Core.Models;
+using StatsdClient;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +12,7 @@ namespace Skuld.Database.Extensions
 {
     public static class UserExtensions
     {
-        public static async Task<long> GetPastaKarma(this SkuldUser user)
+        public static async Task<long> GetPastaKarmaAsync(this SkuldUser user)
         {
             long returnkarma = 0;
 
@@ -50,13 +53,16 @@ namespace Skuld.Database.Extensions
         public static GuildExperience GetGuildExperience(this UserExperience xp, ulong GuildID)
             => xp.GuildExperiences.FirstOrDefault(x => x.GuildID == GuildID);
 
+        public static CommandUsage GetFavouriteCommand(this SkuldUser user)
+            => (user.CommandUsage.Count() > 0 ? user.CommandUsage.Aggregate((x, y) => x.Usage > y.Usage ? x : y) : null);
+
         public static async Task<bool> DoDailyAsync(this SkuldUser user, SkuldConfig config, SkuldUser sender = null)
         {
             if (sender == null)
             {
                 if (user.Daily != 0)
                 {
-                    if (user.Daily < (86400 - DateTime.UtcNow.ToEpoch()))
+                    if (user.Daily < DateTime.UtcNow.Date.ToEpoch())
                     {
                         user.Daily = DateTime.UtcNow.ToEpoch();
                         user.Money += config.Preferences.DailyAmount;
@@ -80,7 +86,7 @@ namespace Skuld.Database.Extensions
             {
                 if (sender.Daily != 0)
                 {
-                    if (sender.Daily < (86400 - DateTime.UtcNow.ToEpoch()))
+                    if (sender.Daily < DateTime.UtcNow.Date.ToEpoch())
                     {
                         sender.Daily = DateTime.UtcNow.ToEpoch();
                         user.Money += config.Preferences.DailyAmount;
@@ -100,6 +106,24 @@ namespace Skuld.Database.Extensions
                     return true;
                 }
             }
+        }
+
+        public static async Task<Rank> GetGlobalRankAsync(this SkuldUser user)
+        {
+            var res = await DatabaseClient.GetGlobalRankAsync(user.ID);
+            if (res.Successful && res.Data is Rank)
+                return (Rank)res.Data;
+
+            return new Rank(-1, -1);
+        }
+
+        public static async Task<Rank> GetGuildRankAsync(this SkuldUser user, IGuild guild)
+        {
+            var res = await DatabaseClient.GetGuildRankAsync(user.ID, guild.Id);
+            if (res.Successful && res.Data is Rank)
+                return (Rank)res.Data;
+
+            return new Rank(-1, -1);
         }
     }
 }

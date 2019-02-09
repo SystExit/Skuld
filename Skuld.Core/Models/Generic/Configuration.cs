@@ -14,7 +14,7 @@ namespace Skuld.Core.Models
         //Bot Configuration
         public DiscordConfig Discord { get; set; }
 
-        //Database Information
+        //SQL Information
         public DatabaseConfig SQL { get; set; }
 
         //Variables
@@ -37,7 +37,7 @@ namespace Skuld.Core.Models
             //Bot
             Discord = new DiscordConfig();
 
-            //Sql
+            //SQL Configuration
             SQL = new DatabaseConfig();
 
             //Variables
@@ -161,13 +161,16 @@ namespace Skuld.Core.Models
     public class BotListingAPI
     {
         public string DBotsOrgKey { get; set; }
-        public string DiscordPWKey { get; set; }
+        public string DiscordGGKey { get; set; }
         public string SysExToken { get; set; }
+        public string B4DToken { get; set; }
 
         public BotListingAPI()
         {
             DBotsOrgKey = "";
-            DiscordPWKey = "";
+            DiscordGGKey = "";
+            SysExToken = null;
+            B4DToken = "";
         }
     }
 }

@@ -1,8 +1,13 @@
 ﻿using Discord;
+using Discord.Addons.Interactive;
 using Discord.Commands;
+using Skuld.Core;
 using Skuld.Core.Utilities;
 using Skuld.Core.Utilities.Stats;
-using Skuld.Discord;
+using Skuld.Discord.Commands;
+using Skuld.Discord.Extensions;
+using Skuld.Discord.Preconditions;
+using Skuld.Discord.Services;
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -12,24 +17,24 @@ using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
-    [Group]
-    public class Stats : SkuldBase<SkuldCommandContext>
+    [Group, RequireEnabledModule]
+    public class Stats : InteractiveBase<SkuldCommandContext>
     {
         [Command("ping"), Summary("Print Ping")]
         public async Task Ping()
-            => await ReplyAsync(Context.Channel, $"PONG: {Context.Client.GetShardFor(Context.Guild).Latency}ms");
+            => await $"PONG: {Context.Client.GetShardFor(Context.Guild).Latency}ms".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
 
         [Command("uptime"), Summary("Current Uptime")]
         public async Task Uptime()
-            => await ReplyAsync(Context.Channel, $"Uptime: {string.Format("{0:dd} Days {0:hh} Hours {0:mm} Minutes {0:ss} Seconds", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}");
+            => await $"Uptime: {string.Format("{0:dd} Days {0:hh} Hours {0:mm} Minutes {0:ss} Seconds", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
 
         [Command("netfw"), Summary(".Net Info")]
         public async Task Netinfo()
-            => await ReplyAsync(Context.Channel, $"{RuntimeInformation.FrameworkDescription} {RuntimeInformation.OSArchitecture}");
+            => await $"{RuntimeInformation.FrameworkDescription} {RuntimeInformation.OSArchitecture}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
 
         [Command("discord"), Summary("Discord Info")]
         public async Task Discnet()
-            => await ReplyAsync(Context.Channel, $"Discord.Net Library Version: {DiscordConfig.Version}");
+            => await $"Discord.Net Library Version: {DiscordConfig.Version}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
 
         [Command("stats"), Summary("All stats")]
         public async Task StatsAll()
@@ -70,11 +75,12 @@ namespace Skuld.Bot.Commands
                 embed.AddField("APIs", apiversions);
                 embed.AddField("System", systemstats);
 
-                await ReplyAsync(Context.Channel, embed.Build());
+                await embed.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("Stats-Cmd", ex.Message, LogSeverity.Error, ex));
+                await ex.Message.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
             }
         }
     }

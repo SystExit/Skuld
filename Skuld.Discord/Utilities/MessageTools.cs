@@ -65,13 +65,14 @@ namespace Skuld.Discord.Utilities
             if (channel.Topic.Contains(ModAdminBypass))
             {
                 if (user.GuildPermissions.Administrator) return true;
-                if (user.GuildPermissions.RawValue == DiscordUtilities.ModeratorPermissions.RawValue) return true;
+                else if (user.GuildPermissions.RawValue == DiscordUtilities.ModeratorPermissions.RawValue) return true;
+                else return false;
             }
             if (channel.Topic.Contains(NoOneCommands)) return false;
             return true;
         }
 
-        public static async Task<SkuldGuild> GetGuildAsync(DiscordNet.IGuild guild)
+        public static async Task<SkuldGuild> GetGuildOrInsertAsync(DiscordNet.IGuild guild)
         {
             var resp = await DatabaseClient.GetGuildAsync(guild.Id).ConfigureAwait(false);
             if(resp.Successful && resp.Data is SkuldGuild)
@@ -87,7 +88,7 @@ namespace Skuld.Discord.Utilities
             }
         }
 
-        public static async Task<SkuldUser> GetUserAsync(DiscordNet.IUser user)
+        public static async Task<SkuldUser> GetUserOrInsertAsync(DiscordNet.IUser user)
         {
             var resp = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
             if (resp.Successful && resp.Data is SkuldUser)
@@ -206,6 +207,20 @@ namespace Skuld.Discord.Utilities
             }
         }
 
+        public static string GetPrefix(DiscordNet.IUserMessage message, DiscordShardedClient client, SkuldConfig sconf, MessageServiceConfig config, string gprefix = null)
+        {
+            if (message.Content.StartsWith(config.Prefix))
+                return config.Prefix;
+            if (message.Content.StartsWith(config.AltPrefix))
+                return config.AltPrefix;
+
+            if(gprefix != null)
+                if (message.Content.StartsWith(gprefix))
+                    return gprefix;
+
+            return null;
+        }
+
         public static bool ModuleDisabled(GuildCommandModules cmdmods, CommandInfo command)
         {
             if (!cmdmods.AccountsEnabled && command.Module.Name.ToLowerInvariant() == "accounts")
@@ -221,6 +236,8 @@ namespace Skuld.Discord.Utilities
             if (!cmdmods.LewdEnabled && command.Module.Name.ToLowerInvariant() == "lewd")
             { return true; }
             if (!cmdmods.SearchEnabled && command.Module.Name.ToLowerInvariant() == "search")
+            { return true; }
+            if (!cmdmods.SpaceEnabled && command.Module.Name.ToLowerInvariant() == "space")
             { return true; }
             if (!cmdmods.StatsEnabled && command.Module.Name.ToLowerInvariant() == "stats")
             { return true; }

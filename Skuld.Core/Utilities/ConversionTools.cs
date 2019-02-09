@@ -28,5 +28,13 @@ namespace Skuld.Core.Utilities
             else
                 return 0;
         }
+
+        public static object ParseInt32OrDefault(object input)
+        {
+            if (Int32.TryParse(input.ToString(), out int tmp))
+                return tmp;
+            else
+                return 0;
+        }
     }
 }

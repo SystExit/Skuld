@@ -13,16 +13,15 @@ namespace Skuld.Core.Models
         public ulong UserLeaveChannel { get; set; }
         public string JoinMessage { get; set; }
         public string LeaveMessage { get; set; }
+        public LevelNotification LevelNotification { get; set; }
         public string LevelUpMessage { get; set; }
+        public ulong LevelUpChannel { get; set; }
 
-        public GuildSettings GuildSettings { get; set; }
-    }
+        public List<CustomCommand> CustomCommands { get; set; }
 
-    public class GuildSettings
-    {
         public GuildCommandModules Modules { get; set; }
         public GuildFeatureModules Features { get; set; }
-        public IReadOnlyList<GuildLevelRewards> LevelRewards { get; set; }
+        public List<GuildLevelRewards> LevelRewards { get; set; }
     }
 
     public class GuildCommandModules
@@ -35,6 +34,7 @@ namespace Skuld.Core.Models
         public bool InformationEnabled { get; set; }
         public bool LewdEnabled { get; set; }
         public bool SearchEnabled { get; set; }
+        public bool SpaceEnabled { get; set; }
         public bool StatsEnabled { get; set; }
         public bool WeebEnabled { get; set; }
     }

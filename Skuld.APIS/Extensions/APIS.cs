@@ -296,7 +296,7 @@ namespace Skuld.APIS.Extensions
                 Description = SteamUtilities.GetSteamGameDescription(game, app),
                 Title = game.Name,
                 ImageUrl = app.Screenshots.Random().PathFull,
-                Url = game.StoreLink,
+                Url = $"https://store.steampowered.com/app/{game.AppId}/",
                 Color = EmbedUtils.RandomColor()
             };
 

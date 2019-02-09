@@ -7,6 +7,7 @@ using Skuld.Core.Globalization;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Database.Extensions;
+using Skuld.Database.Models;
 using StatsdClient;
 using System;
 using System.Collections.Generic;
@@ -105,7 +106,9 @@ namespace Skuld.Database
                             DogStatsd.Increment("mysql.queries");
                             if (resp == null)
                             {
-                                DogStatsd.Increment("mysql.insert");
+                                if(command.CommandText.StartsWith("INSERT INTO"))
+                                    DogStatsd.Increment("mysql.insert");
+
                                 await conn.CloseAsync();
                                 return EventResult.FromSuccess();
                             }
@@ -133,7 +136,7 @@ namespace Skuld.Database
             {
                 if (!user.IsBot && !user.IsWebhook)
                 {
-                    var command = new MySqlCommand("INSERT IGNORE INTO `users` (`UserID`, `Description`, `Language`, `AvatarUrl`) VALUES (@userid , \"I have no description\", @locale, @avatarurl);");
+                    var command = new MySqlCommand("INSERT IGNORE INTO `users` (`UserID`, `Title`, `Language`, `AvatarUrl`) VALUES (@userid , \"\", @locale, @avatarurl);");
                     command.Parameters.AddWithValue("@userid", user.Id);
                     command.Parameters.AddWithValue("@locale", locale??Locale.defaultLocale);
                     command.Parameters.AddWithValue("@avatarurl", user.GetAvatarUrl());
@@ -141,7 +144,7 @@ namespace Skuld.Database
                 }
                 else
                 {
-                    return EventResult.FromFailure("Robots are not supported.");
+                    return EventResult.FromFailure(DiscordTools.NoBotsString);
                 }
             }
             return NoSqlConnection;
@@ -231,7 +234,7 @@ namespace Skuld.Database
 
                                 user.Money = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["Money"]));
 
-                                user.Description = Convert.ToString(reader["Description"]);
+                                user.Title = Convert.ToString(reader["Title"]);
 
                                 user.Language = Convert.ToString(reader["Language"]);
 
@@ -247,9 +250,11 @@ namespace Skuld.Database
 
                                 user.HP = ConversionTools.ParseUInt32OrDefault(Convert.ToString(reader["HP"]));
 
-                                user.GlaredAt = ConversionTools.ParseUInt32OrDefault(Convert.ToString(reader["GlaredAt"]));
+                                user.RecurringBlock = Convert.ToBoolean(reader["RecurringBlock"]);
 
-                                user.Glares = ConversionTools.ParseUInt32OrDefault(Convert.ToString(reader["Glares"]));
+                                user.UnlockedCustBG = Convert.ToBoolean(reader["UnlockedCustBG"]);
+
+                                user.Background = Convert.ToString(reader["Background"]);
 
                                 user.AvatarUrl = Convert.ToString(reader["AvatarUrl"]);
                             }
@@ -281,20 +286,65 @@ namespace Skuld.Database
 
                         int rows = 0;
 
+                        List<CommandUsage> cmds = new List<CommandUsage>();
+
                         if (reader.HasRows)
                         {
                             while (await reader.ReadAsync())
                             {
                                 rows++;
 
-                                user.FavCmd = Convert.ToString(reader["command"]);
-
-                                user.FavCmdUsg = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["Usage"]));
+                                cmds.Add(new CommandUsage
+                                {
+                                    Command = Convert.ToString(reader["command"]),
+                                    Usage = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["Usage"]))
+                                });
                             }
                             DogStatsd.Increment("mysql.rows_ret", rows);
 
                             await conn.CloseAsync();
                         }
+
+                        user.CommandUsage = cmds;
+                    }
+                }
+
+                command = new MySqlCommand("SELECT * FROM `reputation` WHERE Repee = @userid");
+                command.Parameters.AddWithValue("@userid", UserID);
+
+                using (var conn = new MySqlConnection(ConnectionString))
+                {
+                    await conn.OpenAsync();
+                    if (conn.State == System.Data.ConnectionState.Open)
+                    {
+                        command.Connection = conn;
+
+                        DogStatsd.Increment("mysql.queries");
+
+                        var reader = await command.ExecuteReaderAsync();
+
+                        int rows = 0;
+
+                        List<Reputation> reps = new List<Reputation>();
+
+                        if (reader.HasRows)
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                rows++;
+
+                                reps.Add(new Reputation
+                                {
+                                    Reper = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["Reper"])),
+                                    Timestamp = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["Timestamp"]))
+                                });
+                            }
+                            DogStatsd.Increment("mysql.rows_ret", rows);
+
+                            await conn.CloseAsync();
+                        }
+
+                        user.Reputation = reps;
                     }
                 }
 
@@ -374,13 +424,19 @@ namespace Skuld.Database
                                     guild.UserLeaveChannel = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["LeaveChannel"]));
 
                                     guild.LevelUpMessage = Convert.ToString(reader["LevelUpMessage"]);
+
+                                    guild.LevelUpChannel = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["LevelUpChannel"]));
+
+                                    var level = ConversionTools.ParseInt32OrDefault(reader["LevelNotification"]);
+
+                                    Enum.TryParse(Convert.ToString(level), out LevelNotification lupnotif);
+
+                                    guild.LevelNotification = lupnotif;
                                 }
 
                                 DogStatsd.Increment("mysql.rows_ret", rows);
 
                                 await conn.CloseAsync();
-
-                                guild.GuildSettings = new GuildSettings();
                             }
                         }
                     }
@@ -389,8 +445,6 @@ namespace Skuld.Database
 
                 if (guild != null)
                 {
-                    var guildSetts = new GuildSettings();
-
                     GuildCommandModules comSetts = new GuildCommandModules();
                     var command = new MySqlCommand("SELECT * FROM `guildmodules` WHERE GuildID = @guildid");
                     command.Parameters.AddWithValue("@guildid", GuildID);
@@ -428,6 +482,8 @@ namespace Skuld.Database
                                     comSetts.LewdEnabled = Convert.ToBoolean(reader["Lewd"]);
 
                                     comSetts.SearchEnabled = Convert.ToBoolean(reader["Search"]);
+
+                                    comSetts.SpaceEnabled = Convert.ToBoolean(reader["Space"]);
 
                                     comSetts.StatsEnabled = Convert.ToBoolean(reader["Stats"]);
 
@@ -474,9 +530,8 @@ namespace Skuld.Database
                         }
                     }
 
-                    guildSetts.Modules = comSetts;
-                    guildSetts.Features = featSetts;
-                    guild.GuildSettings = guildSetts;
+                    guild.Modules = comSetts;
+                    guild.Features = featSetts;
 
                     return EventResult.FromSuccess(guild);
                 }
@@ -610,7 +665,7 @@ namespace Skuld.Database
                             {
                                 rows++;
 
-                                cmd.GuildID = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["GuildID"]));
+                                //cmd.GuildID = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["GuildID"]));
 
                                 cmd.Content = Convert.ToString(reader["Content"]);
 
@@ -662,7 +717,7 @@ namespace Skuld.Database
 
                                 commands.Add(new CustomCommand
                                 {
-                                    GuildID = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["GuildID"])),
+//                                    GuildID = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["GuildID"])),
                                     Content = Convert.ToString(reader["Content"]),
                                     CommandName = Convert.ToString(reader["CommandName"])
                                 });
@@ -679,6 +734,104 @@ namespace Skuld.Database
                 }
 
                 return EventResult.FromSuccess(commands.AsReadOnly());
+            }
+            return NoSqlConnection;
+        }
+        public static async Task<EventResult> GetAllUserIDsAsync()
+        {
+            if (await CheckConnectionAsync())
+            {
+                try
+                {
+                    var command = new MySqlCommand("SELECT UserID FROM `users`");
+
+                    var ids = new List<ulong>();
+
+                    using (var conn = new MySqlConnection(ConnectionString))
+                    {
+                        await conn.OpenAsync();
+                        if (conn.State == System.Data.ConnectionState.Open)
+                        {
+                            command.Connection = conn;
+
+                            DogStatsd.Increment("mysql.queries");
+
+                            var reader = await command.ExecuteReaderAsync();
+
+                            int rows = 0;
+
+                            if (reader.HasRows)
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    ids.Add(ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["UserID"])));
+
+                                    rows++;
+                                }
+
+
+                                DogStatsd.Increment("mysql.rows_ret", rows);
+
+                                await conn.CloseAsync();
+                            }
+                        }
+                    }
+
+                    return EventResult.FromSuccess(ids);
+                }
+                catch (Exception ex)
+                {
+                    return EventResult.FromFailureException(ex.Message, ex);
+                }
+            }
+            return NoSqlConnection;
+        }
+        public static async Task<EventResult> GetAllGuildIDsAsync()
+        {
+            if (await CheckConnectionAsync())
+            {
+                try
+                {
+                    var command = new MySqlCommand("SELECT GuildID FROM `guilds`");
+
+                    var ids = new List<ulong>();
+
+                    using (var conn = new MySqlConnection(ConnectionString))
+                    {
+                        await conn.OpenAsync();
+                        if (conn.State == System.Data.ConnectionState.Open)
+                        {
+                            command.Connection = conn;
+
+                            DogStatsd.Increment("mysql.queries");
+
+                            var reader = await command.ExecuteReaderAsync();
+
+                            int rows = 0;
+
+                            if (reader.HasRows)
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    ids.Add(ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["GuildID"])));
+
+                                    rows++;
+                                }
+
+
+                                DogStatsd.Increment("mysql.rows_ret", rows);
+
+                                await conn.CloseAsync();
+                            }
+                        }
+                    }
+
+                    return EventResult.FromSuccess(ids);
+                }
+                catch (Exception ex)
+                {
+                    return EventResult.FromFailureException(ex.Message, ex);
+                }
             }
             return NoSqlConnection;
         }
@@ -715,7 +868,7 @@ namespace Skuld.Database
 
                 if (resp.Successful)
                 {
-                    if (!string.IsNullOrEmpty(Convert.ToString(resp.Data)))
+                    if (resp.Data != null)
                     {
                         var cmdusg = Convert.ToInt32(resp.Data);
                         cmdusg = cmdusg + 1;
@@ -772,10 +925,12 @@ namespace Skuld.Database
         }
 
         public static async Task<EventResult> DropGuildAsync(IGuild guild)
+            => await DropGuildAsync(guild.Id);
+        public static async Task<EventResult> DropGuildAsync(ulong ID)
         {
             if (await CheckConnectionAsync())
             {
-                return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `guilds` WHERE `GuildID` = {guild.Id}; DELETE FROM `guildmodules` WHERE `GuildID` = {guild.Id}; DELETE FROM `guildfeatures` WHERE `GuildID` = {guild.Id}; DELETE FROM `guildcustomcommands` WHERE `GuildID` = {guild.Id}; DELETE FROM `guildlevelrewards` WHERE `GuildID` = {guild.Id}; DELETE FROM `userguildxp` WHERE `GuildID` = {guild.Id};")).ConfigureAwait(false);
+                return await SingleQueryAsync(new MySqlCommand($"DELETE FROM `guilds` WHERE `GuildID` = {ID}; DELETE FROM `guildmodules` WHERE `GuildID` = {ID}; DELETE FROM `guildfeatures` WHERE `GuildID` = {ID}; DELETE FROM `guildcustomcommands` WHERE `GuildID` = {ID}; DELETE FROM `guildlevelrewards` WHERE `GuildID` = {ID}; DELETE FROM `userguildxp` WHERE `GuildID` = {ID};")).ConfigureAwait(false);
             }
             return NoSqlConnection;
         }
@@ -788,11 +943,13 @@ namespace Skuld.Database
             return NoSqlConnection;
         }
         public static async Task<EventResult> DropCustomCommand(IGuild guild, string command)
+            => await DropCustomCommand(guild.Id, command);
+        public static async Task<EventResult> DropCustomCommand(ulong guildID, string command)
         {
             if (await CheckConnectionAsync())
             {
                 var cmd = new MySqlCommand("DELETE FROM `guildcustomcommands` WHERE `GuildID` = @guildID AND `CommandName` = @commandName ;");
-                cmd.Parameters.AddWithValue("@guildID", guild.Id);
+                cmd.Parameters.AddWithValue("@guildID", guildID);
                 cmd.Parameters.AddWithValue("@commandName", command);
                 return await SingleQueryAsync(cmd).ConfigureAwait(false);
             }
@@ -967,18 +1124,24 @@ namespace Skuld.Database
                                 {
                                     rows++;
 
+                                    var gID = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["GuildID"]));
+                                    var gLv = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["Level"]));
+                                    var gXP = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["XP"]));
+                                    var gTx = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["TotalXP"]));
+                                    var gLg = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["LastGranted"]));
+
                                     userExperience.GuildExperiences.Add(new GuildExperience
                                     {
 
-                                        GuildID = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["GuildID"])),
+                                        GuildID = gID,
 
-                                        Level = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["Level"])),
+                                        Level = gLv,
 
-                                        XP = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["XP"])),
+                                        XP = gXP,
 
-                                        TotalXP = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["TotalXP"])),
+                                        TotalXP = gTx,
 
-                                        LastGranted = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["LastGranted"]))
+                                        LastGranted = gLg
                                     });
                                 }
 
@@ -1279,6 +1442,231 @@ namespace Skuld.Database
                 }
             }
             return NoSqlConnection;
+        }
+        public static async Task<EventResult> AddReputationAsync(ulong repee, ulong reper)
+        {
+            if (await CheckConnectionAsync())
+            {
+                try
+                {
+                    var command = new MySqlCommand("INSERT INTO `reputation` (Repee, Reper, Timestamp) VALUES (@repee, @reper, @timestamp);");
+
+                    command.Parameters.AddWithValue("@repee", repee);
+                    command.Parameters.AddWithValue("@reper", reper);
+                    command.Parameters.AddWithValue("@timestamp", DateTime.UtcNow.ToEpoch());
+
+                    return await SingleQueryAsync(command).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    return EventResult.FromFailureException(ex.Message, ex);
+                }
+            }
+            return NoSqlConnection;
+        }
+        public static async Task<EventResult> RemoveReputationAsync(ulong repee, ulong reper)
+        {
+            if (await CheckConnectionAsync())
+            {
+                try
+                {
+                    var command = new MySqlCommand("DELETE FROM `reputation` WHERE `Repee` = @repee AND `Reper` = @reper;");
+
+                    command.Parameters.AddWithValue("@repee", repee);
+                    command.Parameters.AddWithValue("@reper", reper);
+
+                    return await SingleQueryAsync(command).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    return EventResult.FromFailureException(ex.Message, ex);
+                }
+            }
+            return NoSqlConnection;
+        }
+        public static async Task<EventResult> IsActionBlockedAsync(ulong source, ulong target)
+        {
+            if (await CheckConnectionAsync())
+            {
+                try
+                {
+                    var command = new MySqlCommand("SELECT (EXISTS (SELECT * FROM `blockedactions` WHERE `Blocker` = @blocker AND `Blockee` = @blockee))");
+
+                    command.Parameters.AddWithValue("@blocker", source);
+                    command.Parameters.AddWithValue("@blockee", target);
+
+                    bool re = false;
+
+                    using (var conn = new MySqlConnection(ConnectionString))
+                    {
+                        await conn.OpenAsync();
+                        if (conn.State == System.Data.ConnectionState.Open)
+                        {
+                            command.Connection = conn;
+
+                            DogStatsd.Increment("mysql.queries");
+
+                            var reader = await command.ExecuteReaderAsync();
+
+                            int rows = 0;
+
+                            if (reader.HasRows)
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    rows++;
+
+                                    re = Convert.ToBoolean(reader[0]);
+                                }
+
+                                DogStatsd.Increment("mysql.rows_ret", rows);
+
+                                await conn.CloseAsync();
+                            }
+                        }
+                    }
+
+                    return EventResult.FromSuccess(re);
+                }
+                catch (Exception ex)
+                {
+                    return EventResult.FromFailureException(ex.Message, ex);
+                }
+            }
+            return NoSqlConnection;
+        }
+        public static async Task<EventResult> BlockActionAsync(ulong source, ulong target)
+        {
+            if (await CheckConnectionAsync())
+            {
+                try
+                {
+                    var command = new MySqlCommand("INSERT INTO `blockedactions` (Blocker, Blockee) VALUES (@blocker, @blockee);");
+
+                    command.Parameters.AddWithValue("@blocker", source);
+                    command.Parameters.AddWithValue("@blockee", target);
+
+                    return await SingleQueryAsync(command).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    return EventResult.FromFailureException(ex.Message, ex);
+                }
+            }
+            return NoSqlConnection;
+        }
+        public static async Task<EventResult> UnblockActionAsync(ulong source, ulong target)
+        {
+            if (await CheckConnectionAsync())
+            {
+                try
+                {
+                    var command = new MySqlCommand("DELETE FROM `reputation` WHERE `Blocker` = @blocker AND `Blockee` = @blockee;");
+
+                    command.Parameters.AddWithValue("@blocker", source);
+                    command.Parameters.AddWithValue("@blockee", target);
+
+                    return await SingleQueryAsync(command).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    return EventResult.FromFailureException(ex.Message, ex);
+                }
+            }
+            return NoSqlConnection;
+        }
+
+        public static async Task<EventResult> GetGlobalRankAsync(ulong userID)
+        {
+            if(await CheckConnectionAsync())
+            {
+                var command = new MySqlCommand("SELECT UserID FROM `userguildxp` GROUP BY UserID ORDER BY SUM(TotalXP) DESC");
+
+                var entries = new List<string>();
+
+                using (var conn = new MySqlConnection(ConnectionString))
+                {
+                    await conn.OpenAsync();
+                    if (conn.State == System.Data.ConnectionState.Open)
+                    {
+                        command.Connection = conn;
+
+                        DogStatsd.Increment("mysql.queries");
+
+                        var reader = await command.ExecuteReaderAsync();
+
+                        if (reader.HasRows)
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                entries.Add(Convert.ToString(reader["UserID"]));
+                            }
+
+                            DogStatsd.Increment("mysql.rows_ret", entries.Count);
+
+                            await conn.CloseAsync();
+                        }
+                        else
+                        {
+                            return NoResultsAvailable;
+                        }
+                    }
+                }
+
+                return EventResult.FromSuccess(new Rank(entries.IndexOf(Convert.ToString(userID))+1, entries.Count));
+            }
+            else
+            {
+                return NoSqlConnection;
+            }
+        }
+        public static async Task<EventResult> GetGuildRankAsync(ulong userID, ulong guildID)
+        {
+            if (await CheckConnectionAsync())
+            {
+                var command = new MySqlCommand("SELECT UserID, GuildID FROM `userguildxp` GROUP BY UserID ORDER BY SUM(TotalXP) DESC");
+
+                var entries = new List<DoubleString>();
+
+                using (var conn = new MySqlConnection(ConnectionString))
+                {
+                    await conn.OpenAsync();
+                    if (conn.State == System.Data.ConnectionState.Open)
+                    {
+                        command.Connection = conn;
+
+                        DogStatsd.Increment("mysql.queries");
+
+                        var reader = await command.ExecuteReaderAsync();
+
+                        if (reader.HasRows)
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                entries.Add(new DoubleString
+                                (
+                                    Convert.ToString(reader["UserID"]),
+                                    Convert.ToString(reader["GuildID"])
+                                ));
+                            }
+
+                            DogStatsd.Increment("mysql.rows_ret", entries.Count);
+
+                            await conn.CloseAsync();
+                        }
+                        else
+                        {
+                            return NoResultsAvailable;
+                        }
+                    }
+                }
+
+                return EventResult.FromSuccess(new Rank(entries.IndexOf(new DoubleString(Convert.ToString(userID), Convert.ToString(guildID)))+1, entries.Count));
+            }
+            else
+            {
+                return NoSqlConnection;
+            }
         }
 
         public static async Task<IReadOnlyList<EventResult>> CheckGuildUsersAsync(DiscordShardedClient client, IGuild guild)
