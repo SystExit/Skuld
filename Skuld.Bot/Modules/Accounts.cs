@@ -51,9 +51,13 @@ namespace Skuld.Bot.Commands
                 }
 
                 if (user == null)
+                {
                     await $"You have: {Configuration.Preferences.MoneySymbol}{skuser.Money.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                }
                 else
+                {
                     await $"{user.Mention} has {Configuration.Preferences.MoneySymbol}{skuser.Money.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                }
             }
             catch (Exception ex)
             {
@@ -90,7 +94,9 @@ namespace Skuld.Bot.Commands
             SkuldUser profileuser;
 
             if (Context.User.Id == user.Id)
+            {
                 profileuser = Context.DBUser;
+            }
             else
             {
                 var res = await DatabaseClient.GetUserAsync(user.Id);
@@ -109,23 +115,27 @@ namespace Skuld.Bot.Commands
             }
 
             if (!Directory.Exists(imagickCache))
+            {
                 Directory.CreateDirectory(imagickCache);
+            }
 
             if (!Directory.Exists(folder))
+            {
                 Directory.CreateDirectory(folder);
+            }
 
             MagickAnyCPU.CacheDirectory = imagickCache;
 
             var imageLocation = folder + user.Id + ".png";
-
-            var backgroundImage = folder + user.Id + ".png";
 
             var imageBackgroundFolder = Path.Combine(AppContext.BaseDirectory, "/storage/backgroundCache/");
 
             var imageBackgroundFile = Path.Combine(imageBackgroundFolder, profileuser.ID + "_background.png");
 
             if (!Directory.Exists(imageBackgroundFolder))
+            {
                 Directory.CreateDirectory(imageBackgroundFolder);
+            }
 
             if (!profileuser.Background.StartsWith('#') && !(profileuser.Background == ""))
             {
@@ -201,9 +211,6 @@ namespace Skuld.Bot.Commands
                 var font = new DrawableFont(fontFile);
                 var encoding = new DrawableTextEncoding(System.Text.Encoding.Unicode);
                 var fontsize = new DrawableFontPointSize(20);
-                var fontbig = new DrawableFontPointSize(35);
-                var fontmed = new DrawableFontPointSize(30);
-                var centeredtext = new DrawableTextAlignment(TextAlignment.Center);
                 var white = new DrawableFillColor(new MagickColor(65535, 65535, 65535));
 
                 var experience = await profileuser.GetUserExperienceAsync();
@@ -365,7 +372,9 @@ namespace Skuld.Bot.Commands
                 {
                     var resp = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
                     if (resp.Successful)
+                    {
                         skuser = resp.Data as SkuldUser;
+                    }
                     else
                     {
                         await DatabaseClient.InsertUserAsync(user);
@@ -556,8 +565,6 @@ namespace Skuld.Bot.Commands
 
             var imageLocation = folder + user.Id + ".png";
 
-            var backgroundImage = folder + user.Id + ".png";
-
             var imageBackgroundFolder = Path.Combine(AppContext.BaseDirectory, "/storage/backgroundCache/");
 
             var imageBackgroundFile = Path.Combine(imageBackgroundFolder, profileuser.ID + "_background.png");
@@ -641,11 +648,8 @@ namespace Skuld.Bot.Commands
 
                 var font = new DrawableFont(fontFile);
                 var encoding = new DrawableTextEncoding(System.Text.Encoding.Unicode);
-                var fontsize = new DrawableFontPointSize(20);
-                var fontbig = new DrawableFontPointSize(35);
                 var fontmed = new DrawableFontPointSize(30);
                 var fontmedd = new DrawableFontPointSize(26);
-                var centeredtext = new DrawableTextAlignment(TextAlignment.Center);
                 var white = new DrawableFillColor(new MagickColor(65535, 65535, 65535));
 
                 var userExperience = await profileuser.GetUserExperienceAsync();
@@ -747,66 +751,78 @@ namespace Skuld.Bot.Commands
 
             var contextDB = Context.DBUser;
             var d = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
-            var userDB = user == null ? null : ((d.Successful) ? (SkuldUser)d.Data : null);
-
-            if (user == null)
+            if(!d.Successful)
             {
-                if (contextDB.HP == 10000)
-                {
-                    await "You're already at max health".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    return;
-                }
-                var amount = GetCostOfHP(hp);
-                if (contextDB.Money < amount)
-                {
-                    await "You don't have enough money for this action".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    return;
-                }
-                if (hp > (10000 - contextDB.HP))
-                {
-                    await ("You only need to heal by: " + (10000 - contextDB.HP)).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    return;
-                }
-
-                contextDB.Money -= amount;
-                contextDB.HP += hp;
-
-                if (contextDB.HP > 10000)
-                    contextDB.HP = 10000;
-
-                await DatabaseClient.UpdateUserAsync(contextDB);
-
-                await $"You have healed your HP by {hp} for {Configuration.Preferences.MoneySymbol}{amount.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await DatabaseClient.InsertUserAsync(user);
+                await Heal(hp, user);
+                return;
             }
             else
             {
-                if (contextDB.HP == 10000)
+                var userDB = d.Data as SkuldUser;
+                if (user == null)
                 {
-                    await "They're already at max health".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    return;
+                    if (contextDB.HP == 10000)
+                    {
+                        await "You're already at max health".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                        return;
+                    }
+                    var amount = GetCostOfHP(hp);
+                    if (contextDB.Money < amount)
+                    {
+                        await "You don't have enough money for this action".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                        return;
+                    }
+                    if (hp > (10000 - contextDB.HP))
+                    {
+                        await ("You only need to heal by: " + (10000 - contextDB.HP)).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                        return;
+                    }
+
+                    contextDB.Money -= amount;
+                    contextDB.HP += hp;
+
+                    if (contextDB.HP > 10000)
+                    {
+                        contextDB.HP = 10000;
+                    }
+
+                    await DatabaseClient.UpdateUserAsync(contextDB);
+
+                    await $"You have healed your HP by {hp} for {Configuration.Preferences.MoneySymbol}{amount.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
-                var amount = GetCostOfHP(hp);
-                if (contextDB.Money < amount)
+                else
                 {
-                    await "You don't have enough money for this action".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    return;
+                    if (contextDB.HP == 10000)
+                    {
+                        await "They're already at max health".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                        return;
+                    }
+                    var amount = GetCostOfHP(hp);
+                    if (contextDB.Money < amount)
+                    {
+                        await "You don't have enough money for this action".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                        return;
+                    }
+                    if (hp > (10000 - userDB.HP))
+                    {
+                        await ("You only need to heal them by: " + (10000 - userDB.HP)).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                        return;
+                    }
+
+                    contextDB.Money -= amount;
+                    userDB.HP += hp;
+
+                    if (userDB.HP > 10000)
+                    {
+                        userDB.HP = 10000;
+                    }
+
+                    await DatabaseClient.UpdateUserAsync(contextDB);
+                    await DatabaseClient.UpdateUserAsync(userDB);
+
+                    await $"You have healed {user.Mention}'s HP by {hp} for {Configuration.Preferences.MoneySymbol}{amount.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
-                if (hp > (10000 - userDB.HP))
-                {
-                    await ("You only need to heal them by: " + (10000 - userDB.HP)).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    return;
-                }
-
-                contextDB.Money -= amount;
-                userDB.HP += hp;
-
-                if (userDB.HP > 10000)
-                    userDB.HP = 10000;
-
-                await DatabaseClient.UpdateUserAsync(contextDB);
-                await DatabaseClient.UpdateUserAsync(userDB);
-
-                await $"You have healed {user.Mention}'s HP by {hp} for {Configuration.Preferences.MoneySymbol}{amount.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
         }
 

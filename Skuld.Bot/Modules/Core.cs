@@ -60,14 +60,20 @@ namespace Skuld.Bot.Commands
                         {
                             var result = await cmd.CheckPreconditionsAsync(Context);
                             if (result.IsSuccess)
+                            {
                                 desc += $"{cmd.Aliases.First()}, ";
+                            }
                             else continue;
                         }
                         string description = "";
                         foreach (var str in desc.Split(' ').Distinct())
+                        {
                             description += str + " ";
+                        }
                         if (!string.IsNullOrWhiteSpace(description))
+                        {
                             embed.AddField(module.Name, $"`{description.Remove(description.Length - 3)}`");
+                        }
                     }
 
                     var allCommandsResp = await DatabaseClient.GetAllCustomCommandsAsync(Context.Guild.Id);

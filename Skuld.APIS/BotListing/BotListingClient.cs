@@ -97,8 +97,6 @@ namespace Skuld.APIS
                     ServerCount = servercount
                 };
 
-                var serializedpayload = JsonConvert.SerializeObject(stat);
-
                 using (var webclient = new HttpClient())
                 using (var content = new StringContent(JsonConvert.SerializeObject(stat), Encoding.UTF8, "application/json"))
                 {
@@ -107,9 +105,13 @@ namespace Skuld.APIS
                     content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
                     var _ = await webclient.PostAsync(new Uri("https://botsfordiscord.com/api/bot/" + client.CurrentUser.Id), content).ConfigureAwait(false);
                     if (_.IsSuccessStatusCode)
+                    {
                         await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("BLC", "Successfully sent data to B4D", Discord.LogSeverity.Info));
+                    }
                     else
+                    {
                         await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("BLC", "Error sending data to B4D | " + _.ReasonPhrase, Discord.LogSeverity.Error));
+                    }
                 }
             }
         }

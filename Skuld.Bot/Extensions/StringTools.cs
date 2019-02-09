@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace Skuld.Bot.Extensions
 {
@@ -98,11 +96,9 @@ namespace Skuld.Bot.Extensions
             "🇿"
         };
 
-        private static readonly Regex symbols = new Regex("^[a-zA-Z0-9 ]*$");
-
         public static string ToRegionalIndicator(this string value)
         {
-            string ret = "";
+            StringBuilder ret = new StringBuilder();
 
             foreach (var chr in value)
             {
@@ -110,26 +106,23 @@ namespace Skuld.Bot.Extensions
                 {
                     if (!char.IsLetter(chr))
                     {
-                        ret += chr;
+                        ret.Append(chr);
                         continue;
                     }
 
-                    ret += regionalIndicator[alphabet.FirstOrDefault(x => x.Key == chr.ToString().ToLower()).Value]+" ";
+                    ret.Append(regionalIndicator[alphabet.FirstOrDefault(x => x.Key == chr.ToString().ToLower()).Value]+" ");
                 }
                 else
                 {
-                    ret += "  ";
-                    continue;
+                    ret.Append("  ");
                 }
             }
-            Console.WriteLine(ret.Count());
-
-            return ret;
+            return ret.ToString();
         }
 
         public static string ToDancingEmoji(this string value)
         {
-            string ret = "";
+            StringBuilder ret = new StringBuilder();
 
             foreach(var chr in value)
             {
@@ -137,20 +130,18 @@ namespace Skuld.Bot.Extensions
                 {
                     if (!char.IsLetter(chr))
                     {
-                        ret += chr;
+                        ret.Append(chr);
                         continue;
                     }
 
-                    ret += alphaDance[alphabet.FirstOrDefault(x => x.Key == chr.ToString().ToLower()).Value];
+                    ret.Append(alphaDance[alphabet.FirstOrDefault(x => x.Key == chr.ToString().ToLower()).Value]);
                 }
                 else
                 {
-                    ret += "  ";
-                    continue;
+                    ret.Append("  ");
                 }
             }
-            Console.WriteLine(ret.Count());
-            return ret;
+            return ret.ToString();
         }
     }
 }
