@@ -644,7 +644,7 @@ namespace Skuld.Bot.Commands
                 var fontsize = new DrawableFontPointSize(20);
                 var fontbig = new DrawableFontPointSize(35);
                 var fontmed = new DrawableFontPointSize(30);
-                var fontmedd = new DrawableFontPointSize(29);
+                var fontmedd = new DrawableFontPointSize(26);
                 var centeredtext = new DrawableTextAlignment(TextAlignment.Center);
                 var white = new DrawableFillColor(new MagickColor(65535, 65535, 65535));
 
@@ -674,17 +674,19 @@ namespace Skuld.Bot.Commands
 
                 ulong xpToNextLevel = DiscordUtilities.GetXPLevelRequirement(guildExperience.Level + 1, DiscordUtilities.PHI);
 
+                int innerHeight = 256;
+
                 //Progressbar
-                image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, 250, 730, 280));
-                image.Draw(new DrawableFillColor(new MagickColor("#dfdfdf")), new DrawableRectangle(22, 252, 728, 278));
+                image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, innerHeight-2, 730, 280));
+                image.Draw(new DrawableFillColor(new MagickColor("#dfdfdf")), new DrawableRectangle(22, innerHeight, 728, 278));
 
                 var percentage = (double)guildExperience.XP / xpToNextLevel * 100;
                 var mapped = percentage.Remap(0, 100, 22, 728);
 
-                image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, 252, mapped, 278));
+                image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, innerHeight, mapped, 278));
 
                 //Current XP
-                image.Draw(font, fontmedd, encoding, new DrawableText(25, 274, (guildExperience.XP).ToString("N0") + "XP"));
+                image.Draw(font, fontmedd, encoding, new DrawableText(25, 275, (guildExperience.XP).ToString("N0") + "XP"));
 
                 //XP To Next
                 using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToString("N0")}XP", new MagickReadSettings
@@ -694,11 +696,11 @@ namespace Skuld.Bot.Commands
                     Width = 725,
                     Height = 30,
                     TextGravity = Gravity.East,
-                    FontPointsize = 29,
+                    FontPointsize = 26,
                     Font = fontFile
                 }))
                 {
-                    image.Composite(label5, 0, 248, CompositeOperator.Over);
+                    image.Composite(label5, 0, 250, CompositeOperator.Over);
 
                     label5.Dispose();
                 }
