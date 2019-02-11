@@ -9,6 +9,7 @@ using Skuld.APIS.Social.Reddit.Models;
 using Skuld.APIS.UrbanDictionary.Models;
 using Skuld.APIS.Utilities;
 using Skuld.Core.Extensions;
+using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Steam.Models.SteamStore;
 using SteamStoreQuery;

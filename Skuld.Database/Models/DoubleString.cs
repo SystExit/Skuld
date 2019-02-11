@@ -2,8 +2,8 @@
 {
     public struct DoubleString
     {
-        string stringA;
-        string stringB;
+        public string stringA;
+        public string stringB;
 
         public DoubleString(string sa, string sb)
         {

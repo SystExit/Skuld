@@ -17,9 +17,12 @@ using Skuld.Discord.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Skuld.Bot.Models;
+using Newtonsoft.Json;
 
 namespace Skuld.Bot.Commands
 {
@@ -59,6 +62,51 @@ namespace Skuld.Bot.Commands
                         await $"Beaned {user.Mention}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
             }
+        }
+
+        [Command("jsoncommands")]
+        public async Task Commands()
+        {
+            var Modules = new List<ModuleSkuld>();
+
+            foreach (var module in BotService.CommandService.Modules)
+            {
+
+                ModuleSkuld mod = new ModuleSkuld
+                {
+                    Name = module.Name,
+                    Commands = new List<CommandSkuld>()
+                };
+
+                List<CommandSkuld> comm = new List<CommandSkuld>();
+
+                foreach (var cmd in module.Commands)
+                {
+                    var parameters = new List<ParameterSkuld>();
+
+                    foreach(var paras in cmd.Parameters)
+                    {
+                        parameters.Add(new ParameterSkuld
+                        {
+                            Name = paras.Name,
+                            Optional = paras.IsOptional
+                        });
+                    }
+
+                    mod.Commands.Add(new CommandSkuld
+                    {
+                        Name = cmd.Name,
+                        Description = cmd.Summary,
+                        Aliases = cmd.Aliases.ToArray(),
+                        Parameters = parameters.ToArray()
+                    });
+                }
+                Modules.Add(mod);
+            }
+
+            File.WriteAllText(AppContext.BaseDirectory + "commands.txt", JsonConvert.SerializeObject(Modules));
+
+            await $"Written commands to {AppContext.BaseDirectory}commands.txt".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
 
         [Command("shardrestart"), Summary("Restarts shard")]

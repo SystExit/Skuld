@@ -1561,7 +1561,7 @@ namespace Skuld.Database
             {
                 try
                 {
-                    var command = new MySqlCommand("DELETE FROM `reputation` WHERE `Blocker` = @blocker AND `Blockee` = @blockee;");
+                    var command = new MySqlCommand("DELETE FROM `blockedactions` WHERE `Blocker` = @blocker AND `Blockee` = @blockee;");
 
                     command.Parameters.AddWithValue("@blocker", source);
                     command.Parameters.AddWithValue("@blockee", target);
@@ -1661,7 +1661,9 @@ namespace Skuld.Database
                     }
                 }
 
-                return EventResult.FromSuccess(new Rank(entries.IndexOf(new DoubleString(Convert.ToString(userID), Convert.ToString(guildID)))+1, entries.Count));
+                var index = entries.FindIndex(x => x.stringA == Convert.ToString(userID));
+
+                return EventResult.FromSuccess(new Rank(index+1, entries.Count));
             }
             else
             {

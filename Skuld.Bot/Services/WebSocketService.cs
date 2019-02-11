@@ -115,37 +115,6 @@ namespace Skuld.Bot.Services
 
                 await conn.Send(JsonConvert.SerializeObject(rawjson));
             }
-            if(message.ToLower() == "commands")
-            {
-                var Modules = new List<ModuleSkuld>();
-
-                foreach (var module in BotService.CommandService.Modules)
-                {
-
-                    ModuleSkuld mod = new ModuleSkuld
-                    {
-                        Name = module.Name,
-                        Commands = new List<CommandSkuld>()
-                    };
-
-                    List<CommandSkuld> comm = new List<CommandSkuld>();
-
-                    foreach (var cmd in module.Commands)
-                    {
-
-                        mod.Commands.Add(new CommandSkuld
-                        {
-                            Name = cmd.Name,
-                            Description = cmd.Summary,
-                            Aliases = cmd.Aliases.ToArray()
-                        });
-
-                    }
-                    Modules.Add(mod);
-                }
-
-                await conn.Send(JsonConvert.SerializeObject(Modules));
-            }
         }
     }
 }

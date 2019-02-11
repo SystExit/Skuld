@@ -8,6 +8,7 @@ using Skuld.Discord.Handlers;
 using StatsdClient;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Skuld.Discord.Utilities;
@@ -45,7 +46,6 @@ namespace Skuld.Discord.Services
         public static void UnRegisterEvents()
         {
             BotService.DiscordClient.ShardReady -= Bot_ShardReady;
-            //BotService.DiscordClient.MessageReceived -= botService.OnMessageRecievedAsync;
             BotService.DiscordClient.JoinedGuild -= Bot_JoinedGuild;
             BotService.DiscordClient.LeftGuild -= Bot_LeftGuild;
             BotService.DiscordClient.UserJoined -= Bot_UserJoined;
@@ -55,6 +55,10 @@ namespace Skuld.Discord.Services
             BotService.DiscordClient.ShardDisconnected -= Bot_ShardDisconnected;
             BotService.DiscordClient.Log -= Bot_Log;
             BotService.DiscordClient.UserUpdated -= Bot_UserUpdated;
+            foreach(var shard in BotService.DiscordClient.Shards)
+            {
+                shard.MessageReceived -= MessageHandler.HandleCommandAsync;
+            }
         }
 
         private static async Task Bot_Log(DiscordNet.LogMessage arg)
@@ -63,11 +67,12 @@ namespace Skuld.Discord.Services
         private static async Task Bot_ShardReady(DiscordSocketClient arg)
         {
             await BotService.DiscordClient.SetGameAsync($"{Configuration.Discord.Prefix}help | {arg.ShardId + 1}/{BotService.DiscordClient.Shards.Count}", type: DiscordNet.ActivityType.Listening);
-            if(!ShardsReady.Contains(arg.ShardId))
+            if (!ShardsReady.Contains(arg.ShardId))
             {
                 arg.MessageReceived += MessageHandler.HandleCommandAsync;
                 ShardsReady.Add(arg.ShardId);
             }
+            await GenericLogger.AddToLogsAsync(new LogMessage($"Shard #{arg.ShardId}", "Shard Ready", DiscordNet.LogSeverity.Info));
         }
 
         private static async Task Bot_UserUpdated(SocketUser arg1, SocketUser arg2)
@@ -91,7 +96,7 @@ namespace Skuld.Discord.Services
 
         private static async Task Bot_ReactionAdded(DiscordNet.Cacheable<DiscordNet.IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3)
         {
-            /*if(arg3.User.IsSpecified)
+            if(arg3.User.IsSpecified)
             {
                 var usr = arg3.User.GetValueOrDefault(null);
                 if (usr != null)
@@ -107,7 +112,7 @@ namespace Skuld.Discord.Services
                 {
                     if (guildResp.Data is SkuldGuild guild)
                     {
-                        if (guild.GuildSettings.Features.Pinning)
+                        if (guild.Features.Pinning)
                         {
                             var dldedmsg = await arg1.GetOrDownloadAsync();
                             int pinboardThreshold = Configuration.Preferences.PinboardThreshold;
@@ -123,14 +128,14 @@ namespace Skuld.Discord.Services
                                     if (!dldedmsg.IsPinned)
                                     {
                                         await dldedmsg.PinAsync();
-                                        await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("PinBrd", $"Reached or Over Threshold, pinned a message in: {dldedmsg.Channel.Name} from: {gld.Name}", DiscordNet.LogSeverity.Info));
+                                        await GenericLogger.AddToLogsAsync(new LogMessage("PinBrd", $"Reached or Over Threshold, pinned a message in: {dldedmsg.Channel.Name} from: {gld.Name}", DiscordNet.LogSeverity.Info));
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }*/
+            }
         }
 
         private static async Task Bot_ShardConnected(DiscordSocketClient arg)
