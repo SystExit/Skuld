@@ -1345,7 +1345,7 @@ namespace Skuld.Database
                     var command = new MySqlCommand("SELECT * FROM `userguildxp` WHERE GuildID = @guildID ORDER BY TotalXP DESC");
                     command.Parameters.AddWithValue("@guildID", GuildID);
 
-                    var results = new List<GuildLeaderboardEntry>();
+                    var results = new List<ExperienceLeaderboardEntry>();
 
                     using (var conn = new MySqlConnection(ConnectionString))
                     {
@@ -1366,7 +1366,7 @@ namespace Skuld.Database
                                 {
                                     rows++;
 
-                                    results.Add(new GuildLeaderboardEntry
+                                    results.Add(new ExperienceLeaderboardEntry
                                     {
                                         ID = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["UserID"])),
                                         Level = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["Level"])),
