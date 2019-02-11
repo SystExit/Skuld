@@ -128,7 +128,7 @@ namespace Skuld.Bot.Commands
 
             var imageLocation = folder + user.Id + ".png";
 
-            var imageBackgroundFolder = Path.Combine(AppContext.BaseDirectory, "/storage/backgroundCache/");
+            var imageBackgroundFolder = Path.Combine(AppContext.BaseDirectory, "storage/backgroundCache/");
 
             var imageBackgroundFile = Path.Combine(imageBackgroundFolder, profileuser.ID + "_background.png");
 
@@ -148,10 +148,9 @@ namespace Skuld.Bot.Commands
 
                 if (profileuser.Background.StartsWith('#'))
                 {
-                    var col = profileuser.Background.FromHex();
-                    image.Draw(new DrawableFillColor(new MagickColor(col.R, col.G, col.B)), new DrawableRectangle(0, 0, 600, 228));
+                    image.Draw(new DrawableFillColor(new MagickColor(profileuser.Background)), new DrawableRectangle(0, 0, 600, 228));
                 }
-                if (profileuser.Background == "")
+                else if (profileuser.Background == "")
                 {
                     image.Draw(new DrawableFillColor(new MagickColor("#3F51B5")), new DrawableRectangle(0, 0, 600, 228));
                 }
@@ -168,7 +167,17 @@ namespace Skuld.Bot.Commands
 
                 var avatar = user.GetAvatarUrl(ImageFormat.Png) ?? user.GetDefaultAvatarUrl();
 
-                using (MagickImage profileBackground = new MagickImage(avatar, 128, 128))
+                var avatarLocation = Path.Combine(AppContext.BaseDirectory, "storage/avatarCache");
+                var avatarFile = Path.Combine(avatarLocation, user.Id + ".png");
+
+                if (!Directory.Exists(avatarLocation))
+                {
+                    Directory.CreateDirectory(avatarLocation);
+                }
+
+                await WebHandler.DownloadFileAsync(new Uri(avatar), avatarFile);
+
+                using (MagickImage profileBackground = new MagickImage(avatarFile, 128, 128))
                 {
                     profileBackground.BackgroundColor = MagickColors.None;
 
@@ -203,7 +212,7 @@ namespace Skuld.Bot.Commands
                         statusBackground.Dispose();
                     }
 
-                    image.Composite(profileBackground, 64, 64, CompositeOperator.Over);
+                    image.Composite(profileBackground, 236, 32, CompositeOperator.Over);
 
                     profileBackground.Dispose();
                 }
@@ -315,7 +324,7 @@ namespace Skuld.Bot.Commands
 
                 //YLevel 3
                 image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {totalExperience.Level} ({totalExperience.TotalXP.ToString("N0")})"));
-                image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: {profileuser.Pats}/Patted: {profileuser.Patted}"));
+                image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: {profileuser.Pats.ToString("N0")}/Patted: {profileuser.Patted.ToString("N0")}"));
 
                 ulong xpToNextLevel = DiscordUtilities.GetXPLevelRequirement(totalExperience.Level + 1, DiscordUtilities.PHI);
 
@@ -512,6 +521,12 @@ namespace Skuld.Bot.Commands
         [Alias("exp")]
         public async Task Level(IGuildUser user = null)
         {
+            if (!Context.DBGuild.Features.Experience)
+            {
+                await "Module `Experience` is disabled for this guild, ask an administrator to enable it using: `sk!guild-feature experience 1`".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                return;
+            }
+
             if (user != null && (user.IsBot || user.IsWebhook))
             {
                 await DiscordTools.NoBotsString.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
@@ -606,7 +621,17 @@ namespace Skuld.Bot.Commands
 
                 var avatar = user.GetAvatarUrl(ImageFormat.Png) ?? user.GetDefaultAvatarUrl();
 
-                using (MagickImage profileBackground = new MagickImage(avatar, 128, 128))
+                var avatarLocation = Path.Combine(AppContext.BaseDirectory, "storage/avatarCache");
+                var avatarFile = Path.Combine(avatarLocation, user.Id + ".png");
+
+                if (!Directory.Exists(avatarLocation))
+                {
+                    Directory.CreateDirectory(avatarLocation);
+                }
+
+                await WebHandler.DownloadFileAsync(new Uri(avatar), avatarFile);
+
+                using (MagickImage profileBackground = new MagickImage(avatarFile, 128, 128))
                 {
                     profileBackground.BackgroundColor = MagickColors.None;
 
@@ -627,7 +652,7 @@ namespace Skuld.Bot.Commands
 
                         using (var mask = new MagickImage("xc:black", 32, 32))
                         {
-                            mask.Draw(new DrawableFillColor(MagickColors.White), new DrawableCircle(16, 16, 16, 32));
+                            mask.Draw(new DrawableFillColor(MagickColors.White), new DrawableCircle(15, 15, 15, 31));
 
                             mask.Transparent(MagickColors.Black);
 
@@ -641,7 +666,7 @@ namespace Skuld.Bot.Commands
                         statusBackground.Dispose();
                     }
 
-                    image.Composite(profileBackground, 84, 84, CompositeOperator.Over);
+                    image.Composite(profileBackground, 64, 84, CompositeOperator.Over);
 
                     profileBackground.Dispose();
                 }
@@ -724,7 +749,7 @@ namespace Skuld.Bot.Commands
             {
                 if(Context.DBUser != null)
                 {
-                    var amnt = Context.DBUser.HP / 0.8;
+                    var amnt = Math.Round(Math.Ceiling(Context.DBUser.Money * 0.8));
                     await $"You can heal for: `{Math.Floor(amnt)}`HP".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
                 else
@@ -749,51 +774,53 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var contextDB = Context.DBUser;
-            var d = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
-            if(!d.Successful)
+            if (user == null)
             {
-                await DatabaseClient.InsertUserAsync(user);
-                await Heal(hp, user);
-                return;
+                var contextDB = Context.DBUser;
+                if (contextDB.HP == 10000)
+                {
+                    await "You're already at max health".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    return;
+                }
+                var amount = GetCostOfHP(hp);
+                if (contextDB.Money < amount)
+                {
+                    await "You don't have enough money for this action".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    return;
+                }
+                if (hp > (10000 - contextDB.HP))
+                {
+                    await ("You only need to heal by: " + (10000 - contextDB.HP)).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    return;
+                }
+
+                contextDB.Money -= amount;
+                contextDB.HP += hp;
+
+                if (contextDB.HP > 10000)
+                {
+                    contextDB.HP = 10000;
+                }
+
+                await DatabaseClient.UpdateUserAsync(contextDB);
+
+                await $"You have healed your HP by {hp} for {Configuration.Preferences.MoneySymbol}{amount.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
             else
             {
-                var userDB = d.Data as SkuldUser;
-                if (user == null)
+                var d = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
+                if (!d.Successful)
                 {
-                    if (contextDB.HP == 10000)
-                    {
-                        await "You're already at max health".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                        return;
-                    }
-                    var amount = GetCostOfHP(hp);
-                    if (contextDB.Money < amount)
-                    {
-                        await "You don't have enough money for this action".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                        return;
-                    }
-                    if (hp > (10000 - contextDB.HP))
-                    {
-                        await ("You only need to heal by: " + (10000 - contextDB.HP)).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                        return;
-                    }
-
-                    contextDB.Money -= amount;
-                    contextDB.HP += hp;
-
-                    if (contextDB.HP > 10000)
-                    {
-                        contextDB.HP = 10000;
-                    }
-
-                    await DatabaseClient.UpdateUserAsync(contextDB);
-
-                    await $"You have healed your HP by {hp} for {Configuration.Preferences.MoneySymbol}{amount.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    await DatabaseClient.InsertUserAsync(user);
+                    await Heal(hp, user);
+                    return;
                 }
                 else
                 {
-                    if (contextDB.HP == 10000)
+                    var contextDB = Context.DBUser;
+                    var userDB = d.Data as SkuldUser;
+
+                    if (userDB.HP == 10000)
                     {
                         await "They're already at max health".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                         return;
@@ -1032,12 +1059,12 @@ namespace Skuld.Bot.Commands
         {
             if (Hex != null)
             {
-                if (Context.DBUser.Money > 300)
+                if (Context.DBUser.Money >= 300)
                 {
                     Context.DBUser.Money -= 300;
-                    if (int.TryParse(Hex, System.Globalization.NumberStyles.HexNumber, null, out int result))
+                    if (int.TryParse((Hex[0] != '#' ? Hex : Hex.Remove(0,1)), System.Globalization.NumberStyles.HexNumber, null, out int result))
                     {
-                        Context.DBUser.Background = Hex;
+                        Context.DBUser.Background = (Hex[0] != '#' ? "#"+Hex : Hex);
                         var res = await DatabaseClient.UpdateUserAsync(Context.DBUser);
                         if (res.Successful)
                         {
@@ -1079,7 +1106,7 @@ namespace Skuld.Bot.Commands
         {
             if (!Context.DBUser.UnlockedCustBG)
             {
-                if (Context.DBUser.Money > 40000)
+                if (Context.DBUser.Money >= 40000)
                 {
                     Context.DBUser.Money -= 40000;
                     Context.DBUser.UnlockedCustBG = true;

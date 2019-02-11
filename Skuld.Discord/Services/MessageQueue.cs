@@ -26,7 +26,8 @@ namespace Skuld.Discord.Services
                     {
                         Message = $"Queue Length: {messageQueue.Count} Est. Time till completion: {(messageQueue.Count * 250) / 1000}sec",
                         Severity = LogSeverity.Info,
-                        Source = "MQ-Exec"
+                        Source = "MQ-Exec",
+                        TimeStamp = DateTime.Now
                     }).ConfigureAwait(false);
                     if(messageQueue.TryDequeue(out SkuldMessage message))
                     {
@@ -91,7 +92,8 @@ namespace Skuld.Discord.Services
             {
                 Source = "MQ-Queue",
                 Message = $"Queued a command in: {message.Channel}/{((IGuildChannel)message.Channel).Guild} for {message.Content.User}",
-                Severity = LogSeverity.Info
+                Severity = LogSeverity.Info,
+                TimeStamp = DateTime.Now
             }).ConfigureAwait(false);
         }
 

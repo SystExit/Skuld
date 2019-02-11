@@ -234,96 +234,88 @@ namespace Skuld.Bot.Commands
 
         [Command("leaderboard"), Summary("Get the guilds XP Leaderboard, use \"money\" for the global money leaderboard")]
         [Alias("lb")]
-        public async Task GetLeaderboard(string arg = null)
+        public async Task GetLeaderboard(string type)
         {
-            if (arg != null)
+            switch (type.ToLower())
             {
-                if (arg.ToLowerInvariant() == "money")
-                {
-                    var moneylbresp = await DatabaseClient.GetMoneyLeaderboardAsync();
-                    if (moneylbresp.Successful)
+                case "money":
+                case "credits":
                     {
-                        var moneylb = moneylbresp.Data as IReadOnlyList<MoneyLeaderboardEntry>;
-                        string response = "";
-                        int count = 1;
-                        int maxnum = moneylb.Count();
-                        foreach (var entry in moneylb)
+                        var moneylbresp = await DatabaseClient.GetMoneyLeaderboardAsync();
+                        if (moneylbresp.Successful)
                         {
-                            var usr = Context.Client.GetUser(entry.ID);
+                            var moneylb = moneylbresp.Data as IList<MoneyLeaderboardEntry>;
 
-                            if (usr != null)
+                            var pages = moneylb.PaginateLeaderboard(Configuration);
+
+                            if (pages.Count > 1)
                             {
-                                string bse = $"{count}/{maxnum}. {usr.Username} - {Configuration.Preferences.MoneySymbol + entry.Money.ToString("N0")}";
-
-                                if (entry == moneylb.Last())
-                                    response += bse;
-                                else
-                                    response += bse + "\n";
-                                count++;
+                                await PagedReplyAsync(new PaginatedMessage
+                                {
+                                    Pages = pages,
+                                    Title = $"__Experience of {Context.Guild.Name}__",
+                                    Color = Color.Purple
+                                });
                             }
                             else
                             {
-                                response += $"??/??. User not found";
-                                await DatabaseClient.DropUserAsync(entry.ID);
+                                await $"{string.Join("\n", pages)}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                            }
+                            return;
+                        }
+                        else
+                        {
+                            await moneylbresp.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                            return;
+                        }
+                    }
+
+                case "experience":
+                case "level":
+                case "levels":
+                    {
+                        if (Context.DBGuild.Features.Experience)
+                        {
+                            var guildCountResp = await DatabaseClient.GetGuildExperienceCountAsync(Context.Guild.Id).ConfigureAwait(false);
+                            int guildCount = -1;
+                            if (guildCountResp.Successful && guildCountResp.Data != null)
+                                guildCount = ConversionTools.ParseInt32OrDefault(Convert.ToString(guildCountResp.Data));
+                            else
+                            {
+                                await $"Guild not opted into Experience module. Use: `{Context.DBGuild.Prefix}guild-feature levels 1`".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                                return;
+                            }
+
+                            var gldxpresp = await DatabaseClient.GetGuildExperienceAsync(Context.Guild.Id);
+                            if (gldxpresp.Successful && gldxpresp.Data != null)
+                            {
+                                var gldlb = gldxpresp.Data as IList<ExperienceLeaderboardEntry>;
+
+                                var pages = gldlb.PaginateLeaderboard();
+
+                                if (pages.Count > 1)
+                                {
+                                    await PagedReplyAsync(new PaginatedMessage
+                                    {
+                                        Pages = pages,
+                                        Title = $"__Experience of {Context.Guild.Name}__",
+                                        Color = Color.Purple
+                                    });
+                                }
+                                else
+                                {
+                                    await $"__Experience of {Context.Guild.Name}__:\n{string.Join("\n", pages)}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                                }
+                                return;
                             }
                         }
-                        await response.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    }
-                    else
-                    {
-                        await moneylbresp.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                    }
-                }
-                else
-                {
-                    await $"Unknown argument: {arg}".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                    return;
-                }
-            }
-            else
-            {
-                if (Context.DBGuild.Features.Experience)
-                {
-                    var guildCountResp = await DatabaseClient.GetGuildExperienceCountAsync(Context.Guild.Id).ConfigureAwait(false);
-                    int guildCount = -1;
-                    if (guildCountResp.Successful && guildCountResp.Data != null)
-                        guildCount = ConversionTools.ParseInt32OrDefault(Convert.ToString(guildCountResp.Data));
-                    else
-                    {
                         await $"Guild not opted into Experience module. Use: `{Context.DBGuild.Prefix}guild-feature levels 1`".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                        return;
+                        break;
                     }
 
-                    var gldxpresp = await DatabaseClient.GetGuildExperienceAsync(Context.Guild.Id);
-                    if (gldxpresp.Successful && gldxpresp.Data != null)
-                    {
-                        var gldlb = gldxpresp.Data as IReadOnlyList<GuildLeaderboardEntry>;
-                        string response = "";
-                        int count = 1;
-                        foreach (var entry in gldlb)
-                        {
-                            var usr = Context.Guild.GetUser(entry.ID);
-                            if (usr != null)
-                            {
-                                string bse = $"{count}/{gldlb.Count()}. {usr.Username} - TotalXP: {entry.TotalXP} | Level: {entry.Level} | XP: {entry.XP}/{DiscordUtilities.GetXPLevelRequirement(entry.Level + 1, DiscordUtilities.PHI)}";
-
-                                if (entry == gldlb.Last())
-                                    response += bse;
-                                else
-                                    response += bse + "\n";
-                                count++;
-                            }
-                            else
-                            {
-                                response += $"??/??. User not found";
-                                await DatabaseClient.DropUserAsync(entry.ID);
-                            }
-                        }
-                        await response.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                        return;
-                    }
-                }
-                await $"Guild not opted into Experience module. Use: `{Context.DBGuild.Prefix}guild-feature levels 1`".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                default:
+                    await $"Unknown argument: {type}".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                    return;
             }
         }
 
