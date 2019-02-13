@@ -1624,9 +1624,11 @@ namespace Skuld.Database
         {
             if (await CheckConnectionAsync())
             {
-                var command = new MySqlCommand("SELECT UserID, GuildID FROM `userguildxp` GROUP BY UserID ORDER BY SUM(TotalXP) DESC");
+                var command = new MySqlCommand("SELECT UserID FROM `userguildxp` WHERE GuildID = @guildID GROUP BY UserID ORDER BY SUM(TotalXP) DESC");
 
-                var entries = new List<DoubleString>();
+                command.Parameters.AddWithValue("@guildID", guildID);
+
+                var entries = new List<string>();
 
                 using (var conn = new MySqlConnection(ConnectionString))
                 {
@@ -1643,11 +1645,7 @@ namespace Skuld.Database
                         {
                             while (await reader.ReadAsync())
                             {
-                                entries.Add(new DoubleString
-                                (
-                                    Convert.ToString(reader["UserID"]),
-                                    Convert.ToString(reader["GuildID"])
-                                ));
+                                entries.Add(Convert.ToString(reader["UserID"]));
                             }
 
                             DogStatsd.Increment("mysql.rows_ret", entries.Count);
@@ -1661,7 +1659,12 @@ namespace Skuld.Database
                     }
                 }
 
-                var index = entries.FindIndex(x => x.stringA == Convert.ToString(userID));
+                var index = entries.FindIndex(x => x == Convert.ToString(userID));
+
+                if(index < 0)
+                {
+                    return EventResult.FromSuccess(new Rank(index, entries.Count));
+                }
 
                 return EventResult.FromSuccess(new Rank(index+1, entries.Count));
             }
