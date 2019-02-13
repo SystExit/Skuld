@@ -314,7 +314,7 @@ namespace Skuld.Bot.Commands
 
                 var rank = await profileuser.GetGlobalRankAsync();
 
-                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Rank {rank.Position}/{rank.Total}"));
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank {rank.Position}/{rank.Total}"));
                 image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel1, dailyText));
 
                 //YLevel 2
@@ -601,7 +601,7 @@ namespace Skuld.Bot.Commands
                     var col = profileuser.Background.FromHex();
                     image.Draw(new DrawableFillColor(new MagickColor(col.R, col.G, col.B)), new DrawableRectangle(0, 0, 750, 300));
                 }
-                if (profileuser.Background == "")
+                else if (profileuser.Background == "")
                 {
                     image.Draw(new DrawableFillColor(new MagickColor("#3F51B5")), new DrawableRectangle(0, 0, 750, 300));
                 }
@@ -865,7 +865,10 @@ namespace Skuld.Bot.Commands
             {
                 if (Context.DBUser.Reputation.Count() > 0)
                 {
-                    await $"Your repuation is at: {Context.DBUser.Reputation.Count()}rep\nYour most recent rep was by {Context.Client.GetUser(Context.DBUser.Reputation.FirstOrDefault().Reper).FullName()} at {Context.DBUser.Reputation.FirstOrDefault().Timestamp.FromEpoch()}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    var descending = Context.DBUser.Reputation.OrderByDescending(x => x.Timestamp);
+                    var mostRecent = descending.FirstOrDefault();
+                    await $"Your repuation is at: {Context.DBUser.Reputation.Count()}rep\nYour most recent rep was by {Context.Client.GetUser(mostRecent.Reper).FullName()} at {mostRecent.Timestamp.FromEpoch()}"
+                        .QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
                 else
                 {
