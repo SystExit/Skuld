@@ -36,7 +36,7 @@ namespace Skuld.Discord.Extensions
             {
                 var usr = list[x];
 
-                pagetext += $"{x + 1}/{list.Count}. {BotService.DiscordClient.GetUser(usr.ID).Username} - TotalXP: {usr.TotalXP} | Level: {usr.Level} | XP: {usr.XP}/{DiscordUtilities.GetXPLevelRequirement(usr.Level + 1, DiscordUtilities.PHI)}";
+                pagetext += $"{x + 1}/{list.Count}. {BotService.DiscordClient.GetUser(usr.ID).Username} - TotalXP: {usr.TotalXP} | Level: {usr.Level} | XP: {usr.XP}/{DiscordUtilities.GetXPLevelRequirement(usr.Level + 1, DiscordUtilities.PHI)}\n";
 
                 if ((x + 1) % 10 == 0 || (x + 1) == list.Count)
                 {
