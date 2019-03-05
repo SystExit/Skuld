@@ -1,6 +1,6 @@
 ﻿namespace Skuld.APIS.Pokemon.Models
 {
-    public enum PokeSharpGroup
+    public enum PokemonDataGroup
     {
         Abilities,
         Default,

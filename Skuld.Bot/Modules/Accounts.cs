@@ -181,40 +181,28 @@ namespace Skuld.Bot.Commands
                 {
                     profileBackground.BackgroundColor = MagickColors.None;
 
-                    using (var mask = new MagickImage("xc:black", 128, 128))
+                    using (var mask = new MagickImage("xc:none", 128, 128))
                     {
-                        mask.Draw(new DrawableFillColor(MagickColors.White), new DrawableCircle(64, 64, 64, 128));
-
-                        mask.Transparent(MagickColors.Black);
+                        mask.Draw(new DrawableFillColor(MagickColors.White), new DrawableCircle(64, 64, 62, 126));
 
                         profileBackground.Composite(mask, CompositeOperator.CopyAlpha);
-
-                        mask.Dispose();
                     }
 
                     using (MagickImage statusBackground = new MagickImage($"xc:{user.Status.HexFromStatus()}", 32, 32))
                     {
                         statusBackground.BackgroundColor = MagickColors.None;
 
-                        using (var mask = new MagickImage("xc:black", 32, 32))
+                        using (var mask = new MagickImage("xc:none", 32, 32))
                         {
-                            mask.Draw(new DrawableFillColor(MagickColors.White), new DrawableCircle(16, 16, 16, 32));
-
-                            mask.Transparent(MagickColors.Black);
+                            mask.Draw(new DrawableFillColor(MagickColors.White), new DrawableCircle(16, 16, 14, 30));
 
                             statusBackground.Composite(mask, CompositeOperator.CopyAlpha);
-
-                            mask.Dispose();
                         }
 
                         profileBackground.Composite(statusBackground, 96, 96, CompositeOperator.Over);
-
-                        statusBackground.Dispose();
                     }
 
                     image.Composite(profileBackground, 236, 32, CompositeOperator.Over);
-
-                    profileBackground.Dispose();
                 }
 
                 var font = new DrawableFont(fontFile);
@@ -251,8 +239,6 @@ namespace Skuld.Bot.Commands
                 }))
                 {
                     image.Composite(label, 20, 193, CompositeOperator.Over);
-
-                    label.Dispose();
                 }
 
                 //Money
@@ -268,8 +254,6 @@ namespace Skuld.Bot.Commands
                 }))
                 {
                     image.Composite(label2, 0, 193, CompositeOperator.Over);
-
-                    label2.Dispose();
                 }
 
                 //Username
@@ -284,8 +268,6 @@ namespace Skuld.Bot.Commands
                 }))
                 {
                     image.Composite(label3, 0, 230, CompositeOperator.Over);
-
-                    label3.Dispose();
                 }
 
                 //Title
@@ -314,7 +296,7 @@ namespace Skuld.Bot.Commands
 
                 var rank = await profileuser.GetGlobalRankAsync();
 
-                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Rank {rank.Position}/{rank.Total}"));
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank {rank.Position}/{rank.Total}"));
                 image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel1, dailyText));
 
                 //YLevel 2
@@ -353,13 +335,9 @@ namespace Skuld.Bot.Commands
                 }))
                 {
                     image.Composite(label5, 0, 475, CompositeOperator.Over);
-
-                    label5.Dispose();
                 }
 
                 image.Write(imageLocation);
-
-                image.Dispose();
             }
 
             await "".QueueMessage(Discord.Models.MessageType.File, Context.User, Context.Channel, imageLocation);
@@ -601,7 +579,7 @@ namespace Skuld.Bot.Commands
                     var col = profileuser.Background.FromHex();
                     image.Draw(new DrawableFillColor(new MagickColor(col.R, col.G, col.B)), new DrawableRectangle(0, 0, 750, 300));
                 }
-                if (profileuser.Background == "")
+                else if (profileuser.Background == "")
                 {
                     image.Draw(new DrawableFillColor(new MagickColor("#3F51B5")), new DrawableRectangle(0, 0, 750, 300));
                 }
@@ -635,40 +613,28 @@ namespace Skuld.Bot.Commands
                 {
                     profileBackground.BackgroundColor = MagickColors.None;
 
-                    using (var mask = new MagickImage("xc:black", 128, 128))
+                    using (var mask = new MagickImage("xc:none", 128, 128))
                     {
-                        mask.Draw(new DrawableFillColor(MagickColors.White), new DrawableCircle(64, 64, 64, 128));
-
-                        mask.Transparent(MagickColors.Black);
+                        mask.Draw(new DrawableFillColor(MagickColors.White), new DrawableCircle(64, 64, 62, 126));
 
                         profileBackground.Composite(mask, CompositeOperator.CopyAlpha);
-
-                        mask.Dispose();
                     }
 
                     using (MagickImage statusBackground = new MagickImage($"xc:{user.Status.HexFromStatus()}", 32, 32))
                     {
                         statusBackground.BackgroundColor = MagickColors.None;
 
-                        using (var mask = new MagickImage("xc:black", 32, 32))
+                        using (var mask = new MagickImage("xc:none", 36, 36))
                         {
-                            mask.Draw(new DrawableFillColor(MagickColors.White), new DrawableCircle(15, 15, 15, 31));
-
-                            mask.Transparent(MagickColors.Black);
+                            mask.Draw(new DrawableFillColor(MagickColors.White), new DrawableCircle(16, 16, 14, 30));
 
                             statusBackground.Composite(mask, CompositeOperator.CopyAlpha);
-
-                            mask.Dispose();
                         }
 
                         profileBackground.Composite(statusBackground, 96, 96, CompositeOperator.Over);
-
-                        statusBackground.Dispose();
                     }
 
                     image.Composite(profileBackground, 64, 84, CompositeOperator.Over);
-
-                    profileBackground.Dispose();
                 }
 
                 var font = new DrawableFont(fontFile);
@@ -694,8 +660,6 @@ namespace Skuld.Bot.Commands
                 }))
                 {
                     image.Composite(label3, 220, 80, CompositeOperator.Over);
-
-                    label3.Dispose();
                 }
 
                 image.Draw(font, fontmed, encoding, white, new DrawableText(220, 170, $"Rank {guildRank.Position}/{guildRank.Total}"));
@@ -730,13 +694,9 @@ namespace Skuld.Bot.Commands
                 }))
                 {
                     image.Composite(label5, 0, 250, CompositeOperator.Over);
-
-                    label5.Dispose();
                 }
 
                 image.Write(imageLocation);
-
-                image.Dispose();
             }
 
             await "".QueueMessage(Discord.Models.MessageType.File, Context.User, Context.Channel, imageLocation);
@@ -865,7 +825,10 @@ namespace Skuld.Bot.Commands
             {
                 if (Context.DBUser.Reputation.Count() > 0)
                 {
-                    await $"Your repuation is at: {Context.DBUser.Reputation.Count()}rep\nYour most recent rep was by {Context.Client.GetUser(Context.DBUser.Reputation.FirstOrDefault().Reper).FullName()} at {Context.DBUser.Reputation.FirstOrDefault().Timestamp.FromEpoch()}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    var descending = Context.DBUser.Reputation.OrderByDescending(x => x.Timestamp);
+                    var mostRecent = descending.FirstOrDefault();
+                    await $"Your repuation is at: {Context.DBUser.Reputation.Count()}rep\nYour most recent rep was by {Context.Client.GetUser(mostRecent.Reper).FullName()} at {mostRecent.Timestamp.FromEpoch()}"
+                        .QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
                 else
                 {
@@ -887,7 +850,7 @@ namespace Skuld.Bot.Commands
                     var data = dbUser.Data as SkuldUser;
                     if(data.Reputation.Where(x=>x.Reper == Context.User.Id).Count() == 0)
                     {
-                        await DatabaseClient.AddReputationAsync(data.ID, Context.User.Id);
+                        await data.AddReputationAsync(Context.User.Id);
                         await $"You gave rep to {user.Mention}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                     }
                     else
@@ -925,7 +888,7 @@ namespace Skuld.Bot.Commands
                 var data = dbUser.Data as SkuldUser;
                 if (data.Reputation.Where(x => x.Reper == Context.User.Id).Count() != 0)
                 {
-                    await DatabaseClient.RemoveReputationAsync(data.ID, Context.User.Id);
+                    await data.RemoveReputationAsync(Context.User.Id);
                     await $"You removed your rep to {user.Mention}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
                 else
@@ -1024,12 +987,13 @@ namespace Skuld.Bot.Commands
         [Command("action-block"), Summary("Blocks people from performing actions on you")]
         public async Task BlockActions([Remainder]IUser user)
         {
-            var res = await DatabaseClient.IsActionBlockedAsync(Context.User.Id, user.Id);
+            var res = await Context.DBUser.IsBlockedFromPerformingActions(user.Id);
+            var user2 = await MessageTools.GetUserOrInsertAsync(user);
             if (res.Successful)
             {
                 if (!(bool)res.Data)
                 {
-                    var res2 = await DatabaseClient.BlockActionAsync(Context.User.Id, user.Id);
+                    var res2 = await user2.BlockUserActionsAsync(Context.User.Id);
                     if (res.Successful)
                     {
                         await $"Blocked {user.FullName()} from performing actions on you".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
@@ -1041,7 +1005,7 @@ namespace Skuld.Bot.Commands
                 }
                 else
                 {
-                    var res2 = await DatabaseClient.UnblockActionAsync(Context.User.Id, user.Id);
+                    var res2 = await user2.UnblockUserActionsAsync(Context.User.Id);
                     if (res.Successful)
                     {
                         await $"Unblocked {user.FullName()} from performing actions on you".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);

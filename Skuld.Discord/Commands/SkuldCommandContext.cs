@@ -14,5 +14,10 @@ namespace Skuld.Discord.Commands
             DBUser = user;
             DBGuild = guild;
         }
+
+        public SkuldCommandContext(DiscordShardedClient client, SocketUserMessage msg) : base(client, msg)
+        {
+
+        }
     }
 }

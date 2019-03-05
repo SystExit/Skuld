@@ -164,13 +164,18 @@ namespace Skuld.Core.Extensions
 
             string game = null;
 
-            if (user.Activity != null) game = user.Activity.Name;
-            else game = "Nothing";
+            if (user.Activity != null)
+            {
+                game = user.Activity.Name;
+            }
 
             embed.AddField(":id: ID", user.Id.ToString() ?? "Unknown", true);
             embed.AddField(":vertical_traffic_light: Status", status ?? "Unknown", true);
-            embed.AddField(":video_game: Currently Playing", game, true);
-            embed.AddField(":robot: Bot?", user.IsBot.ToString() ?? "Unknown", true);
+            if (game != null)
+            {
+                embed.AddField(":video_game: Currently Playing", game, true);
+            }
+            embed.AddField(":robot: Bot?", user.IsBot ? "✔️" : "❌", true);
             embed.AddField(":eyes: Mutual Servers", $"{seencount} servers", true);
             embed.AddField(":shield: Roles", $"[{user.RoleIds.Count}] Do `{Configuration.Discord.Prefix}roles` to see your roles");
 

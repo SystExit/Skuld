@@ -120,7 +120,7 @@ namespace Skuld.Database.Extensions
         public static async Task<Rank> GetGuildRankAsync(this SkuldUser user, IGuild guild)
         {
             var res = await DatabaseClient.GetGuildRankAsync(user.ID, guild.Id);
-            if (res.Successful && res.Data is Rank)
+            if (res.Successful && res.Data is Rank && ((Rank)res.Data).Position > 0)
                 return (Rank)res.Data;
 
             return new Rank(-1, -1);

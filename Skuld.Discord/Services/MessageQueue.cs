@@ -16,19 +16,15 @@ namespace Skuld.Discord.Services
     {
         private static ConcurrentQueue<SkuldMessage> messageQueue = new ConcurrentQueue<SkuldMessage>();
 
+        private static readonly int messageDelay = 50;
+
         private static async Task ExecuteAsync()
         {
             while(true)
             {
                 if(!messageQueue.IsEmpty)
                 {
-                    await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage
-                    {
-                        Message = $"Queue Length: {messageQueue.Count} Est. Time till completion: {(messageQueue.Count * 250) / 1000}sec",
-                        Severity = LogSeverity.Info,
-                        Source = "MQ-Exec",
-                        TimeStamp = DateTime.Now
-                    }).ConfigureAwait(false);
+                    await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MQ-Exec", $"Queue Length: {messageQueue.Count} Est. Time till completion: {(messageQueue.Count * messageDelay) / 1000}sec", LogSeverity.Info)).ConfigureAwait(false);
                     if(messageQueue.TryDequeue(out SkuldMessage message))
                     {
                         try
@@ -42,10 +38,24 @@ namespace Skuld.Discord.Services
                                     await MessageSender.ReplyWithMentionAsync(message.Channel, message.Content.User, message.Content.Message, message.Content.Embed);
                                     break;
                                 case Models.MessageType.Success:
-                                    await MessageSender.ReplySuccessAsync(message.Channel, message.Content.Message);
+                                    if (!string.IsNullOrEmpty(message.Content.Message))
+                                    {
+                                        await MessageSender.ReplySuccessAsync(message.Channel, message.Content.Message);
+                                    }
+                                    else
+                                    {
+                                        await MessageSender.ReplySuccessAsync(message.Channel);
+                                    }
                                     break;
                                 case Models.MessageType.Failed:
-                                    await MessageSender.ReplyFailedAsync(message.Channel, message.Content.Message);
+                                    if (!string.IsNullOrEmpty(message.Content.Message))
+                                    {
+                                        await MessageSender.ReplyFailedAsync(message.Channel, message.Content.Message);
+                                    }
+                                    else
+                                    {
+                                        await MessageSender.ReplyFailedAsync(message.Channel);
+                                    }
                                     break;
                                 case Models.MessageType.DMS:
                                     await MessageSender.ReplyDMsAsync(await message.Content.User.GetOrCreateDMChannelAsync(), message.Channel, message.Content.Message, message.Content.Embed);
@@ -69,7 +79,7 @@ namespace Skuld.Discord.Services
                                 File.Delete(message.Content.File);
                             }
 
-                            await Task.Delay(250);
+                            await Task.Delay(messageDelay * messageQueue.Count);
                         }
                         catch(Exception ex)
                         {
@@ -77,10 +87,14 @@ namespace Skuld.Discord.Services
                             await MessageSender.ReplyFailedAsync(message.Channel, ex.Message);
                         }
                     }
+                    else
+                    {
+                        await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MsgQueue", "Error removing message from queue", LogSeverity.Error));
+                    }
                 }
                 else
                 {
-                    await Task.Delay(50);
+                    await Task.Delay(25);
                 }
             }
         }
@@ -88,13 +102,26 @@ namespace Skuld.Discord.Services
         public static void AddMessage(SkuldMessage message)
         {
             messageQueue.Enqueue(message);
-            GenericLogger.AddToLogsAsync(new Core.Models.LogMessage
+            if(message.Meta.Type != (Models.MessageType.DMS|Models.MessageType.DMFail))
             {
-                Source = "MQ-Queue",
-                Message = $"Queued a command in: {message.Channel}/{((IGuildChannel)message.Channel).Guild} for {message.Content.User}",
-                Severity = LogSeverity.Info,
-                TimeStamp = DateTime.Now
-            }).ConfigureAwait(false);
+                GenericLogger.AddToLogsAsync(new Core.Models.LogMessage
+                {
+                    Source = "MQ-Queue",
+                    Message = $"Queued a command in: {message.Channel}/{((IGuildChannel)message.Channel).Guild} for {message.Content.User}",
+                    Severity = LogSeverity.Info,
+                    TimeStamp = DateTime.Now
+                }).ConfigureAwait(false);
+            }
+            else
+            {
+                GenericLogger.AddToLogsAsync(new Core.Models.LogMessage
+                {
+                    Source = "MQ-Queue",
+                    Message = $"Queued a command in: {message.Content.User}/DMs",
+                    Severity = LogSeverity.Info,
+                    TimeStamp = DateTime.Now
+                }).ConfigureAwait(false);
+            }
         }
 
         public static void Run()

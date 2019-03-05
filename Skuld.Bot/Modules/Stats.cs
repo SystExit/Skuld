@@ -54,12 +54,13 @@ namespace Skuld.Bot.Commands
                 };
 
                 string apiversions =
-                    "SysEx: " + SoftwareStats.SysEx.Version.ToString() + "\n" +
-                    "Booru: " + SoftwareStats.Booru.Version.ToString() + "\n" +
-                    "Weebsh: " + SoftwareStats.Weebsh.Version.ToString();
+                    $"[Booru: {SoftwareStats.Booru.Key.Version.ToString()}]({SoftwareStats.Booru.Value})\n" +   
+                    $"[SysEx: {SoftwareStats.SysEx.Key.Version.ToString()}]({SoftwareStats.SysEx.Value})\n" +
+                    $"[Twitch: {SoftwareStats.Twitch.Key.Version.ToString()}]({SoftwareStats.Twitch.Value})\n" +
+                    $"[Weebsh: {SoftwareStats.Weebsh.Key.Version.ToString()}]({SoftwareStats.Weebsh.Value})";
 
                 string botstats = "";
-                    botstats += "Skuld: " + SoftwareStats.Skuld.Version.ToString() + "\n";
+                    botstats += $"[Skuld: {SoftwareStats.Skuld.Key.Version.ToString()}]({SoftwareStats.Skuld.Value})\n";
                     botstats += "Uptime: " + string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime)) + "\n";
                     botstats += "Ping: " + Context.Client.GetShardFor(Context.Guild).Latency + "ms\n";
                     botstats += "Guilds: " + Context.Client.Guilds.Count + "\n";

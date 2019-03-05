@@ -6,9 +6,7 @@ using Discord.WebSocket;
 using Imgur.API.Authentication.Impl;
 using IqdbApi;
 using Microsoft.Extensions.DependencyInjection;
-using PokeSharp;
 using Skuld.APIS;
-using Skuld.Bot.Commands;
 using Skuld.Core;
 using Skuld.Core.Globalization;
 using Skuld.Core.Models;
@@ -25,6 +23,8 @@ using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using YoutubeExplode;
+using System.Collections.Generic;
+using Akitaux.Twitch.Helix;
 
 namespace Skuld.Bot.Services
 {
@@ -32,55 +32,74 @@ namespace Skuld.Bot.Services
     {
         public static SkuldConfig Configuration;
         public static WebSocketService WebSocket;
-        public static MessageQueue MessageQueue;
         public static IServiceProvider Services;
         private static string logfile;
 
         public async Task CreateAsync()
         {
-            EnsureConfigExists();
-            Configuration = SkuldConfig.Load();
-            logfile = Path.Combine(AppContext.BaseDirectory, "logs", DateTime.Now.ToString("dd-MM-yyyy") + ".log");
-
-            GenericLogger.Configure(Configuration, true, true, logfile);
-
-            InitializeStaticClients();
-
-            await InstallServicesAsync();
-
-            await InitializeServicesAsync();
-
-            BotService.AddBotLister(Services.GetRequiredService<BotListingClient>());
-
-            BotService.AddServices(Services);
-
-            await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("Framework", "Loaded Skuld v" + SoftwareStats.Skuld.Version, LogSeverity.Info));
-
-            await MessageHandler.ConfigureCommandServiceAsync(new DiscordNetCommands.CommandServiceConfig
+            try
             {
-                CaseSensitiveCommands = false,
-                DefaultRunMode = DiscordNetCommands.RunMode.Async,
-                LogLevel = LogSeverity.Verbose
-            },new MessageServiceConfig
+                EnsureConfigExists();
+                Configuration = SkuldConfig.Load();
+                logfile = Path.Combine(AppContext.BaseDirectory, "logs", DateTime.Now.ToString("dd-MM-yyyy") + ".log");
+
+                GenericLogger.Configure(Configuration, true, true, logfile);
+
+                InitializeStaticClients();
+
+                await InstallServicesAsync();
+
+                await InitializeServicesAsync();
+
+                BotService.AddBotLister(Services.GetRequiredService<BotListingClient>());
+
+                BotService.AddServices(Services);
+
+                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("Framework", "Loaded Skuld v" + SoftwareStats.Skuld.Key.Version, LogSeverity.Info));
+
+                var result = await MessageHandler.ConfigureCommandServiceAsync(new DiscordNetCommands.CommandServiceConfig
+                {
+                    CaseSensitiveCommands = false,
+                    DefaultRunMode = DiscordNetCommands.RunMode.Async,
+                    LogLevel = LogSeverity.Verbose
+                }, new MessageServiceConfig
+                {
+                    Prefix = Configuration.Discord.Prefix,
+                    AltPrefix = Configuration.Discord.AltPrefix,
+                    ArgPos = 0
+                }, Configuration, Assembly.GetExecutingAssembly(), Services);
+
+                if(!result.Successful)
+                {
+                    await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("CmdServ-Configure", result.Error, LogSeverity.Critical, result.Exception));
+                }
+                else
+                {
+                    await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("CmdServ-Configure", "Configured Command Service", LogSeverity.Info));
+                }
+
+                await BotService.DiscordClient.LoginAsync(TokenType.Bot, Configuration.Discord.Token);
+
+                await BotService.DiscordClient.StartAsync();
+
+                WebSocket = new WebSocketService();
+
+                BotService.BackgroundTasks();
+
+                MessageQueue.Run();
+
+                await Task.Delay(-1);
+
+                WebSocket.ShutdownServer();
+
+                Environment.Exit(0);
+            }
+            catch(Exception ex)
             {
-                Prefix = Configuration.Discord.Prefix,
-                AltPrefix = Configuration.Discord.AltPrefix,
-                ArgPos = 0
-            }, Configuration, Assembly.GetExecutingAssembly(), Services);
-
-            await BotService.DiscordClient.LoginAsync(TokenType.Bot, Configuration.Discord.Token);
-
-            await BotService.DiscordClient.StartAsync();
-
-            WebSocket = new WebSocketService();
-
-            BotService.BackgroundTasks();
-
-            MessageQueue.Run();
-
-            await Task.Delay(-1);
-
-            WebSocket.ShutdownServer();
+                Console.WriteLine(ex);
+                Console.ReadLine();
+                Environment.Exit(13);
+            }
         }
 
         private static void InitializeStaticClients()
@@ -95,11 +114,10 @@ namespace Skuld.Bot.Services
 
             if (Configuration.Modules.TwitchModule)
             {
-                TwitchClient.ConfigureAndStartAsync(new NTwitch.Rest.TwitchRestConfig
+                BotService.TwitchClient = new TwitchHelixClient
                 {
-                    ClientId = Configuration.APIS.TwitchClientID,
-                    LogLevel = NTwitch.LogSeverity.Verbose
-                }, Configuration.APIS.TwitchToken);
+                    ClientId = new System.Net.Http.Headers.NameValueHeaderValue("Client-ID", Configuration.APIS.TwitchClientID)
+                };
             }
 
             SearchClient.Configure(Configuration);
@@ -127,7 +145,6 @@ namespace Skuld.Bot.Services
                     .AddSingleton<SysExClient>()
                     .AddSingleton<AnimalClient>()
                     .AddSingleton<BooruClient>()
-                    .AddSingleton<PokeSharpClient>()
                     .AddSingleton<SteamStore>()
                     .AddSingleton<AnimalClient>()
                     .AddSingleton<GiphyClient>()
@@ -143,7 +160,6 @@ namespace Skuld.Bot.Services
                     .AddSingleton<ISSClient>()
                     .AddSingleton<IqdbClient>()
                     .AddSingleton(new BotListingClient(BotService.DiscordClient))
-                    //.AddSingleton(weebprovider)
                     .BuildServiceProvider();
 
                 await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("Framework", "Successfully built service provider", LogSeverity.Info));
@@ -157,8 +173,6 @@ namespace Skuld.Bot.Services
         private static async Task InitializeServicesAsync()
         {
             ConfigureStatsCollector();
-
-            MessageQueue = new MessageQueue();
 
             await DatabaseClient.CheckConnectionAsync();
         }

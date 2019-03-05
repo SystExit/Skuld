@@ -3,7 +3,9 @@ using Discord;
 using Imgur.API.Models;
 using Kitsu.Anime;
 using Kitsu.Manga;
-using NTwitch.Rest;
+using Akitaux.Twitch.Helix;
+using Akitaux.Twitch.Helix.Entities;
+using Akitaux.Twitch.Helix.Requests;
 using Skuld.APIS.Pokemon.Models;
 using Skuld.APIS.Social.Reddit.Models;
 using Skuld.APIS.UrbanDictionary.Models;
@@ -18,6 +20,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Resources;
 using System.Threading.Tasks;
+using Voltaic;
 
 namespace Skuld.APIS.Extensions
 {
@@ -304,62 +307,76 @@ namespace Skuld.APIS.Extensions
             return embed.Build();
         }
 
-        public async static Task<bool> IsStreamingAsync(this RestChannel channel)
+        public async static Task<bool> IsStreamingAsync(this User channel, TwitchHelixClient client)
         {
-            var stream = await channel.GetStreamAsync();
+            var stream = await client.GetStreamsAsync(new GetStreamsParams
+            {
+                UserIds = new[]{(ulong)channel.Id}
+            });
 
-            if (stream == null) return false;
+            var resp = stream.Data.FirstOrDefault();
 
-            return true;
+            bool result = false;
+
+            if(resp.StartedAt.IsSpecified)
+            {
+                result = true;
+            }
+
+            return result;
         }
 
-        public async static Task<Embed> GetEmbedAsync(this RestChannel channel)
+        public async static Task<Stream> GetStreamAsync(this User channel, TwitchHelixClient client)
         {
-            var embed = new EmbedBuilder
+            var stream = await client.GetStreamsAsync(new GetStreamsParams
             {
-                Author = new EmbedAuthorBuilder
-                {
-                    Name = channel.DisplayName,
-                    IconUrl = channel.LogoUrl,
-                    Url = channel.Url
-                },
-                ThumbnailUrl = channel.LogoUrl,
-                Color = channel.ProfileBannerBackgroundColor.FromHex()
-            };
+                UserIds = new[] { (ulong)channel.Id }
+            });
 
-            if (await channel.IsStreamingAsync())
+            return stream.Data.FirstOrDefault();
+        }
+
+        public async static Task<Embed> GetEmbedAsync(this User channel, TwitchHelixClient client)
+        {
+            if (await channel.IsStreamingAsync(client))
             {
-                var stream = await channel.GetStreamAsync();
-                embed.Title = channel.Status ?? "No Title Set";
-                embed.AddField("Playing", channel.Game, true);
-                embed.AddField("For", $"{stream.Viewers.ToString("N0")} viewers", true);
-                embed.ImageUrl = stream.Previews.SkipWhile(x => x.Key != "large").FirstOrDefault().Value;
+                var name = channel.DisplayName.IsSpecified ? channel.DisplayName.Value : (channel.Name.IsSpecified ? channel.Name.Value : new Utf8String($"{channel.Id}"));
+                var iconurl = channel.ProfileImageUrl.IsSpecified ? channel.ProfileImageUrl.Value : new Utf8String("");
+
+                var embed = new EmbedBuilder
+                {
+                    Author = new EmbedAuthorBuilder
+                    {
+                        Name = (string)name,
+                        IconUrl = (string)iconurl,
+                        Url = "https://twitch.tv/" + channel.Name
+                    },
+                    ThumbnailUrl = (string)iconurl,
+                    Color = EmbedUtils.RandomColor()
+                };
+
+                var stream = await channel.GetStreamAsync(client);
+
+                embed.Title = (string)(stream.Title.IsSpecified ? stream.Title.Value : new Utf8String("No Title Set"));
+
+                if (stream.GameId.IsSpecified)
+                {
+                    var resp = await client.GetGamesAsync(new GetGamesParams
+                    {
+                        GameIds = new[] { (ulong)stream.GameId }
+                    });
+                    embed.AddField("Playing", resp.Data.FirstOrDefault().Name, true);
+                }
+                embed.AddField("For", $"{((stream.ViewerCount.IsSpecified ? stream.ViewerCount.Value : -1) > -1 ? ((int)stream.ViewerCount.Value).ToString("N0") : "N/A")} viewers", true);
+
+                if (stream.ThumbnailUrl.IsSpecified)
+                {
+                    embed.ImageUrl = (string)stream.ThumbnailUrl.Value;
+                }
+
+                return embed.Build();
             }
-            else
-            {
-                if (!string.IsNullOrEmpty(channel.Status))
-                {
-                    embed.AddField("Last stream title", channel.Status, true);
-                }
-                else
-                {
-                    embed.AddField("Last stream title", "Unset", true);
-                }
-                if (!string.IsNullOrEmpty(channel.Game))
-                {
-                    embed.AddField("Was last streaming", channel.Game, true);
-                }
-                else
-                {
-                    embed.AddField("Was last streaming", "Nothing", true);
-                }
-                embed.AddField("Followers", $"{channel.Followers.ToString("N0")}", true);
-                embed.AddField("Total Views", $"{channel.Views.ToString("N0")}", true);
-
-                embed.WithThumbnailUrl(channel.VideoBannerUrl);
-            }
-
-            return embed.Build();
+            return null;
         }
 
         public static Embed ToEmbed(this UrbanWord word)
@@ -378,100 +395,6 @@ namespace Skuld.APIS.Extensions
             embed.AddField("Example", word.Example);
             embed.AddField("Upvotes", word.UpVotes);
             embed.AddInlineField("Downvotes", word.DownVotes);
-            return embed.Build();
-        }
-
-        public static Embed GetEmbed(this PokeSharp.Models.PocketMonster pokemon, PokeSharpGroup group)
-        {
-            var embed = new EmbedBuilder
-            {
-                Author = new EmbedAuthorBuilder
-                {
-                    Name = char.ToUpper(pokemon.Name[0]) + pokemon.Name.Substring(1)
-                },
-                Color = Color.Blue
-            };
-
-            var result = rnd.Next(0, 8193);
-            string sprite = null;
-            //if it equals 8 out of a random integer between 1 and 8192 then give shiny
-            if (result == 8)
-            {
-                sprite = pokemon.Sprites.FrontShiny;
-            }
-            else
-            {
-                sprite = pokemon.Sprites.Front;
-            }
-
-            switch (group)
-            {
-                case PokeSharpGroup.Default:
-                    embed.AddInlineField("Height", pokemon.Height + "mm");
-                    embed.AddInlineField("Weight", pokemon.Weight + "kg");
-                    embed.AddInlineField("ID", pokemon.ID.ToString());
-                    embed.AddInlineField("Base Experience", pokemon.BaseExperience.ToString());
-                    break;
-
-                case PokeSharpGroup.Abilities:
-                    foreach (var ability in pokemon.Abilities)
-                    {
-                        embed.AddInlineField(ability.Ability.Name, "Slot: " + ability.Slot);
-                    }
-                    break;
-
-                case PokeSharpGroup.Games:
-                    string games = null;
-                    foreach (var game in pokemon.GameIndices)
-                    {
-                        games += game.Version.Name + "\n";
-                        if (game == pokemon.GameIndices.Last())
-                        {
-                            games += game.Version.Name;
-                        }
-                    }
-                    embed.AddInlineField("Game", games);
-                    break;
-
-                case PokeSharpGroup.HeldItems:
-                    if (pokemon.HeldItems.Length > 0)
-                    {
-                        foreach (var hitem in pokemon.HeldItems)
-                        {
-                            foreach (var game in hitem.VersionDetails)
-                            {
-                                embed.AddInlineField("Item", hitem.Item.Name + "\n**Game**\n" + game.Version.Name + "\n**Rarity**\n" + game.Rarity);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        embed.Description = "This pokemon doesn't hold any items in the wild";
-                    }
-                    break;
-
-                case PokeSharpGroup.Moves:
-                    var moves = pokemon.Moves.Take(4).Select(i => i).ToArray();
-                    foreach (var move in moves)
-                    {
-                        string mve = move.Move.Name;
-                        mve += "\n**Learned at:**\n" + "Level " + move.VersionGroupDetails.FirstOrDefault().LevelLearnedAt;
-                        mve += "\n**Method:**\n" + move.VersionGroupDetails.FirstOrDefault().MoveLearnMethod.Name;
-                        embed.AddInlineField("Move", mve);
-                    }
-                    embed.Author.Url = "https://bulbapedia.bulbagarden.net/wiki/" + pokemon.Name + "_(Pokémon)";
-                    embed.Footer = new EmbedFooterBuilder { Text = "Click the name to view more moves, I limited it to 4 to prevent a wall of text" };
-                    break;
-
-                case PokeSharpGroup.Stats:
-                    foreach (var stat in pokemon.Stats)
-                    {
-                        embed.AddInlineField(stat.Stat.Name, "Base Stat: " + stat.BaseStat);
-                    }
-                    break;
-            }
-            embed.ThumbnailUrl = sprite;
-
             return embed.Build();
         }
     }

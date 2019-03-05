@@ -129,7 +129,23 @@ namespace Skuld.Bot.Commands
 
         [Command("avatar"), Summary("Gets your avatar url")]
         public async Task Avatar([Remainder]IUser user = null)
-            => await (user.GetAvatarUrl(ImageFormat.Auto) ?? $"User {(user??Context.User).Username} has no avatar set").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+        {
+            if (user == null)
+                user = Context.User;
+
+            var avatar = user.GetAvatarUrl(ImageFormat.Auto, 512);
+            if (avatar.Contains("a_"))
+                avatar = user.GetAvatarUrl(ImageFormat.Gif, 512);
+            else if (avatar == "" || avatar == null)
+                avatar = user.GetDefaultAvatarUrl();
+
+            await new EmbedBuilder
+            {
+                Description = $"Avatar for {user.Mention}",
+                ImageUrl = avatar,
+                Color = EmbedUtils.RandomColor()
+            }.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+        }
 
         [Command("mods"), Summary("Gives online status of Moderators/Admins")]
         public async Task ModsOnline()

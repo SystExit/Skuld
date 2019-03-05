@@ -145,6 +145,8 @@ namespace Skuld.Core.Models
             NASAApiKey = "";
             DataDogHost = "127.0.0.1";
             DataDogPort = 8125;
+            ImgurClientID = "";
+            ImgurClientSecret = "";
         }
     }
 
@@ -169,7 +171,7 @@ namespace Skuld.Core.Models
         {
             DBotsOrgKey = "";
             DiscordGGKey = "";
-            SysExToken = null;
+            SysExToken = "";
             B4DToken = "";
         }
     }

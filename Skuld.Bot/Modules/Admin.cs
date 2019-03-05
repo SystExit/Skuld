@@ -9,6 +9,7 @@ using Skuld.Database;
 using Skuld.Discord.Commands;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Handlers;
+using Skuld.Discord.Models;
 using Skuld.Discord.Preconditions;
 using StatsdClient;
 using System;
@@ -943,6 +944,49 @@ namespace Skuld.Bot.Commands
             {
                 await DatabaseClient.InsertGuildAsync(Context.Guild.Id, Configuration.Discord.Prefix);
                 await $"`{Context.Guild.Name}` doesn't exist in database, fixing.".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            }
+        }
+
+        [Command("serverrole"), Summary("Adds a new self assignable role. Use: optable=[true/false] cost=[cost] level-grant=[true/false] require-level=[level] require-role=[rolename/roleid/mention]")]
+        public async Task AddRole(IRole role, GuildRoleConfig config)
+        {
+            EventResult result = new EventResult();
+            if(config.Optable)
+            {
+                result = await DatabaseClient.AddGuildAssignRole(Context.Guild, role.Id, config);
+            }
+            else if(config.LevelReward)
+            {
+                result = await DatabaseClient.AddGuildLevelReward(Context.Guild, role.Id, config);
+            }
+            else
+            {
+                await "Your role needs to either be optable or a level reward".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                return;
+            }
+
+            if(result.Successful)
+            {
+                await "".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
+            }
+            else
+            {
+                await result.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+            }
+        }
+
+        [Command("deleterole"), Summary("Removes a custom role")]
+        public async Task DeleteRole(IRole role)
+        {
+
+        }
+        [Command("deleterole"), Summary("Removes a custom role")]
+        public async Task DeleteRole(ulong roleID)
+        {
+            if(Context.DBGuild.JoinableRoles.Where(x=>x == roleID).Count() > 0)
+            {
+                Context.DBGuild.JoinableRoles.Remove(roleID);
+                await DatabaseClient.UpdateGuildAsync(Context.DBGuild);
             }
         }
     }

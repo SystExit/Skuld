@@ -1,4 +1,4 @@
-﻿using Skuld.Bot.Models;
+﻿using SysEx.Net.Models;
 using System.Collections.Generic;
 
 namespace Skuld.Bot.Extensions

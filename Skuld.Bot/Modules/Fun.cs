@@ -18,6 +18,7 @@ using Skuld.Core.Globalization;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Database;
+using Skuld.Database.Extensions;
 using Skuld.Discord.Attributes;
 using Skuld.Discord.Commands;
 using Skuld.Discord.Extensions;
@@ -34,6 +35,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using WenceyWang.FIGlet;
+using SysEx.Net.Models;
 
 namespace Skuld.Bot.Commands
 {
@@ -53,7 +55,7 @@ namespace Skuld.Bot.Commands
         public BaseClient WebHandler { get; set; }
         private CommandService CommandService { get => BotService.CommandService; }
 
-        private static string[] eightball = {
+        private static readonly string[] eightball = {
             "SKULD_FUN_8BALL_YES1",
             "SKULD_FUN_8BALL_YES2",
             "SKULD_FUN_8BALL_YES3",
@@ -248,7 +250,7 @@ namespace Skuld.Bot.Commands
                 }
                 if (cmd == "upvote")
                 {
-                    var result = await DatabaseClient.CastPastaVoteAsync(Context.User, pastaLocal, true);
+                    var result = await Context.DBUser.CastPastaVoteAsync(pastaLocal, true);
 
                     if (result.Successful)
                     {
@@ -261,7 +263,7 @@ namespace Skuld.Bot.Commands
                 }
                 if (cmd == "downvote")
                 {
-                    var result = await DatabaseClient.CastPastaVoteAsync(Context.User, pastaLocal, false);
+                    var result = await Context.DBUser.CastPastaVoteAsync(pastaLocal, false);
 
                     if (result.Successful)
                     {
@@ -325,7 +327,10 @@ namespace Skuld.Bot.Commands
             else
             {
                 var pastaResp = await DatabaseClient.GetPastaAsync(title);
-                if (pastaResp.Successful) await ((Pasta)pastaResp.Data).Content.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                if (pastaResp.Successful)
+                {
+                    await ((Pasta)pastaResp.Data).Content.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                }
                 else
                 {
                     DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
@@ -351,9 +356,7 @@ namespace Skuld.Bot.Commands
 
         [Command("emoji"), Summary("Turns text into bigmoji")]
         public async Task Emojify([Remainder]string message)
-        {
-            await message.ToRegionalIndicator().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-        }
+            => await message.ToRegionalIndicator().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
 
         [Command("emojidance"), Summary("Dancing Emoji")]
         public async Task DanceEmoji([Remainder]string message)
@@ -471,7 +474,7 @@ namespace Skuld.Bot.Commands
             var roast = await SysExClient.GetRoastAsync();
             DogStatsd.Increment("web.get");
 
-            await roast.QueueMessage(Discord.Models.MessageType.Mention, Context.User, Context.Channel);
+            await roast.QueueMessage(Discord.Models.MessageType.Mention, user, Context.Channel);
         }
 
         [Command("dadjoke"), Summary("Gives you a bad dad joke to facepalm at.")]
@@ -622,36 +625,43 @@ namespace Skuld.Bot.Commands
         [Command("meme"), Summary("Does a funny haha meme"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Memay(string template, params IUser[] users)
         {
-            var endpoints = JsonConvert.DeserializeObject<MemeResponse>(await WebHandler.ReturnStringAsync(new Uri("https://api.skuldbot.uk/fun/meme/?endpoints"))).Endpoints;
+            var endpoints = await SysExClient.GetMemeImageAsync();
 
-            if (endpoints.Any(x=>x.Name.ToLower() == template.ToLower()))
+            if (endpoints is MemeResponse)
+            { }
+            else
             {
-                var endpoint = endpoints.First(x => x.Name.ToLower() == template.ToLower());
-                if (endpoint.RequiredSources <= users.Count())
+                await Locale.GetLocale(Locale.defaultLocale).GetString("SKULD_GENERIC_ERROR").QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                return;
+            }
+
+            var nameLowered = template.ToLowerInvariant();
+
+            if(((MemeResponse)endpoints).Endpoints.Exists(x=>x.Name.ToLowerInvariant() == nameLowered))
+            {
+                var endpoint = ((MemeResponse)endpoints).Endpoints.FirstOrDefault(x => x.Name.ToLowerInvariant() == nameLowered);
+
+                if(endpoint.RequiredSources > users.Count())
                 {
-                    string queryString = "";
+                    await $"You don't have enough sources. You need {endpoint.RequiredSources} source images".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                    return;
+                }
 
-                    int x = 1;
-                    foreach (var usr in users)
+                var avatars = new List<string>();
+                foreach (var usr in users)
+                {
+                    var avatar = usr.GetAvatarUrl(ImageFormat.Png);
+                    if (avatar == "" || avatar == null)
                     {
-                        var avatar = usr.GetAvatarUrl(ImageFormat.Png);
-                        if (avatar == "" || avatar == null)
-                        {
-                            avatar = usr.GetDefaultAvatarUrl();
-                        }
-                        if (usr != users.Last())
-                        {
-                            queryString += $"source{x}={avatar}&";
-                        }
-                        else
-                        {
-                            queryString += $"source{x}={avatar}";
-                        }
-                        x++;
+                        avatar = usr.GetDefaultAvatarUrl();
                     }
+                    avatars.Add(avatar);
+                }
 
-                    var url = $"https://api.skuldbot.uk/fun/meme/{template}/?{queryString}";
+                var resp = await SysExClient.GetMemeImageAsync(endpoint.Name, avatars.ToArray());
 
+                if(resp != null && resp is Stream)
+                {
                     var folderPath = Path.Combine(AppContext.BaseDirectory, "storage/meme/");
 
                     var filePath = Path.Combine(folderPath, $"{template}-{Context.User.Id}-{Context.Channel.Id}.png");
@@ -661,13 +671,16 @@ namespace Skuld.Bot.Commands
                         Directory.CreateDirectory(folderPath);
                     }
 
-                    await WebHandler.DownloadFileAsync(new Uri(url), filePath);
+                    using (var file = System.Drawing.Image.FromStream(((Stream)resp)))
+                    {
+                        file.Save(filePath);
+                    }
 
                     await "".QueueMessage(Discord.Models.MessageType.File, Context.User, Context.Channel, filePath);
                 }
                 else
                 {
-                    await $"You don't have enough sources. You need {endpoint.RequiredSources} source images".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                    await Locale.GetLocale(Locale.defaultLocale).GetString("SKULD_GENERIC_ERROR").QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                 }
             }
             else

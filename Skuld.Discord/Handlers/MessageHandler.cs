@@ -5,11 +5,11 @@ using StatsdClient;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Database;
+using Skuld.Database.Extensions;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.TypeReaders;
 using Skuld.Discord.Utilities;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -42,6 +42,7 @@ namespace Skuld.Discord.Handlers
                    await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("CommandService - " + arg.Source, arg.Message, arg.Severity, arg.Exception));
 
                 CommandService.AddTypeReader<Uri>(new UriTypeReader());
+                CommandService.AddTypeReader<GuildRoleConfig>(new RoleConfigTypeReader());
                 await CommandService.AddModulesAsync(ModuleAssembly, ServiceProvider);
 
                 return EventResult.FromSuccess();
@@ -84,13 +85,12 @@ namespace Skuld.Discord.Handlers
                     if (arg3.Error != CommandError.UnknownCommand && !arg3.ErrorReason.Contains("Timeout") && displayerror)
                     {
                         await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("CmdHand", "Error with command, Error is: " + arg3, LogSeverity.Error));
-                        await BotService.DiscordClient.SendChannelAsync(arg2.Channel, "",
-                            new EmbedBuilder
-                            {
-                                Author = new EmbedAuthorBuilder { Name = "Error with the command" },
-                                Description = Convert.ToString(arg3.ErrorReason),
-                                Color = new Color(255, 0, 0)
-                            }.Build()).ConfigureAwait(false);
+                        await new EmbedBuilder
+                        {
+                            Author = new EmbedAuthorBuilder { Name = "Error with the command" },
+                            Description = Convert.ToString(arg3.ErrorReason),
+                            Color = new Color(255, 0, 0)
+                        }.Build().QueueMessage(Models.MessageType.Standard, arg2.User, arg2.Channel);
                     }
                     DogStatsd.Increment("commands.errors");
 
@@ -142,6 +142,14 @@ namespace Skuld.Discord.Handlers
             var message = arg as SocketUserMessage;
             if (message is null) { return; }
 
+            var gldtemp = (message.Channel as ITextChannel).Guild;
+            if(gldtemp != null)
+            {
+                var guser = await gldtemp.GetUserAsync(BotService.DiscordClient.CurrentUser.Id);
+
+                if (!guser.GetPermissions(message.Channel as IGuildChannel).SendMessages) return;
+            }
+
             SkuldUser suser = null;
             if (await DatabaseClient.CheckConnectionAsync())
             {
@@ -150,9 +158,9 @@ namespace Skuld.Discord.Handlers
                 {
                     await DatabaseClient.SingleQueryAsync(new MySql.Data.MySqlClient.MySqlCommand($"UPDATE `users` SET `AvatarUrl` = \"{message.Author.GetAvatarUrl()}\" WHERE `UserID` = {message.Author.Id};"));
                 }
-            }
 
-            if (suser != null && suser.Banned) return;
+                if (suser != null && suser.Banned) return;
+            }
 
             if (!MessageTools.IsEnabledChannel(await (message.Channel as ITextChannel).Guild.GetUserAsync(message.Author.Id), (ITextChannel)message.Channel)) { return; }
 
@@ -166,10 +174,19 @@ namespace Skuld.Discord.Handlers
                 }
             }
 
-            var context = new SkuldCommandContext(BotService.DiscordClient, message, suser, sguild);
-
-            if (sguild != null) { if (!MessageTools.HasPrefix(message, BotService.DiscordClient, SkuldConfig, cmdConfig, context.DBGuild.Prefix)) { return; } }
+            if (sguild != null) { if (!MessageTools.HasPrefix(message, BotService.DiscordClient, SkuldConfig, cmdConfig, sguild.Prefix)) { return; } }
             else { if (!MessageTools.HasPrefix(message, BotService.DiscordClient, SkuldConfig, cmdConfig)) { return; } }
+
+            SkuldCommandContext context;
+
+            if(suser != null && sguild != null)
+            {
+                context = new SkuldCommandContext(BotService.DiscordClient, message, suser, sguild);
+            }
+            else
+            {
+                context = new SkuldCommandContext(BotService.DiscordClient, message);
+            }
 
             if(sguild != null)
             {
@@ -184,6 +201,7 @@ namespace Skuld.Discord.Handlers
         public static async Task HandleExperienceAsync(IUser user, IGuild guild, SkuldGuild sguild, IMessageChannel backupChannel)
         {
             var luserexperienceResp = await DatabaseClient.GetUserExperienceAsync(user.Id);
+            var skuldUser = await MessageTools.GetUserOrInsertAsync(user);
 
             ulong amount = (ulong)rnd.Next(0, 25);
 
@@ -247,7 +265,7 @@ namespace Skuld.Discord.Handlers
                                 gld.TotalXP += amount;
                                 gld.LastGranted = DateTime.UtcNow.ToEpoch();
                             }
-                            await DatabaseClient.UpdateGuildExperienceAsync(user.Id, gld, guild.Id);
+                            await skuldUser.UpdateGuildExperienceAsync(gld, guild.Id);
                             DogStatsd.Increment("user.levels.processed");
                         }
                     }
@@ -259,7 +277,7 @@ namespace Skuld.Discord.Handlers
                             XP = amount
                         };
                         gld.TotalXP = gld.XP;
-                        await DatabaseClient.InsertGuildExperienceAsync(user.Id, guild.Id, gld);
+                        await skuldUser.InsertGuildExperienceAsync(guild.Id, gld);
                         DogStatsd.Increment("user.levels.processed");
                     }
                 }
@@ -271,7 +289,7 @@ namespace Skuld.Discord.Handlers
                         XP = amount
                     };
                     gld.TotalXP = gld.XP;
-                    await DatabaseClient.InsertGuildExperienceAsync(user.Id, guild.Id, gld);
+                    await skuldUser.InsertGuildExperienceAsync(guild.Id, gld);
                     DogStatsd.Increment("user.levels.processed");
                 }
             }
@@ -283,7 +301,7 @@ namespace Skuld.Discord.Handlers
                     XP = amount
                 };
                 gld.TotalXP = gld.XP;
-                await DatabaseClient.InsertGuildExperienceAsync(user.Id, guild.Id, gld);
+                await skuldUser.InsertGuildExperienceAsync(guild.Id, gld);
                 DogStatsd.Increment("user.levels.processed");
             }
 
@@ -306,7 +324,7 @@ namespace Skuld.Discord.Handlers
         public static async Task DispatchCommandAsync(SkuldCommandContext context)
         {
             watch.Start();
-            await CommandService.ExecuteAsync(context, cmdConfig.ArgPos, BotService.Services);
+            var result = await CommandService.ExecuteAsync(context, cmdConfig.ArgPos, BotService.Services);
             watch.Stop();
         }
 
@@ -326,9 +344,9 @@ namespace Skuld.Discord.Handlers
         }
 
         private static async Task InsertCommandAsync(CommandInfo command, SkuldUser user)
-            => await DatabaseClient.UpdateUserUsageAsync(user, command.Name ?? command.Module.Name);
+            => await user.UpdateUserCommandCountAsync(command.Name ?? command.Module.Name);
 
         private static async Task InsertCommandAsync(CustomCommand command, SkuldUser user)
-            => await DatabaseClient.UpdateUserUsageAsync(user, command.CommandName);
+            => await user.UpdateUserCommandCountAsync(command.CommandName);
     }
 }

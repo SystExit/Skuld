@@ -1,9 +1,9 @@
-﻿using Discord;
+﻿using Akitaux.Twitch.Helix;
+using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Skuld.APIS;
 using Skuld.Core;
-using Skuld.Database;
 using Skuld.Discord.Handlers;
 using StatsdClient;
 using System;
@@ -18,6 +18,7 @@ namespace Skuld.Discord.Services
     {
         public static DiscordShardedClient DiscordClient;
         public static CommandService CommandService { get => MessageHandler.CommandService; }
+        public static TwitchHelixClient TwitchClient;
         public static IServiceProvider Services;
         static List<ulong> UserIDs;
         public static int Users { get => UserIDs.Count(); }
@@ -72,13 +73,6 @@ namespace Skuld.Discord.Services
                     await FeedUsersAsync().ConfigureAwait(false);
                 }
             ).Start();
-            new Thread(
-                async () =>
-                {
-                    Thread.CurrentThread.IsBackground = true;
-                    await CleanDatabaseAsync();
-                }
-            ).Start();
         }
 
         private static Task SendDataToDataDog()
@@ -95,58 +89,6 @@ namespace Skuld.Discord.Services
                 }
                 DogStatsd.Gauge("users.total", Users);
                 Thread.Sleep(TimeSpan.FromSeconds(5));
-            }
-        }
-
-        private static async Task CleanDatabaseAsync()
-        {
-            while (true)
-            {
-                if (DiscordClient.Shards.All(x => x.ConnectionState == ConnectionState.Connected))
-                {
-                    if (DatabaseClient.Enabled)
-                    {
-                        var res = await DatabaseClient.GetAllUserIDsAsync();
-                        if (res.Successful)
-                        {
-                            var ids = res.Data as List<ulong>;
-                            var sanitized = ids.Except(UserIDs).ToList();
-
-                            foreach (var id in sanitized)
-                            {
-                                if (DiscordClient.GetUser(id) == null)
-                                {
-                                    await DatabaseClient.DropUserAsync(id);
-                                }
-                            }
-                        }
-
-                        var res2 = await DatabaseClient.GetAllGuildIDsAsync();
-                        if (res2.Successful)
-                        {
-                            var ids = res2.Data as List<ulong>;
-                            List<ulong> guildIDs = new List<ulong>();
-                            foreach(var gld in DiscordClient.Guilds)
-                            {
-                                guildIDs.Add(gld.Id);
-                            }
-                            var sanitized = ids.Except(guildIDs).ToList();
-
-                            foreach (var id in sanitized)
-                            {
-                                if (DiscordClient.GetGuild(id) == null)
-                                {
-                                    await DatabaseClient.DropGuildAsync(id);
-                                }
-                            }
-                        }
-                    }
-                    await Task.Delay(TimeSpan.FromMinutes(30));
-                }
-                else
-                {
-                    await Task.Delay(TimeSpan.FromMinutes(1));
-                }
             }
         }
 
