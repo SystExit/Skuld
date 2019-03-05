@@ -296,7 +296,7 @@ namespace Skuld.Bot.Commands
 
                 var rank = await profileuser.GetGlobalRankAsync();
 
-                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank {rank.Position}/{rank.Total}"));
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: {rank.Position}/{rank.Total}"));
                 image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel1, dailyText));
 
                 //YLevel 2
