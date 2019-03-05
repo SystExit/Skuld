@@ -7,7 +7,7 @@ namespace Skuld.Core.Models
         public ulong ID { get; set; }
         public string Prefix { get; set; }
         public ulong MutedRole { get; set; }
-        public ulong[] JoinableRoles { get; set; }
+        public List<ulong> JoinableRoles { get; set; }
         public ulong JoinRole { get; set; }
         public ulong UserJoinChannel { get; set; }
         public ulong UserLeaveChannel { get; set; }

@@ -1,18 +1,21 @@
-﻿using Discord;
+﻿using Akitaux.Twitch.Helix;
+using Akitaux.Twitch.Helix.Requests;
+using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
-using PokeSharp;
+using PokeAPI;
 using Skuld.APIS;
 using Skuld.APIS.Extensions;
 using Skuld.APIS.Pokemon.Models;
+using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
-using Skuld.Discord;
 using Skuld.Discord.Attributes;
 using Skuld.Discord.Commands;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
+using Skuld.Discord.Services;
 using SteamStoreQuery;
 using SteamWebAPI2.Interfaces;
 using System;
@@ -20,6 +23,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Voltaic;
 
 namespace Skuld.Bot.Commands
 {
@@ -28,7 +32,7 @@ namespace Skuld.Bot.Commands
     {
         public SocialAPIS Social { get; set; }
         public Random Random { get; set; }
-        public PokeSharpClient PokeMonClient { get; set; }
+
         public SteamStore SteamStoreClient { get; set; }
         public UrbanDictionaryClient UrbanDictionary { get; set; }
         public WikipediaClient Wikipedia { get; set; }
@@ -40,9 +44,17 @@ namespace Skuld.Bot.Commands
         [Command("twitch"), Summary("Finds a twitch user"), RequireTwitch]
         public async Task TwitchSearch([Remainder]string twitchStreamer)
         {
-            var channel = await TwitchClient.GetUserAsync(twitchStreamer);
+            var channel = await BotService.TwitchClient.GetUsersAsync(new GetUsersParams
+            {
+                UserNames = new[] { new Utf8String(twitchStreamer) }
+            });
 
-            await (await channel.GetEmbedAsync()).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            var user = channel.Data.FirstOrDefault();
+
+            if (user != null)
+                await (await user.GetEmbedAsync(BotService.TwitchClient)).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            else
+                await $"Couldn't find user `{twitchStreamer}`. Check your spelling and try again".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
         }
 
         [Command("instagram"), Alias("insta"), Ratelimit(20, 1, Measure.Minutes)]
@@ -150,7 +162,6 @@ namespace Skuld.Bot.Commands
             if (platform == "youtube" || platform == "yt")
             {
                 await $"🔍 Searching Youtube for: {query}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                var type = Context.Channel.EnterTypingState();
                 var result = await SearchClient.SearchYoutubeAsync(query);
                 await result.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
@@ -276,14 +287,14 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("pokemon"), Summary("Gets information about a pokemon id")]
-        public async Task Getpokemon(string pokemon, string group = null)
-            => await SendPokemonAsync(await PokeMonClient.GetPocketMonsterAsync(pokemon.ToLowerInvariant()), group ?? "default").ConfigureAwait(false);
+        public async Task GetPokemon(string pokemon, string group = null)
+            => await SendPokemonAsync(await DataFetcher.GetNamedApiObject<PokemonSpecies>(pokemon.ToLowerInvariant()), group ?? "default").ConfigureAwait(false);
 
         [Command("pokemon"), Summary("Gets information about a pokemon id")]
-        public async Task Getpokemon(int pokemonid, string group = null)
-            => await SendPokemonAsync(await PokeMonClient.GetPocketMonsterAsync(pokemonid), group ?? "default").ConfigureAwait(false);
+        public async Task GetPokemon(int pokemonid, string group = null)
+            => await SendPokemonAsync(await DataFetcher.GetApiObject<PokemonSpecies>(pokemonid), group ?? "default").ConfigureAwait(false);
 
-        public async Task SendPokemonAsync(PokeSharp.Models.PocketMonster pokemon, string group)
+        public async Task SendPokemonAsync(PokemonSpecies pokemon, string group)
         {
             if (pokemon == null)
             {
@@ -291,7 +302,7 @@ namespace Skuld.Bot.Commands
                 {
                     Color = Color.Red,
                     Title = "Command Error!",
-                    Description = "This pokemon doesn't exist. Please try again.\nIf it is a Generation 7, pokeapi.co hasn't updated for it yet."
+                    Description = "This pokemon doesn't exist. Please try again."
                 }.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
             }
@@ -303,27 +314,27 @@ namespace Skuld.Bot.Commands
 
                 if (group == "stat" || group == "stats")
                 {
-                    embed = pokemon.GetEmbed(PokeSharpGroup.Stats);
+                    embed = await pokemon.GetEmbedAsync(PokemonDataGroup.Stats);
                 }
                 if (group == "abilities" || group == "ability")
                 {
-                    embed = pokemon.GetEmbed(PokeSharpGroup.Abilities);
+                    embed = await pokemon.GetEmbedAsync(PokemonDataGroup.Abilities);
                 }
                 if (group == "helditems" || group == "hitems" || group == "hitem" || group == "items")
                 {
-                    embed = pokemon.GetEmbed(PokeSharpGroup.HeldItems);
+                    embed = await pokemon.GetEmbedAsync(PokemonDataGroup.HeldItems);
                 }
                 if (group == "default")
                 {
-                    embed = pokemon.GetEmbed(PokeSharpGroup.Default);
+                    embed = await pokemon.GetEmbedAsync(PokemonDataGroup.Default);
                 }
                 if (group == "move" || group == "moves")
                 {
-                    embed = pokemon.GetEmbed(PokeSharpGroup.Moves);
+                    embed = await pokemon.GetEmbedAsync(PokemonDataGroup.Moves);
                 }
                 if (group == "games" || group == "game")
                 {
-                    embed = pokemon.GetEmbed(PokeSharpGroup.Games);
+                    embed = await pokemon.GetEmbedAsync(PokemonDataGroup.Games);
                 }
                 await embed.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }

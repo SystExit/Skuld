@@ -37,7 +37,7 @@ namespace Skuld.Core.Extensions
             ".apng"
         };
 
-        public static LogSeverity ToDiscord(this NTwitch.LogSeverity logSeverity)
+        /*public static LogSeverity ToDiscord(this NTwitch.LogSeverity logSeverity)
         {
             if (logSeverity == NTwitch.LogSeverity.Critical)
                 return LogSeverity.Critical;
@@ -53,7 +53,7 @@ namespace Skuld.Core.Extensions
                 return LogSeverity.Warning;
 
             return LogSeverity.Verbose;
-        }
+        }*/
 
         public static ConsoleColor SeverityToColor(this LogSeverity sev)
         {

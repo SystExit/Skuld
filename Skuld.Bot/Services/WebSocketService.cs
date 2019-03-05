@@ -104,7 +104,7 @@ namespace Skuld.Bot.Services
                 else
                     mem = HardwareStats.Memory.GetMBUsage + "MB";
 
-                var rawjson = $"{{\"Skuld\":\"{SoftwareStats.Skuld.Version.ToString()}\"," +
+                var rawjson = $"{{\"Skuld\":\"{SoftwareStats.Skuld.Key.Version.ToString()}\"]({SoftwareStats.Skuld.Value})," +
                     $"\"Uptime\":\"{string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}\"," +
                     $"\"Ping\":\"{Client.Latency}ms\"," +
                     $"\"Guilds\":{Client.Guilds.Count}," +

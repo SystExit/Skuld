@@ -14,6 +14,7 @@ using System;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using TraceMoe.NET;
 
 namespace Skuld.Bot.Commands
 {
@@ -139,6 +140,70 @@ namespace Skuld.Bot.Commands
                 ImageUrl = gif,
                 Color = EmbedUtils.RandomColor()
             }.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+        }
+
+        [Command("whatanime"), Summary("Searches Trace.Moe")]
+        public async Task WhatAnime(Uri url = null)
+        {
+            if(url == null)
+            {
+                if (Context.Message.Attachments.Count() > 0)
+                {
+                    var attach = Context.Message.Attachments.First();
+
+                    var data = await new TraceMoe.NET.ApiConversion().TraceAnimeByUrlAsync(attach.Url);
+
+                    if (data.docs.Count() > 0)
+                    {
+                        var ordered = data.docs.OrderByDescending(x => x.similarity);
+                        var mostLikely = ordered.First();
+
+                        var message = $"The image is most likely from: {mostLikely.title}/{mostLikely.title_romaji}\n" +
+                            $"Similarity Rating: {string.Format("{0:0.00}", Math.Round(mostLikely.similarity * 100))}%\n" +
+                            "Other potential candidates:\n";
+
+                        var take = ordered.Skip(1).Where(x => x.similarity < mostLikely.similarity).Take(5);
+
+                        foreach (var took in take)
+                        {
+                            message += $"{took.title}/{took.title_romaji} - {string.Format("{0:0.00}", Math.Round(took.similarity * 100))}%\n";
+                        }
+
+                        await message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    }
+                    else
+                    {
+                        await "Couldn't find anything with the image provided".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    }
+                }
+            }
+            else
+            {
+                var data = await new ApiConversion().TraceAnimeByUrlAsync(url.OriginalString);
+
+                if (data.docs.Count() > 0)
+                {
+                    var ordered = data.docs.OrderByDescending(x => x.similarity);
+                    var mostLikely = ordered.First();
+
+                    var message = $"The image is most likely from: {mostLikely.title}/{mostLikely.title_romaji}\n" +
+                        $"Similarity Rating: {string.Format("{0:0.00}", Math.Round(mostLikely.similarity * 100))}%\n" +
+                        "Other potential candidates:\n";
+
+                    var take = ordered.Skip(1).Where(x=>x.similarity < mostLikely.similarity).Take(5);
+
+                    foreach (var took in take)
+                    {
+                        message += $"{took.title}/{took.title_romaji} - {string.Format("{0:0.00}", Math.Round(took.similarity * 100))}%\n";
+                    }
+
+                    await message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                }
+                else
+                {
+                    await "Couldn't find anything with the image provided".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                }
+            }
         }
     }
 }

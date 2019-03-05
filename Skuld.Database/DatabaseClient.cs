@@ -21,17 +21,17 @@ namespace Skuld.Database
         private static string ConnectionString;
         private static DateTime LastCheck;
         private static bool LastResult;
-        private static EventResult NoSqlConnection = new EventResult
+        public static EventResult NoSqlConnection = new EventResult
         {
                 Successful = false,
                 Error = "MySQL Connection unsuccessful"
         };
-        private static EventResult ResultParseError = new EventResult
+        public static EventResult ResultParseError = new EventResult
         {
             Successful = false,
             Error = "Error Parsing Data"
         };
-        private static EventResult NoResultsAvailable = new EventResult
+        public static EventResult NoResultsAvailable = new EventResult
         {
             Successful = false,
             Error = "No Results Available"
@@ -396,16 +396,16 @@ namespace Skuld.Database
 
                                     if (!string.IsNullOrWhiteSpace(rawroles))
                                     {
+                                        guild.JoinableRoles = new List<ulong>();
+
                                         var roles = rawroles.Split(',');
 
                                         if (roles.Length > 0)
                                         {
-                                            var rolelist = new ulong[roles.Length];
                                             for (int x = 0; x < roles.Length; x++)
                                             {
-                                                rolelist[x] = Convert.ToUInt64(roles[x]);
+                                                guild.JoinableRoles.Add(Convert.ToUInt64(roles[x]));
                                             }
-                                            guild.JoinableRoles = rolelist;
                                         }
                                         else
                                         {
@@ -737,163 +737,13 @@ namespace Skuld.Database
             }
             return NoSqlConnection;
         }
-        public static async Task<EventResult> GetAllUserIDsAsync()
-        {
-            if (await CheckConnectionAsync())
-            {
-                try
-                {
-                    var command = new MySqlCommand("SELECT UserID FROM `users`");
-
-                    var ids = new List<ulong>();
-
-                    using (var conn = new MySqlConnection(ConnectionString))
-                    {
-                        await conn.OpenAsync();
-                        if (conn.State == System.Data.ConnectionState.Open)
-                        {
-                            command.Connection = conn;
-
-                            DogStatsd.Increment("mysql.queries");
-
-                            var reader = await command.ExecuteReaderAsync();
-
-                            int rows = 0;
-
-                            if (reader.HasRows)
-                            {
-                                while (await reader.ReadAsync())
-                                {
-                                    ids.Add(ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["UserID"])));
-
-                                    rows++;
-                                }
-
-
-                                DogStatsd.Increment("mysql.rows_ret", rows);
-
-                                await conn.CloseAsync();
-                            }
-                        }
-                    }
-
-                    return EventResult.FromSuccess(ids);
-                }
-                catch (Exception ex)
-                {
-                    return EventResult.FromFailureException(ex.Message, ex);
-                }
-            }
-            return NoSqlConnection;
-        }
-        public static async Task<EventResult> GetAllGuildIDsAsync()
-        {
-            if (await CheckConnectionAsync())
-            {
-                try
-                {
-                    var command = new MySqlCommand("SELECT GuildID FROM `guilds`");
-
-                    var ids = new List<ulong>();
-
-                    using (var conn = new MySqlConnection(ConnectionString))
-                    {
-                        await conn.OpenAsync();
-                        if (conn.State == System.Data.ConnectionState.Open)
-                        {
-                            command.Connection = conn;
-
-                            DogStatsd.Increment("mysql.queries");
-
-                            var reader = await command.ExecuteReaderAsync();
-
-                            int rows = 0;
-
-                            if (reader.HasRows)
-                            {
-                                while (await reader.ReadAsync())
-                                {
-                                    ids.Add(ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["GuildID"])));
-
-                                    rows++;
-                                }
-
-
-                                DogStatsd.Increment("mysql.rows_ret", rows);
-
-                                await conn.CloseAsync();
-                            }
-                        }
-                    }
-
-                    return EventResult.FromSuccess(ids);
-                }
-                catch (Exception ex)
-                {
-                    return EventResult.FromFailureException(ex.Message, ex);
-                }
-            }
-            return NoSqlConnection;
-        }
 
         public static async Task<EventResult> UpdateUserAsync(SkuldUser user)
-        {
-            if (await CheckConnectionAsync())
-            {
-                return await SingleQueryAsync(user.GetMySqlCommand()).ConfigureAwait(false);
-            }
-            return NoSqlConnection;
-        }
-        public static async Task<IReadOnlyList<EventResult>> UpdateGuildAsync(SkuldGuild guild)
-        {
-            if (await CheckConnectionAsync())
-            {
-                return new List<EventResult>
-                {
-                    await SingleQueryAsync(guild.GetBaseMySqlCommand()).ConfigureAwait(false),
-                    await SingleQueryAsync(guild.GetFeaturesMySqlCommand()).ConfigureAwait(false),
-                    await SingleQueryAsync(guild.GetModulesMySqlCommand()).ConfigureAwait(false)
-                }.AsReadOnly();
-            }
-            return new List<EventResult> { NoSqlConnection };
-        }
-        public static async Task<EventResult> UpdateUserUsageAsync(SkuldUser user, string command)
-        {
-            if (await CheckConnectionAsync())
-            {
-                var cmd = new MySqlCommand("SELECT `Usage` from `usercommandusage` WHERE UserID = @userID AND Command = @command");
-                cmd.Parameters.AddWithValue("@userID", user.ID);
-                cmd.Parameters.AddWithValue("@command", command);
-                var resp = await SingleQueryAsync(cmd).ConfigureAwait(false);
+            => await user.UpdateAsync();
 
-                if (resp.Successful)
-                {
-                    if (resp.Data != null)
-                    {
-                        var cmdusg = Convert.ToInt32(resp.Data);
-                        cmdusg = cmdusg + 1;
-                        cmd = new MySqlCommand("UPDATE `usercommandusage` SET `Usage` = @userusg WHERE UserID = @userid AND Command = @command");
-                        cmd.Parameters.AddWithValue("@userusg", cmdusg);
-                        cmd.Parameters.AddWithValue("@userid", user.ID);
-                        cmd.Parameters.AddWithValue("@command", command);
-                        return await SingleQueryAsync(cmd).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        cmd = new MySqlCommand("INSERT INTO `usercommandusage` (`UserID`, `Usage`, `Command`) VALUES (@userid , @userusg , @command)");
-                        cmd.Parameters.AddWithValue("@userusg", 1);
-                        cmd.Parameters.AddWithValue("@userid", user.ID);
-                        cmd.Parameters.AddWithValue("@command", command);
-                        return await SingleQueryAsync(cmd).ConfigureAwait(false);
-                    }
-                }
-                else
-                {
-                    return resp;
-                }
-            }
-            return NoSqlConnection;
-        }
+        public static async Task<IReadOnlyList<EventResult>> UpdateGuildAsync(SkuldGuild guild)
+            => await guild.UpdateAsync();
+
         public static async Task<EventResult> UpdateCustomCommand(ulong GuildID, string command, string content)
         {
             if (await CheckConnectionAsync())
@@ -962,130 +812,6 @@ namespace Skuld.Database
                 var cmd = new MySqlCommand("DELETE FROM `pasta` WHERE Name = @pastaname;");
                 cmd.Parameters.AddWithValue("@pastaname", title);
                 return await SingleQueryAsync(cmd).ConfigureAwait(false);
-            }
-            return NoSqlConnection;
-        }
-
-        public static async Task<EventResult> CastPastaVoteAsync(IUser user, Pasta pasta, bool upvote)
-        {
-            if (await CheckConnectionAsync())
-            {
-                var command = new MySqlCommand("INSERT INTO `pastakarma` (PastaID,UserID,VoteType) VALUES (@pastaid,@userid,@votetype)");
-
-                command.Parameters.AddWithValue("@pastaid", pasta.PastaID);
-                command.Parameters.AddWithValue("@userid", user.Id);
-
-                if (upvote)
-                {
-                    command.Parameters.AddWithValue("@votetype", 1);
-                }
-                else
-                {
-                    command.Parameters.AddWithValue("@votetype", 0);
-                }
-
-                var resp = await HasUserVotedOnPastaAsync(user, pasta);
-                if (!resp.Successful) return resp;
-
-                bool.TryParse(resp.Data as string, out bool usercasted);
-
-                if (!usercasted)
-                {
-                    return await SingleQueryAsync(command);
-                }
-                else
-                {
-                    var tmpcom = new MySqlCommand("SELECT VoteType FROM `pastakarma` WHERE UserID = @userid AND PastaID = @pastaid");
-                    tmpcom.Parameters.AddWithValue("@userid", user.Id);
-                    tmpcom.Parameters.AddWithValue("@pastaid", pasta.PastaID);
-                    var res = await SingleQueryAsync(tmpcom);
-
-                    var datares = Convert.ToString(res.Data).ToBool();
-
-                    if (datares == upvote)
-                    {
-                        return EventResult.FromFailure("User already voted");
-                    }
-                    if (!(datares == upvote))
-                    {
-                        return EventResult.FromFailure("User already voted");
-                    }
-
-                    return await ChangeUserVoteOnPastaAsync(user, pasta);
-                }
-            }
-            return NoSqlConnection;
-        }
-        public static async Task<EventResult> GetUserVoteAsync(IUser user, Pasta pasta)
-        {
-            if (await CheckConnectionAsync())
-            {
-                var tmpcom = new MySqlCommand("SELECT VoteType FROM `pastakarma` WHERE UserID = @userid AND PastaID = @pastaid");
-                tmpcom.Parameters.AddWithValue("@userid", user.Id);
-                tmpcom.Parameters.AddWithValue("@pastaid", pasta.PastaID);
-                var res = await SingleQueryAsync(tmpcom);
-
-                var datares = Convert.ToString(res.Data).ToBool();
-
-                return new EventResult
-                {
-                    Successful = true,
-                    Data = datares
-                };
-            }
-            return NoSqlConnection;
-        }
-        public static async Task<EventResult> HasUserVotedOnPastaAsync(IUser user, Pasta pasta)
-        {
-            if (await CheckConnectionAsync())
-            {
-                var command = new MySqlCommand("SELECT * FROM `pastakarma` WHERE PastaID = @pastaid AND UserID = @userid");
-
-                command.Parameters.AddWithValue("@userid", user.Id);
-                command.Parameters.AddWithValue("@pastaid", pasta.PastaID);
-
-                var res = await SingleQueryAsync(command);
-
-                if (res.Data == null)
-                {
-                    return new EventResult
-                    {
-                        Successful = true,
-                        Data = false
-                    };
-                }
-                else
-                {
-                    return new EventResult
-                    {
-                        Successful = true,
-                        Data = true
-                    };
-                }
-            }
-            return NoSqlConnection;
-        }
-        public static async Task<EventResult> ChangeUserVoteOnPastaAsync(IUser user, Pasta pasta)
-        {
-            if (await CheckConnectionAsync())
-            {
-                bool vote = false;
-                var hasresp = await HasUserVotedOnPastaAsync(user, pasta).ConfigureAwait(false);
-                if(hasresp.Successful)
-                {
-                    var voteresp = await GetUserVoteAsync(user, pasta).ConfigureAwait(false);
-                    if(voteresp.Successful)
-                    {
-                        bool.TryParse((string)voteresp.Data, out vote);
-                    }
-                }
-
-                var command = new MySqlCommand("UPDATE `pastakarma` SET VoteType = @votetype WHERE UserID = @userID AND PastaID = @pastaid");
-                command.Parameters.AddWithValue("@votetype", !vote);
-                command.Parameters.AddWithValue("@UserID", user.Id);
-                command.Parameters.AddWithValue("@pastaid", pasta.PastaID);
-
-                return await SingleQueryAsync(command);
             }
             return NoSqlConnection;
         }
@@ -1161,79 +887,6 @@ namespace Skuld.Database
                 catch (Exception ex)
                 {
                     return EventResult.FromFailureException(ex.Message, ex);
-                }
-            }
-            return NoSqlConnection;
-        }
-        public static async Task<EventResult> UpdateGuildExperienceAsync(ulong UserID, GuildExperience guildexp, ulong GuildID)
-        {
-            if (await CheckConnectionAsync())
-            {
-                try
-                {
-                    var command = new MySqlCommand("UPDATE `userguildxp` SET " +
-                    "`Level` = @lvl, " +
-                    "`XP` = @xp, " +
-                    "`TotalXP` = @txp " +
-                    "WHERE GuildID = @guildID AND UserID = @userID");
-
-                    command.Parameters.AddWithValue("@lvl", guildexp.Level);
-                    command.Parameters.AddWithValue("@xp", guildexp.XP);
-                    command.Parameters.AddWithValue("@txp", guildexp.TotalXP);
-                    command.Parameters.AddWithValue("@guildID", GuildID);
-                    command.Parameters.AddWithValue("@userID", UserID);
-
-                    return await SingleQueryAsync(command).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    return EventResult.FromFailureException(ex.Message, ex);
-                }
-            }
-            return NoSqlConnection;
-        }
-        public static async Task<EventResult> InsertGuildExperienceAsync(ulong UserID, ulong GuildID, GuildExperience experience)
-        {
-            if (await CheckConnectionAsync())
-            {
-                try
-                {
-                    var command = new MySqlCommand("INSERT INTO `userguildxp` (UserID, GuildID, Level, XP, TotalXP, LastGranted) VALUES (@userID, @guildID, @lvl, @xp, @txp, @lgrant);");
-
-                    command.Parameters.AddWithValue("@guildID", GuildID);
-                    command.Parameters.AddWithValue("@userID", UserID);
-                    command.Parameters.AddWithValue("@lvl", experience.Level);
-                    command.Parameters.AddWithValue("@xp", experience.XP);
-                    command.Parameters.AddWithValue("@txp", experience.TotalXP);
-                    command.Parameters.AddWithValue("@lgrant", experience.LastGranted);
-
-                    return await SingleQueryAsync(command).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    return EventResult.FromFailureException(ex.Message, ex);
-                }
-            }
-            return NoSqlConnection;
-        }
-        public static async Task<EventResult> AddExperienceAsync(ulong UserID, ulong amount, ulong GuildID)
-        {
-            if (await CheckConnectionAsync())
-            {
-                var userExperienceResp = await GetUserExperienceAsync(UserID).ConfigureAwait(false);
-
-                if (userExperienceResp.Data is UserExperience)
-                {
-                    var guildExp = (userExperienceResp.Data as UserExperience).GetGuildExperience(GuildID);
-
-                    guildExp.XP += amount;
-                    guildExp.TotalXP += amount;
-
-                    return await UpdateGuildExperienceAsync(UserID, guildExp, GuildID);
-                }
-                else
-                {
-                    return userExperienceResp;
                 }
             }
             return NoSqlConnection;
@@ -1443,138 +1096,6 @@ namespace Skuld.Database
             }
             return NoSqlConnection;
         }
-        public static async Task<EventResult> AddReputationAsync(ulong repee, ulong reper)
-        {
-            if (await CheckConnectionAsync())
-            {
-                try
-                {
-                    var command = new MySqlCommand("INSERT INTO `reputation` (Repee, Reper, Timestamp) VALUES (@repee, @reper, @timestamp);");
-
-                    command.Parameters.AddWithValue("@repee", repee);
-                    command.Parameters.AddWithValue("@reper", reper);
-                    command.Parameters.AddWithValue("@timestamp", DateTime.UtcNow.ToEpoch());
-
-                    return await SingleQueryAsync(command).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    return EventResult.FromFailureException(ex.Message, ex);
-                }
-            }
-            return NoSqlConnection;
-        }
-        public static async Task<EventResult> RemoveReputationAsync(ulong repee, ulong reper)
-        {
-            if (await CheckConnectionAsync())
-            {
-                try
-                {
-                    var command = new MySqlCommand("DELETE FROM `reputation` WHERE `Repee` = @repee AND `Reper` = @reper;");
-
-                    command.Parameters.AddWithValue("@repee", repee);
-                    command.Parameters.AddWithValue("@reper", reper);
-
-                    return await SingleQueryAsync(command).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    return EventResult.FromFailureException(ex.Message, ex);
-                }
-            }
-            return NoSqlConnection;
-        }
-        public static async Task<EventResult> IsActionBlockedAsync(ulong source, ulong target)
-        {
-            if (await CheckConnectionAsync())
-            {
-                try
-                {
-                    var command = new MySqlCommand("SELECT (EXISTS (SELECT * FROM `blockedactions` WHERE `Blocker` = @blocker AND `Blockee` = @blockee))");
-
-                    command.Parameters.AddWithValue("@blocker", source);
-                    command.Parameters.AddWithValue("@blockee", target);
-
-                    bool re = false;
-
-                    using (var conn = new MySqlConnection(ConnectionString))
-                    {
-                        await conn.OpenAsync();
-                        if (conn.State == System.Data.ConnectionState.Open)
-                        {
-                            command.Connection = conn;
-
-                            DogStatsd.Increment("mysql.queries");
-
-                            var reader = await command.ExecuteReaderAsync();
-
-                            int rows = 0;
-
-                            if (reader.HasRows)
-                            {
-                                while (await reader.ReadAsync())
-                                {
-                                    rows++;
-
-                                    re = Convert.ToBoolean(reader[0]);
-                                }
-
-                                DogStatsd.Increment("mysql.rows_ret", rows);
-
-                                await conn.CloseAsync();
-                            }
-                        }
-                    }
-
-                    return EventResult.FromSuccess(re);
-                }
-                catch (Exception ex)
-                {
-                    return EventResult.FromFailureException(ex.Message, ex);
-                }
-            }
-            return NoSqlConnection;
-        }
-        public static async Task<EventResult> BlockActionAsync(ulong source, ulong target)
-        {
-            if (await CheckConnectionAsync())
-            {
-                try
-                {
-                    var command = new MySqlCommand("INSERT INTO `blockedactions` (Blocker, Blockee) VALUES (@blocker, @blockee);");
-
-                    command.Parameters.AddWithValue("@blocker", source);
-                    command.Parameters.AddWithValue("@blockee", target);
-
-                    return await SingleQueryAsync(command).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    return EventResult.FromFailureException(ex.Message, ex);
-                }
-            }
-            return NoSqlConnection;
-        }
-        public static async Task<EventResult> UnblockActionAsync(ulong source, ulong target)
-        {
-            if (await CheckConnectionAsync())
-            {
-                try
-                {
-                    var command = new MySqlCommand("DELETE FROM `blockedactions` WHERE `Blocker` = @blocker AND `Blockee` = @blockee;");
-
-                    command.Parameters.AddWithValue("@blocker", source);
-                    command.Parameters.AddWithValue("@blockee", target);
-
-                    return await SingleQueryAsync(command).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    return EventResult.FromFailureException(ex.Message, ex);
-                }
-            }
-            return NoSqlConnection;
-        }
 
         public static async Task<EventResult> GetGlobalRankAsync(ulong userID)
         {
@@ -1672,6 +1193,39 @@ namespace Skuld.Database
             {
                 return NoSqlConnection;
             }
+        }
+
+        public static async Task<EventResult> AddGuildAssignRole(IGuild guild, ulong roleID, GuildRoleConfig roleConfig)
+        {
+            if (await CheckConnectionAsync())
+            {
+
+            }
+            return NoSqlConnection;
+        }
+        public static async Task<EventResult> AddGuildLevelReward(IGuild guild, ulong roleID, GuildRoleConfig roleConfig)
+        {
+            if (await CheckConnectionAsync())
+            {
+
+            }
+            return NoSqlConnection;
+        }
+        public static async Task<EventResult> RemoveGuildRewardRole(SkuldGuild guild, ulong roleID)
+        {
+            if (await CheckConnectionAsync())
+            {
+                foreach(var role in guild.LevelRewards)
+                {
+                    if(role.RoleID == roleID)
+                    {
+                        guild.LevelRewards.Remove(role);
+                        await guild.RemoveRoleFromLevelRewardsAsync(role.RoleID);
+                    }
+                }
+
+            }
+            return NoSqlConnection;
         }
 
         public static async Task<IReadOnlyList<EventResult>> CheckGuildUsersAsync(DiscordShardedClient client, IGuild guild)
