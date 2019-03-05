@@ -366,7 +366,7 @@ namespace Skuld.Bot.Commands
                                 }
                                 else
                                 {
-                                    await $"{user.Mention} doged your pet, pet someone else. (They've blocked users from petting them)".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                                    await EmbedUtils.EmbedImage(new Uri("https://cdn.discordapp.com/attachments/306137824023805953/552393620448215050/image0-7.jpg"), "", $"{user.Mention} doged your pet, pet someone else. (They've blocked users from petting them)").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                                 }
                             }
                             else
@@ -407,7 +407,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                await GetBlockedMessage(Context.User, user, "pat").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await EmbedUtils.EmbedImage(new Uri("https://cdn.discordapp.com/attachments/306137824023805953/552393620448215050/image0-7.jpg"), "", GetBlockedMessage(Context.User, user, "pat")).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
         }
 
