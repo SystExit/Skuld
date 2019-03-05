@@ -10,7 +10,7 @@ namespace Skuld.APIS
 {
     public class AnimalClient : BaseClient
     {
-        private readonly Uri BIRDAPI = new Uri("https://birdsare.cool/bird.json");
+        private readonly Uri BIRDAPI = new Uri("https://random.birb.pw/tweet.json/");
         private readonly Uri KITTYAPI = new Uri("https://aws.random.cat/meow");
         private readonly Uri KITTYAPI2 = new Uri("http://thecatapi.com/api/images/get");
         private readonly Uri DOGGOAPI = new Uri("https://random.dog/woof");
@@ -50,9 +50,9 @@ namespace Skuld.APIS
 
             var rawresp = await ReturnStringAsync(BIRDAPI);
             dynamic data = JsonConvert.DeserializeObject(rawresp);
-            var birb = data["url"];
+            var birb = data["file"];
             if (birb == null) return null;
-            return birb;
+            return "https://random.birb.pw/img/"+birb;
         }
 
         private async Task<string> GetKittyAsync()
