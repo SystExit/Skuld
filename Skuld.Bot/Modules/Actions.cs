@@ -435,7 +435,7 @@ namespace Skuld.Bot.Commands
 
             if (res.Successful)
             {
-                return !(bool)res.Data;
+                return !Convert.ToBoolean(res.Data);
             }
 
             return true;
