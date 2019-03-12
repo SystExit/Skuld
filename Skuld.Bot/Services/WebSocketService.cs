@@ -95,6 +95,150 @@ namespace Skuld.Bot.Services
                     await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found")));
                 }
             }
+            if (message.StartsWith("roles:"))
+            {
+                ulong.TryParse(message.Replace("roles:", ""), out var guildid);
+
+                var gld = Client.GetGuild(guildid);
+                if (gld != null)
+                {
+                    List<WebSocketSnowFlake> snowflakes = new List<WebSocketSnowFlake>();
+
+                    foreach(var role in gld.Roles)
+                    {
+                        snowflakes.Add(new WebSocketSnowFlake
+                        {
+                            Name = role.Name,
+                            ID = role.Id
+                        });
+                    }
+
+                    var wsgld = new WebSocketSnowFlakes
+                    {
+                        Type = "roles",
+                        GuildID = guildid,
+                        Data = snowflakes
+                    };
+
+                    var res = EventResult.FromSuccess(wsgld);
+
+                    var cnv = JsonConvert.SerializeObject(res);
+
+                    await conn.Send(cnv);
+                }
+                else
+                {
+                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found")));
+                }
+            }
+            if (message.StartsWith("tchannels:"))
+            {
+                ulong.TryParse(message.Replace("tchannels:", ""), out var guildid);
+
+                var gld = Client.GetGuild(guildid);
+                if (gld != null)
+                {
+                    List<WebSocketSnowFlake> snowflakes = new List<WebSocketSnowFlake>();
+
+                    foreach (var role in gld.TextChannels)
+                    {
+                        snowflakes.Add(new WebSocketSnowFlake
+                        {
+                            Name = role.Name,
+                            ID = role.Id
+                        });
+                    }
+
+                    var wsgld = new WebSocketSnowFlakes
+                    {
+                        Type = "tchannels",
+                        GuildID = guildid,
+                        Data = snowflakes
+                    };
+
+                    var res = EventResult.FromSuccess(wsgld);
+
+                    var cnv = JsonConvert.SerializeObject(res);
+
+                    await conn.Send(cnv);
+                }
+                else
+                {
+                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found")));
+                }
+            }
+            if (message.StartsWith("cchannels:"))
+            {
+                ulong.TryParse(message.Replace("cchannels:", ""), out var guildid);
+
+                var gld = Client.GetGuild(guildid);
+                if (gld != null)
+                {
+                    List<WebSocketSnowFlake> snowflakes = new List<WebSocketSnowFlake>();
+
+                    foreach (var role in gld.CategoryChannels)
+                    {
+                        snowflakes.Add(new WebSocketSnowFlake
+                        {
+                            Name = role.Name,
+                            ID = role.Id
+                        });
+                    }
+
+                    var wsgld = new WebSocketSnowFlakes
+                    {
+                        Type = "cchannels",
+                        GuildID = guildid,
+                        Data = snowflakes
+                    };
+
+                    var res = EventResult.FromSuccess(wsgld);
+
+                    var cnv = JsonConvert.SerializeObject(res);
+
+                    await conn.Send(cnv);
+                }
+                else
+                {
+                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found")));
+                }
+            }
+            if (message.StartsWith("vchannels:"))
+            {
+                ulong.TryParse(message.Replace("vchannels:", ""), out var guildid);
+
+                var gld = Client.GetGuild(guildid);
+                if (gld != null)
+                {
+                    List<WebSocketSnowFlake> snowflakes = new List<WebSocketSnowFlake>();
+
+                    foreach (var role in gld.VoiceChannels)
+                    {
+                        snowflakes.Add(new WebSocketSnowFlake
+                        {
+                            Name = role.Name,
+                            ID = role.Id
+                        });
+                    }
+
+                    var wsgld = new WebSocketSnowFlakes
+                    {
+                        Type = "vchannels",
+                        GuildID = guildid,
+                        Data = snowflakes
+                    };
+
+                    var res = EventResult.FromSuccess(wsgld);
+
+                    var cnv = JsonConvert.SerializeObject(res);
+
+                    await conn.Send(cnv);
+                }
+                else
+                {
+                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found")));
+                }
+            }
             if (message.ToLower() == "stats" || message.ToLower() == "status")
             {
                 var mem = "";
