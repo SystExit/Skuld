@@ -14,15 +14,20 @@ namespace Skuld.Discord.Utilities
         {
             if (commandname.ToLower() != "pasta")
             {
+                var serch = commandService.Search(context, commandname).Commands;
+
+                var summ = GetSummary(serch);
+
+                if (summ == null)
+                {
+                    return null;
+                }
+
                 var embed = new EmbedBuilder
                 {
                     Description = $"Here are some commands like **{commandname}**",
                     Color = EmbedUtils.RandomColor()
                 };
-
-                var serch = commandService.Search(context, commandname).Commands;
-
-                var summ = GetSummaryAsync(serch);
 
                 embed.AddField(string.Join(", ", serch[0].Command.Aliases), summ, false);
 
@@ -51,51 +56,59 @@ namespace Skuld.Discord.Utilities
             }
         }
 
-        public static string GetSummaryAsync(IReadOnlyList<CommandMatch> Variants)
+        public static string GetSummary(IReadOnlyList<CommandMatch> Variants)
         {
-            var primary = Variants[0];
-
-            string summ = "Summary: " + primary.Command.Summary;
-            int totalparams = 0;
-
-            foreach (var com in Variants)
+            if(Variants != null)
             {
-                totalparams += com.Command.Parameters.Count;
-            }
-
-            if (totalparams > 0)
-            {
-                summ += "\nParameters:\n";
-
-                int instance = 0;
-
-                foreach (var cmd in Variants)
+                if (Variants.Count > 0)
                 {
-                    instance++;
-                    if (Variants.Count > 1)
-                    {
-                        summ += $"**Command Version: {instance}**\n";
-                    }
-                    if (cmd.Command.Parameters.Count == 0)
-                    {
-                        summ += "No Parameters\n";
-                    }
-                    foreach (var param in cmd.Command.Parameters)
-                    {
-                        if (param.IsOptional)
-                        {
-                            summ += $"**[Optional]** {param.Name} - {param.Type.Name}\n";
-                        }
-                        else
-                        {
-                            summ += $"**[Required]** {param.Name} - {param.Type.Name}\n";
-                        }
-                    }
-                }
+                    var primary = Variants[0];
 
-                return summ;
+                    string summ = "Summary: " + primary.Command.Summary;
+                    int totalparams = 0;
+
+                    foreach (var com in Variants)
+                    {
+                        totalparams += com.Command.Parameters.Count;
+                    }
+
+                    if (totalparams > 0)
+                    {
+                        summ += "\nParameters:\n";
+
+                        int instance = 0;
+
+                        foreach (var cmd in Variants)
+                        {
+                            instance++;
+                            if (Variants.Count > 1)
+                            {
+                                summ += $"**Command Version: {instance}**\n";
+                            }
+                            if (cmd.Command.Parameters.Count == 0)
+                            {
+                                summ += "No Parameters\n";
+                            }
+                            foreach (var param in cmd.Command.Parameters)
+                            {
+                                if (param.IsOptional)
+                                {
+                                    summ += $"**[Optional]** {param.Name} - {param.Type.Name}\n";
+                                }
+                                else
+                                {
+                                    summ += $"**[Required]** {param.Name} - {param.Type.Name}\n";
+                                }
+                            }
+                        }
+
+                        return summ;
+                    }
+                    return summ + "\nParameters: None";
+                }
             }
-            return summ + "\nParameters: None";
+
+            return null;
         }
 
         public static GuildPermissions ModeratorPermissions = new GuildPermissions(268443650);
