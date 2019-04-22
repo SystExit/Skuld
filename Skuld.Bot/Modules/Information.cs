@@ -19,6 +19,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net.NetworkInformation;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -269,7 +271,7 @@ namespace Skuld.Bot.Commands
                                 await PagedReplyAsync(new PaginatedMessage
                                 {
                                     Pages = pages,
-                                    Title = $"__Experience of {Context.Guild.Name}__",
+                                    Title = "Global Money Leaderboard",
                                     Color = Color.Purple
                                 });
                             }
@@ -333,6 +335,44 @@ namespace Skuld.Bot.Commands
                     await $"Unknown argument: {type}".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
                     return;
             }
+        }
+
+        [Command("ipping"), Summary("Pings a specific IP address or domain name")]
+        public async Task PingDomain(string url)
+        {
+            var adds = System.Net.Dns.GetHostAddresses(url);
+
+            if(adds.Length > 0)
+                await PingIP(adds[0]);
+            else
+            {
+                await $"Couldn't find host at {url}".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                return;
+            }
+        }
+
+        [Command("ipping"), Summary("Pings a specific IP address or domain name")]
+        public async Task PingIP(System.Net.IPAddress ipAddress)
+        {
+            await "<:blobok:350673783482351626> Ok. Please standby for the ping results".QueueMessage(Discord.Models.MessageType.Timed, Context.User, Context.Channel);
+            Ping pingboi = new Ping();
+            var pings = new List<PingReply>();
+
+            for(int x = 0; x < 4; x++)
+            {
+                pings.Add(await pingboi.SendPingAsync(ipAddress));
+            }
+
+            StringBuilder sb = new StringBuilder();
+
+            int count = 1;
+            foreach(var res in pings)
+            {
+                sb.AppendLine($"{count}. {res.Address} {res.RoundtripTime}ms {res.Status}");
+                count++;
+            }
+
+            await $"```\n{sb.ToString()}```".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
 
         [Command("epoch"), Summary("Gets a DateTime DD/MM/YYYY HH:MM:SS (24 Hour) or the current time in POSIX/Unix Epoch time")]
