@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Discord;
 
 namespace Skuld.Core.Models
 {
@@ -25,5 +26,14 @@ namespace Skuld.Core.Models
         public List<int> DownvotedPastas { get; set; }
         public List<CommandUsage> CommandUsage { get; set; }
         public List<Reputation> Reputation { get; set; }
-    }
-}
+
+        public static bool operator ==(SkuldUser user, IUser duser) => user.ID == duser.Id && user.Username == duser.Username && user.AvatarUrl == (duser.GetAvatarUrl() ?? duser.GetDefaultAvatarUrl());
+        public static bool operator !=(SkuldUser user, IUser duser) => user.ID != duser.Id && user.Username != duser.Username && user.AvatarUrl != (duser.GetAvatarUrl() ?? duser.GetDefaultAvatarUrl());
+        public static bool operator ==(IUser duser, SkuldUser user) => user == duser;
+        public static bool operator !=(IUser duser, SkuldUser user) => user != duser;
+        public bool Equals(IUser user)
+        {
+            return this.ID == user.Id &&
+                this.Username == user.Username;
+        }
+    }}

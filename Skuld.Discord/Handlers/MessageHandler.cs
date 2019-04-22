@@ -156,9 +156,9 @@ namespace Skuld.Discord.Handlers
             if (await DatabaseClient.CheckConnectionAsync())
             {
                 suser = await MessageTools.GetUserOrInsertAsync(message.Author).ConfigureAwait(false);
-                if (suser.AvatarUrl != message.Author.GetAvatarUrl())
+                if(suser != message.Author) //if out of date in database
                 {
-                    await DatabaseClient.SingleQueryAsync(new MySql.Data.MySqlClient.MySqlCommand($"UPDATE `users` SET `AvatarUrl` = \"{message.Author.GetAvatarUrl()}\" WHERE `UserID` = {message.Author.Id};"));
+                    await suser.UpdateAsync();
                 }
 
                 if (suser != null && suser.Banned) return;
