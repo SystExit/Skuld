@@ -6,6 +6,7 @@ namespace Skuld.Core.Models
     {
         public ulong ID { get; set; }
         public bool Banned { get; set; }
+        public string Username { get; set; }
         public string Title { get; set; }
         public bool CanDM { get; set; }
         public ulong Money { get; set; }

@@ -90,6 +90,7 @@ namespace Skuld.Database.Extensions
                     {
                         sender.Daily = DateTime.UtcNow.ToEpoch();
                         user.Money += config.Preferences.DailyAmount;
+                        await DatabaseClient.UpdateUserAsync(sender);
                         await DatabaseClient.UpdateUserAsync(user);
                         return true;
                     }
@@ -102,6 +103,7 @@ namespace Skuld.Database.Extensions
                 {
                     sender.Daily = DateTime.UtcNow.ToEpoch();
                     user.Money += config.Preferences.DailyAmount;
+                    await DatabaseClient.UpdateUserAsync(sender);
                     await DatabaseClient.UpdateUserAsync(user);
                     return true;
                 }

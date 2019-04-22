@@ -136,8 +136,9 @@ namespace Skuld.Database
             {
                 if (!user.IsBot && !user.IsWebhook)
                 {
-                    var command = new MySqlCommand("INSERT IGNORE INTO `users` (`UserID`, `Title`, `Language`, `AvatarUrl`) VALUES (@userid , \"\", @locale, @avatarurl);");
+                    var command = new MySqlCommand("INSERT IGNORE INTO `users` (`UserID`, `Username`, `Title`, `Language`, `AvatarUrl`) VALUES (@userid , @username, \"\", @locale, @avatarurl);");
                     command.Parameters.AddWithValue("@userid", user.Id);
+                    command.Parameters.AddWithValue("@username", user.Username);
                     command.Parameters.AddWithValue("@locale", locale??Locale.defaultLocale);
                     command.Parameters.AddWithValue("@avatarurl", user.GetAvatarUrl());
                     return await SingleQueryAsync(command).ConfigureAwait(false);
@@ -231,6 +232,8 @@ namespace Skuld.Database
                                 rows++;
 
                                 user.ID = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["UserID"]));
+
+                                user.Username = Convert.ToString(reader["Username"]);
 
                                 user.Money = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["Money"]));
 

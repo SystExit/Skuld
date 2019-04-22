@@ -16,6 +16,7 @@ namespace Skuld.Database.Extensions
                     "UPDATE `users` SET " +
                     "Banned = @banned, " +
                     "Title = @title, " +
+                    "Username = @username, " +
                     "CanDM = @dmenabled, " +
                     "Money = @money, " +
                     "Language = @language, " +
@@ -30,6 +31,7 @@ namespace Skuld.Database.Extensions
 
             command.Parameters.AddWithValue("@money", user.Money);
             command.Parameters.AddWithValue("@title", user.Title);
+            command.Parameters.AddWithValue("@username", user.Username);
             command.Parameters.AddWithValue("@daily", user.Daily);
             command.Parameters.AddWithValue("@language", user.Language);
             command.Parameters.AddWithValue("@dmenabled", user.CanDM);
