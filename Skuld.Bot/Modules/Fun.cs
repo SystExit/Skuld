@@ -36,6 +36,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using WenceyWang.FIGlet;
 using SysEx.Net.Models;
+using ImageMagick;
 
 namespace Skuld.Bot.Commands
 {
@@ -448,6 +449,138 @@ namespace Skuld.Bot.Commands
             {
                 await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CAH-Cmd", "Error parsing website", LogSeverity.Error, ex));
             }
+        }
+
+        [Command("magik"), Summary("Magiks an image"), Alias("magick", "magic", "liquify"), Ratelimit(5, 1, Measure.Minutes)]
+        public async Task Magik()
+        {
+            string url = "";
+
+            var msgsRaw = Context.Channel.GetMessagesAsync(Context.Message, Direction.Before, 25);
+            var msgs = await msgsRaw.FlattenAsync();
+
+            foreach (var msg in msgs)
+            {
+                if(msg.Attachments.Count > 0)
+                {
+                    url = msg.Attachments.FirstOrDefault().Url;
+                    break;
+                }
+                if(msg.Embeds.Count > 0)
+                {
+                    var embed = msg.Embeds.FirstOrDefault();
+                    if(embed.Image.HasValue)
+                    {
+                        url = embed.Image.Value.Url;
+                        return;
+                    }
+                    if(embed.Thumbnail.HasValue)
+                    {
+                        url = embed.Image.Value.Url;
+                        return;
+                    }
+                    if(embed.Author.HasValue)
+                    {
+                        if(!string.IsNullOrEmpty(embed.Author.Value.IconUrl))
+                        {
+                            url = embed.Author.Value.IconUrl;
+                            return;
+                        }
+                    }
+                }
+            }
+
+            if(url != "")
+            {
+                await Magik(new Uri(url));
+                return;
+            }
+
+            await "Couldn't find an image".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+        }
+
+        [Command("magik"), Summary("Magiks an image"), Alias("magick", "magic", "liquify"), Ratelimit(5, 1, Measure.Minutes)]
+        public async Task Magik(Uri image)
+        {
+            var guid = new Guid();
+            var imageLocation = Path.Combine(AppContext.BaseDirectory, "storage/magikCache");
+            var imageFile = Path.Combine(imageLocation, guid + ".png");
+
+            if (!Directory.Exists(imageLocation))
+            {
+                Directory.CreateDirectory(imageLocation);
+            }
+
+            await WebHandler.DownloadFileAsync(image, imageFile);
+
+            using var magikImag = new MagickImage(imageFile);
+            using var magik2 = magikImag.Clone();
+
+            magik2.Resize(800, 600);
+
+            magik2.LiquidRescale(new MagickGeometry
+            {
+                X = 1,
+                Width = Convert.ToInt32(magik2.Width * 0.5),
+                Height = Convert.ToInt32(magik2.Height * 0.5)
+            });
+            magik2.LiquidRescale(new MagickGeometry
+            {
+                X = 2,
+                Width = Convert.ToInt32(magik2.Width * 1.5),
+                Height = Convert.ToInt32(magik2.Height * 1.5)
+            });
+
+            magik2.Resize(magikImag.Width, magikImag.Height);
+
+            magik2.Write(imageFile);
+
+            await "".QueueMessage(Discord.Models.MessageType.File, Context.User, Context.Channel, imageFile);
+        }
+        [Command("magik"), Summary("Magiks an image"), Alias("magick", "magic", "liquify"), Ratelimit(5, 1, Measure.Minutes)]
+        public async Task Magik([Remainder]IGuildUser user)
+        {
+            var avatarLocation = Path.Combine(AppContext.BaseDirectory, "storage/avatarCache");
+            var avatarFile = Path.Combine(avatarLocation, user.Id + ".png");
+
+            if (!Directory.Exists(avatarLocation))
+            {
+                Directory.CreateDirectory(avatarLocation);
+            }
+
+            var avatar = user.GetAvatarUrl(ImageFormat.Png, 512) ?? user.GetDefaultAvatarUrl();
+
+            await WebHandler.DownloadFileAsync(new Uri(avatar), avatarFile);
+
+            using var magikImag = new MagickImage(avatarFile);
+
+            if (magikImag.Width != 512 && magikImag.Height != 512)
+            {
+                magikImag.Resize(512, 512);
+            }
+
+            using var magik2 = magikImag.Clone();
+
+            magik2.Resize(800, 600);
+
+            magik2.LiquidRescale(new MagickGeometry
+            {
+                X = 1,
+                Width = Convert.ToInt32(magik2.Width * 0.5),
+                Height = Convert.ToInt32(magik2.Height * 0.5)
+            });
+            magik2.LiquidRescale(new MagickGeometry
+            {
+                X = 2,
+                Width = Convert.ToInt32(magik2.Width * 1.5),
+                Height = Convert.ToInt32(magik2.Height * 1.5)
+            });
+
+            magik2.Resize(magikImag.Width, magikImag.Height);
+
+            magik2.Write(avatarFile);
+
+            await "".QueueMessage(Discord.Models.MessageType.File, Context.User, Context.Channel, avatarFile);
         }
 
         [Command("time"), Summary("Gets current time")]
