@@ -2,20 +2,21 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using StatsdClient;
+using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Database;
 using Skuld.Database.Extensions;
+using Skuld.Discord.Commands;
 using Skuld.Discord.Extensions;
+using Skuld.Discord.Services;
 using Skuld.Discord.TypeReaders;
 using Skuld.Discord.Utilities;
 using System;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
-using Skuld.Core;
-using Skuld.Discord.Commands;
-using Skuld.Discord.Services;
 
 namespace Skuld.Discord.Handlers
 {
@@ -43,6 +44,7 @@ namespace Skuld.Discord.Handlers
 
                 CommandService.AddTypeReader<Uri>(new UriTypeReader());
                 CommandService.AddTypeReader<GuildRoleConfig>(new RoleConfigTypeReader());
+                CommandService.AddTypeReader<IPAddress>(new IPAddressTypeReader());
                 await CommandService.AddModulesAsync(ModuleAssembly, ServiceProvider);
 
                 return EventResult.FromSuccess();
@@ -71,8 +73,7 @@ namespace Skuld.Discord.Handlers
 
                     DogStatsd.Increment("commands.processed", 1, 1, new[] { $"module:{cmd.Module.Name.ToLowerInvariant()}", $"cmd:{cmd.Name.ToLowerInvariant()}" });
                 }
-
-                if (!arg3.IsSuccess)
+                else
                 {
                     bool displayerror = true;
                     if (arg3.ErrorReason.Contains("few parameters"))
@@ -82,7 +83,7 @@ namespace Skuld.Discord.Handlers
                         displayerror = false;
                     }
 
-                    if (arg3.Error != CommandError.UnknownCommand && !arg3.ErrorReason.Contains("Timeout") && displayerror)
+                    if (arg3.Error != CommandError.UnknownCommand && displayerror)
                     {
                         await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("CmdHand", "Error with command, Error is: " + arg3, LogSeverity.Error));
                         await new EmbedBuilder
@@ -135,7 +136,6 @@ namespace Skuld.Discord.Handlers
         }
         public static async Task HandleCommandAsync(SocketMessage arg)
         {
-            var cms = CommandService.Commands;
             DogStatsd.Increment("messages.recieved");
             if (arg.Author.IsBot || arg.Author.IsWebhook) { return; }
 
@@ -150,6 +150,8 @@ namespace Skuld.Discord.Handlers
                 if (!guser.GetPermissions(message.Channel as IGuildChannel).SendMessages) return;
             }
 
+            if (!MessageTools.IsEnabledChannel(await (message.Channel as ITextChannel).Guild.GetUserAsync(message.Author.Id), (ITextChannel)message.Channel)) { return; }
+
             SkuldUser suser = null;
             if (await DatabaseClient.CheckConnectionAsync())
             {
@@ -161,8 +163,6 @@ namespace Skuld.Discord.Handlers
 
                 if (suser != null && suser.Banned) return;
             }
-
-            if (!MessageTools.IsEnabledChannel(await (message.Channel as ITextChannel).Guild.GetUserAsync(message.Author.Id), (ITextChannel)message.Channel)) { return; }
 
             SkuldGuild sguild = await MessageTools.GetGuildOrInsertAsync((message.Channel as ITextChannel).Guild).ConfigureAwait(false);
 
@@ -324,7 +324,7 @@ namespace Skuld.Discord.Handlers
         public static async Task DispatchCommandAsync(SkuldCommandContext context)
         {
             watch.Start();
-            var result = await CommandService.ExecuteAsync(context, cmdConfig.ArgPos, BotService.Services);
+            await CommandService.ExecuteAsync(context, cmdConfig.ArgPos, BotService.Services);
             watch.Stop();
         }
 
