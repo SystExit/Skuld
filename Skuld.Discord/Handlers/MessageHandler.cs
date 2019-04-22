@@ -156,8 +156,9 @@ namespace Skuld.Discord.Handlers
             if (await DatabaseClient.CheckConnectionAsync())
             {
                 suser = await MessageTools.GetUserOrInsertAsync(message.Author).ConfigureAwait(false);
-                if(suser != message.Author) //if out of date in database
+                if(!suser.IsUpToDate(message.Author))
                 {
+                    suser.FillDataFromDiscord(message.Author);
                     await suser.UpdateAsync();
                 }
 
