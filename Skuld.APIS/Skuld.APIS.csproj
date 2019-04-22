@@ -11,11 +11,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Akitaux.Twitch.Core" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.Helix" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.Pubsub" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.Rest" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.WebSocket" Version="0.1.0-build-00009" />
     <PackageReference Include="Booru.Net" Version="1.0.0.3" />
     <PackageReference Include="Discord.Net" Version="2.0.2-dev-01059" />
     <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.38.0.1369" />

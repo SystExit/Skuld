@@ -26,15 +26,19 @@ namespace Skuld.APIS.Extensions
 {
     public static class APIS
     {
-        private static Random rnd = new Random(DateTime.UtcNow.Millisecond);
-        private static List<string> blacklistedTags = new List<string>
+        private static readonly Random rnd = new Random(DateTime.UtcNow.Millisecond);
+        private static readonly List<string> blacklistedTags = new List<string>
         {
             "loli",
             "shota",
+            "cub",
             "gore",
+            "guro",
             "vore",
             "death"
         };
+
+        public static List<string> BlacklistedTags { get => blacklistedTags; }
 
         public static DanbooruImage GetRandomImage(this IReadOnlyList<DanbooruImage> posts)
             => posts[rnd.Next(0, posts.Count)];
@@ -307,30 +311,11 @@ namespace Skuld.APIS.Extensions
             return embed.Build();
         }
 
-        public async static Task<bool> IsStreamingAsync(this User channel, TwitchHelixClient client)
-        {
-            var stream = await client.GetStreamsAsync(new GetStreamsParams
-            {
-                UserIds = new[]{(ulong)channel.Id}
-            });
-
-            var resp = stream.Data.FirstOrDefault();
-
-            bool result = false;
-
-            if(resp.StartedAt.IsSpecified)
-            {
-                result = true;
-            }
-
-            return result;
-        }
-
         public async static Task<Stream> GetStreamAsync(this User channel, TwitchHelixClient client)
         {
             var stream = await client.GetStreamsAsync(new GetStreamsParams
             {
-                UserIds = new[] { (ulong)channel.Id }
+                UserNames = new[] { channel.Name.Value }
             });
 
             return stream.Data.FirstOrDefault();
@@ -338,45 +323,117 @@ namespace Skuld.APIS.Extensions
 
         public async static Task<Embed> GetEmbedAsync(this User channel, TwitchHelixClient client)
         {
-            if (await channel.IsStreamingAsync(client))
+            var name = channel.DisplayName.IsSpecified ? channel.DisplayName.Value : (channel.Name.IsSpecified ? channel.Name.Value : new Utf8String($"{channel.Id}"));
+            var iconurl = channel.ProfileImageUrl.IsSpecified ? channel.ProfileImageUrl.Value : new Utf8String("");
+
+            string twitchStatus = "";
+            string channelIcon = "";
+
+            switch(channel.Type.Value)
             {
-                var name = channel.DisplayName.IsSpecified ? channel.DisplayName.Value : (channel.Name.IsSpecified ? channel.Name.Value : new Utf8String($"{channel.Id}"));
-                var iconurl = channel.ProfileImageUrl.IsSpecified ? channel.ProfileImageUrl.Value : new Utf8String("");
+                case UserType.Staff:
+                    twitchStatus = DiscordTools.TwitchStaff;
+                    break;
+                case UserType.Admin:
+                    twitchStatus = DiscordTools.TwitchAdmins;
+                    break;
+                case UserType.GlobalMod:
+                    twitchStatus = DiscordTools.TwitchGlobalMod;
+                    break;
+            }
 
-                var embed = new EmbedBuilder
+            switch (channel.BroadcasterType.Value)
+            {
+                case BroadcasterType.Partner:
+                    channelIcon = DiscordTools.TwitchVerified;
+                    break;
+                case BroadcasterType.Affiliate:
+                    channelIcon = DiscordTools.TwitchAffiliate;
+                    break;
+            }
+
+            var embed = new EmbedBuilder
+            {
+                Author = new EmbedAuthorBuilder
                 {
-                    Author = new EmbedAuthorBuilder
-                    {
-                        Name = (string)name,
-                        IconUrl = (string)iconurl,
-                        Url = "https://twitch.tv/" + channel.Name
-                    },
-                    ThumbnailUrl = (string)iconurl,
-                    Color = EmbedUtils.RandomColor()
-                };
+                    Name = (string)name,
+                    IconUrl = (string)iconurl,
+                    Url = "https://twitch.tv/" + channel.Name
+                },
+                ThumbnailUrl = (string)iconurl,
+                Color = EmbedUtils.RandomColor()
+            };
 
-                var stream = await channel.GetStreamAsync(client);
+            string channelBadges = null;
 
+            if (twitchStatus != null)
+            {
+                channelBadges += twitchStatus;
+            }
+            if (channelIcon != null)
+            {
+                channelBadges += channelIcon;
+            }
+
+            if (channelBadges != null)
+            {
+                embed.AddInlineField("Channel Badges", channelBadges);
+            }
+
+            var stream = await channel.GetStreamAsync(client);
+
+            if (stream != null)
+            {
                 embed.Title = (string)(stream.Title.IsSpecified ? stream.Title.Value : new Utf8String("No Title Set"));
 
                 if (stream.GameId.IsSpecified)
                 {
-                    var resp = await client.GetGamesAsync(new GetGamesParams
+                    /*var resp = await client.GetGamesAsync(new GetGamesParams
                     {
-                        GameIds = new[] { (ulong)stream.GameId }
+                        GameIds = new[] { stream.GameId.Value }
                     });
-                    embed.AddField("Playing", resp.Data.FirstOrDefault().Name, true);
+                    embed.AddInlineField("Playing", resp.Data.FirstOrDefault().Name);*/
                 }
-                embed.AddField("For", $"{((stream.ViewerCount.IsSpecified ? stream.ViewerCount.Value : -1) > -1 ? ((int)stream.ViewerCount.Value).ToString("N0") : "N/A")} viewers", true);
+                embed.AddInlineField("Viewers 👀👀", $"{((stream.ViewerCount.IsSpecified ? stream.ViewerCount.Value : -1) > -1 ? stream.ViewerCount.Value.ToString("N0") : "N/A")}");
 
                 if (stream.ThumbnailUrl.IsSpecified)
                 {
-                    embed.ImageUrl = (string)stream.ThumbnailUrl.Value;
+                    string bigimg = Convert.ToString(stream.ThumbnailUrl.Value);
+                    bigimg = bigimg.Replace("{width}", "1280").Replace("{height}", "720");
+                    embed.ImageUrl = bigimg;
                 }
 
-                return embed.Build();
+                embed.AddInlineField("Started streaming", stream.StartedAt.Value.ToString("dd/MM/yyyy HH:mm:ss"));
+
+                var uptime = DateTime.UtcNow.Subtract(stream.StartedAt.Value);
+
+                string uptimeString = "";
+
+                if(uptime.Days > 0)
+                {
+                    uptimeString += $"{uptime.Days} days ";
+                }
+                if(uptime.Hours > 0)
+                {
+                    uptimeString += $"{uptime.Hours} hours ";
+                }
+                if(uptime.Minutes > 0)
+                {
+                    uptimeString += $"{uptime.Minutes} minutes ";
+                }
+                if (uptime.Seconds > 0)
+                {
+                    uptimeString += $"{uptime.Minutes} seconds ";
+                }
+
+                embed.AddInlineField("Uptime", $"{uptimeString.Substring(0, uptimeString.Count() - 1)}");
             }
-            return null;
+            else
+            {
+                embed.AddInlineField("Total Views", channel.TotalViews.Value.ToString("N0"));
+            }
+
+            return embed.Build();
         }
 
         public static Embed ToEmbed(this UrbanWord word)
