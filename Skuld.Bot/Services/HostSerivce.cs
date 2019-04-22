@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 using YoutubeExplode;
 using System.Collections.Generic;
 using Akitaux.Twitch.Helix;
+using Voltaic;
 
 namespace Skuld.Bot.Services
 {
@@ -116,7 +117,7 @@ namespace Skuld.Bot.Services
             {
                 BotService.TwitchClient = new TwitchHelixClient
                 {
-                    ClientId = new System.Net.Http.Headers.NameValueHeaderValue("Client-ID", Configuration.APIS.TwitchClientID)
+                    ClientId = new Utf8String(Configuration.APIS.TwitchClientID)
                 };
             }
 

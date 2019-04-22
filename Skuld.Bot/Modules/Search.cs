@@ -32,7 +32,6 @@ namespace Skuld.Bot.Commands
     {
         public SocialAPIS Social { get; set; }
         public Random Random { get; set; }
-
         public SteamStore SteamStoreClient { get; set; }
         public UrbanDictionaryClient UrbanDictionary { get; set; }
         public WikipediaClient Wikipedia { get; set; }

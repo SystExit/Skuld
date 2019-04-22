@@ -248,9 +248,9 @@ namespace Skuld.Bot.Services
                 else
                     mem = HardwareStats.Memory.GetMBUsage + "MB";
 
-                var rawjson = $"{{\"Skuld\":\"{SoftwareStats.Skuld.Key.Version.ToString()}\"]({SoftwareStats.Skuld.Value})," +
+                var rawjson = $"{{\"Skuld\":\"{SoftwareStats.Skuld.Key.Version.ToString()}\"," +
                     $"\"Uptime\":\"{string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}\"," +
-                    $"\"Ping\":\"{Client.Latency}ms\"," +
+                    $"\"Ping\":{Client.Latency}," +
                     $"\"Guilds\":{Client.Guilds.Count}," +
                     $"\"Users\":{BotService.Users}," +
                     $"\"Shards\":{Client.Shards.Count}," +
