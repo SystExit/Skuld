@@ -3,14 +3,6 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.0</TargetFramework>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Akitaux.Twitch.Core" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.Helix" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.Pubsub" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.Rest" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.WebSocket" Version="0.1.0-build-00009" />
-  </ItemGroup>
   
   <ItemGroup>
     <ProjectReference Include="..\Skuld.APIS\Skuld.APIS.csproj" />

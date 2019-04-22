@@ -28,6 +28,27 @@ namespace Skuld.Discord.Extensions
             });
             return Task.CompletedTask;
         }
+        public static Task QueueMessage(this EmbedBuilder embed, Models.MessageType type, IUser user, IMessageChannel channel, string content = "", string filepath = null, Exception exception = null, double timeout = 0.0)
+        {
+            MessageQueue.AddMessage(new Models.SkuldMessage
+            {
+                Channel = channel,
+                Meta = new Models.SkuldMessageMeta
+                {
+                    Exception = exception,
+                    Timeout = timeout,
+                    Type = type
+                },
+                Content = new Models.SkuldMessageContent
+                {
+                    Embed = embed.Build(),
+                    Message = content,
+                    User = user,
+                    File = filepath
+                }
+            });
+            return Task.CompletedTask;
+        }
         public static Task QueueMessage(this string content, Models.MessageType type, IUser user, IMessageChannel channel, string filepath = null, Exception exception = null, double timeout = 0.0)
         {
             MessageQueue.AddMessage(new Models.SkuldMessage
