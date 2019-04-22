@@ -319,7 +319,6 @@ namespace Skuld.Bot.Commands
             Thread thd = new Thread(async () =>
             {
                 Thread.CurrentThread.IsBackground = true;
-                string message = "";
                 int count = 0;
                 foreach (var guild in Context.Client.Guilds)
                 {
@@ -328,11 +327,9 @@ namespace Skuld.Bot.Commands
                     {
                         count++;
                         await DatabaseClient.InsertUserAsync(user, "en-GB");
-                        Thread.Sleep(2000);
-                        message += count + ". Inserted\n";
                     }
                 }
-                await message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await $"Inserted {count} users".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             })
             {
                 IsBackground = true
@@ -345,16 +342,14 @@ namespace Skuld.Bot.Commands
         {
             Thread thd = new Thread(async () =>
             {
-                string message = "";
+                Thread.CurrentThread.IsBackground = true;
                 int count = 0;
                 foreach (var guild in Context.Client.Guilds)
                 {
                     count++;
                     await DatabaseClient.InsertGuildAsync(guild.Id, Configuration.Discord.Prefix);
-                    Thread.Sleep(2000);
-                    message += count + ". Inserted\n";
                 }
-                await message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await $"Inserted {count} guilds".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             })
             {
                 IsBackground = true
