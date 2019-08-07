@@ -6,7 +6,7 @@ using Skuld.Core;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities.Stats;
 using Skuld.Bot.Models;
-using Skuld.Bot.Models.WebSocket;
+using Skuld.Bot.Models.Services.WebSocket;
 using Skuld.Discord.Services;
 using System;
 using System.Diagnostics;
@@ -21,9 +21,9 @@ namespace Skuld.Bot.Services
         public DiscordShardedClient Client { get => BotService.DiscordClient; }
         private readonly WebSocketServer _server;
 
-        public WebSocketService()
+        public WebSocketService(SkuldConfig configuration)
         {
-            _server = new WebSocketServer("ws://127.0.0.1:37821");
+            _server = new WebSocketServer($"{(configuration.WebSocket.Secure ? "wss" : "ws")}://{configuration.WebSocket.Host}:{configuration.WebSocket.Port}");
             _server.Start(x =>
             {
                 x.OnMessage = async (message) => await HandleMessageAsync(x, message);

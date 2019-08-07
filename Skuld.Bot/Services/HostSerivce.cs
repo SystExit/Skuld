@@ -1,4 +1,5 @@
-﻿using Booru.Net;
+﻿using Akitaux.Twitch.Helix;
+using Booru.Net;
 using Discord;
 using Discord.Addons.Interactive;
 using DiscordNetCommands = Discord.Commands;
@@ -6,6 +7,7 @@ using Discord.WebSocket;
 using Imgur.API.Authentication.Impl;
 using IqdbApi;
 using Microsoft.Extensions.DependencyInjection;
+using Octokit;
 using Skuld.APIS;
 using Skuld.Core;
 using Skuld.Core.Globalization;
@@ -22,10 +24,8 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
-using YoutubeExplode;
-using System.Collections.Generic;
-using Akitaux.Twitch.Helix;
 using Voltaic;
+using YoutubeExplode;
 
 namespace Skuld.Bot.Services
 {
@@ -83,7 +83,7 @@ namespace Skuld.Bot.Services
 
                 await BotService.DiscordClient.StartAsync();
 
-                WebSocket = new WebSocketService();
+                WebSocket = new WebSocketService(Configuration);
 
                 BotService.BackgroundTasks();
 
@@ -121,7 +121,7 @@ namespace Skuld.Bot.Services
                 };
             }
 
-            SearchClient.Configure(Configuration);
+            APIS.SearchClient.Configure(Configuration);
 
             DatabaseClient.Initialize(Configuration);
         }
@@ -161,6 +161,7 @@ namespace Skuld.Bot.Services
                     .AddSingleton<ISSClient>()
                     .AddSingleton<IqdbClient>()
                     .AddSingleton(new BotListingClient(BotService.DiscordClient))
+                    .AddSingleton(new GitHubClient(new ProductHeaderValue("Skuld")))
                     .BuildServiceProvider();
 
                 await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("Framework", "Successfully built service provider", LogSeverity.Info));
