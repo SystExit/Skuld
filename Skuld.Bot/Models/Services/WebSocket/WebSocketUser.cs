@@ -1,4 +1,4 @@
-﻿namespace Skuld.Bot.Models.WebSocket
+﻿namespace Skuld.Bot.Models.Services.WebSocket
 {
     public class WebSocketUser
     {

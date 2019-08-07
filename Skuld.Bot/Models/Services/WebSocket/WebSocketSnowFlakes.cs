@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 
-namespace Skuld.Bot.Models
+namespace Skuld.Bot.Models.Services.WebSocket
 {
     public class WebSocketSnowFlakes
     {
