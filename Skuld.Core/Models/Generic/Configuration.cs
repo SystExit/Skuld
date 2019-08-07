@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Discor = Discord;
 
@@ -16,6 +17,9 @@ namespace Skuld.Core.Models
 
         //SQL Information
         public DatabaseConfig SQL { get; set; }
+
+        //WebSocket Information
+        public WebSocketConfig WebSocket { get; set; }
 
         //Variables
         public BotPreferences Preferences { get; set; }
@@ -39,6 +43,9 @@ namespace Skuld.Core.Models
 
             //SQL Configuration
             SQL = new DatabaseConfig();
+
+            //Websocket Configuraton
+            WebSocket = new WebSocketConfig();
 
             //Variables
             Preferences = new BotPreferences();
@@ -102,21 +109,39 @@ namespace Skuld.Core.Models
         }
     }
 
+    public class WebSocketConfig
+    {
+        public string Host { get; set; }
+
+        public ushort Port { get; set; }
+
+        public bool Secure { get; set; }
+
+        public WebSocketConfig()
+        {
+            Host = "127.0.0.1";
+            Port = 37821;
+            Secure = false;
+        }
+    }
+
     public class BotPreferences
     {
         public int PinboardThreshold { get; set; }
         public int PinboardDateLimit { get; set; }
         public ulong DailyAmount { get; set; }
-        public string MoneyName { get; set; }
-        public string MoneySymbol { get; set; }
+
+        public float VoiceExpIndeterminate { get; set; }
+
+        public int VoiceExpMinMinutes { get; set; }
 
         public BotPreferences()
         {
             PinboardThreshold = 5;
             PinboardDateLimit = 7;
             DailyAmount = 50;
-            MoneyName = "";
-            MoneySymbol = "";
+            VoiceExpIndeterminate = .002f;
+            VoiceExpMinMinutes = 5;
         }
     }
 

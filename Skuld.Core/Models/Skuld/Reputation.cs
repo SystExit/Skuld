@@ -1,7 +1,7 @@
 ﻿using Skuld.Core.Extensions;
 using System;
 
-namespace Skuld.Core.Models
+namespace Skuld.Core.Models.Skuld
 {
     public class Reputation
     {

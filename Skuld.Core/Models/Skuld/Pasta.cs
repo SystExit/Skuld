@@ -1,4 +1,4 @@
-﻿namespace Skuld.Core.Models
+﻿namespace Skuld.Core.Models.Skuld
 {
     public class Pasta
     {

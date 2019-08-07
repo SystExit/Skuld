@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Skuld.Core.Models
+namespace Skuld.Core.Models.Skuld
 {
     public class SkuldGuild
     {
@@ -16,6 +16,8 @@ namespace Skuld.Core.Models
         public LevelNotification LevelNotification { get; set; }
         public string LevelUpMessage { get; set; }
         public ulong LevelUpChannel { get; set; }
+        public string MoneyName { get; set; }
+        public string MoneyIcon { get; set; }
 
         public List<CustomCommand> CustomCommands { get; set; }
 

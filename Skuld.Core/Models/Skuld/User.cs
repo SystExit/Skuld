@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Discord;
 
-namespace Skuld.Core.Models
+namespace Skuld.Core.Models.Skuld
 {
     public class SkuldUser
     {

@@ -1,6 +1,5 @@
 ﻿using Discord;
 using Discord.Commands;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace Skuld.Core.Models

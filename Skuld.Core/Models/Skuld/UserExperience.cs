@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Skuld.Core.Models
+namespace Skuld.Core.Models.Skuld
 {
     public class UserExperience
     {
