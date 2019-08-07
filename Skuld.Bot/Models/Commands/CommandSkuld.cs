@@ -1,4 +1,4 @@
-﻿namespace Skuld.Bot.Models
+﻿namespace Skuld.Bot.Models.Commands
 {
     public struct CommandSkuld
     {

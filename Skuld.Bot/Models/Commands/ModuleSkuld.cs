@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Skuld.Bot.Models
+namespace Skuld.Bot.Models.Commands
 {
     public struct ModuleSkuld
     {
