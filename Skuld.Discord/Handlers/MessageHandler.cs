@@ -5,6 +5,7 @@ using StatsdClient;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
+using Skuld.Core.Models.Skuld;
 using Skuld.Database;
 using Skuld.Database.Extensions;
 using Skuld.Discord.Commands;
@@ -54,7 +55,6 @@ namespace Skuld.Discord.Handlers
                 return EventResult.FromFailureException(ex.Message, ex);
             }
         }
-
         private static async Task CommandService_CommandExecuted(Optional<CommandInfo> arg1, ICommandContext arg2, IResult arg3)
         {
             if(arg1.IsSpecified)
@@ -129,7 +129,6 @@ namespace Skuld.Discord.Handlers
             }
             watch = new Stopwatch();
         }
-
         public static void HandleMessageAsync(SocketMessage arg)
         {
             var _ = HandleCommandAsync(arg).ConfigureAwait(false);
@@ -153,9 +152,11 @@ namespace Skuld.Discord.Handlers
             if (!MessageTools.IsEnabledChannel(await (message.Channel as ITextChannel).Guild.GetUserAsync(message.Author.Id), (ITextChannel)message.Channel)) { return; }
 
             SkuldUser suser = null;
+            SkuldGuild sguild = null;
             if (await DatabaseClient.CheckConnectionAsync())
             {
                 suser = await MessageTools.GetUserOrInsertAsync(message.Author).ConfigureAwait(false);
+                sguild = await MessageTools.GetGuildOrInsertAsync((message.Channel as ITextChannel).Guild).ConfigureAwait(false);
                 if(!suser.IsUpToDate(message.Author))
                 {
                     suser.FillDataFromDiscord(message.Author);
@@ -164,8 +165,6 @@ namespace Skuld.Discord.Handlers
 
                 if (suser != null && suser.Banned) return;
             }
-
-            SkuldGuild sguild = await MessageTools.GetGuildOrInsertAsync((message.Channel as ITextChannel).Guild).ConfigureAwait(false);
 
             if (sguild != null)
             {
@@ -204,7 +203,7 @@ namespace Skuld.Discord.Handlers
             var luserexperienceResp = await DatabaseClient.GetUserExperienceAsync(user.Id);
             var skuldUser = await MessageTools.GetUserOrInsertAsync(user);
 
-            ulong amount = (ulong)rnd.Next(0, 25);
+            ulong amount = (ulong)rnd.Next(1, 26);
 
             if (luserexperienceResp.Data is UserExperience)
             {
@@ -321,14 +320,12 @@ namespace Skuld.Discord.Handlers
             }
             return;
         }
-
         public static async Task DispatchCommandAsync(SkuldCommandContext context)
         {
             watch.Start();
             await CommandService.ExecuteAsync(context, cmdConfig.ArgPos, BotService.Services);
             watch.Stop();
         }
-
         public static async Task DispatchCommandAsync(SkuldCommandContext context, CustomCommand command)
         {
             watch.Start();

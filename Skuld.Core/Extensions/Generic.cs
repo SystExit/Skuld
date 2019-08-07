@@ -271,6 +271,29 @@ namespace Skuld.Core.Extensions
             return (same && iarr.Count() > startLimit);
         }
 
+        /// <summary>
+        /// Get's the experience multiplier from Users Minutes in Voice
+        /// </summary>
+        /// <param name="expIndeterminate">Indeterminate Value for parabola</param>
+        /// <param name="minMinutes">Minimum Minutes In voice</param>
+        /// <param name="timeInVoice">Users time in voice by minutes</param>
+        /// <returns></returns>
+        public static int GetExpMultiFromMinutesInVoice(float expIndeterminate, int minMinutes, int timeInVoice)
+        {
+            if (timeInVoice < minMinutes)
+                return 0; //if less than minimum minutes return 0 multiplier
+
+            var result = Math.Pow((expIndeterminate * (timeInVoice - minMinutes)), 2); //do math
+
+            if (result > 100)
+                result = 100; //clamp to 100 as limit
+
+            if (result < 0)
+                result = 0; //if negative clamp to zero
+
+            return (int)Math.Round(result); //return rounded integral version of result
+        }
+
         //https://gist.github.com/starquake/8d72f1e55c0176d8240ed336f92116e3
         public static string StripHtml(this string value)
         {

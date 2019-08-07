@@ -5,8 +5,8 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\Skuld.APIS\Skuld.APIS.csproj" />
     <ProjectReference Include="..\Skuld.Core\Skuld.Core.csproj" />
+    <ProjectReference Include="..\Skuld.APIS\Skuld.APIS.csproj" />
     <ProjectReference Include="..\Skuld.Database\Skuld.Database.csproj" />
   </ItemGroup>
 

@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using Skuld.Core.Models;
+using Skuld.Core.Models.Skuld;
 using Skuld.Core.Utilities;
 using System;
 using System.Linq;
@@ -64,7 +65,7 @@ namespace Skuld.Core.Extensions
                 afkname = "";
             }
 
-            embed.AddInlineField("Users", $"Users: {humanusers.ToString("N0")}\nBots: {botusers.ToString("N0")}\nRatio: {ratio}%");
+            embed.AddInlineField("Members", $"Humans: {humanusers.ToString("N0")}\nRobots: {botusers.ToString("N0")}\nRatio: {ratio}%");
             embed.AddInlineField("Shard", client.GetShardIdFor(guild));
             embed.AddInlineField("Verification Level", guild.VerificationLevel);
             embed.AddInlineField("Voice Region", guild.VoiceRegionId);

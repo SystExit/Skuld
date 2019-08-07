@@ -11,10 +11,20 @@ namespace Skuld.Core.Utilities.Stats
     public static class SoftwareStats
     {
         public static readonly OperatingSystem WindowsVersion = Environment.OSVersion;
-        public static readonly KeyValuePair<AssemblyName, string> Skuld = new KeyValuePair<AssemblyName, string>(Assembly.GetEntryAssembly().GetName(), "https://github.com/exsersewo/Skuld");
-        public static readonly KeyValuePair<AssemblyName, string> SysEx = new KeyValuePair<AssemblyName,string>(Assembly.GetAssembly(typeof(SysExClient)).GetName(), "https://github.com/exsersewo/SysEx.Net");
-        public static readonly KeyValuePair<AssemblyName, string> Booru = new KeyValuePair<AssemblyName,string>(Assembly.GetAssembly(typeof(BooruClient)).GetName(), "https://github.com/exsersewo/Booru.Net");
-        public static readonly KeyValuePair<AssemblyName, string> Weebsh = new KeyValuePair<AssemblyName, string>(Assembly.GetAssembly(typeof(WeebClient)).GetName(), "https://github.com/Daniele122898/Weeb.net");
-        public static readonly KeyValuePair<AssemblyName, string> Twitch = new KeyValuePair<AssemblyName, string>(Assembly.GetAssembly(typeof(TwitchHelixClient)).GetName(), "https://github.com/Akitaux/Twitch");
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Skuld = new KeyValuePair<AssemblyName, GitRepoStruct>(Assembly.GetEntryAssembly().GetName(), new GitRepoStruct("Skuldbot", "Skuld"));
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> SysEx = new KeyValuePair<AssemblyName, GitRepoStruct>(Assembly.GetAssembly(typeof(SysExClient)).GetName(), new GitRepoStruct("SystemExit", "SysEx.Net"));
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Booru = new KeyValuePair<AssemblyName, GitRepoStruct>(Assembly.GetAssembly(typeof(BooruClient)).GetName(), new GitRepoStruct("SystemExit", "Booru.Net"));
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Weebsh = new KeyValuePair<AssemblyName, GitRepoStruct>(Assembly.GetAssembly(typeof(WeebClient)).GetName(), new GitRepoStruct("Daniele122898", "Weeb.net"));
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Twitch = new KeyValuePair<AssemblyName, GitRepoStruct>(Assembly.GetAssembly(typeof(TwitchHelixClient)).GetName(), new GitRepoStruct("Akitaux", "Twitch"));
+    }
+    public struct GitRepoStruct
+    {
+        public string Owner { get; set; }
+        public string Repo { get; set; }
+        public GitRepoStruct(string o, string r)
+        {
+            Owner = o;
+            Repo = r;
+        }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using Discord.Commands;
 using Discord.WebSocket;
-using Skuld.Core.Models;
+using Skuld.Core.Models.Skuld;
 
 namespace Skuld.Discord.Commands
 {

@@ -1,4 +1,5 @@
 ﻿using Skuld.Core.Models;
+using Skuld.Core.Models.Skuld;
 using Skuld.Discord.Services;
 using Skuld.Discord.Utilities;
 using System.Collections.Generic;
@@ -7,7 +8,7 @@ namespace Skuld.Discord.Extensions
 {
     public static class Pagination
     {
-        public static IReadOnlyList<string> PaginateLeaderboard(this IList<MoneyLeaderboardEntry> list, SkuldConfig config)
+        public static IReadOnlyList<string> PaginateLeaderboard(this IList<MoneyLeaderboardEntry> list, SkuldGuild guild)
         {
             var pages = new List<string>();
             string pagetext = "";
@@ -16,7 +17,7 @@ namespace Skuld.Discord.Extensions
             {
                 var usr = list[x];
 
-                pagetext += $"{x + 1}. {BotService.DiscordClient.GetUser(usr.ID).Username} {config.Preferences.MoneySymbol}{usr.Money.ToString("N0")}\n";
+                pagetext += $"{x + 1}. {BotService.DiscordClient.GetUser(usr.ID).Username} {guild.MoneyIcon}{usr.Money.ToString("N0")}\n";
 
                 if ((x + 1) % 10 == 0 || (x + 1) == list.Count)
                 {

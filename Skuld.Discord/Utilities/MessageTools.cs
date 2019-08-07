@@ -4,6 +4,7 @@ using DiscordNet = Discord;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
+using Skuld.Core.Models.Skuld;
 using Skuld.Database;
 using System;
 using System.Threading.Tasks;
@@ -86,6 +87,7 @@ namespace Skuld.Discord.Utilities
 
                 return resp.Data as SkuldGuild;
             }
+            return null;
         }
 
         public static async Task<SkuldUser> GetUserOrInsertAsync(DiscordNet.IUser user)
@@ -102,6 +104,7 @@ namespace Skuld.Discord.Utilities
 
                 return resp.Data as SkuldUser;
             }
+            return null;
         }
 
         public static string GetCmdName(DiscordNet.IUserMessage arg, DiscordConfig config, DiscordShardedClient client, SkuldGuild sguild = null)
