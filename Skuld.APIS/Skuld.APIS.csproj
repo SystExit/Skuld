@@ -12,16 +12,16 @@
 
   <ItemGroup>
     <PackageReference Include="Booru.Net" Version="1.0.0.3" />
-    <PackageReference Include="Discord.Net" Version="2.0.2-dev-01059" />
-    <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.38.0.1369" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.9.1" />
+    <PackageReference Include="Discord.Net" Version="2.2.0-dev-20190629.2" />
+    <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.40.2.1369" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.9" />
     <PackageReference Include="Imgur.API" Version="5.0.0-beta1" />
-    <PackageReference Include="Kitsu" Version="1.4.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
+    <PackageReference Include="Kitsu" Version="1.4.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
     <PackageReference Include="Steam.Models" Version="3.0.8" />
     <PackageReference Include="SteamWebAPI2" Version="4.0.8" />
     <PackageReference Include="SysEx.Net" Version="1.0.7" />
-    <PackageReference Include="YoutubeExplode" Version="4.6.6" />
+    <PackageReference Include="YoutubeExplode" Version="4.7.6" />
   </ItemGroup>
 
   <ItemGroup>

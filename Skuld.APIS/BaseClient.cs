@@ -18,7 +18,7 @@ namespace Skuld.APIS
 
         }
 
-        public string UAGENT = "Mozilla/5.0 (compatible; SkuldBot/" + Assembly.GetEntryAssembly().GetName().Version.ToString().Substring(0, 3) + "; +https://github.com/exsersewo/Skuld/)";
+        public static string UAGENT = "Mozilla/5.0 (compatible; SkuldBot/" + Assembly.GetEntryAssembly().GetName().Version.ToString().Substring(0, 3) + "; +https://github.com/Skuldbot/Skuld/)";
 
         public HttpWebRequest CreateWebRequest(Uri uri, byte[] auth = null)
         {
