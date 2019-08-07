@@ -151,25 +151,11 @@ namespace Skuld.Bot.Commands
                 {
                     var attach = Context.Message.Attachments.First();
 
-                    var data = await new TraceMoe.NET.ApiConversion().TraceAnimeByUrlAsync(attach.Url);
+                    var data = await new ApiConversion().TraceAnimeByUrlAsync(attach.Url);
 
                     if (data.docs.Count() > 0)
                     {
-                        var ordered = data.docs.OrderByDescending(x => x.similarity);
-                        var mostLikely = ordered.First();
-
-                        var message = $"The image is most likely from: {mostLikely.title}/{mostLikely.title_romaji}\n" +
-                            $"Similarity Rating: {string.Format("{0:0.00}", Math.Round(mostLikely.similarity * 100))}%\n" +
-                            "Other potential candidates:\n";
-
-                        var take = ordered.Skip(1).Where(x => x.similarity < mostLikely.similarity).Take(5);
-
-                        foreach (var took in take)
-                        {
-                            message += $"{took.title}/{took.title_romaji} - {string.Format("{0:0.00}", Math.Round(took.similarity * 100))}%\n";
-                        }
-
-                        await message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                        await GetWhatAnimeMessage(data.docs.OrderByDescending(x => x.similarity)).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                     }
                     else
                     {
@@ -183,27 +169,36 @@ namespace Skuld.Bot.Commands
 
                 if (data.docs.Count() > 0)
                 {
-                    var ordered = data.docs.OrderByDescending(x => x.similarity);
-                    var mostLikely = ordered.First();
-
-                    var message = $"The image is most likely from: {mostLikely.title}/{mostLikely.title_romaji}\n" +
-                        $"Similarity Rating: {string.Format("{0:0.00}", Math.Round(mostLikely.similarity * 100))}%\n" +
-                        "Other potential candidates:\n";
-
-                    var take = ordered.Skip(1).Where(x=>x.similarity < mostLikely.similarity).Take(5);
-
-                    foreach (var took in take)
-                    {
-                        message += $"{took.title}/{took.title_romaji} - {string.Format("{0:0.00}", Math.Round(took.similarity * 100))}%\n";
-                    }
-
-                    await message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    await GetWhatAnimeMessage(data.docs.OrderByDescending(x => x.similarity)).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
                 else
                 {
                     await "Couldn't find anything with the image provided".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
             }
+        }
+
+        string GetWhatAnimeMessage(IOrderedEnumerable<TraceMoe.NET.DataStructures.Doc> results)
+        {
+            var mostLikely = results.First();
+
+            var message = $"The image is most likely from: {mostLikely.title}/{mostLikely.title_romaji}\n" +
+                $"Similarity Rating: {string.Format("{0:0.00}", Math.Round(mostLikely.similarity * 100))}%";
+
+            var take = results.Skip(1).Where(x => x.similarity < mostLikely.similarity).Take(5);
+
+            if(!take.All(x=>x.mal_id == mostLikely.mal_id))
+            {
+                string appendix = "\nOther potential candidates:\n";
+
+                foreach (var took in take)
+                {
+                    appendix += $"{took.title}/{took.title_romaji} - {string.Format("{0:0.00}", Math.Round(took.similarity * 100))}%\n";
+                }
+                message += appendix;
+            }
+
+            return message;
         }
     }
 }

@@ -36,15 +36,7 @@ namespace Skuld.Bot.Commands
         [Command("server"), Summary("Gets information about the server")]
         public async Task GetServer()
         {
-            Embed embed = null;
-            if (await DatabaseClient.CheckConnectionAsync())
-            {
-                embed = await Context.Guild.GetSummaryAsync(Context.Client, Context.DBGuild);
-            }
-            else
-            {
-                embed = await Context.Guild.GetSummaryAsync(Context.Client);
-            }
+            Embed embed = await DatabaseClient.CheckConnectionAsync() ? await Context.Guild.GetSummaryAsync(Context.Client, Context.DBGuild) : await Context.Guild.GetSummaryAsync(Context.Client);
 
             await embed.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
@@ -66,7 +58,7 @@ namespace Skuld.Bot.Commands
                     else
                     { message += $"{emoji.Name} <:{emoji.Name}:{emoji.Id}>\n"; }
                 }
-                message = message.Substring(0, message.Length - 2);
+                message = message[0..^2];
             }
             await message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
@@ -179,11 +171,8 @@ namespace Skuld.Bot.Commands
                     }
                 }
             }
-            string message = "";
-            if (modstatus != "__Moderators__\n")
-            { message = modstatus + "\n" + adminstatus; }
-            else
-            { message = adminstatus; }
+            string message = modstatus != "__Moderators__\n" ? modstatus + "\n" + adminstatus : adminstatus;
+
             await message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
 
@@ -264,7 +253,7 @@ namespace Skuld.Bot.Commands
                         {
                             var moneylb = moneylbresp.Data as IList<MoneyLeaderboardEntry>;
 
-                            var pages = moneylb.PaginateLeaderboard(Configuration);
+                            var pages = moneylb.PaginateLeaderboard(Context.DBGuild);
 
                             if (pages.Count > 1)
                             {
@@ -295,9 +284,10 @@ namespace Skuld.Bot.Commands
                         if (Context.DBGuild.Features.Experience)
                         {
                             var guildCountResp = await DatabaseClient.GetGuildExperienceCountAsync(Context.Guild.Id).ConfigureAwait(false);
-                            int guildCount = -1;
+
                             if (guildCountResp.Successful && guildCountResp.Data != null)
-                                guildCount = ConversionTools.ParseInt32OrDefault(Convert.ToString(guildCountResp.Data));
+                            {
+                            }
                             else
                             {
                                 await $"Guild not opted into Experience module. Use: `{Context.DBGuild.Prefix}guild-feature levels 1`".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);

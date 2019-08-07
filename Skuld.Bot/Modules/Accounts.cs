@@ -20,13 +20,13 @@ using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
-    [Group, RequireEnabledModule]
+    [Group, RequireEnabledModule, RequireDatabase]
     public class Profiles : InteractiveBase<SkuldCommandContext>
     {
         public SkuldConfig Configuration { get; set; }
         public BaseClient WebHandler { get; set; }
 
-        [Command("money"), Summary("Gets a user's money"), RequireDatabase]
+        [Command("money"), Summary("Gets a user's money")]
         public async Task Money([Remainder]IGuildUser user = null)
         {
             if (user != null && (user.IsBot || user.IsWebhook))
@@ -52,11 +52,11 @@ namespace Skuld.Bot.Commands
 
                 if (user == null)
                 {
-                    await $"You have: {Configuration.Preferences.MoneySymbol}{skuser.Money.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    await $"You have: {Context.DBGuild.MoneyIcon}{skuser.Money.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
                 else
                 {
-                    await $"{user.Mention} has {Configuration.Preferences.MoneySymbol}{skuser.Money.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    await $"{user.Mention} has {Context.DBGuild.MoneyIcon}{skuser.Money.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
             }
             catch (Exception ex)
@@ -242,7 +242,7 @@ namespace Skuld.Bot.Commands
                 }
 
                 //Money
-                using (MagickImage label2 = new MagickImage($"label:{Configuration.Preferences.MoneySymbol}{profileuser.Money.ToString("N0")}", new MagickReadSettings
+                using (MagickImage label2 = new MagickImage($"label:{Context.DBGuild.MoneyIcon}{profileuser.Money.ToString("N0")}", new MagickReadSettings
                 {
                     BackgroundColor = MagickColors.Transparent,
                     FillColor = MagickColors.White,
@@ -343,7 +343,7 @@ namespace Skuld.Bot.Commands
             await "".QueueMessage(Discord.Models.MessageType.File, Context.User, Context.Channel, imageLocation);
         }
 
-        [Command("profile-ext"), Summary("Get a users extended profile"), RequireDatabase]
+        [Command("profile-ext"), Summary("Get a users extended profile")]
         public async Task ExtProfile([Remainder]IGuildUser user = null)
         {
             if (user != null && (user.IsBot || user.IsWebhook))
@@ -369,7 +369,7 @@ namespace Skuld.Bot.Commands
                     }
                 }
 
-                var embed = await skuser.GetExtendedProfileAsync(user ?? (IGuildUser)Context.User, Configuration);
+                var embed = await skuser.GetExtendedProfileAsync(user ?? (IGuildUser)Context.User, Context.DBGuild);
 
                 await embed.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
@@ -380,7 +380,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("daily"), Summary("Daily Money"), RequireDatabase]
+        [Command("daily"), Summary("Daily Money")]
         public async Task Daily(IGuildUser user = null)
         {
             if (user != null && (user.IsBot || user.IsWebhook))
@@ -401,7 +401,7 @@ namespace Skuld.Bot.Commands
 
                         if (resp)
                         {
-                            await $"You got your daily of: `{Configuration.Preferences.MoneySymbol + Configuration.Preferences.DailyAmount}`, you now have: {Configuration.Preferences.MoneySymbol}{((SkuldUser)context.Data).Money.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                            await $"You got your daily of: `{Context.DBGuild.MoneyIcon + Configuration.Preferences.DailyAmount}`, you now have: {Context.DBGuild.MoneyIcon}{((SkuldUser)context.Data).Money.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                         }
                         else
                         {
@@ -420,7 +420,7 @@ namespace Skuld.Bot.Commands
                         suser = await DatabaseClient.GetUserAsync(user.Id);
                         if (resp)
                         {
-                            await $"You just gave {user.Mention} your daily of: `{Configuration.Preferences.MoneySymbol + Configuration.Preferences.DailyAmount}`, they now have: {Configuration.Preferences.MoneySymbol}{((SkuldUser)suser.Data).Money.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                            await $"You just gave {user.Mention} your daily of: `{Context.DBGuild.MoneyIcon + Configuration.Preferences.DailyAmount}`, they now have: {Context.DBGuild.MoneyIcon}{((SkuldUser)suser.Data).Money.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                         }
                         else
                         {
@@ -438,7 +438,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("give"), Summary("Give your money to people"), RequireDatabase]
+        [Command("give"), Summary("Give your money to people")]
         public async Task Give(IGuildUser user, ulong amount)
         {
             if (user != null && (user.IsBot || user.IsWebhook))
@@ -476,7 +476,7 @@ namespace Skuld.Bot.Commands
 
                     if (res1.Successful && res2.Successful)
                     {
-                        await $"You just gave {user.Mention} {Configuration.Preferences.MoneySymbol}{amount.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Mention, Context.User, Context.Channel);
+                        await $"You just gave {user.Mention} {Context.DBGuild.MoneyIcon}{amount.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Mention, Context.User, Context.Channel);
                     }
                     else
                     {
@@ -495,7 +495,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("rank"), Summary("Gets your or someone's current level"), RequireDatabase]
+        [Command("rank"), Summary("Gets your or someone's current level")]
         [Alias("exp")]
         public async Task Level(IGuildUser user = null)
         {
@@ -702,7 +702,7 @@ namespace Skuld.Bot.Commands
             await "".QueueMessage(Discord.Models.MessageType.File, Context.User, Context.Channel, imageLocation);
         }
 
-        [Command("heal"), Summary("Shows you how much you can heal by"), RequireDatabase]
+        [Command("heal"), Summary("Shows you how much you can heal by")]
         public async Task HealAmount()
         {
             try
@@ -725,7 +725,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("heal"), Summary("Heal yourself or others here"), RequireDatabase]
+        [Command("heal"), Summary("Heal yourself or others here")]
         public async Task Heal(uint hp, [Remainder] IGuildUser user = null)
         {
             if (user != null && (user.IsBot || user.IsWebhook))
@@ -764,7 +764,7 @@ namespace Skuld.Bot.Commands
 
                 await DatabaseClient.UpdateUserAsync(contextDB);
 
-                await $"You have healed your HP by {hp} for {Configuration.Preferences.MoneySymbol}{amount.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await $"You have healed your HP by {hp} for {Context.DBGuild.MoneyIcon}{amount.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
             }
             else
             {
@@ -808,12 +808,12 @@ namespace Skuld.Bot.Commands
                     await DatabaseClient.UpdateUserAsync(contextDB);
                     await DatabaseClient.UpdateUserAsync(userDB);
 
-                    await $"You have healed {user.Mention}'s HP by {hp} for {Configuration.Preferences.MoneySymbol}{amount.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    await $"You have healed {user.Mention}'s HP by {hp} for {Context.DBGuild.MoneyIcon}{amount.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
             }
         }
 
-        [Command("rep"), Summary("Gives someone rep or checks your rep"), RequireDatabase]
+        [Command("rep"), Summary("Gives someone rep or checks your rep")]
         public async Task GiveRep([Remainder]IGuildUser user = null)
         {
             if (user != null && (user.IsBot || user.IsWebhook))
@@ -867,7 +867,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("unrep"), Summary("Removes a rep"), RequireDatabase]
+        [Command("unrep"), Summary("Removes a rep")]
         public async Task RemoveRep([Remainder]IGuildUser user)
         {
             if (user != null && (user.IsBot || user.IsWebhook))
@@ -1047,7 +1047,7 @@ namespace Skuld.Bot.Commands
                 }
                 else
                 {
-                    await $"You need at least {Configuration.Preferences.MoneySymbol}300 to change your background".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    await $"You need at least {Context.DBGuild.MoneyIcon}300 to change your background".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
             }
             else
@@ -1082,7 +1082,7 @@ namespace Skuld.Bot.Commands
                 }
                 else
                 {
-                    await $"You need at least {Configuration.Preferences.MoneySymbol}40,000 to unlock custom backgrounds".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    await $"You need at least {Context.DBGuild.MoneyIcon}40,000 to unlock custom backgrounds".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
             }
             else
@@ -1112,7 +1112,7 @@ namespace Skuld.Bot.Commands
                 }
                 else
                 {
-                    await $"You need at least {Configuration.Preferences.MoneySymbol}900 to change your background".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    await $"You need at least {Context.DBGuild.MoneyIcon}900 to change your background".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 }
             }
             else

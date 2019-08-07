@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
+using Octokit;
 using Skuld.Core;
 using Skuld.Core.Utilities;
 using Skuld.Core.Utilities.Stats;
@@ -20,6 +21,8 @@ namespace Skuld.Bot.Commands
     [Group, RequireEnabledModule]
     public class Stats : InteractiveBase<SkuldCommandContext>
     {
+        public GitHubClient GitClient { get; set; }
+
         [Command("ping"), Summary("Print Ping")]
         public async Task Ping()
             => await $"PONG: {Context.Client.GetShardFor(Context.Guild).Latency}ms".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
@@ -54,19 +57,23 @@ namespace Skuld.Bot.Commands
                 };
 
                 string apiversions =
-                    $"[Booru: {SoftwareStats.Booru.Key.Version.ToString()}]({SoftwareStats.Booru.Value})\n" +   
-                    $"[SysEx: {SoftwareStats.SysEx.Key.Version.ToString()}]({SoftwareStats.SysEx.Value})\n" +
-                    $"[Twitch: {SoftwareStats.Twitch.Key.Version.ToString()}]({SoftwareStats.Twitch.Value})\n" +
-                    $"[Weebsh: {SoftwareStats.Weebsh.Key.Version.ToString()}]({SoftwareStats.Weebsh.Value})";
+                    $"[Booru: {SoftwareStats.Booru.Key.Version.ToString()}](https://github.com/{SoftwareStats.Booru.Value.Owner}/{SoftwareStats.Booru.Value.Repo})\n" +   
+                    $"[SysEx: {SoftwareStats.SysEx.Key.Version.ToString()}](https://github.com/{SoftwareStats.SysEx.Value.Owner}/{SoftwareStats.SysEx.Value.Repo})\n" +
+                    $"[Twitch: {SoftwareStats.Twitch.Key.Version.ToString()}](https://github.com/{SoftwareStats.Twitch.Value.Owner}/{SoftwareStats.Twitch.Value.Repo})\n" +
+                    $"[Weebsh: {SoftwareStats.Weebsh.Key.Version.ToString()}](https://github.com/{SoftwareStats.Weebsh.Value.Owner}/{SoftwareStats.Weebsh.Value.Repo})";
+
+                var commits = await GitClient.Repository.Commit.GetAll(SoftwareStats.Skuld.Value.Owner, SoftwareStats.Skuld.Value.Repo);
 
                 string botstats = "";
-                    botstats += $"[Skuld: {SoftwareStats.Skuld.Key.Version.ToString()}]({SoftwareStats.Skuld.Value})\n";
-                    botstats += "Uptime: " + string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime)) + "\n";
-                    botstats += "Ping: " + Context.Client.GetShardFor(Context.Guild).Latency + "ms\n";
-                    botstats += "Guilds: " + Context.Client.Guilds.Count + "\n";
-                    botstats += "Users: " + BotService.Users + "\n";
-                    botstats += "Shards: " + Context.Client.Shards.Count + "\n";
-                    botstats += "Commands: " + BotService.CommandService.Commands.Count();
+                    botstats += $"[Skuld: {SoftwareStats.Skuld.Key.Version.ToString()}](https://github.com/{SoftwareStats.Skuld.Value.Owner}/{SoftwareStats.Skuld.Value.Repo})\n";
+                    botstats += $"Uptime: {string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}\n";
+                    botstats += $"Ping: {Context.Client.GetShardFor(Context.Guild).Latency}ms\n";
+                    botstats += $"Guilds: {Context.Client.Guilds.Count}\n";
+                    botstats += $"Users: {BotService.Users}\n";
+                    botstats += $"Shards: {Context.Client.Shards.Count}\n";
+                    botstats += $"Commands: {BotService.CommandService.Commands.Count()}\n";
+                    botstats += $"Commits: {commits.Count}\n";
+                    botstats += $"Most Recent Commit: [`{commits.First().Sha.Substring(0, 7)}`]({commits.First().HtmlUrl}) {commits.First().Commit.Message}";
 
                 string systemstats =
                     "Memory Used: " + HardwareStats.Memory.GetMBUsage + "MB\n" +

@@ -21,8 +21,8 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Skuld.Bot.Models;
 using Newtonsoft.Json;
+using Skuld.Bot.Models.Commands;
 
 namespace Skuld.Bot.Commands
 {
@@ -247,7 +247,7 @@ namespace Skuld.Bot.Commands
 
                     await DatabaseClient.UpdateUserAsync(suser);
 
-                    await $"User {user.Username} now has: {Configuration.Preferences.MoneySymbol}{suser.Money}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel); ;
+                    await $"User {user.Username} now has: {Context.DBGuild.MoneyIcon}{suser.Money}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel); ;
                 }
                 else
                 {

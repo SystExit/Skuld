@@ -2,6 +2,7 @@
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
+using ImageMagick;
 using IqdbApi;
 using Newtonsoft.Json;
 using Skuld.APIS;
@@ -11,11 +12,11 @@ using Skuld.APIS.NekoLife.Models;
 using Skuld.APIS.WebComics.Explosm.Models;
 using Skuld.APIS.WebComics.XKCD.Models;
 using Skuld.Bot.Extensions;
-using Skuld.Bot.Models;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Globalization;
 using Skuld.Core.Models;
+using Skuld.Core.Models.Skuld;
 using Skuld.Core.Utilities;
 using Skuld.Database;
 using Skuld.Database.Extensions;
@@ -27,6 +28,7 @@ using Skuld.Discord.Preconditions;
 using Skuld.Discord.Utilities;
 using StatsdClient;
 using SysEx.Net;
+using SysEx.Net.Models;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -35,8 +37,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using WenceyWang.FIGlet;
-using SysEx.Net.Models;
-using ImageMagick;
 
 namespace Skuld.Bot.Commands
 {
@@ -644,7 +644,7 @@ namespace Skuld.Bot.Commands
             var choice = choices[Random.Next(0, choices.Length)];
 
             if (char.IsWhiteSpace(choice[0])) choice = choice.Remove(choice[0], 1);
-            else if (char.IsWhiteSpace(choice[choice.Length - 1])) choice = choice.Remove(choice.Length - 1);
+            else if (char.IsWhiteSpace(choice[^1])) choice = choice.Remove(choice.Length - 1);
 
             await $"<:blobthinkcool:350673773113901056> | __{(Context.User as IGuildUser).Nickname ?? Context.User.Username}__ I choose: **{choice}**".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
@@ -705,7 +705,7 @@ namespace Skuld.Bot.Commands
                 result += "\n";
             }
 
-            result = result.Substring(0, result.Length - 2);
+            result = result[0..^2];
             result += "```";
 
             await result.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
@@ -804,7 +804,7 @@ namespace Skuld.Bot.Commands
                         Directory.CreateDirectory(folderPath);
                     }
 
-                    using (var file = System.Drawing.Image.FromStream(((Stream)resp)))
+                    using (var file = System.Drawing.Image.FromStream((Stream)resp))
                     {
                         file.Save(filePath);
                     }
@@ -832,38 +832,28 @@ namespace Skuld.Bot.Commands
                 if (endpoints.Any(x => x.Name.ToLower() == template.ToLower()))
                 {
                     var endpoint = endpoints.First(x => x.Name.ToLower() == template.ToLower());
-                    if (endpoint.RequiredSources <= sources.Count())
+                    if (endpoint.RequiredSources == sources.Count())
                     {
-                        string queryString = "";
+                        var resp = await SysExClient.GetMemeImageAsync(endpoint.Name, sources);
 
-                        int x = 1;
-                        foreach (var source in sources)
+                        if (resp != null && resp is Stream)
                         {
-                            if (source != sources.Last())
+                            var folderPath = Path.Combine(AppContext.BaseDirectory, "storage/meme/");
+
+                            var filePath = Path.Combine(folderPath, $"{template}-{Context.User.Id}-{Context.Channel.Id}.png");
+
+                            if (!Directory.Exists(folderPath))
                             {
-                                queryString += $"source{x}={source}&";
+                                Directory.CreateDirectory(folderPath);
                             }
-                            else
+
+                            using (var file = System.Drawing.Image.FromStream((Stream)resp))
                             {
-                                queryString += $"source{x}={source}";
+                                file.Save(filePath);
                             }
-                            x++;
+
+                            await "".QueueMessage(Discord.Models.MessageType.File, Context.User, Context.Channel, filePath);
                         }
-
-                        var url = $"https://api.skuldbot.uk/fun/meme/{template}/?{queryString}";
-
-                        var folderPath = Path.Combine(AppContext.BaseDirectory, "storage/meme/");
-
-                        var filePath = Path.Combine(folderPath, $"{template}-{Context.User.Id}-{Context.Channel.Id}.png");
-
-                        if (!Directory.Exists(folderPath))
-                        {
-                            Directory.CreateDirectory(folderPath);
-                        }
-
-                        await WebHandler.DownloadFileAsync(new Uri(url), filePath);
-
-                        await "".QueueMessage(Discord.Models.MessageType.File, Context.User, Context.Channel, filePath);
                     }
                     else
                     {
