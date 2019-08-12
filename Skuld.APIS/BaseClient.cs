@@ -31,7 +31,7 @@ namespace Skuld.APIS
             returncli.AllowAutoRedirect = true;
             returncli.KeepAlive = false;
             returncli.Timeout = 20000;
-            returncli.ProtocolVersion = HttpVersion.Version10;
+            returncli.ProtocolVersion = HttpVersion.Version11;
 
             return returncli;
         }
