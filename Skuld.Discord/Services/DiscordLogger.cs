@@ -2,7 +2,7 @@
 using Discord.WebSocket;
 using Skuld.APIS;
 using Skuld.Core;
-using Skuld.Core.Models;
+using Skuld.Core.Models.Skuld;
 using Skuld.Database;
 using Skuld.Discord.Handlers;
 using StatsdClient;
@@ -12,12 +12,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Skuld.Discord.Utilities;
+using Skuld.Core.Models;
 
 namespace Skuld.Discord.Services
 {
     public static class DiscordLogger
     {
-        private static readonly Random random = new Random();
         private static BotListingClient botListing;
         private static readonly SkuldConfig Configuration = SkuldConfig.Load();
         private static List<int> ShardsReady = new List<int>();
