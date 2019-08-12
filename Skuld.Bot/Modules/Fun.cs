@@ -754,87 +754,61 @@ namespace Skuld.Bot.Commands
                 await "Couldn't find an image".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
             }
         }
-
+        
         [Command("meme"), Summary("Does a funny haha meme"), Ratelimit(20, 1, Measure.Minutes)]
-        public async Task Memay(string template, params IUser[] users)
+        public async Task Memay(string template = null, params string[] sources)
         {
-            var endpoints = await SysExClient.GetMemeImageAsync();
-
-            if (endpoints is MemeResponse)
-            { }
-            else
+            if(template == null && !sources.Any())
             {
-                await Locale.GetLocale(Locale.defaultLocale).GetString("SKULD_GENERIC_ERROR").QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                var endpoints = JsonConvert.DeserializeObject<MemeResponse>(await WebHandler.ReturnStringAsync(new Uri("https://api.skuldbot.uk/fun/meme/?endpoints"))).Endpoints;
+
+                var paginatedMessage = new PaginatedMessage
+                {
+                    Title = "__Current Templates__",
+                    Color = Color.Blue,
+                    Options = new PaginatedAppearanceOptions
+                    {
+                        DisplayInformationIcon = false,
+                        JumpDisplayOptions = JumpDisplayOptions.WithManageMessages
+                    }
+                };
+
+                paginatedMessage.Pages = endpoints.PaginateList();
+
+                await PagedReplyAsync(paginatedMessage);
                 return;
             }
 
-            var nameLowered = template.ToLowerInvariant();
+            List<string> imageLinks = new List<string>();
 
-            if(((MemeResponse)endpoints).Endpoints.Exists(x=>x.Name.ToLowerInvariant() == nameLowered))
+            foreach(var str in sources)
             {
-                var endpoint = ((MemeResponse)endpoints).Endpoints.FirstOrDefault(x => x.Name.ToLowerInvariant() == nameLowered);
-
-                if(endpoint.RequiredSources > users.Count())
+                if(str.IsImageExtension())
                 {
-                    await $"You don't have enough sources. You need {endpoint.RequiredSources} source images".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                    return;
+                    imageLinks.Add(str.TrimEmbedHiders());
                 }
 
-                var avatars = new List<string>();
-                foreach (var usr in users)
+                if(DiscordUtilities.UserMentionRegex.IsMatch(str))
                 {
-                    var avatar = usr.GetAvatarUrl(ImageFormat.Png);
-                    if (avatar == "" || avatar == null)
-                    {
-                        avatar = usr.GetDefaultAvatarUrl();
-                    }
-                    avatars.Add(avatar);
-                }
+                    var userid = str.Replace("<@", "").Replace(">", "");
+                    ulong.TryParse(userid, out ulong useridl);
 
-                var resp = await SysExClient.GetMemeImageAsync(endpoint.Name, avatars.ToArray());
+                    var user = Context.Guild.GetUser(useridl);
 
-                if(resp != null && resp is Stream)
-                {
-                    var folderPath = Path.Combine(AppContext.BaseDirectory, "storage/meme/");
-
-                    var filePath = Path.Combine(folderPath, $"{template}-{Context.User.Id}-{Context.Channel.Id}.png");
-
-                    if (!Directory.Exists(folderPath))
-                    {
-                        Directory.CreateDirectory(folderPath);
-                    }
-
-                    using (var file = System.Drawing.Image.FromStream((Stream)resp))
-                    {
-                        file.Save(filePath);
-                    }
-
-                    await "".QueueMessage(Discord.Models.MessageType.File, Context.User, Context.Channel, filePath);
-                }
-                else
-                {
-                    await Locale.GetLocale(Locale.defaultLocale).GetString("SKULD_GENERIC_ERROR").QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                    imageLinks.Add(user.GetAvatarUrl() ?? user.GetDefaultAvatarUrl());
                 }
             }
-            else
-            {
-                await $"Template `{template}` does not exist".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-            }
-        }
 
-        [Command("meme"), Summary("Does a funny haha meme"), Ratelimit(20, 1, Measure.Minutes)]
-        public async Task Memay(string template, params string[] sources)
-        {
-            if(sources.All(x=>x.IsImageExtension()))
+            if (imageLinks.All(x=>x.IsImageExtension()))
             {
                 var endpoints = JsonConvert.DeserializeObject<MemeResponse>(await WebHandler.ReturnStringAsync(new Uri("https://api.skuldbot.uk/fun/meme/?endpoints"))).Endpoints;
 
                 if (endpoints.Any(x => x.Name.ToLower() == template.ToLower()))
                 {
                     var endpoint = endpoints.First(x => x.Name.ToLower() == template.ToLower());
-                    if (endpoint.RequiredSources == sources.Count())
+                    if (endpoint.RequiredSources == imageLinks.Count())
                     {
-                        var resp = await SysExClient.GetMemeImageAsync(endpoint.Name, sources);
+                        var resp = await SysExClient.GetMemeImageAsync(endpoint.Name, imageLinks.ToArray());
 
                         if (resp != null && resp is Stream)
                         {
@@ -869,27 +843,6 @@ namespace Skuld.Bot.Commands
             {
                 await "Sources need to be an image link".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
             }
-        }
-
-        [Command("meme"), Summary("Lists all endpoints")]
-        public async Task Memeay()
-        {
-            var endpoints = JsonConvert.DeserializeObject<MemeResponse>(await WebHandler.ReturnStringAsync(new Uri("https://api.skuldbot.uk/fun/meme/?endpoints"))).Endpoints;
-
-            var paginatedMessage = new PaginatedMessage
-            {
-                Title = "__Current Templates__",
-                Color = Color.Blue,
-                Options = new PaginatedAppearanceOptions
-                {
-                    DisplayInformationIcon = false,
-                    JumpDisplayOptions = JumpDisplayOptions.WithManageMessages
-                }
-            };
-
-            paginatedMessage.Pages = endpoints.PaginateList();
-
-            await PagedReplyAsync(paginatedMessage);
         }
 
         private int EdgeCase;
