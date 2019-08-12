@@ -3,12 +3,17 @@ using Discord.Commands;
 using Skuld.Core.Extensions;
 using Skuld.Core.Utilities;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Skuld.Discord.Utilities
 {
     public class DiscordUtilities
     {
         public const double PHI = 1.618;
+
+        public static Regex UserMentionRegex = new Regex("<@.?[0-9]*?>");
+        public static Regex RoleMentionRegex = new Regex("<&[0-9]*?>");
+        public static Regex ChannelMentionRegex = new Regex("<#[0-9]*?>");
 
         public static Embed GetCommandHelp(CommandService commandService, ICommandContext context, string commandname)
         {
