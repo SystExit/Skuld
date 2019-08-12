@@ -5,6 +5,7 @@ using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Core.Models.Discord;
+using Skuld.Core.Models.Skuld;
 using Skuld.Database;
 using Skuld.Discord.Commands;
 using Skuld.Discord.Extensions;
@@ -787,7 +788,8 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("levelnotif"), Summary("Sets the levelup notification")]
+        [Command("levelnotification"), Summary("Sets the levelup notification")]
+        [Alias("levelnotif")]
         public async Task ConfigureLevelNotif(LevelNotification level)
         {
             Context.DBGuild.LevelNotification = level;
@@ -947,17 +949,19 @@ namespace Skuld.Bot.Commands
             }
         }
 
+        [Disabled]
         [Command("serverrole"), Summary("Adds a new self assignable role. Use: optable=[true/false] cost=[cost] level-grant=[true/false] require-level=[level] require-role=[rolename/roleid/mention]")]
         public async Task AddRole(IRole role, GuildRoleConfig config)
         {
             EventResult result = new EventResult();
+
             if(config.Optable)
             {
-                result = await DatabaseClient.AddGuildAssignRole(Context.Guild, role.Id, config);
+                result = await DatabaseClient.AddGuildAssignRoleAsync(Context.Guild, role.Id, config);
             }
             else if(config.LevelReward)
             {
-                result = await DatabaseClient.AddGuildLevelReward(Context.Guild, role.Id, config);
+                result = await DatabaseClient.AddGuildLevelRewardAsync(Context.Guild, role.Id, config);
             }
             else
             {
@@ -975,11 +979,14 @@ namespace Skuld.Bot.Commands
             }
         }
 
+        [Disabled]
         [Command("deleterole"), Summary("Removes a custom role")]
         public async Task DeleteRole(IRole role)
         {
 
         }
+
+        [Disabled]
         [Command("deleterole"), Summary("Removes a custom role")]
         public async Task DeleteRole(ulong roleID)
         {
