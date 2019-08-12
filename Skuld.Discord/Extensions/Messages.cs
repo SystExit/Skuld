@@ -70,5 +70,17 @@ namespace Skuld.Discord.Extensions
             });
             return Task.CompletedTask;
         }
+
+        public static string TrimEmbedHiders(this string message)
+        {
+            string s = message;
+
+            if (s.StartsWith("<"))
+                s = s.Substring(1);
+            if (s.EndsWith(">"))
+                s = s.Substring(0, s.Length - 1);
+
+            return s;
+        }
     }
 }
