@@ -6,6 +6,7 @@ using Skuld.APIS;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
+using Skuld.Core.Models.Skuld;
 using Skuld.Core.Utilities;
 using Skuld.Database;
 using Skuld.Database.Extensions;
@@ -156,13 +157,13 @@ namespace Skuld.Bot.Commands
                 }
                 else
                 {
-                    using (MagickImage img2 = new MagickImage(imageBackgroundFile))
+                    using MagickImage img2 = new MagickImage(imageBackgroundFile)
                     {
-                        img2.FilterType = FilterType.Quadratic;
-                        img2.Resize(600, 0);
-                        img2.Crop(600, 228, Gravity.Center);
-                        image.Composite(img2);
-                    }
+                        FilterType = FilterType.Quadratic
+                    };
+                    img2.Resize(600, 0);
+                    img2.Crop(600, 228, Gravity.Center);
+                    image.Composite(img2);
                 }
 
                 var avatar = user.GetAvatarUrl(ImageFormat.Png) ?? user.GetDefaultAvatarUrl();
@@ -273,7 +274,7 @@ namespace Skuld.Bot.Commands
                 //Title
                 if(profileuser.Title != "")
                 {
-                    using (MagickImage label4 = new MagickImage($"label:{profileuser.Title}", new MagickReadSettings
+                    using MagickImage label4 = new MagickImage($"label:{profileuser.Title}", new MagickReadSettings
                     {
                         BackgroundColor = MagickColors.Transparent,
                         FillColor = MagickColors.White,
@@ -281,12 +282,10 @@ namespace Skuld.Bot.Commands
                         Height = 40,
                         TextGravity = Gravity.Center,
                         Font = fontFile
-                    }))
-                    {
-                        image.Composite(label4, 0, 270, CompositeOperator.Over);
+                    });
+                    image.Composite(label4, 0, 270, CompositeOperator.Over);
 
-                        label4.Dispose();
-                    }
+                    label4.Dispose();
                 }
 
                 //YLevel 1
@@ -585,13 +584,13 @@ namespace Skuld.Bot.Commands
                 }
                 else
                 {
-                    using (MagickImage img2 = new MagickImage(imageBackgroundFile))
+                    using MagickImage img2 = new MagickImage(imageBackgroundFile)
                     {
-                        img2.FilterType = FilterType.Quadratic;
-                        img2.Resize(750, 0);
-                        img2.Crop(750, 300, Gravity.Center);
-                        image.Composite(img2);
-                    }
+                        FilterType = FilterType.Quadratic
+                    };
+                    img2.Resize(750, 0);
+                    img2.Crop(750, 300, Gravity.Center);
+                    image.Composite(img2);
                 }
 
                 //Box
@@ -1026,7 +1025,7 @@ namespace Skuld.Bot.Commands
                 if (Context.DBUser.Money >= 300)
                 {
                     Context.DBUser.Money -= 300;
-                    if (int.TryParse((Hex[0] != '#' ? Hex : Hex.Remove(0,1)), System.Globalization.NumberStyles.HexNumber, null, out int result))
+                    if (int.TryParse((Hex[0] != '#' ? Hex : Hex.Remove(0,1)), System.Globalization.NumberStyles.HexNumber, null, out _))
                     {
                         Context.DBUser.Background = (Hex[0] != '#' ? "#"+Hex : Hex);
                         var res = await DatabaseClient.UpdateUserAsync(Context.DBUser);

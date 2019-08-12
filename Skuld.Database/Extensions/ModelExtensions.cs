@@ -1,6 +1,7 @@
 ﻿using MySql.Data.MySqlClient;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
+using Skuld.Core.Models.Skuld;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -169,7 +170,7 @@ namespace Skuld.Database.Extensions
                     if (resp.Data != null)
                     {
                         var cmdusg = Convert.ToInt32(resp.Data);
-                        cmdusg = cmdusg + 1;
+                        cmdusg += 1;
                         cmd = new MySqlCommand("UPDATE `usercommandusage` SET `Usage` = @userusg WHERE UserID = @userid AND Command = @command");
                         cmd.Parameters.AddWithValue("@userusg", cmdusg);
                         cmd.Parameters.AddWithValue("@userid", user.ID);
@@ -419,7 +420,8 @@ namespace Skuld.Database.Extensions
         //Guild
         private static MySqlCommand GetBaseMySqlCommand(this SkuldGuild guild)
         {
-            MySqlCommand command = null;
+            MySqlCommand command;
+
             if (guild.JoinableRoles != null)
             {
                 command = new MySqlCommand(

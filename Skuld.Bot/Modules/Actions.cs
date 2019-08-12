@@ -4,6 +4,7 @@ using Discord.Commands;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
+using Skuld.Core.Models.Skuld;
 using Skuld.Core.Utilities;
 using Skuld.Database;
 using Skuld.Database.Extensions;
@@ -28,7 +29,7 @@ namespace Skuld.Bot.Commands
         [Command("slap"), Summary("Slap a user")]
         public async Task Slap([Remainder]IGuildUser user)
         {
-            if (await CanPerformActions(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
+            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
             {
                 try
                 {
@@ -59,7 +60,7 @@ namespace Skuld.Bot.Commands
         [Command("kill"), Summary("Kills a user")]
         public async Task Kill([Remainder]IGuildUser user)
         {
-            if (await CanPerformActions(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
+            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
             {
                 try
                 {
@@ -89,7 +90,7 @@ namespace Skuld.Bot.Commands
         [Command("stab"), Summary("Stabs a user")]
         public async Task Stab([Remainder]IGuildUser user)
         {
-            if (await CanPerformActions(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
+            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
             {
                 try
                 {
@@ -153,7 +154,7 @@ namespace Skuld.Bot.Commands
         [Command("hug"), Summary("hugs a user")]
         public async Task Hug([Remainder]IGuildUser user)
         {
-            if (await CanPerformActions(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
+            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
             {
                 try
                 {
@@ -184,7 +185,7 @@ namespace Skuld.Bot.Commands
         [Command("punch"), Summary("Punch a user")]
         public async Task Punch([Remainder]IGuildUser user)
         {
-            if (await CanPerformActions(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
+            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
             {
                 try
                 {
@@ -231,7 +232,7 @@ namespace Skuld.Bot.Commands
         [Command("adore"), Summary("Adore a user")]
         public async Task Adore([Remainder]IGuildUser user)
         {
-            if (await CanPerformActions(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
+            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
             {
                 try
                 {
@@ -262,7 +263,7 @@ namespace Skuld.Bot.Commands
         [Command("kiss"), Summary("Kiss a user")]
         public async Task Kiss([Remainder]IGuildUser user)
         {
-            if (await CanPerformActions(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
+            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
             {
                 try
                 {
@@ -293,7 +294,7 @@ namespace Skuld.Bot.Commands
         [Command("grope"), Summary("Grope a user")]
         public async Task Grope([Remainder]IGuildUser user)
         {
-            if (await CanPerformActions(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
+            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
             {
                 try
                 {
@@ -324,7 +325,7 @@ namespace Skuld.Bot.Commands
         [Command("pat"), Summary("Pat a user"), Alias("pet", "headpat")]
         public async Task Pat([Remainder]IGuildUser user)
         {
-            if (await CanPerformActions(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
+            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
             {
                 try
                 {
@@ -414,7 +415,7 @@ namespace Skuld.Bot.Commands
         [Command("glare"), Summary("Glares at a user")]
         public async Task Glare([Remainder]IGuildUser user)
         {
-            if (await CanPerformActions(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
+            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
             {
                 var gif = await SysExClient.GetWeebActionGifAsync(GifType.Glare).ConfigureAwait(false);
 
@@ -429,7 +430,7 @@ namespace Skuld.Bot.Commands
         private string GetBlockedMessage(IUser blocked, IUser blockee, string command)
             => $"{blocked.Mention} the user {blockee.Mention} dodged your {command}";
 
-        public static async Task<bool> CanPerformActions(SkuldUser blocker, SkuldUser blockee)
+        public static async Task<bool> CanPerformActionsAsync(SkuldUser blocker, SkuldUser blockee)
         {
             var res = await blockee.IsBlockedFromPerformingActions(blocker.ID);
 
