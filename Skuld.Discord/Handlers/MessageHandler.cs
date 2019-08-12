@@ -133,13 +133,47 @@ namespace Skuld.Discord.Handlers
         {
             var _ = HandleCommandAsync(arg).ConfigureAwait(false);
         }
+
+        public static async Task<bool> CheckPermissionToSendMessageAsync(ITextChannel channel)
+        {
+            if(channel.Guild != null)
+            {
+                var guild = channel.Guild;
+                var currentuser = await channel.Guild.GetCurrentUserAsync();
+                var chan = await channel.Guild.GetChannelAsync(channel.Id);
+                var po = chan.GetPermissionOverwrite(currentuser);
+
+                if (po.HasValue)
+                {
+                    if (po.Value.SendMessages != PermValue.Deny)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
         public static async Task HandleCommandAsync(SocketMessage arg)
         {
             DogStatsd.Increment("messages.recieved");
-            if (arg.Author.IsBot || arg.Author.IsWebhook) { return; }
+            if (arg.Author.IsBot || arg.Author.IsWebhook || arg.Author.Discriminator.Equals("0000")) { return; }
 
             var message = arg as SocketUserMessage;
             if (message is null) { return; }
+
+            if (message.Channel is ITextChannel)
+            {
+                if(!await CheckPermissionToSendMessageAsync(message.Channel as ITextChannel))
+                {
+                    return;
+                }
+            }
 
             var gldtemp = (message.Channel as ITextChannel).Guild;
             if(gldtemp != null)
@@ -153,10 +187,12 @@ namespace Skuld.Discord.Handlers
 
             SkuldUser suser = null;
             SkuldGuild sguild = null;
+
             if (await DatabaseClient.CheckConnectionAsync())
             {
                 suser = await MessageTools.GetUserOrInsertAsync(message.Author).ConfigureAwait(false);
                 sguild = await MessageTools.GetGuildOrInsertAsync((message.Channel as ITextChannel).Guild).ConfigureAwait(false);
+
                 if(!suser.IsUpToDate(message.Author))
                 {
                     suser.FillDataFromDiscord(message.Author);
@@ -174,8 +210,7 @@ namespace Skuld.Discord.Handlers
                 }
             }
 
-            if (sguild != null) { if (!MessageTools.HasPrefix(message, BotService.DiscordClient, SkuldConfig, cmdConfig, sguild.Prefix)) { return; } }
-            else { if (!MessageTools.HasPrefix(message, BotService.DiscordClient, SkuldConfig, cmdConfig)) { return; } }
+            if (!MessageTools.HasPrefix(message, BotService.DiscordClient, SkuldConfig, cmdConfig, sguild?.Prefix)) return;
 
             SkuldCommandContext context;
 
@@ -188,11 +223,12 @@ namespace Skuld.Discord.Handlers
                 context = new SkuldCommandContext(BotService.DiscordClient, message);
             }
 
-            if(sguild != null)
+            if (sguild != null)
             {
                 if (sguild.Modules.CustomEnabled)
                 {
                     var _ = HandleCustomCommandAsync(context);
+                    return;
                 }
             }
 
