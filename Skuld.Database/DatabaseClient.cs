@@ -5,13 +5,12 @@ using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Globalization;
 using Skuld.Core.Models;
+using Skuld.Core.Models.Skuld;
 using Skuld.Core.Utilities;
 using Skuld.Database.Extensions;
-using Skuld.Database.Models;
 using StatsdClient;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Skuld.Database
@@ -94,36 +93,34 @@ namespace Skuld.Database
         {
             if (await CheckConnectionAsync())
             {
-                using (var conn = new MySqlConnection(ConnectionString))
+                using var conn = new MySqlConnection(ConnectionString);
+                await conn.OpenAsync();
+                if (conn.State == System.Data.ConnectionState.Open)
                 {
-                    await conn.OpenAsync();
-                    if (conn.State == System.Data.ConnectionState.Open)
+                    command.Connection = conn;
+                    try
                     {
-                        command.Connection = conn;
-                        try
+                        var resp = await command.ExecuteScalarAsync();
+                        DogStatsd.Increment("mysql.queries");
+                        if (resp == null)
                         {
-                            var resp = await command.ExecuteScalarAsync();
-                            DogStatsd.Increment("mysql.queries");
-                            if (resp == null)
-                            {
-                                if(command.CommandText.StartsWith("INSERT INTO"))
-                                    DogStatsd.Increment("mysql.insert");
+                            if (command.CommandText.StartsWith("INSERT INTO"))
+                                DogStatsd.Increment("mysql.insert");
 
-                                await conn.CloseAsync();
-                                return EventResult.FromSuccess();
-                            }
-                            else
-                            {
-                                await conn.CloseAsync();
-                                return EventResult.FromSuccess(resp);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("SQLSngl", "Error with SQL Statement", LogSeverity.Error, ex));
                             await conn.CloseAsync();
-                            return EventResult.FromFailureException("Error with SQL Statement", ex);
+                            return EventResult.FromSuccess();
                         }
+                        else
+                        {
+                            await conn.CloseAsync();
+                            return EventResult.FromSuccess(resp);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("SQLSngl", "Error with SQL Statement", LogSeverity.Error, ex));
+                        await conn.CloseAsync();
+                        return EventResult.FromFailureException("Error with SQL Statement", ex);
                     }
                 }
             }
@@ -1198,23 +1195,29 @@ namespace Skuld.Database
             }
         }
 
-        public static async Task<EventResult> AddGuildAssignRole(IGuild guild, ulong roleID, GuildRoleConfig roleConfig)
+        public static async Task<EventResult> AddGuildAssignRoleAsync(IGuild guild, ulong roleID, GuildRoleConfig roleConfig)
         {
+            throw new NotImplementedException();
+            //TODO
+
             if (await CheckConnectionAsync())
             {
 
             }
             return NoSqlConnection;
         }
-        public static async Task<EventResult> AddGuildLevelReward(IGuild guild, ulong roleID, GuildRoleConfig roleConfig)
+        public static async Task<EventResult> AddGuildLevelRewardAsync(IGuild guild, ulong roleID, GuildRoleConfig roleConfig)
         {
+            throw new NotImplementedException();
+            //TODO
+
             if (await CheckConnectionAsync())
             {
 
             }
             return NoSqlConnection;
         }
-        public static async Task<EventResult> RemoveGuildRewardRole(SkuldGuild guild, ulong roleID)
+        public static async Task<EventResult> RemoveGuildRewardRoleAsync(SkuldGuild guild, ulong roleID)
         {
             if (await CheckConnectionAsync())
             {
