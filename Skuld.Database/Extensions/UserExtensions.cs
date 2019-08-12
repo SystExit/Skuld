@@ -1,8 +1,7 @@
 ﻿using Discord;
-using MySql.Data.MySqlClient;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
-using StatsdClient;
+using Skuld.Core.Models.Skuld;
 using System;
 using System.Collections.Generic;
 using System.Linq;

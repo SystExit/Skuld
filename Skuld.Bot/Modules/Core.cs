@@ -3,6 +3,7 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Skuld.Core;
 using Skuld.Core.Models;
+using Skuld.Core.Models.Skuld;
 using Skuld.Core.Utilities;
 using Skuld.Database;
 using Skuld.Discord.Commands;

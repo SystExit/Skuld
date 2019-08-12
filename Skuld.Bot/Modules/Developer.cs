@@ -5,9 +5,11 @@ using Discord.WebSocket;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Skuld.APIS;
+using Skuld.Bot.Models.Commands;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
+using Skuld.Core.Models.Skuld;
 using Skuld.Core.Utilities;
 using Skuld.Database;
 using Skuld.Discord.Commands;
@@ -22,7 +24,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Skuld.Bot.Models.Commands;
 
 namespace Skuld.Bot.Commands
 {
