@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Skuld.Core.Extensions;
 using System;
 using System.Diagnostics;
 
@@ -11,7 +12,7 @@ namespace Skuld.Core.Utilities
             var bytes = new byte[3];
 
             if (seed == 0)
-                seed = Process.GetCurrentProcess().StartTime.Millisecond;
+                seed = new Random().Next(1, int.MaxValue);
 
             new Random(seed).NextBytes(bytes);
 

@@ -4,7 +4,9 @@ using Skuld.Core.Models;
 using Skuld.Core.Models.Skuld;
 using Skuld.Core.Utilities;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Skuld.Core.Extensions
@@ -35,6 +37,38 @@ namespace Skuld.Core.Extensions
             var userslist = await guild.GetUsersAsync();
             var users = userslist.Count;
             return Math.Round((((decimal)botusers / users) * 100m), 2);
+        }
+
+        public static Color GetHighestRoleColor(this IGuildUser user, IGuild guild)
+        {
+            IRole highestRole = null;
+
+            foreach (var roleid in user.RoleIds.OrderByDescending(x => x))
+            {
+                var role = guild.GetRole(roleid);
+
+                if (role.Color == Color.Default)
+                {
+                    continue;
+                }
+
+                highestRole = role;
+                break;
+            }
+
+            return (highestRole != null ? highestRole.Color : Color.Default);
+        }
+
+        public static string ToEmoji(this ClientType client)
+        {
+            return client switch
+            {
+                ClientType.Desktop => "🖥️",
+                ClientType.Mobile => "📱",
+                ClientType.Web => "🔗",
+
+                _ => "🖥️",
+            };
         }
 
         public static async Task<Embed> GetSummaryAsync(this IGuild guild, DiscordShardedClient client, SkuldGuild skuldguild = null)
@@ -133,64 +167,72 @@ namespace Skuld.Core.Extensions
             }
         }
 
-        public static Embed GetWhois(this IGuildUser user, Color EmbedColor, DiscordShardedClient Client, SkuldConfig Configuration)
+        public static Embed GetWhois(this IUser user, IGuildUser guildUser, IReadOnlyCollection<ulong> roles, Color EmbedColor, DiscordShardedClient Client, SkuldConfig Configuration)
         {
-            string nickname = null;
             string status = "";
 
-            if (!string.IsNullOrEmpty(user.Nickname)) nickname = $"({user.Nickname})";
-            if (user.Status == UserStatus.Online) status = DiscordTools.Online_Emote + " Online";
-            if (user.Status == UserStatus.AFK || user.Status == UserStatus.Idle) status = DiscordTools.Idle_Emote + " AFK/Idle";
-            if (user.Status == UserStatus.DoNotDisturb) status = DiscordTools.DoNotDisturb_Emote + " Do not Disturb/Busy";
-            if (user.Status == UserStatus.Invisible) status = DiscordTools.Invisible_Emote + " Invisible";
-            if (user.Status == UserStatus.Offline) status = DiscordTools.Offline_Emote + " Offline";
-            if (user.Activity != null) if (user.Activity.Type == ActivityType.Streaming) status = DiscordTools.Streaming_Emote + $" {user.Activity.Type.ToString()}";
-
-            string name = user.Username + $"#{user.DiscriminatorValue}";
-
-            if (user.Nickname != null) name += $" {nickname}";
+            if (user.Activity != null)
+            {
+                if (user.Activity.Type == ActivityType.Streaming) status = DiscordTools.Streaming_Emote;
+                else status = user.Status.StatusToEmote();
+            }
+            else status = user.Status.StatusToEmote();
 
             var embed = new EmbedBuilder
             {
                 Color = EmbedColor,
-                Author = new EmbedAuthorBuilder { IconUrl = user.GetAvatarUrl(ImageFormat.Png), Name = name },
-                ImageUrl = user.GetAvatarUrl()
+                Author = new EmbedAuthorBuilder
+                {
+                    IconUrl = user.GetAvatarUrl(ImageFormat.Png),
+                    Name = $"{user.Username}{(guildUser != null ? (guildUser.Nickname != null ? $" ({guildUser.Nickname})" : "") : "")}#{user.DiscriminatorValue}"
+                },
+                ThumbnailUrl = user.GetAvatarUrl() ?? user.GetDefaultAvatarUrl()
             };
 
-            int seencount = 0;
-            foreach (var item in Client.Guilds)
-            {
-                if (item.GetUser(user.Id) != null) seencount++;
-            }
-
-            string game = null;
+            embed.AddInlineField(":id:", user.Id.ToString() ?? "Unknown");
+            embed.AddInlineField(":vertical_traffic_light:", status ?? "Unknown");
 
             if (user.Activity != null)
             {
-                game = user.Activity.Name;
+                embed.AddInlineField(":video_game:", user.Activity.ActivityToString());
             }
 
-            embed.AddField(":id: ID", user.Id.ToString() ?? "Unknown", true);
-            embed.AddField(":vertical_traffic_light: Status", status ?? "Unknown", true);
-            if (game != null)
+            embed.AddInlineField("🤖", user.IsBot ? "✔️" : "❌");
+
+            embed.AddInlineField("Mutual Servers", $"{Client.GetUser(user.Id).MutualGuilds.Count()}");
+
+            StringBuilder clientString = new StringBuilder();
+            foreach (var client in user.ActiveClients)
             {
-                embed.AddField(":video_game: Currently Playing", game, true);
+                clientString = clientString.Append(client.ToEmoji());
+
+                if (user.ActiveClients.Count > 1 && client != user.ActiveClients.Last())
+                    clientString.Append(", ");
             }
-            embed.AddField(":robot: Bot?", user.IsBot ? "✔️" : "❌", true);
-            embed.AddField(":eyes: Mutual Servers", $"{seencount} servers", true);
-            embed.AddField(":shield: Roles", $"[{user.RoleIds.Count}] Do `{Configuration.Discord.Prefix}roles` to see your roles");
+
+            embed.AddInlineField($"Active Client{(user.ActiveClients.Count > 1 ? "s" : "")}", $"{clientString}");
+
+            if(roles != null)
+            {
+                embed.AddField(":shield: Roles", $"[{roles.Count}] Do `{Configuration.Discord.Prefix}roles` to see your roles");
+            }
 
             var createdatstring = user.CreatedAt.GetStringfromOffset(DateTime.UtcNow);
             embed.AddField(":globe_with_meridians: Discord Join", user.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + $" ({createdatstring})\t`DD/MM/YYYY`");
 
-            if (user.JoinedAt.HasValue)
+            if(guildUser != null)
             {
-                var joinedatstring = user.JoinedAt.Value.GetStringfromOffset(DateTime.UtcNow);
-                embed.AddField(":inbox_tray: Server Join", user.JoinedAt.Value.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + $" ({joinedatstring})\t`DD/MM/YYYY`");
+                var joinedatstring = guildUser.JoinedAt.Value.GetStringfromOffset(DateTime.UtcNow);
+                embed.AddField(":inbox_tray: Server Join", guildUser.JoinedAt.Value.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + $" ({joinedatstring})\t`DD/MM/YYYY`");
             }
-            else
+
+            if (guildUser.PremiumSince.HasValue)
             {
-                embed.AddField(":inbox_tray: Server Join", "N/A");
+                var icon = guildUser.PremiumSince.Value.BoostMonthToEmote();
+
+                var offsetString = guildUser.PremiumSince.Value.GetStringfromOffset(DateTime.UtcNow);
+
+                embed.AddField(DiscordTools.NitroBoostEmote + " Boosting Since", $"{(icon == null ? "" : icon + " ")}{guildUser.PremiumSince.Value.UtcDateTime.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")} ({offsetString})\t`DD/MM/YYYY`");
             }
 
             return embed.Build();
@@ -218,6 +260,68 @@ namespace Skuld.Core.Extensions
                 default:
                     return "#fff";
             }
+        }
+
+        public static string ActivityToString(this IActivity activity)
+        {
+            StringBuilder builder = new StringBuilder();
+
+            switch (activity.Type)
+            {
+                case ActivityType.Listening:
+                    builder = builder.Append("Listening to");
+                    break;
+                case ActivityType.Playing:
+                    builder = builder.Append("Playing");
+                    break;
+                case ActivityType.Streaming:
+                    builder = builder.Append("Streaming");
+                    break;
+                case ActivityType.Watching:
+                    builder = builder.Append("Watching");
+                    break;
+            }
+
+            builder = builder.Append(" ");
+            builder = builder.Append(activity.Name);
+
+            return builder.ToString();
+        }
+
+        public static string StatusToEmote(this UserStatus status) => status switch
+        {
+            UserStatus.Online => DiscordTools.Online_Emote,
+            UserStatus.AFK => DiscordTools.Idle_Emote,
+            UserStatus.Idle => DiscordTools.Idle_Emote,
+            UserStatus.DoNotDisturb => DiscordTools.DoNotDisturb_Emote,
+            UserStatus.Invisible => DiscordTools.Offline_Emote,
+            UserStatus.Offline => DiscordTools.Offline_Emote,
+
+            _ => DiscordTools.Offline_Emote,
+        };
+
+        public static string BoostMonthToEmote(this DateTimeOffset boostMonths)
+        {
+            var months = DiscordTools.MonthsBetween(DateTime.UtcNow, boostMonths.Date);
+
+            if (months <= 1)
+            {
+                return DiscordTools.NitroBoostRank1Emote;
+            }
+            if (months == 2)
+            {
+                return DiscordTools.NitroBoostRank2Emote;
+            }
+            if (months == 3)
+            {
+                return DiscordTools.NitroBoostRank3Emote;
+            }
+            if (months >= 4)
+            {
+                return DiscordTools.NitroBoostRank4Emote;
+            }
+
+            return null;
         }
     }
 }

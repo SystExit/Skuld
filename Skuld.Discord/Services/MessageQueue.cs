@@ -102,12 +102,24 @@ namespace Skuld.Discord.Services
         public static void AddMessage(SkuldMessage message)
         {
             messageQueue.Enqueue(message);
+
+            string location = "";
+
+            if(message.Channel is IGuildChannel)
+            {
+                location = $"{message.Channel}/{((IGuildChannel)message.Channel).Guild}";
+            }
+            else
+            {
+                location = $"{message.Channel.Name}";
+            }
+
             if(message.Meta.Type != (Models.MessageType.DMS|Models.MessageType.DMFail))
             {
                 GenericLogger.AddToLogsAsync(new Core.Models.LogMessage
                 {
                     Source = "MQ-Queue",
-                    Message = $"Queued a command in: {message.Channel}/{((IGuildChannel)message.Channel).Guild} for {message.Content.User}",
+                    Message = $"Queued a command in: {location} for {message.Content.User}",
                     Severity = LogSeverity.Info,
                     TimeStamp = DateTime.Now
                 }).ConfigureAwait(false);

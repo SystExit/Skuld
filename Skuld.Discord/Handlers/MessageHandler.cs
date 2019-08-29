@@ -175,15 +175,18 @@ namespace Skuld.Discord.Handlers
                 }
             }
 
-            var gldtemp = (message.Channel as ITextChannel).Guild;
-            if(gldtemp != null)
+            if(message.Channel is ITextChannel)
             {
-                var guser = await gldtemp.GetUserAsync(BotService.DiscordClient.CurrentUser.Id);
+                var gldtemp = (message.Channel as ITextChannel).Guild;
+                if (gldtemp != null)
+                {
+                    var guser = await gldtemp.GetUserAsync(BotService.DiscordClient.CurrentUser.Id);
 
-                if (!guser.GetPermissions(message.Channel as IGuildChannel).SendMessages) return;
+                    if (!guser.GetPermissions(message.Channel as IGuildChannel).SendMessages) return;
+                }
+
+                if (!MessageTools.IsEnabledChannel(await (message.Channel as ITextChannel).Guild.GetUserAsync(message.Author.Id), (ITextChannel)message.Channel)) { return; }
             }
-
-            if (!MessageTools.IsEnabledChannel(await (message.Channel as ITextChannel).Guild.GetUserAsync(message.Author.Id), (ITextChannel)message.Channel)) { return; }
 
             SkuldUser suser = null;
             SkuldGuild sguild = null;
@@ -191,7 +194,9 @@ namespace Skuld.Discord.Handlers
             if (await DatabaseClient.CheckConnectionAsync())
             {
                 suser = await MessageTools.GetUserOrInsertAsync(message.Author).ConfigureAwait(false);
-                sguild = await MessageTools.GetGuildOrInsertAsync((message.Channel as ITextChannel).Guild).ConfigureAwait(false);
+
+                if(message.Channel is ITextChannel)
+                    sguild = await MessageTools.GetGuildOrInsertAsync((message.Channel as ITextChannel).Guild).ConfigureAwait(false);
 
                 if(!suser.IsUpToDate(message.Author))
                 {
@@ -212,23 +217,13 @@ namespace Skuld.Discord.Handlers
 
             if (!MessageTools.HasPrefix(message, BotService.DiscordClient, SkuldConfig, cmdConfig, sguild?.Prefix)) return;
 
-            SkuldCommandContext context;
-
-            if(suser != null && sguild != null)
-            {
-                context = new SkuldCommandContext(BotService.DiscordClient, message, suser, sguild);
-            }
-            else
-            {
-                context = new SkuldCommandContext(BotService.DiscordClient, message);
-            }
+            SkuldCommandContext context = new SkuldCommandContext(BotService.DiscordClient, message, suser??null, sguild??null);
 
             if (sguild != null)
             {
                 if (sguild.Modules.CustomEnabled)
                 {
                     var _ = HandleCustomCommandAsync(context);
-                    return;
                 }
             }
 

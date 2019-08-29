@@ -2,6 +2,7 @@
 using Discord.Commands;
 using Skuld.Core.Extensions;
 using Skuld.Core.Utilities;
+using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
@@ -14,6 +15,14 @@ namespace Skuld.Discord.Utilities
         public static Regex UserMentionRegex = new Regex("<@.?[0-9]*?>");
         public static Regex RoleMentionRegex = new Regex("<&[0-9]*?>");
         public static Regex ChannelMentionRegex = new Regex("<#[0-9]*?>");
+
+        public static string Level1ServerBoost = "server/level1.svg";
+        public static string Level2ServerBoost = "server/level2.svg";
+        public static string Level3ServerBoost = "server/level3.svg";
+
+        public static string Level1UserBoost = "profile/level1.svg";
+        public static string Level2UserBoost = "profile/level2.svg";
+        public static string Level3UserBoost = "profile/level3.svg";
 
         public static Embed GetCommandHelp(CommandService commandService, ICommandContext context, string commandname)
         {

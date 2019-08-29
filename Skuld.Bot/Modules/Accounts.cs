@@ -203,6 +203,39 @@ namespace Skuld.Bot.Commands
                         profileBackground.Composite(statusBackground, 96, 96, CompositeOperator.Over);
                     }
 
+                    if(Context.Client.GetUser(user.Id).MutualGuilds.Any(x=>x.GetUser(user.Id).PremiumSince.HasValue))
+                    {
+                        var prem = Context.Client.GetUser(user.Id).MutualGuilds.FirstOrDefault(x => x.GetUser(user.Id).PremiumSince.HasValue).GetUser(user.Id).PremiumSince;
+
+                        var months = DiscordTools.MonthsBetween(DateTime.UtcNow, prem.Value.Date);
+                        string emblem = "";
+
+                        if (months <= 1)
+                        {
+                            emblem = DiscordUtilities.Level1UserBoost;
+                        }
+                        if (months == 2)
+                        {
+                            emblem = DiscordUtilities.Level2UserBoost;
+                        }
+                        if (months >= 3)
+                        {
+                            emblem = DiscordUtilities.Level3UserBoost;
+                        }
+
+                        using MagickImage img3 = new MagickImage(Path.Combine(AppContext.BaseDirectory, "storage/boost", emblem), 256, 256);
+
+                        img3.Settings.BackgroundColor = MagickColors.None;
+                        img3.BackgroundColor = MagickColors.None;
+                        img3.Alpha(AlphaOption.Set);
+                        img3.ColorFuzz = new Percentage(10);
+                        img3.FloodFill(MagickColors.None, 1, 1);
+                        
+                        img3.Resize(48, 48);
+
+                        profileBackground.Composite(img3, -4, 90, CompositeOperator.Over);
+                    }
+
                     image.Composite(profileBackground, 236, 32, CompositeOperator.Over);
                 }
 

@@ -1,17 +1,16 @@
 ﻿using Discord;
 using Skuld.Core.Extensions;
+using System;
 
 namespace Skuld.Core.Utilities
 {
     public static class DiscordTools
     {
-        public static readonly string Streaming_Emote = "<:streaming:313956277132853248>";
-        public static readonly string Online_Emote = "<:online:313956277808005120>";
-        public static readonly string Idle_Emote = "<:away:313956277220802560>";
-        public static readonly string DoNotDisturb_Emote = "<:dnd:313956276893646850>";
-        public static readonly string Invisible_Emote = "<:invisible:313956277107556352>";
-        public static readonly string Offline_Emote = "<:offline:313956277237710868>";
-        public static readonly string Warning_Emote = "<:BOSHY:485761951251562497>";
+        public static readonly string Streaming_Emote = "<:streaming:614849478926794752>";
+        public static readonly string Online_Emote = "<:online:614849479161544751>";
+        public static readonly string Idle_Emote = "<:away:614849478847102986>";
+        public static readonly string DoNotDisturb_Emote = "<:dnd:614849478482198528>";
+        public static readonly string Offline_Emote = "<:offline:614849478758760479>";
 
         public static readonly string Ok_Emoji = "👌";
         public static readonly string Successful_Emoji = "✔";
@@ -36,9 +35,17 @@ namespace Skuld.Core.Utilities
         public static readonly string TwitchVIP = "<:TwitchVIP:552666767416360971>";
         public static readonly string TwitchGlobalMod = "<:TwitchGlobalMod:552668468877590538>";
 
+        public static readonly string NitroBoostEmote = "<:boost:614875223417684126>";
+        public static readonly string NitroBoostRank1Emote = "<:boostrank1:614875835123499212>";
+        public static readonly string NitroBoostRank2Emote = "<:boostrank2:614875835131887795>";
+        public static readonly string NitroBoostRank3Emote = "<:boostrank3:614875835102658560>";
+        public static readonly string NitroBoostRank4Emote = "<:boostrank4:614875835249197076>";
 
         public static readonly Color Ok_Color = "#339966".FromHex();
         public static readonly Color Warning_Color = "#FFFF00".FromHex();
         public static readonly Color Failed_Color = "#FF0000".FromHex();
+
+        public static int MonthsBetween(DateTime date1, DateTime date2)
+            => (int)Math.Round(date1.Subtract(date2).Days / (365.25 / 12), MidpointRounding.AwayFromZero);
     }
 }

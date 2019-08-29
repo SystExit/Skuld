@@ -87,7 +87,6 @@ namespace Skuld.Discord.Utilities
 
                 return resp.Data as SkuldGuild;
             }
-            return null;
         }
 
         public static async Task<SkuldUser> GetUserOrInsertAsync(DiscordNet.IUser user)
@@ -104,7 +103,6 @@ namespace Skuld.Discord.Utilities
 
                 return resp.Data as SkuldUser;
             }
-            return null;
         }
 
         public static string GetCmdName(DiscordNet.IUserMessage arg, DiscordConfig config, DiscordShardedClient client, SkuldGuild sguild = null)
@@ -210,7 +208,7 @@ namespace Skuld.Discord.Utilities
             }
         }
 
-        public static string GetPrefix(DiscordNet.IUserMessage message, DiscordShardedClient client, SkuldConfig sconf, MessageServiceConfig config, string gprefix = null)
+        public static string GetPrefix(DiscordNet.IUserMessage message, MessageServiceConfig config, string gprefix = null)
         {
             if (message.Content.StartsWith(config.Prefix))
                 return config.Prefix;
@@ -250,6 +248,7 @@ namespace Skuld.Discord.Utilities
             return false;
         }
 
+#pragma warning disable IDE0060
         public static async Task<DiscordNet.IUserMessage> SendChannelAsync(this DiscordShardedClient client, DiscordNet.IChannel channel, string message)
         {
             try
@@ -267,6 +266,7 @@ namespace Skuld.Discord.Utilities
                 return null;
             }
         }
+#pragma warning restore IDE0060
 
         public static async Task<DiscordNet.IUserMessage> SendChannelAsync(this DiscordShardedClient client, DiscordNet.IChannel channel, string message, DiscordNet.Embed embed)
         {

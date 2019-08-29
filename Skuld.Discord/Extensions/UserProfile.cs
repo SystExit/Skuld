@@ -3,7 +3,6 @@ using Skuld.Core.Extensions;
 using Skuld.Core.Models.Skuld;
 using Skuld.Core.Utilities;
 using Skuld.Database.Extensions;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Skuld.Discord.Extensions
@@ -38,5 +37,13 @@ namespace Skuld.Discord.Extensions
 
         public static string FullName (this IUser usr)
             => $"{usr.Username}#{usr.Discriminator}";
+
+        public static string FullNameWithNickname(this IGuildUser usr)
+        {
+            if (usr.Nickname == null)
+                return usr.FullName();
+            else
+                return $"{usr.Username} ({usr.Nickname})#{usr.Discriminator}";
+        }
     }
 }

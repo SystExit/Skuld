@@ -1,4 +1,5 @@
-﻿using Booru.Net;
+﻿#pragma warning disable IDE0060
+using Booru.Net;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
@@ -672,9 +673,9 @@ namespace Skuld.Bot.Commands
                 int count = (int)Math.Round(splittext.Count() / (decimal)FIGLETWIDTH, MidpointRounding.AwayFromZero);
 
                 int prevamount = 0;
-                for(int x = 0; x < count; x++)
+                for(int x = 1; x <= count; x++)
                 {
-                    int amount = (x + 1) * FIGLETWIDTH;
+                    int amount = x * FIGLETWIDTH;
                     string txt = string.Concat(splittext.Skip(prevamount).Take(amount));
                     textrows.Add(txt);
                     prevamount = amount;
@@ -736,7 +737,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("safebooru"), Summary("Gets stuff from safebooru"), Ratelimit(20, 1, Measure.Minutes)]
-        [Alias("Safe")]
+        [Alias("safe")]
         public async Task Safebooru(params string[] tags)
         {
             if (tags.ContainsBlacklistedTags()) await "Your tags contains a banned tag, please remove it.".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
@@ -845,17 +846,15 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        private int EdgeCase;
-
-        public SafebooruImage GetSafeImage(IReadOnlyList<SafebooruImage> posts)
+        public SafebooruImage GetSafeImage(IReadOnlyList<SafebooruImage> posts, int EdgeCase = 0)
         {
-            var post = posts.GetRandomImage();
+            var post = posts.GetRandomItem();
             EdgeCase++;
             if (EdgeCase <= 5)
             {
                 if (post.Rating != Rating.Safe)
                 {
-                    return GetSafeImage(posts);
+                    return GetSafeImage(posts, EdgeCase);
                 }
                 else
                 {
@@ -864,9 +863,9 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                EdgeCase = 0;
                 return null;
             }
         }
     }
 }
+#pragma warning restore IDE0060

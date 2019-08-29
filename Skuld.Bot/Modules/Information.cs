@@ -4,13 +4,16 @@ using Discord.Commands;
 using Discord.WebSocket;
 using NodaTime;
 using Skuld.APIS;
+using Skuld.Bot.Extensions;
 using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Globalization;
 using Skuld.Core.Models;
+using Skuld.Core.Models.Skuld;
 using Skuld.Core.Utilities;
 using Skuld.Database;
+using Skuld.Database.Extensions;
 using Skuld.Discord.Commands;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
@@ -146,8 +149,8 @@ namespace Skuld.Bot.Commands
         {
             var guild = Context.Guild as SocketGuild;
             await guild.DownloadUsersAsync();
-            string modstatus = "__Moderators__\n";
-            string adminstatus = "__Administrators__\n";
+            List<string> admins = new List<string>();
+            List<string> mods = new List<string>();
             foreach (var user in guild.Users)
             {
                 if (user.IsBot) { }
@@ -155,23 +158,48 @@ namespace Skuld.Bot.Commands
                 {
                     if (user.GuildPermissions.Administrator)
                     {
-                        if (user.Status == UserStatus.Online) adminstatus += DiscordTools.Online_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
-                        if (user.Status == UserStatus.AFK || user.Status == UserStatus.Idle) adminstatus += DiscordTools.Idle_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
-                        if (user.Status == UserStatus.DoNotDisturb) adminstatus += DiscordTools.DoNotDisturb_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
-                        if (user.Status == UserStatus.Invisible) adminstatus += DiscordTools.Invisible_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
-                        if (user.Status == UserStatus.Offline) adminstatus += DiscordTools.Invisible_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
+                        if (user.Activity != null)
+                        {
+                            if (user.Activity.Type == ActivityType.Streaming)
+                                admins.Add(DiscordTools.Streaming_Emote + $" {user.FullNameWithNickname()}");
+                        }
+                        else
+                        {
+                            admins.Add($"{user.Status.StatusToEmote()} {user.FullNameWithNickname()}");
+                        }
                     }
                     else if (user.GuildPermissions.RawValue == DiscordUtilities.ModeratorPermissions.RawValue)
                     {
-                        if (user.Status == UserStatus.Online) modstatus += DiscordTools.Online_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
-                        if (user.Status == UserStatus.AFK || user.Status == UserStatus.Idle) modstatus += DiscordTools.Idle_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
-                        if (user.Status == UserStatus.DoNotDisturb) modstatus += DiscordTools.DoNotDisturb_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
-                        if (user.Status == UserStatus.Invisible) modstatus += DiscordTools.Invisible_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
-                        if (user.Status == UserStatus.Offline) modstatus += DiscordTools.Invisible_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
+                        if (user.Activity != null)
+                        {
+                            if (user.Activity.Type == ActivityType.Streaming)
+                                mods.Add(DiscordTools.Streaming_Emote + $" {user.FullNameWithNickname()}");
+                        }
+                        else
+                        {
+                            mods.Add($"{user.Status.StatusToEmote()} {user.FullNameWithNickname()}");
+                        }
                     }
                 }
             }
-            string message = modstatus != "__Moderators__\n" ? modstatus + "\n" + adminstatus : adminstatus;
+
+            StringBuilder message = new StringBuilder();
+
+            if(admins.Count() > 0)
+            {
+                message.Append("__Administrators__");
+                message.Append(Environment.NewLine);
+                message.AppendJoin(Environment.NewLine, admins);
+            }
+            if(mods.Count() > 0)
+            {
+                if(admins.Count() > 0)
+                {
+                    message.Append(Environment.NewLine);
+                }
+                message.Append("__Moderators__");
+                message.AppendJoin(Environment.NewLine, mods);
+            }
 
             await message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
@@ -209,22 +237,35 @@ namespace Skuld.Bot.Commands
 
         [Command("me")]
         public async Task Whois()
-            => await GetProile(Context.User as IGuildUser).ConfigureAwait(false);
+        {
+            if(!Context.IsPrivate)
+            {
+                await GetProileAsync(Context.User as IGuildUser).ConfigureAwait(false);
+                return;
+            }
+            else
+            {
+                await Context.User.GetWhois(null, null, EmbedUtils.RandomColor(), Context.Client, Configuration).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                return;
+            }
+        }
 
         [Command("whois"), Summary("Get's information about a user"), Alias("user")]
-        public async Task GetProile([Remainder]IGuildUser whois = null)
+        public async Task GetProileAsync([Remainder]IGuildUser whois = null)
         {
-            if (whois == null)
-                whois = (IGuildUser)Context.User;
-            try
+            Color color = Color.Default;
+
+            if(!Context.IsPrivate)
             {
-                await whois.GetWhois(EmbedUtils.RandomColor(), Context.Client, Configuration).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                if (whois == null)
+                    whois = (IGuildUser)Context.User;
+
+                color = whois.GetHighestRoleColor(Context.Guild);
             }
-            catch (Exception ex)
-            {
-                await ex.Message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel, null, ex);
-                await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("Cmd", "Error Encountered Parsing Whois", LogSeverity.Error, ex));
-            }
+
+            color = color == Color.Default ? EmbedUtils.RandomColor() : color;
+
+            await whois.GetWhois(whois, whois.RoleIds, color, Context.Client, Configuration).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
 
         [Command("roles"), Summary("Gets a users current roles")]
@@ -345,18 +386,21 @@ namespace Skuld.Bot.Commands
         public async Task PingIP(System.Net.IPAddress ipAddress)
         {
             await "<:blobok:350673783482351626> Ok. Please standby for the ping results".QueueMessage(Discord.Models.MessageType.Timed, Context.User, Context.Channel);
-            Ping pingboi = new Ping();
+
             var pings = new List<PingReply>();
 
-            for(int x = 0; x < 4; x++)
+            using (Ping pingboi = new Ping())
             {
-                pings.Add(await pingboi.SendPingAsync(ipAddress));
+                for (int x = 0; x < 4; x++)
+                {
+                    pings.Add(await pingboi.SendPingAsync(ipAddress));
+                }
             }
 
             StringBuilder sb = new StringBuilder();
 
             int count = 1;
-            foreach(var res in pings)
+            foreach (var res in pings)
             {
                 sb.AppendLine($"{count}. {res.Address} {res.RoundtripTime}ms {res.Status}");
                 count++;
@@ -433,6 +477,154 @@ namespace Skuld.Bot.Commands
             var toZoned = fromZoned.WithZone(toZone);
             var toLocal = toZoned.LocalDateTime;
             return toLocal.ToDateTimeUnspecified();
+        }
+
+        [Command("addrole"), Summary("Adds yourself to a role")]
+        [Alias("iam"), RequireDatabase]
+        public async Task IamRole([Remainder]IRole role = null)
+        {
+            if(Context.IsPrivate)
+            {
+                await "DM's are not supported for this command".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                return;
+            }
+            var iamlist = (IReadOnlyList<IAmRole>)(await DatabaseClient.GetOptableGuildRoles(Context.Guild)).Data;
+
+            if (role == null || !iamlist.Any(x => x.RoleId == role.Id))
+            {
+                var paged = iamlist.Paginate(Context.DBGuild, Context.Guild);
+                if (iamlist.Count > 10)
+                {
+                    await PagedReplyAsync(new PaginatedMessage
+                    {
+                        Pages = paged,
+                        Title = $"Joinable roles of __{Context.Guild.Name}__"
+                    });
+                }
+                else
+                {
+                    await new EmbedBuilder
+                    {
+                        Description = paged[0],
+                        Title = $"Joinable roles of __{Context.Guild.Name}__"
+                    }.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                }
+                return;
+            }
+
+            var r = iamlist.FirstOrDefault(x => x.RoleId == role.Id);
+
+            var didpass = await CheckIAmValidAsync(Context.DBUser, Context.User as IGuildUser, Context.DBGuild, Context.Guild, r);
+
+            if (didpass != IAmFail.Success)
+            {
+                await GetErrorIAmFail(didpass, r, Context.DBGuild, Context.Guild).QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+            }
+            else
+            {
+                if((Context.User as IGuildUser).RoleIds.Any(x=>x == r.RoleId))
+                {
+                    await "You already have that role".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    return;
+                }
+
+                try
+                {
+                    var ro = Context.Guild.GetRole(r.RoleId);
+                    await (Context.User as IGuildUser).AddRoleAsync(ro);
+                    await $"You now have the role \"{ro.Name}\"".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+
+                    if(r.Price > 0)
+                    {
+                        Context.DBUser.Money -= r.Price;
+                        await Context.DBUser.UpdateAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if(ex.Message.Contains("403"))
+                    {
+                        await $"I need to be above the role as well as have `MANAGE_ROLES` in order to give the role".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel, null, ex);
+                    }
+                    else
+                    {
+                        await ex.Message.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel, null, ex);
+                    }
+                }
+            }
+        }
+
+        [Command("removerole"), Summary("Removes yourself from a role")]
+        [Alias("iamnot"), RequireDatabase]
+        public async Task IamNotRole([Remainder]IRole role)
+        {
+            var g = Context.User as IGuildUser;
+
+            if (g.RoleIds.Any(x => x == role.Id))
+            {
+                try
+                {
+                    await g.RemoveRoleAsync(role);
+                    await $"You are no longer \"{role.Name}\"".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                }
+                catch (Exception ex)
+                {
+                    if (ex.Message.Contains("403"))
+                    {
+                        await $"Ensure that I have `MANAGE_ROLES` and that I am above the role \"{role.Name}\" in order to remove it".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                    }
+                    else
+                    {
+                        await ex.Message.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel, null, ex);
+                    }
+                }
+            }
+            else
+            {
+                await "You already don\'t have that role".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                return;
+            }
+        }
+
+        string GetErrorIAmFail(IAmFail amFail, IAmRole role, SkuldGuild sguild, IGuild guild)
+            => amFail switch
+            {
+                IAmFail.Price => $"You don\'t have enough money. You need at least {sguild.MoneyIcon}{role.Price}",
+                IAmFail.Level => $"You don\'t have the level required for this role (Level: {role.LevelRequired}",
+                IAmFail.RequiredRole => $"You don\'t have the required role for this role. You need the role {guild.GetRole(role.RequiredRoleId).Name}",
+                _ => "",
+            };
+
+        async Task<IAmFail> CheckIAmValidAsync(SkuldUser suser, IGuildUser user, SkuldGuild sguild, IGuild guild, IAmRole roleconf)
+        {
+            if(roleconf.RequiredRoleId != 0)
+            {
+                if(!user.RoleIds.Any(x=>x == roleconf.RequiredRoleId))
+                {
+                    return IAmFail.RequiredRole;
+                }
+            }
+
+            if(suser.Money < roleconf.Price)
+            {
+                return IAmFail.Price;
+            }
+
+            var guildExperience = (await suser.GetUserExperienceAsync()).GetGuildExperience(guild.Id);
+
+            if(guildExperience != null)
+            {
+                if (guildExperience.Level < roleconf.LevelRequired && sguild.Features.Experience)
+                {
+                    return IAmFail.Level;
+                }
+            }
+            else if (roleconf.LevelRequired != 0)
+            {
+                return IAmFail.Level;
+            }
+
+            return IAmFail.Success;
         }
     }
 }

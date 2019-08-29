@@ -34,7 +34,7 @@ namespace Skuld.APIS
 
             var raw = await ReturnStringAsync(new Uri(QueryEndPoint + phrase));
 
-            return JsonConvert.DeserializeObject<UrbanWordContainer>(raw).List.GetRandomEntry();
+            return JsonConvert.DeserializeObject<UrbanWordContainer>(raw).List.GetRandomItem();
         }
     }
 }

@@ -5,33 +5,28 @@ namespace Skuld.Core.Utilities
 {
     public static class ConversionTools
     {
-        public static int ParseInt32OrDefault(string s)
+        public static ulong GetEpochMs()
+            => (ulong)new DateTime().Subtract(new DateTime(1970, 1, 1, 0, 0, 0)).TotalMilliseconds;
+
+        public static int ParseInt32OrDefault(object input)
         {
-            if (Int32.TryParse(s, out int tmp))
+            if (int.TryParse(Convert.ToString(input), out int tmp))
                 return tmp;
             else
                 return 0;
         }
 
-        public static uint ParseUInt32OrDefault(string s)
+        public static uint ParseUInt32OrDefault(object input)
         {
-            if (UInt32.TryParse(s, out uint tmp))
+            if (uint.TryParse(Convert.ToString(input), out uint tmp))
                 return tmp;
             else
                 return 0;
         }
 
-        public static UInt64 ParseUInt64OrDefault(string input)
+        public static ulong ParseUInt64OrDefault(object input)
         {
-            if (UInt64.TryParse(input, out ulong tmp))
-                return tmp;
-            else
-                return 0;
-        }
-
-        public static object ParseInt32OrDefault(object input)
-        {
-            if (Int32.TryParse(input.ToString(), out int tmp))
+            if (ulong.TryParse(Convert.ToString(input), out ulong tmp))
                 return tmp;
             else
                 return 0;

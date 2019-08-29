@@ -33,7 +33,7 @@ namespace Skuld.Bot.Commands
                 {
                     string prefix = (Context.DBGuild != null ? Context.DBGuild.Prefix : Configuration.Discord.Prefix);
 
-                    string title = $"Commands of: {Context.Client.CurrentUser.Username}#{Context.Client.CurrentUser.DiscriminatorValue} that can be invoked in: ";
+                    string title = $"Commands of: {Context.Client.CurrentUser} that can be invoked in: ";
 
                     if (Context.IsPrivate)
                     {
@@ -41,7 +41,7 @@ namespace Skuld.Bot.Commands
                     }
                     else
                     {
-                        title += $"**{Context.Guild.Name}/{Context.Channel.Name}**";
+                        title += $"{Context.Guild.Name}/{Context.Channel.Name}";
                     }
 
                     var embed = new EmbedBuilder
@@ -49,13 +49,15 @@ namespace Skuld.Bot.Commands
                         Author = new EmbedAuthorBuilder
                         {
                             Name = title,
-                            IconUrl = Context.Client.CurrentUser.GetAvatarUrl()
+                            IconUrl = Context.Client.CurrentUser.GetAvatarUrl() ?? Context.Client.CurrentUser.GetDefaultAvatarUrl()
                         },
                         Color = EmbedUtils.RandomColor(),
-                        Description = $"The prefix of **{Context.Guild.Name}** is: `{prefix}`"
+                        Description = $"The prefix of **{(Context.Guild == null ? Context.User.FullName() : Context.Guild.Name)}** is: `{prefix}`"
                     };
                     foreach (var module in CommandService.Modules)
                     {
+                        if (Context.IsPrivate) if (module.Name.ToLowerInvariant() == nameof(Admin).ToLowerInvariant()) continue;
+
                         string desc = "";
                         foreach (var cmd in module.Commands)
                         {
@@ -77,17 +79,20 @@ namespace Skuld.Bot.Commands
                         }
                     }
 
-                    var allCommandsResp = await DatabaseClient.GetAllCustomCommandsAsync(Context.Guild.Id);
-                    if (allCommandsResp.Successful)
+                    if(Context.DBGuild != null)
                     {
-                        var commands = allCommandsResp.Data as IReadOnlyList<CustomCommand>;
-                        string commandsText = "";
-                        foreach (var cmd in commands)
+                        var allCommandsResp = await DatabaseClient.GetAllCustomCommandsAsync(Context.Guild.Id);
+                        if (allCommandsResp.Successful)
                         {
-                            commandsText += $"{cmd.CommandName}, ";
+                            var commands = allCommandsResp.Data as IReadOnlyList<CustomCommand>;
+                            string commandsText = "";
+                            foreach (var cmd in commands)
+                            {
+                                commandsText += $"{cmd.CommandName}, ";
+                            }
+                            commandsText = commandsText.Substring(0, commandsText.Length - 2);
+                            embed.AddField("Custom Commands", $"`{commandsText}`");
                         }
-                        commandsText = commandsText.Substring(0, commandsText.Length - 2);
-                        embed.AddField("Custom Commands", $"`{commandsText}`");
                     }
 
                     var dmchan = await Context.User.GetOrCreateDMChannelAsync();

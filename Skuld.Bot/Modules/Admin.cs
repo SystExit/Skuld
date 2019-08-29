@@ -949,27 +949,22 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Disabled]
-        [Command("serverrole"), Summary("Adds a new self assignable role. Use: optable=[true/false] cost=[cost] level-grant=[true/false] require-level=[level] require-role=[rolename/roleid/mention]")]
-        public async Task AddRole(IRole role, GuildRoleConfig config)
+        [Command("addassignablerole"), Summary("Adds a new self assignable role. Supported:cost=[cost] require-level=[level] require-role=[rolename/roleid/mention]")]
+        [Alias("asar")]
+        public async Task AddSARole(IRole role, [Remainder]GuildRoleConfig config = null)
         {
-            EventResult result = new EventResult();
+            if (config == null)
+                config = new GuildRoleConfig();
 
-            if(config.Optable)
+            if(config.RequireLevel != 0 && !Context.DBGuild.Features.Experience)
             {
-                result = await DatabaseClient.AddGuildAssignRoleAsync(Context.Guild, role.Id, config);
-            }
-            else if(config.LevelReward)
-            {
-                result = await DatabaseClient.AddGuildLevelRewardAsync(Context.Guild, role.Id, config);
-            }
-            else
-            {
-                await "Your role needs to either be optable or a level reward".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                await $"Enable Experience module first by using `{Context.DBGuild.Prefix}guild-feature experience 1`".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
                 return;
             }
 
-            if(result.Successful)
+            EventResult result = await DatabaseClient.InsertOptableGuildRole(Context.Guild, role, config);
+
+            if (result.Successful)
             {
                 await "".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
             }
@@ -979,22 +974,26 @@ namespace Skuld.Bot.Commands
             }
         }
 
+        [Command("addlevelrole"), Summary("Adds a new self assignable role. Supported:cost=[cost] require-level=[level] require-role=[rolename/roleid/mention]")]
+        [Alias("alr")]
         [Disabled]
-        [Command("deleterole"), Summary("Removes a custom role")]
-        public async Task DeleteRole(IRole role)
+        public async Task AddLRole(IRole role, [Remainder]GuildRoleConfig config)
         {
 
         }
 
         [Disabled]
-        [Command("deleterole"), Summary("Removes a custom role")]
-        public async Task DeleteRole(ulong roleID)
+        [Command("deleteasr"), Summary("Removes a Self Assignable Role from the list")]
+        public async Task DeleteSelfRole([Remainder]IRole role)
         {
-            if(Context.DBGuild.JoinableRoles.Where(x=>x == roleID).Count() > 0)
-            {
-                Context.DBGuild.JoinableRoles.Remove(roleID);
-                await DatabaseClient.UpdateGuildAsync(Context.DBGuild);
-            }
+            //await DatabaseClient.DropCustomRole(role, false)
+        }
+
+        [Disabled]
+        [Command("deletealr"), Summary("Removes a Level Grant Role from the list")]
+        public async Task DeleteLevelRole([Remainder]IRole role)
+        {
+            //await DatabaseClient.DropCustomRole(role, true)
         }
     }
 }

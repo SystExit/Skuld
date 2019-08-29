@@ -26,8 +26,9 @@ namespace Skuld.APIS.Extensions
 {
     public static class APIS
     {
-        private static readonly Random rnd = new Random(DateTime.UtcNow.Millisecond);
-        private static readonly List<string> blacklistedTags = new List<string>
+        private static readonly Random rnd = new Random((int)ConversionTools.GetEpochMs());
+
+        public static List<string> BlacklistedTags { get; } = new List<string>
         {
             "loli",
             "shota",
@@ -38,33 +39,7 @@ namespace Skuld.APIS.Extensions
             "death"
         };
 
-        public static List<string> BlacklistedTags { get => blacklistedTags; }
-
-        public static DanbooruImage GetRandomImage(this IReadOnlyList<DanbooruImage> posts)
-            => posts[rnd.Next(0, posts.Count)];
-
-        public static Rule34Image GetRandomImage(this IReadOnlyList<Rule34Image> posts)
-            => posts[rnd.Next(0, posts.Count)];
-
-        public static RealbooruImage GetRandomImage(this IReadOnlyList<RealbooruImage> posts)
-            => posts[rnd.Next(0, posts.Count)];
-
-        public static SafebooruImage GetRandomImage(this IReadOnlyList<SafebooruImage> posts)
-            => posts[rnd.Next(0, posts.Count)];
-
-        public static GelbooruImage GetRandomImage(this IReadOnlyList<GelbooruImage> posts)
-            => posts[rnd.Next(0, posts.Count)];
-
-        public static KonaChanImage GetRandomImage(this IReadOnlyList<KonaChanImage> posts)
-            => posts[rnd.Next(0, posts.Count)];
-
-        public static E621Image GetRandomImage(this IReadOnlyList<E621Image> posts)
-            => posts[rnd.Next(0, posts.Count)];
-
-        public static YandereImage GetRandomImage(this IReadOnlyList<YandereImage> posts)
-            => posts[rnd.Next(0, posts.Count)];
-
-        public static T GetRandomEntry<T>(this IEnumerable<T> entries)
+        public static T GetRandomItem<T>(this IEnumerable<T> entries)
             => entries.ElementAtOrDefault(rnd.Next(0, entries.Count()));
 
         public static string GetMessage(this BooruImage image, string postUrl)
@@ -78,21 +53,6 @@ namespace Skuld.APIS.Extensions
 
             return message;
         }
-
-        public static string GetMessage(this SafebooruImage image, string postUrl)
-        {
-            string message = $"`Score: {image.Score}` <{postUrl}>\n{image.ImageUrl}";
-
-            if (image.ImageUrl.IsVideoFile())
-            {
-                message += " (Video)";
-            }
-
-            return message;
-        }
-
-        public static IGalleryItem GetRandomItem(this IEnumerable<IGalleryItem> list)
-            => list.ElementAtOrDefault(rnd.Next(0, list.Count()));
 
         public static StoreScreenshotModel Random(this IReadOnlyList<StoreScreenshotModel> elements)
             => elements[rnd.Next(0, elements.Count)];
@@ -195,7 +155,7 @@ namespace Skuld.APIS.Extensions
         {
             var newtags = new List<string>();
             newtags.AddRange(tags);
-            blacklistedTags.ForEach(x => newtags.Add("-" + x));
+            BlacklistedTags.ForEach(x => newtags.Add("-" + x));
             return newtags;
         }
 
@@ -204,7 +164,7 @@ namespace Skuld.APIS.Extensions
             bool returnvalue = false;
             foreach (var tag in tags)
             {
-                if (blacklistedTags.Contains(tag.ToLowerInvariant()))
+                if (BlacklistedTags.Contains(tag.ToLowerInvariant()))
                 {
                     returnvalue = true;
                 }
@@ -281,7 +241,7 @@ namespace Skuld.APIS.Extensions
             var SteamStore = new SteamWebAPI2.Interfaces.SteamStore();
             var app = await SteamStore.GetStoreAppDetailsAsync(Convert.ToUInt32(game.AppId));
 
-            string releasetext = "";
+            string releasetext;
             if (app.ReleaseDate.ComingSoon)
             {
                 releasetext = $"Coming soon! ({app.ReleaseDate.Date})";

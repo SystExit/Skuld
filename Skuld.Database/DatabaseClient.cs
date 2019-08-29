@@ -133,7 +133,7 @@ namespace Skuld.Database
             {
                 if (!user.IsBot && !user.IsWebhook)
                 {
-                    var command = new MySqlCommand("INSERT IGNORE INTO `users` (`UserID`, `Username`, `Title`, `Language`, `AvatarUrl`) VALUES (@userid , @username, \"\", @locale, @avatarurl);");
+                    using var command = new MySqlCommand("INSERT IGNORE INTO `users` (`UserID`, `Username`, `Title`, `Language`, `AvatarUrl`) VALUES (@userid , @username, \"\", @locale, @avatarurl);");
                     command.Parameters.AddWithValue("@userid", user.Id);
                     command.Parameters.AddWithValue("@username", user.Username);
                     command.Parameters.AddWithValue("@locale", locale??Locale.defaultLocale);
@@ -159,13 +159,19 @@ namespace Skuld.Database
 
                 results.Add(await SingleQueryAsync(gcmd).ConfigureAwait(false));
 
+                gcmd.Dispose();
+
                 gcmd = new MySqlCommand("INSERT IGNORE INTO `guildfeatures` (`GuildID`,`Pinning`,`Experience`) VALUES ( @guildid, 0, 0);");
                 gcmd.Parameters.AddWithValue("@GuildID", GuildID);
                 results.Add(await SingleQueryAsync(gcmd).ConfigureAwait(false));
 
+                gcmd.Dispose();
+
                 gcmd = new MySqlCommand("INSERT IGNORE INTO `guildmodules` (`GuildID`,`Accounts`, `Actions`,`Admin`,`Custom`,`Fun`,`Information`,`Lewd`,`Search`,`Stats`,`Weeb`) VALUES (@guildid,1,1,1,1,1,1,1,1,1,1);");
                 gcmd.Parameters.AddWithValue("@GuildID", GuildID);
                 results.Add(await SingleQueryAsync(gcmd).ConfigureAwait(false));
+
+                gcmd.Dispose();
 
                 return results;
             }
@@ -178,7 +184,7 @@ namespace Skuld.Database
                 content = content.Replace("\'", "\\\'");
                 content = content.Replace("\"", "\\\"");
 
-                var command = new MySqlCommand("INSERT INTO `pasta` (Content,OwnerID,Created,Name) VALUES ( @content , @ownerid , @created , @pastatitle )");
+                using var command = new MySqlCommand("INSERT INTO `pasta` (Content,OwnerID,Created,Name) VALUES ( @content , @ownerid , @created , @pastatitle )");
                 command.Parameters.AddWithValue("@content", content);
                 command.Parameters.AddWithValue("@ownerid", user.Id);
                 command.Parameters.AddWithValue("@created", DateTime.UtcNow.ToEpoch());
@@ -192,7 +198,7 @@ namespace Skuld.Database
         {
             if (await CheckConnectionAsync())
             {
-                var cmd = new MySqlCommand("INSERT INTO `guildcustomcommands` ( `Content`, `GuildID`, `CommandName` ) VALUES ( @newcontent , @guildID , @commandName ) ;");
+                using var cmd = new MySqlCommand("INSERT INTO `guildcustomcommands` ( `Content`, `GuildID`, `CommandName` ) VALUES ( @newcontent , @guildID , @commandName ) ;");
                 cmd.Parameters.AddWithValue("@newcontent", content);
                 cmd.Parameters.AddWithValue("@guildID", guild.Id);
                 cmd.Parameters.AddWithValue("@commandName", command);
@@ -228,27 +234,27 @@ namespace Skuld.Database
                             {
                                 rows++;
 
-                                user.ID = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["UserID"]));
+                                user.ID = ConversionTools.ParseUInt64OrDefault(reader["UserID"]);
 
                                 user.Username = Convert.ToString(reader["Username"]);
 
-                                user.Money = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["Money"]));
+                                user.Money = ConversionTools.ParseUInt64OrDefault(reader["Money"]);
 
                                 user.Title = Convert.ToString(reader["Title"]);
 
                                 user.Language = Convert.ToString(reader["Language"]);
 
-                                user.Daily = ConversionTools.ParseUInt64OrDefault(reader["LastDaily"].ToString());
+                                user.Daily = ConversionTools.ParseUInt64OrDefault(reader["LastDaily"]);
 
                                 user.CanDM = Convert.ToBoolean(reader["CanDM"]);
 
                                 user.Banned = Convert.ToBoolean(reader["Banned"]);
 
-                                user.Patted = ConversionTools.ParseUInt32OrDefault(Convert.ToString(reader["Patted"]));
+                                user.Patted = ConversionTools.ParseUInt32OrDefault(reader["Patted"]);
 
-                                user.Pats = ConversionTools.ParseUInt32OrDefault(Convert.ToString(reader["Pats"]));
+                                user.Pats = ConversionTools.ParseUInt32OrDefault(reader["Pats"]);
 
-                                user.HP = ConversionTools.ParseUInt32OrDefault(Convert.ToString(reader["HP"]));
+                                user.HP = ConversionTools.ParseUInt32OrDefault(reader["HP"]);
 
                                 user.RecurringBlock = Convert.ToBoolean(reader["RecurringBlock"]);
 
@@ -269,6 +275,8 @@ namespace Skuld.Database
                         }
                     }
                 }
+
+                command.Dispose();
 
                 command = new MySqlCommand("SELECT * FROM `usercommandusage` WHERE UserID = @userid ORDER BY `Usage` DESC LIMIT 1");
                 command.Parameters.AddWithValue("@userid", UserID);
@@ -308,6 +316,8 @@ namespace Skuld.Database
                         user.CommandUsage = cmds;
                     }
                 }
+
+                command.Dispose();
 
                 command = new MySqlCommand("SELECT * FROM `reputation` WHERE Repee = @userid");
                 command.Parameters.AddWithValue("@userid", UserID);
@@ -360,7 +370,7 @@ namespace Skuld.Database
 
                 if (await CheckConnectionAsync())
                 {
-                    var command = new MySqlCommand("SELECT * FROM `guilds` WHERE `GuildID` = @guildid");
+                    using var command = new MySqlCommand("SELECT * FROM `guilds` WHERE `GuildID` = @guildid");
                     command.Parameters.AddWithValue("@guildid", GuildID);
 
                     using (var conn = new MySqlConnection(ConnectionString))
@@ -382,13 +392,13 @@ namespace Skuld.Database
                                 {
                                     rows++;
 
-                                    guild.ID = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["GuildID"]));
+                                    guild.ID = ConversionTools.ParseUInt64OrDefault(reader["GuildID"]);
 
                                     guild.JoinMessage = Convert.ToString(reader["JoinMessage"]);
 
                                     guild.LeaveMessage = Convert.ToString(reader["LeaveMessage"]);
 
-                                    guild.JoinRole = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["JoinRole"]));
+                                    guild.JoinRole = ConversionTools.ParseUInt64OrDefault(reader["JoinRole"]);
 
                                     guild.Prefix = Convert.ToString(reader["Prefix"]);
 
@@ -404,7 +414,7 @@ namespace Skuld.Database
                                         {
                                             for (int x = 0; x < roles.Length; x++)
                                             {
-                                                guild.JoinableRoles.Add(Convert.ToUInt64(roles[x]));
+                                                guild.JoinableRoles.Add(ConversionTools.ParseUInt64OrDefault(roles[x]));
                                             }
                                         }
                                         else
@@ -417,19 +427,17 @@ namespace Skuld.Database
                                         guild.JoinableRoles = null;
                                     }
 
-                                    guild.MutedRole = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["MutedRole"]));
+                                    guild.MutedRole = ConversionTools.ParseUInt64OrDefault(reader["MutedRole"]);
 
-                                    guild.UserJoinChannel = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["JoinChannel"]));
+                                    guild.UserJoinChannel = ConversionTools.ParseUInt64OrDefault(reader["JoinChannel"]);
 
-                                    guild.UserLeaveChannel = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["LeaveChannel"]));
+                                    guild.UserLeaveChannel = ConversionTools.ParseUInt64OrDefault(reader["LeaveChannel"]);
 
                                     guild.LevelUpMessage = Convert.ToString(reader["LevelUpMessage"]);
 
-                                    guild.LevelUpChannel = ConversionTools.ParseUInt64OrDefault(Convert.ToString(reader["LevelUpChannel"]));
+                                    guild.LevelUpChannel = ConversionTools.ParseUInt64OrDefault(reader["LevelUpChannel"]);
 
-                                    var level = ConversionTools.ParseInt32OrDefault(reader["LevelNotification"]);
-
-                                    Enum.TryParse(Convert.ToString(level), out LevelNotification lupnotif);
+                                    Enum.TryParse(Convert.ToString(reader["LevelNotification"]), out LevelNotification lupnotif);
 
                                     guild.LevelNotification = lupnotif;
                                 }
@@ -543,7 +551,7 @@ namespace Skuld.Database
             if (await CheckConnectionAsync())
             {
                 var pasta = new Pasta();
-                var command = new MySqlCommand("SELECT * FROM `pasta` WHERE Name = @pastaname");
+                using var command = new MySqlCommand("SELECT * FROM `pasta` WHERE Name = @pastaname");
                 command.Parameters.AddWithValue("@pastaname", PastaName);
 
                 using (var conn = new MySqlConnection(ConnectionString))
@@ -564,12 +572,12 @@ namespace Skuld.Database
                             while (await reader.ReadAsync())
                             {
                                 rows++;
-                                pasta.Name = reader["Name"].ToString();
-                                pasta.Content = reader["Content"].ToString();
-                                pasta.OwnerID = Convert.ToUInt64(reader["OwnerID"].ToString());
-                                pasta.Created = Convert.ToUInt64(reader["Created"].ToString());
-                                pasta.Upvotes = Convert.ToUInt32(reader["UpVotes"].ToString());
-                                pasta.Downvotes = Convert.ToUInt32(reader["DownVotes"].ToString());
+                                pasta.Name = Convert.ToString(reader["Name"]);
+                                pasta.Content = Convert.ToString(reader["Content"]);
+                                pasta.OwnerID = ConversionTools.ParseUInt64OrDefault(reader["OwnerID"]);
+                                pasta.Created = ConversionTools.ParseUInt64OrDefault(reader["Created"]);
+                                pasta.Upvotes = ConversionTools.ParseUInt32OrDefault(reader["UpVotes"]);
+                                pasta.Downvotes = ConversionTools.ParseUInt32OrDefault(reader["DownVotes"]);
                             }
 
                             DogStatsd.Increment("mysql.rows_ret", rows);
@@ -588,7 +596,7 @@ namespace Skuld.Database
         {
             if (await CheckConnectionAsync())
             {
-                var command = new MySqlCommand("SELECT * FROM `pasta`;");
+                using var command = new MySqlCommand("SELECT * FROM `pasta`;");
                 var allpasta = new List<Pasta>();
                 using (var conn = new MySqlConnection(ConnectionString))
                 {
@@ -611,13 +619,13 @@ namespace Skuld.Database
 
                                 allpasta.Add(new Pasta
                                 {
-                                    PastaID = Convert.ToUInt32(reader["PastaID"].ToString()),
-                                    Name = reader["Name"].ToString(),
-                                    Content = reader["Content"].ToString(),
-                                    OwnerID = Convert.ToUInt64(reader["OwnerID"].ToString()),
-                                    Created = Convert.ToUInt64(reader["Created"].ToString()),
-                                    Upvotes = Convert.ToUInt32(reader["UpVotes"].ToString()),
-                                    Downvotes = Convert.ToUInt32(reader["DownVotes"].ToString())
+                                    PastaID = ConversionTools.ParseUInt32OrDefault(reader["PastaID"]),
+                                    Name = Convert.ToString(reader["Name"]),
+                                    Content = Convert.ToString(reader["Content"]),
+                                    OwnerID = ConversionTools.ParseUInt64OrDefault(reader["OwnerID"].ToString()),
+                                    Created = ConversionTools.ParseUInt64OrDefault(reader["Created"].ToString()),
+                                    Upvotes = ConversionTools.ParseUInt32OrDefault(reader["UpVotes"].ToString()),
+                                    Downvotes = ConversionTools.ParseUInt32OrDefault(reader["DownVotes"].ToString())
                                 });
                             }
 
@@ -641,7 +649,7 @@ namespace Skuld.Database
             if (await CheckConnectionAsync())
             {
                 var cmd = new CustomCommand();
-                var command = new MySqlCommand("SELECT * FROM `guildcustomcommands` WHERE GuildID = @guildID AND CommandName = @command");
+                using var command = new MySqlCommand("SELECT * FROM `guildcustomcommands` WHERE GuildID = @guildID AND CommandName = @command");
 
                 command.Parameters.AddWithValue("@guildID", GuildID);
                 command.Parameters.AddWithValue("@command", CommandName);
@@ -690,7 +698,7 @@ namespace Skuld.Database
         {
             if (await CheckConnectionAsync())
             {
-                var command = new MySqlCommand("SELECT * FROM `guildcustomcommands` WHERE GuildID = @guildID");
+                using var command = new MySqlCommand("SELECT * FROM `guildcustomcommands` WHERE GuildID = @guildID");
 
                 command.Parameters.AddWithValue("@guildID", GuildID);
 
@@ -1195,17 +1203,77 @@ namespace Skuld.Database
             }
         }
 
-        public static async Task<EventResult> AddGuildAssignRoleAsync(IGuild guild, ulong roleID, GuildRoleConfig roleConfig)
+        public static async Task<EventResult> InsertOptableGuildRole(IGuild guild, IRole role, GuildRoleConfig config)
         {
-            throw new NotImplementedException();
-            //TODO
-
             if (await CheckConnectionAsync())
             {
+                using var command = new MySqlCommand("INSERT INTO `guildiamlist` ( `GuildID`, `RoleID`, `Price`, `LevelRequired`, `RequiredRoleId` ) VALUES ( @guildid , @roleid , @price , @level , @requiredRole ) ;");
 
+                command.Parameters.AddWithValue("@guildid", guild.Id);
+                command.Parameters.AddWithValue("@roleid", role.Id);
+                command.Parameters.AddWithValue("@price", config.Cost);
+                command.Parameters.AddWithValue("@level", config.RequireLevel);
+                command.Parameters.AddWithValue("@requiredRole", (config.RequiredRole == null ? 0 : config.RequiredRole.Id));
+
+                return await SingleQueryAsync(command);
+            }
+            else
+            {
+                return NoSqlConnection;
+            }
+        }
+
+        public static async Task<EventResult> GetOptableGuildRoles(IGuild guild)
+        {
+            if (await CheckConnectionAsync())
+            {
+                var command = new MySqlCommand("SELECT * FROM `guildiamlist` WHERE `guildid` = @guildID");
+
+                command.Parameters.AddWithValue("@guildID", guild.Id);
+
+                var results = new List<IAmRole>();
+
+                using (var conn = new MySqlConnection(ConnectionString))
+                {
+                    await conn.OpenAsync();
+                    if (conn.State == System.Data.ConnectionState.Open)
+                    {
+                        command.Connection = conn;
+
+                        DogStatsd.Increment("mysql.queries");
+
+                        var reader = await command.ExecuteReaderAsync();
+
+                        int rows = 0;
+
+                        if (reader.HasRows)
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                rows++;
+
+                                results.Add(new IAmRole
+                                {
+                                    GuildId = ConversionTools.ParseUInt64OrDefault(reader["GuildID"]),
+                                    RoleId = ConversionTools.ParseUInt64OrDefault(reader["RoleID"]),
+                                    Price = ConversionTools.ParseUInt32OrDefault(reader["Price"]),
+                                    LevelRequired = ConversionTools.ParseUInt32OrDefault(reader["LevelRequired"]),
+                                    RequiredRoleId = ConversionTools.ParseUInt64OrDefault(reader["RequiredRoleId"])
+                                });
+                            }
+
+                            DogStatsd.Increment("mysql.rows_ret", rows);
+
+                            await conn.CloseAsync();
+                        }
+                    }
+                }
+
+                return EventResult.FromSuccess(results.AsReadOnly());
             }
             return NoSqlConnection;
         }
+
         public static async Task<EventResult> AddGuildLevelRewardAsync(IGuild guild, ulong roleID, GuildRoleConfig roleConfig)
         {
             throw new NotImplementedException();

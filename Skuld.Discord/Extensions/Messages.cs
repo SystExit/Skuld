@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Skuld.Discord.Services;
 using System;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Skuld.Discord.Extensions
@@ -71,6 +72,9 @@ namespace Skuld.Discord.Extensions
             return Task.CompletedTask;
         }
 
+        public static Task QueueMessage(this StringBuilder content, Models.MessageType type, IUser user, IMessageChannel channel, string filepath = null, Exception exception = null, double timeout = 0.0)
+            => content.ToString().QueueMessage(type, user, channel, filepath, exception, timeout);
+
         public static string TrimEmbedHiders(this string message)
         {
             string s = message;
@@ -78,7 +82,7 @@ namespace Skuld.Discord.Extensions
             if (s.StartsWith("<"))
                 s = s.Substring(1);
             if (s.EndsWith(">"))
-                s = s.Substring(0, s.Length - 1);
+                s = s[0..^1];
 
             return s;
         }

@@ -6,54 +6,21 @@ namespace Skuld.Core.Models
 {
     public class GuildRoleConfig
     {
-        public bool Optable;
         public int Cost;
-        public bool LevelReward;
         public int RequireLevel;
         public IRole RequiredRole;
 
         public GuildRoleConfig()
         {
-            Optable = false;
             Cost = 0;
-            LevelReward = false;
             RequireLevel = 0;
             RequiredRole = null;
-        }
-
-        public static bool operator !=(GuildRoleConfig a, GuildRoleConfig b)
-        {
-            return a.Optable != b.Optable &&
-                a.Cost != b.Cost &&
-                a.LevelReward != b.LevelReward &&
-                a.RequireLevel != b.RequireLevel &&
-                a.RequiredRole.Id != b.RequiredRole.Id;
-        }
-        public static bool operator ==(GuildRoleConfig a, GuildRoleConfig b)
-        {
-            return a.Optable == b.Optable &&
-                a.Cost == b.Cost &&
-                a.LevelReward == b.LevelReward &&
-                a.RequireLevel == b.RequireLevel &&
-                a.RequiredRole.Id == b.RequiredRole.Id;
         }
 
         public static bool FromString(string input, ICommandContext context, out GuildRoleConfig roleConfig)
         {
             roleConfig = new GuildRoleConfig();
             string[] inputsplit = input.Split(' ');
-
-            if(inputsplit.Where(x=>x.StartsWith("optable=")).Count() > 0)
-            {
-                if(bool.TryParse(inputsplit.FirstOrDefault(x => x.StartsWith("optable=")).Replace("optable=", ""), out bool result))
-                {
-                    roleConfig.Optable = result;
-                }
-                else
-                {
-                    return false;
-                }
-            }
 
             if (inputsplit.Where(x => x.StartsWith("cost=")).Count() > 0)
             {
@@ -66,17 +33,9 @@ namespace Skuld.Core.Models
                     return false;
                 }
             }
-
-            if (inputsplit.Where(x => x.StartsWith("level-grant=")).Count() > 0)
+            else
             {
-                if (bool.TryParse(inputsplit.FirstOrDefault(x => x.StartsWith("level-grant=")).Replace("level-grant=", ""), out bool result))
-                {
-                    roleConfig.LevelReward = result;
-                }
-                else
-                {
-                    return false;
-                }
+                roleConfig.Cost = 0;
             }
 
             if (inputsplit.Where(x => x.StartsWith("require-level=")).Count() > 0)
@@ -89,6 +48,10 @@ namespace Skuld.Core.Models
                 {
                     return false;
                 }
+            }
+            else
+            {
+                roleConfig.RequireLevel = 0;
             }
 
             if (inputsplit.Where(x => x.StartsWith("require-role=")).Count() > 0)
@@ -149,6 +112,10 @@ namespace Skuld.Core.Models
                 {
                     return false;
                 }
+            }
+            else
+            {
+                roleConfig.RequiredRole = null;
             }
 
              return true;

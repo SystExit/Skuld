@@ -14,7 +14,19 @@ namespace Skuld.Discord.Handlers
             if (channel == null) { return null; }
 
             await channel.TriggerTypingAsync();
-            await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
+
+            if(channel is IGuildChannel)
+            {
+                if((channel as IGuildChannel).Guild != null)
+                {
+                    await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}", LogSeverity.Info));
+                }
+            }
+            else
+            {
+                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {channel.Name}", LogSeverity.Info));
+            }
+
             return await channel.SendMessageAsync(message, false, embed ?? null);
         }
         public static async Task<IUserMessage> ReplyWithFileAsync(IMessageChannel channel, string message, string filepath)
@@ -39,7 +51,7 @@ namespace Skuld.Discord.Handlers
             {
                 await channel.TriggerTypingAsync();
                 await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MsgDisp", $"Dispatched message to {channel.Recipient} in DMs", LogSeverity.Info));
-                msg = await backupchannel.SendMessageAsync(DiscordTools.Ok_Emoji + " Check your DMs");
+                if(backupchannel != channel) msg = await backupchannel.SendMessageAsync(DiscordTools.Ok_Emoji + " Check your DMs");
                 return await channel.SendMessageAsync(message, false, embed ?? null);
             }
             catch (Exception ex)

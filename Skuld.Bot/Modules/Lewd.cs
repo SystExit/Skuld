@@ -62,7 +62,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var post = posts.GetRandomEntry();
+            var post = posts.GetRandomItem();
 
             await post.GetMessage(post.PostUrl).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
@@ -87,7 +87,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var post = posts.GetRandomEntry();
+            var post = posts.GetRandomItem();
 
             await post.GetMessage(post.PostUrl).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
@@ -112,7 +112,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var post = posts.GetRandomEntry();
+            var post = posts.GetRandomItem();
 
             await post.GetMessage(post.PostUrl).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
@@ -136,7 +136,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var post = posts.GetRandomEntry();
+            var post = posts.GetRandomItem();
 
             await post.GetMessage(post.PostUrl).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
@@ -161,7 +161,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var post = posts.GetRandomEntry();
+            var post = posts.GetRandomItem();
 
             await post.GetMessage(post.PostUrl).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
@@ -185,7 +185,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var post = posts.GetRandomEntry();
+            var post = posts.GetRandomItem();
 
             await post.GetMessage(post.PostUrl).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
@@ -209,7 +209,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var post = posts.GetRandomEntry();
+            var post = posts.GetRandomItem();
 
             await post.GetMessage(post.PostUrl).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
         }
@@ -243,7 +243,7 @@ namespace Skuld.Bot.Commands
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts != null)
             {
-                var post = posts.GetRandomEntry();
+                var post = posts.GetRandomItem();
                 if (post != null)
                 {
                     msg += post.GetMessage(post.PostUrl) + "\n";
@@ -254,7 +254,7 @@ namespace Skuld.Bot.Commands
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts2 != null)
             {
-                var post = posts2.GetRandomEntry();
+                var post = posts2.GetRandomItem();
                 if (post != null)
                 {
                     msg += post.GetMessage(post.PostUrl) + "\n";
@@ -265,7 +265,7 @@ namespace Skuld.Bot.Commands
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts3 != null)
             {
-                var post = posts3.GetRandomEntry();
+                var post = posts3.GetRandomItem();
                 if (post != null)
                 {
                     msg += post.GetMessage(post.PostUrl) + "\n";
@@ -276,7 +276,7 @@ namespace Skuld.Bot.Commands
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts4 != null)
             {
-                var post = posts4.GetRandomEntry();
+                var post = posts4.GetRandomItem();
                 if (post != null)
                 {
                     msg += post.GetMessage(post.PostUrl) + "\n";
@@ -287,7 +287,7 @@ namespace Skuld.Bot.Commands
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts5 != null)
             {
-                var post = posts5.GetRandomEntry();
+                var post = posts5.GetRandomItem();
                 if (post != null)
                 {
                     msg += post.GetMessage(post.PostUrl) + "\n";
@@ -298,7 +298,7 @@ namespace Skuld.Bot.Commands
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts6 != null)
             {
-                var post = posts6.GetRandomEntry();
+                var post = posts6.GetRandomItem();
                 if (post != null)
                 {
                     msg += post.GetMessage(post.PostUrl) + "\n";
