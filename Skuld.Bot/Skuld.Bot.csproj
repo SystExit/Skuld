@@ -9,15 +9,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Discord.Net" Version="2.2.0-dev-20190629.2" />
+    <PackageReference Include="Discord.Net" Version="2.2.0-dev-20190730.2" />
     <PackageReference Include="FIGlet.Net" Version="1.1.1" />
     <PackageReference Include="IqdbApi" Version="1.4.0" />
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="7.14.0.2" />
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="7.14.2" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
     <PackageReference Include="Octokit" Version="0.32.0" />
-    <PackageReference Include="PokeApi.NET" Version="1.1.1" />
+    <PackageReference Include="PokeApi.NET" Version="1.1.2" />
     <PackageReference Include="SauceNET" Version="1.0.1" />
-    <PackageReference Include="System.Drawing.Common" Version="4.6.0-preview6.19303.8" />
+    <PackageReference Include="System.Drawing.Common" Version="4.6.0-preview8.19405.3" />
     <PackageReference Include="TraceMoe.NET" Version="1.0.5" />
   </ItemGroup>
 

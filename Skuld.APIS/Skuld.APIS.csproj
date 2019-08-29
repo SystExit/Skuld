@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.0</TargetFramework>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,17 +12,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Booru.Net" Version="1.0.0.3" />
-    <PackageReference Include="Discord.Net" Version="2.2.0-dev-20190629.2" />
-    <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.40.2.1369" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.9" />
+    <PackageReference Include="Booru.Net" Version="1.0.0.4" />
+    <PackageReference Include="Discord.Net" Version="2.2.0-dev-20190730.2" />
+    <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.40.3.1369" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.12" />
     <PackageReference Include="Imgur.API" Version="5.0.0-beta1" />
     <PackageReference Include="Kitsu" Version="1.4.2" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
     <PackageReference Include="Steam.Models" Version="3.0.8" />
-    <PackageReference Include="SteamWebAPI2" Version="4.0.8" />
+    <PackageReference Include="SteamWebAPI2" Version="4.0.9" />
     <PackageReference Include="SysEx.Net" Version="1.0.7" />
-    <PackageReference Include="YoutubeExplode" Version="4.7.6" />
+    <PackageReference Include="YoutubeExplode" Version="4.7.8" />
   </ItemGroup>
 
   <ItemGroup>
