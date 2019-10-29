@@ -41,7 +41,7 @@ namespace Skuld.Core.Extensions
         //https://stackoverflow.com/a/1262619
         public static void Shuffle<T>(this IList<T> list)
         {
-            RNGCryptoServiceProvider provider = new RNGCryptoServiceProvider();
+            using RNGCryptoServiceProvider provider = new RNGCryptoServiceProvider();
             int n = list.Count;
             while (n > 1)
             {
@@ -56,38 +56,7 @@ namespace Skuld.Core.Extensions
             }
         }
 
-        /*public static LogSeverity ToDiscord(this NTwitch.LogSeverity logSeverity)
-        {
-            if (logSeverity == NTwitch.LogSeverity.Critical)
-                return LogSeverity.Critical;
-            if (logSeverity == NTwitch.LogSeverity.Debug)
-                return LogSeverity.Debug;
-            if (logSeverity == NTwitch.LogSeverity.Error)
-                return LogSeverity.Error;
-            if (logSeverity == NTwitch.LogSeverity.Info)
-                return LogSeverity.Info;
-            if (logSeverity == NTwitch.LogSeverity.Verbose)
-                return LogSeverity.Verbose;
-            if (logSeverity == NTwitch.LogSeverity.Warning)
-                return LogSeverity.Warning;
-
-            return LogSeverity.Verbose;
-        }*/
-
-        public static ConsoleColor SeverityToColor(this LogSeverity sev)
-        {
-            if (sev == LogSeverity.Critical)
-                return ConsoleColor.Red;
-            if (sev == LogSeverity.Error)
-                return ConsoleColor.Red;
-            if (sev == LogSeverity.Info)
-                return ConsoleColor.Green;
-            if (sev == LogSeverity.Warning)
-                return ConsoleColor.Yellow;
-            if (sev == LogSeverity.Verbose)
-                return ConsoleColor.Cyan;
-            return ConsoleColor.White;
-        }
+        #region Conversion
 
         public static bool ToBool(this string data)
         {
@@ -108,6 +77,31 @@ namespace Skuld.Core.Extensions
 
         public static Uri ToUri(this string value)
             => new Uri(value);
+
+        public static ConsoleColor SeverityToColor(this LogSeverity sev)
+        {
+            if (sev == LogSeverity.Critical)
+                return ConsoleColor.Red;
+            if (sev == LogSeverity.Error)
+                return ConsoleColor.Red;
+            if (sev == LogSeverity.Info)
+                return ConsoleColor.Green;
+            if (sev == LogSeverity.Warning)
+                return ConsoleColor.Yellow;
+            if (sev == LogSeverity.Verbose)
+                return ConsoleColor.Cyan;
+            return ConsoleColor.White;
+        }
+
+        public static DateTime FromEpoch(this ulong epoch)
+            => new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(Convert.ToDouble(epoch));
+
+        public static ulong ToEpoch(this DateTime dateTime)
+            => (ulong)(dateTime.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+
+        #endregion Conversion
+
+        #region Verification
 
         public static bool IsImageExtension(this string input)
         {
@@ -158,6 +152,32 @@ namespace Skuld.Core.Extensions
             return strHeader.ToLower().EndsWith("png");
         }
 
+        public static string CheckForNull(this string s)
+        {
+            if (string.IsNullOrEmpty(s) || string.IsNullOrWhiteSpace(s))
+                return null;
+            else
+                return s;
+        }
+
+        public static bool IsRecurring(this ulong val, int startLimit)
+        {
+            var str = Convert.ToString(val);
+            var iarr = new List<int>();
+            foreach (var ch in str)
+            {
+                iarr.Add(Convert.ToInt32(Convert.ToString(ch)));
+            }
+
+            var same = iarr.All(x => x == iarr[0]);
+
+            return (same && iarr.Count() > startLimit);
+        }
+
+        #endregion Verification
+
+        #region Localisation
+
         public static string CheckEmptyWithLocale(this int? val, ResourceManager loc)
         {
             if (val.HasValue)
@@ -192,19 +212,9 @@ namespace Skuld.Core.Extensions
         public static string CheckEmptyWithLocale(this string val, ResourceManager loc)
             => val ?? loc.GetString("SKULD_GENERIC_EMPTY");
 
-        public static string CheckForNull(this string s)
-        {
-            if (string.IsNullOrEmpty(s) || string.IsNullOrWhiteSpace(s))
-                return null;
-            else
-                return s;
-        }
+        #endregion Localisation
 
-        public static DateTime FromEpoch(this ulong epoch)
-            => new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(Convert.ToDouble(epoch));
-
-        public static ulong ToEpoch(this DateTime dateTime)
-            => (ulong)(dateTime.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+        #region Pagination
 
         public static IList<string> PaginateList(this string[] list)
         {
@@ -245,6 +255,8 @@ namespace Skuld.Core.Extensions
             return pages;
         }
 
+        #endregion Pagination
+
         public static string GetStringfromOffset(this DateTimeOffset dateTimeOffset, DateTime dateTime)
         {
             var thing = dateTime - dateTimeOffset;
@@ -256,20 +268,6 @@ namespace Skuld.Core.Extensions
 
         public static double Remap(this double value, double a0, double a1, double b0, double b1)
             => b0 + (b1 - b0) * ((value - a0) / (a1 - a0));
-
-        public static bool IsRecurring(this uint val, int startLimit)
-        {
-            var str = Convert.ToString(val);
-            var iarr = new List<int>();
-            foreach(var ch in str)
-            {
-                iarr.Add(Convert.ToInt32(Convert.ToString(ch)));
-            }
-
-            var same = iarr.All(x=>x == iarr[0]);
-
-            return (same && iarr.Count() > startLimit);
-        }
 
         /// <summary>
         /// Get's the experience multiplier from Users Minutes in Voice

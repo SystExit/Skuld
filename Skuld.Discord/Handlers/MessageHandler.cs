@@ -1,18 +1,15 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using StatsdClient;
-using Skuld.Core;
 using Skuld.Core.Extensions;
+using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
-using Skuld.Core.Models.Skuld;
-using Skuld.Database;
-using Skuld.Database.Extensions;
-using Skuld.Discord.Commands;
+using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Services;
 using Skuld.Discord.TypeReaders;
 using Skuld.Discord.Utilities;
+using StatsdClient;
 using System;
 using System.Linq;
 using System.Net;
@@ -29,7 +26,11 @@ namespace Skuld.Discord.Handlers
         private static readonly Random rnd = new Random();
         private static Stopwatch watch;
 
-        public static async Task<EventResult> ConfigureCommandServiceAsync(CommandServiceConfig Config, MessageServiceConfig cmdConf, SkuldConfig conf, Assembly ModuleAssembly, IServiceProvider ServiceProvider = null)
+        public static async Task<EventResult> ConfigureCommandServiceAsync(CommandServiceConfig Config,
+                                                                           MessageServiceConfig cmdConf,
+                                                                           SkuldConfig conf,
+                                                                           Assembly ModuleAssembly,
+                                                                           IServiceProvider ServiceProvider = null)
         {
             watch = new Stopwatch();
             SkuldConfig = conf;
@@ -40,13 +41,42 @@ namespace Skuld.Discord.Handlers
 
                 CommandService.CommandExecuted += CommandService_CommandExecuted;
 
-                CommandService.Log += async (arg) =>
-                   await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("CommandService - " + arg.Source, arg.Message, arg.Severity, arg.Exception));
+                CommandService.Log += (arg) =>
+                   {
+                       var key = "CommandService - " + arg.Source;
+                       switch (arg.Severity)
+                       {
+                           case LogSeverity.Error:
+                               Log.Error(key, arg.Message, arg.Exception);
+                               break;
+
+                           case LogSeverity.Debug:
+                               Log.Debug(key, arg.Message, arg.Exception);
+                               break;
+
+                           case LogSeverity.Critical:
+                               Log.Critical(key, arg.Message, arg.Exception);
+                               break;
+
+                           case LogSeverity.Info:
+                               Log.Info(key, arg.Message);
+                               break;
+
+                           case LogSeverity.Verbose:
+                               Log.Verbose(key, arg.Message, arg.Exception);
+                               break;
+
+                           case LogSeverity.Warning:
+                               Log.Warning(key, arg.Message, arg.Exception);
+                               break;
+                       }
+                       return Task.CompletedTask;
+                   };
 
                 CommandService.AddTypeReader<Uri>(new UriTypeReader());
                 CommandService.AddTypeReader<GuildRoleConfig>(new RoleConfigTypeReader());
                 CommandService.AddTypeReader<IPAddress>(new IPAddressTypeReader());
-                await CommandService.AddModulesAsync(ModuleAssembly, ServiceProvider);
+                await CommandService.AddModulesAsync(ModuleAssembly, ServiceProvider).ConfigureAwait(false);
 
                 return EventResult.FromSuccess();
             }
@@ -55,88 +85,92 @@ namespace Skuld.Discord.Handlers
                 return EventResult.FromFailureException(ex.Message, ex);
             }
         }
+
         private static async Task CommandService_CommandExecuted(Optional<CommandInfo> arg1, ICommandContext arg2, IResult arg3)
         {
-            if(arg1.IsSpecified)
+            CommandInfo cmd = null;
+
+            if (arg1.IsSpecified)
+                cmd = arg1.Value;
+
+            if (arg3.IsSuccess)
             {
-                var cmd = arg1.Value;
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-                var cont = arg2 as SkuldCommandContext;
-
-                DogStatsd.Increment("commands.total.threads", 1, 1, new[] { $"module:{cmd.Module.Name.ToLowerInvariant()}", $"cmd:{cmd.Name.ToLowerInvariant()}" });
-
-                if (arg3.IsSuccess)
+                if (arg1.IsSpecified)
                 {
+                    var cont = arg2 as ShardedCommandContext;
+
+                    DogStatsd.Increment("commands.total.threads", 1, 1, new[] { $"module:{cmd.Module.Name.ToLowerInvariant()}", $"cmd:{cmd.Name.ToLowerInvariant()}" });
+
                     DogStatsd.Histogram("commands.latency", watch.ElapsedMilliseconds(), 0.5, new[] { $"module:{cmd.Module.Name.ToLowerInvariant()}", $"cmd:{cmd.Name.ToLowerInvariant()}" });
 
-                    await InsertCommandAsync(cmd, cont.DBUser).ConfigureAwait(false);
+                    await InsertCommandAsync(cmd, (await Database.GetUserAsync(cont.User))).ConfigureAwait(false);
 
                     DogStatsd.Increment("commands.processed", 1, 1, new[] { $"module:{cmd.Module.Name.ToLowerInvariant()}", $"cmd:{cmd.Name.ToLowerInvariant()}" });
                 }
-                else
+            }
+            else
+            {
+                bool displayerror = true;
+                if (arg3.ErrorReason.Contains("few parameters"))
                 {
-                    bool displayerror = true;
-                    if (arg3.ErrorReason.Contains("few parameters"))
+                    var cmdembed = DiscordUtilities.GetCommandHelp(CommandService, arg2, cmd.Name);
+                    await BotService.DiscordClient.SendChannelAsync(arg2.Channel, "You seem to be missing a parameter or 2, here's the help", cmdembed).ConfigureAwait(false);
+                    displayerror = false;
+                }
+
+                if (arg3.Error != CommandError.UnknownCommand && displayerror)
+                {
+                    Log.Error("CmdHand", "Error with command, Error is: " + arg3);
+                    await new EmbedBuilder
                     {
-                        var cmdembed = DiscordUtilities.GetCommandHelp(CommandService, arg2, cmd.Name);
-                        await BotService.DiscordClient.SendChannelAsync(arg2.Channel, "You seem to be missing a parameter or 2, here's the help", cmdembed).ConfigureAwait(false);
-                        displayerror = false;
-                    }
+                        Author = new EmbedAuthorBuilder { Name = "Error with the command" },
+                        Description = Convert.ToString(arg3.ErrorReason),
+                        Color = new Color(255, 0, 0)
+                    }.Build()
+                    .QueueMessageAsync(arg2 as ShardedCommandContext)
+                    .ConfigureAwait(false);
+                }
+                DogStatsd.Increment("commands.errors");
 
-                    if (arg3.Error != CommandError.UnknownCommand && displayerror)
-                    {
-                        await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("CmdHand", "Error with command, Error is: " + arg3, LogSeverity.Error));
-                        await new EmbedBuilder
-                        {
-                            Author = new EmbedAuthorBuilder { Name = "Error with the command" },
-                            Description = Convert.ToString(arg3.ErrorReason),
-                            Color = new Color(255, 0, 0)
-                        }.Build().QueueMessage(Models.MessageType.Standard, arg2.User, arg2.Channel);
-                    }
-                    DogStatsd.Increment("commands.errors");
+                switch (arg3.Error)
+                {
+                    case CommandError.UnmetPrecondition:
+                        DogStatsd.Increment("commands.errors", 1, 1, new[] { "err:unm-precon" });
+                        break;
 
-                    switch (arg3.Error)
-                    {
-                        case CommandError.UnmetPrecondition:
-                            DogStatsd.Increment("commands.errors", 1, 1, new[] { "err:unm-precon" });
-                            break;
+                    case CommandError.Unsuccessful:
+                        DogStatsd.Increment("commands.errors", 1, 1, new[] { "err:generic" });
+                        break;
 
-                        case CommandError.Unsuccessful:
-                            DogStatsd.Increment("commands.errors", 1, 1, new[] { "err:generic" });
-                            break;
+                    case CommandError.MultipleMatches:
+                        DogStatsd.Increment("commands.errors", 1, 1, new[] { "err:multiple" });
+                        break;
 
-                        case CommandError.MultipleMatches:
-                            DogStatsd.Increment("commands.errors", 1, 1, new[] { "err:multiple" });
-                            break;
+                    case CommandError.BadArgCount:
+                        DogStatsd.Increment("commands.errors", 1, 1, new[] { "err:incorr-args" });
+                        break;
 
-                        case CommandError.BadArgCount:
-                            DogStatsd.Increment("commands.errors", 1, 1, new[] { "err:incorr-args" });
-                            break;
+                    case CommandError.ParseFailed:
+                        DogStatsd.Increment("commands.errors", 1, 1, new[] { "err:parse-fail" });
+                        break;
 
-                        case CommandError.ParseFailed:
-                            DogStatsd.Increment("commands.errors", 1, 1, new[] { "err:parse-fail" });
-                            break;
+                    case CommandError.Exception:
+                        DogStatsd.Increment("commands.errors", 1, 1, new[] { "err:exception" });
+                        break;
 
-                        case CommandError.Exception:
-                            DogStatsd.Increment("commands.errors", 1, 1, new[] { "err:exception" });
-                            break;
-
-                        case CommandError.UnknownCommand:
-                            DogStatsd.Increment("commands.errors", 1, 1, new[] { "err:unk-cmd" });
-                            break;
-                    }
+                    case CommandError.UnknownCommand:
+                        DogStatsd.Increment("commands.errors", 1, 1, new[] { "err:unk-cmd" });
+                        break;
                 }
             }
             watch = new Stopwatch();
         }
-        public static void HandleMessageAsync(SocketMessage arg)
-        {
-            var _ = HandleCommandAsync(arg).ConfigureAwait(false);
-        }
 
         public static async Task<bool> CheckPermissionToSendMessageAsync(ITextChannel channel)
         {
-            if(channel.Guild != null)
+            if (channel.Guild != null)
             {
                 var guild = channel.Guild;
                 var currentuser = await channel.Guild.GetCurrentUserAsync();
@@ -159,223 +193,280 @@ namespace Skuld.Discord.Handlers
             return true;
         }
 
+        #region HandleProcessing
+
+        public static void HandleMessageAsync(SocketMessage arg)
+        {
+            var _ = HandleCommandAsync(arg).ConfigureAwait(false);
+        }
+
         public static async Task HandleCommandAsync(SocketMessage arg)
         {
-            DogStatsd.Increment("messages.recieved");
-            if (arg.Author.IsBot || arg.Author.IsWebhook || arg.Author.Discriminator.Equals("0000")) { return; }
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var message = arg as SocketUserMessage;
-            if (message is null) { return; }
-
-            if (message.Channel is ITextChannel)
+            try
             {
-                if(!await CheckPermissionToSendMessageAsync(message.Channel as ITextChannel))
+                DogStatsd.Increment("messages.recieved");
+                if (arg.Author.IsBot || arg.Author.IsWebhook || arg.Author.Discriminator.Equals("0000")) { return; }
+
+                var message = arg as SocketUserMessage;
+                if (message is null) { return; }
+
+                if (message.Channel is ITextChannel)
                 {
-                    return;
-                }
-            }
-
-            if(message.Channel is ITextChannel)
-            {
-                var gldtemp = (message.Channel as ITextChannel).Guild;
-                if (gldtemp != null)
-                {
-                    var guser = await gldtemp.GetUserAsync(BotService.DiscordClient.CurrentUser.Id);
-
-                    if (!guser.GetPermissions(message.Channel as IGuildChannel).SendMessages) return;
-                }
-
-                if (!MessageTools.IsEnabledChannel(await (message.Channel as ITextChannel).Guild.GetUserAsync(message.Author.Id), (ITextChannel)message.Channel)) { return; }
-            }
-
-            SkuldUser suser = null;
-            SkuldGuild sguild = null;
-
-            if (await DatabaseClient.CheckConnectionAsync())
-            {
-                suser = await MessageTools.GetUserOrInsertAsync(message.Author).ConfigureAwait(false);
-
-                if(message.Channel is ITextChannel)
-                    sguild = await MessageTools.GetGuildOrInsertAsync((message.Channel as ITextChannel).Guild).ConfigureAwait(false);
-
-                if(!suser.IsUpToDate(message.Author))
-                {
-                    suser.FillDataFromDiscord(message.Author);
-                    await suser.UpdateAsync();
-                }
-
-                if (suser != null && suser.Banned) return;
-            }
-
-            if (sguild != null)
-            {
-                if (sguild.Features.Experience)
-                {
-                    var _ = HandleExperienceAsync(message.Author, ((message.Channel as ITextChannel).Guild), sguild, message.Channel);
-                }
-            }
-
-            if (!MessageTools.HasPrefix(message, BotService.DiscordClient, SkuldConfig, cmdConfig, sguild?.Prefix)) return;
-
-            SkuldCommandContext context = new SkuldCommandContext(BotService.DiscordClient, message, suser??null, sguild??null);
-
-            if (sguild != null)
-            {
-                if (sguild.Modules.CustomEnabled)
-                {
-                    var _ = HandleCustomCommandAsync(context);
-                }
-            }
-
-            await DispatchCommandAsync(context).ConfigureAwait(false);
-        }
-        public static async Task HandleExperienceAsync(IUser user, IGuild guild, SkuldGuild sguild, IMessageChannel backupChannel)
-        {
-            var luserexperienceResp = await DatabaseClient.GetUserExperienceAsync(user.Id);
-            var skuldUser = await MessageTools.GetUserOrInsertAsync(user);
-
-            ulong amount = (ulong)rnd.Next(1, 26);
-
-            if (luserexperienceResp.Data is UserExperience)
-            {
-                var luxp = luserexperienceResp.Data as UserExperience;
-
-                if (luxp.GuildExperiences.Count() != 0)
-                {
-                    var gld = luxp.GuildExperiences.FirstOrDefault(x => x.GuildID == guild.Id);
-                    if (gld != null)
+                    if (!await CheckPermissionToSendMessageAsync(message.Channel as ITextChannel))
                     {
-                        if (gld.LastGranted < (DateTime.UtcNow.ToEpoch() - 60))
-                        {
-                            var xptonextlevel = DiscordUtilities.GetXPLevelRequirement(gld.Level + 1, DiscordUtilities.PHI); //get next level xp requirement based on phi
-
-                            if ((gld.XP + amount) >= xptonextlevel) //if over or equal to next level requirement, update accordingly
-                            {
-                                gld.XP = 0;
-                                gld.TotalXP += amount;
-                                gld.Level++;
-                                gld.LastGranted = DateTime.UtcNow.ToEpoch();
-
-                                if(sguild.LevelNotification == LevelNotification.Channel)
-                                {
-                                    ulong ChannelID = 0;
-                                    if (sguild.LevelUpChannel != 0)
-                                        ChannelID = sguild.LevelUpChannel;
-                                    else
-                                        ChannelID = backupChannel.Id;
-
-                                    if (string.IsNullOrEmpty(sguild.LevelUpMessage))
-                                        await $"Congratulations {user.Mention}!! You're now level **{gld.Level}**".QueueMessage(Models.MessageType.Standard, user, (IMessageChannel)await guild.GetChannelAsync(ChannelID));
-                                    else
-                                    {
-                                        string msg = sguild.LevelUpMessage;
-                                        msg = msg.Replace("-m", user.Mention).Replace("-u", user.Username).Replace("-l", $"{gld.Level}");
-
-                                        await msg.QueueMessage(Models.MessageType.Standard, user, (IMessageChannel)await guild.GetChannelAsync(ChannelID));
-                                    }
-                                }
-                                else if(sguild.LevelNotification == LevelNotification.DM)
-                                {
-                                    if (string.IsNullOrEmpty(sguild.LevelUpMessage))
-                                        await $"Congratulations {user.Mention}!! You're now level **{gld.Level}**".QueueMessage(Models.MessageType.DMFail, user, backupChannel);
-                                    else
-                                    {
-                                        string msg = sguild.LevelUpMessage;
-                                        msg = msg.Replace("-m", user.Mention).Replace("-u", user.Username).Replace("-l", $"{gld.Level}");
-
-                                        await msg.QueueMessage(Models.MessageType.DMFail, user, backupChannel);
-                                    }
-                                }
-
-                                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("MessageService", "User leveled up", LogSeverity.Info));
-                                DogStatsd.Increment("user.levels.levelup");
-                            }
-                            else //otherwise append current status
-                            {
-                                gld.XP += amount;
-                                gld.TotalXP += amount;
-                                gld.LastGranted = DateTime.UtcNow.ToEpoch();
-                            }
-                            await skuldUser.UpdateGuildExperienceAsync(gld, guild.Id);
-                            DogStatsd.Increment("user.levels.processed");
-                        }
+                        return;
                     }
-                    else
+                }
+
+                if (message.Channel is ITextChannel)
+                {
+                    var gldtemp = (message.Channel as ITextChannel).Guild;
+                    if (gldtemp != null)
                     {
-                        gld = new GuildExperience
-                        {
-                            LastGranted = DateTime.UtcNow.ToEpoch(),
-                            XP = amount
-                        };
-                        gld.TotalXP = gld.XP;
-                        await skuldUser.InsertGuildExperienceAsync(guild.Id, gld);
-                        DogStatsd.Increment("user.levels.processed");
+                        var guser = await gldtemp.GetUserAsync(BotService.DiscordClient.CurrentUser.Id);
+
+                        if (!guser.GetPermissions(message.Channel as IGuildChannel).SendMessages) return;
                     }
+
+                    if (!MessageTools.IsEnabledChannel(await (message.Channel as ITextChannel).Guild.GetUserAsync(message.Author.Id), (ITextChannel)message.Channel)) { return; }
+                }
+
+                User suser = null;
+                Guild sguild = null;
+
+                if (!Database.Users.Any(x => x.Id == arg.Author.Id))
+                {
+                    suser = await Database.InsertUserAsync(arg.Author);
                 }
                 else
                 {
-                    var gld = new GuildExperience
+                    suser = await Database.GetUserAsync(arg.Author);
+                    if (suser != null && suser.Banned) return;
+                    if (!suser.IsUpToDate(message.Author))
                     {
-                        LastGranted = DateTime.UtcNow.ToEpoch(),
-                        XP = amount
-                    };
-                    gld.TotalXP = gld.XP;
-                    await skuldUser.InsertGuildExperienceAsync(guild.Id, gld);
+                        suser.AvatarUrl = new Uri(message.Author.GetAvatarUrl() ?? message.Author.GetDefaultAvatarUrl());
+                        suser.Username = message.Author.Username;
+                        await Database.SaveChangesAsync().ConfigureAwait(false);
+                    }
+                }
+
+                if (message.Channel is ITextChannel)
+                {
+                    var gld = (message.Channel as ITextChannel).Guild;
+                    if (!Database.Guilds.Any(x => x.Id == gld.Id))
+                    {
+                        sguild = await Database.InsertGuildAsync(gld,
+                                                                        cmdConfig.Prefix,
+                                                                        cmdConfig.MoneyName,
+                                                                        cmdConfig.MoneyIcon).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        sguild = await Database.GetGuildAsync(gld);
+                    }
+                }
+
+                if (sguild != null)
+                {
+                    var features = Database.Features.FirstOrDefault(x => x.Id == sguild.Id);
+                    if (features.Experience)
+                    {
+                        var _ = HandleExperienceAsync(message.Author, ((message.Channel as ITextChannel).Guild), sguild, message.Channel);
+                    }
+                }
+
+                if (!MessageTools.HasPrefix(message, BotService.DiscordClient, SkuldConfig, cmdConfig, sguild?.Prefix)) return;
+
+                ShardedCommandContext context = new ShardedCommandContext(BotService.DiscordClient, message);
+
+                if (sguild != null)
+                {
+                    var modules = Database.Modules.FirstOrDefault(x => x.Id == sguild.Id);
+                    if (modules.Custom)
+                    {
+                        var _ = HandleCustomCommandAsync(context);
+                    }
+                }
+
+                await DispatchCommandAsync(context).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Log.Critical("HandleCommandAsync", ex.Message, ex);
+            }
+        }
+
+        public static async Task HandleExperienceAsync(IUser user, IGuild guild, Guild sguild, IMessageChannel backupChannel)
+        {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var luxp = Database.UserXp.FirstOrDefault(x => x.UserId == user.Id && x.GuildId == guild.Id);
+
+            var User = Database.GetUserAsync(user);
+
+            ulong amount = (ulong)rnd.Next(1, 26);
+
+            if (luxp != null)
+            {
+                if (luxp.LastGranted < (DateTime.UtcNow.ToEpoch() - 60))
+                {
+                    var xptonextlevel = DiscordTools.GetXPLevelRequirement(luxp.Level + 1, DiscordTools.PHI); //get next level xp requirement based on phi
+
+                    if ((luxp.XP + amount) >= xptonextlevel) //if over or equal to next level requirement, update accordingly
+                    {
+                        luxp.XP = 0;
+                        luxp.TotalXP += amount;
+                        luxp.Level++;
+                        luxp.LastGranted = DateTime.UtcNow.ToEpoch();
+
+                        if (sguild.LevelNotification == LevelNotification.Channel)
+                        {
+                            ulong ChannelID = 0;
+                            if (sguild.LevelUpChannel != 0)
+                                ChannelID = sguild.LevelUpChannel;
+                            else
+                                ChannelID = backupChannel.Id;
+
+                            if (string.IsNullOrEmpty(sguild.LevelUpMessage))
+                                await (await guild.GetTextChannelAsync(ChannelID).ConfigureAwait(false))
+                                    .SendMessageAsync($"Congratulations {user.Mention}!! You're now level **{luxp.Level}**").ConfigureAwait(false);
+                            else
+                            {
+                                string msg = sguild.LevelUpMessage;
+
+                                msg = msg
+                                    .Replace("-m", user.Mention)
+                                    .Replace("-u", user.Username)
+                                    .Replace("-l", luxp.Level.ToString("N0"));
+
+                                await (await guild.GetTextChannelAsync(ChannelID).ConfigureAwait(false)).SendMessageAsync(msg).ConfigureAwait(false);
+                            }
+                        }
+                        else if (sguild.LevelNotification == LevelNotification.DM)
+                        {
+                            if (string.IsNullOrEmpty(sguild.LevelUpMessage))
+                                await user.SendMessageAsync($"Congratulations {user.Mention}!! You're now level **{luxp.Level}** in {guild.Name}").ConfigureAwait(false);
+                            else
+                            {
+                                string msg = sguild.LevelUpMessage;
+                                msg = msg
+                                    .Replace("-m", user.Mention)
+                                    .Replace("-u", user.Username)
+                                    .Replace("-l", $"{luxp.Level}");
+
+                                await user.SendMessageAsync(msg).ConfigureAwait(false);
+                            }
+                        }
+
+                        Log.Info("MessageService", "User leveled up");
+                        DogStatsd.Increment("user.levels.levelup");
+                    }
+                    else //otherwise append current status
+                    {
+                        luxp.XP += amount;
+                        luxp.TotalXP += amount;
+                        luxp.LastGranted = DateTime.UtcNow.ToEpoch();
+                    }
+
                     DogStatsd.Increment("user.levels.processed");
                 }
             }
             else
             {
-                var gld = new GuildExperience
+                Database.UserXp.Add(new UserExperience
                 {
                     LastGranted = DateTime.UtcNow.ToEpoch(),
-                    XP = amount
-                };
-                gld.TotalXP = gld.XP;
-                await skuldUser.InsertGuildExperienceAsync(guild.Id, gld);
+                    XP = amount,
+                    UserId = user.Id,
+                    GuildId = guild.Id,
+                    TotalXP = amount
+                });
                 DogStatsd.Increment("user.levels.processed");
             }
 
+            await Database.SaveChangesAsync().ConfigureAwait(false);
+
             return;
         }
-        public static async Task HandleCustomCommandAsync(SkuldCommandContext context)
+
+        public static async Task HandleCustomCommandAsync(ShardedCommandContext context)
         {
-            var prefix = MessageTools.GetPrefixFromCommand(context.DBGuild, context.Message.Content, SkuldConfig);
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var prefix = MessageTools.GetPrefixFromCommand(await Database.GetGuildAsync(context.Guild), context.Message.Content, SkuldConfig);
             var name = MessageTools.GetCommandName(prefix, context.Message);
-            var customcommand = await MessageTools.GetCustomCommandAsync(context.Guild, name);
+            var customcommand = Database.CustomCommands.FirstOrDefault(x => x.GuildId == context.Guild.Id && x.Name.ToLower() == name.ToLower());
 
             if (customcommand != null)
             {
-                await DispatchCommandAsync(context, customcommand);
+                await DispatchCommandAsync(context, customcommand).ConfigureAwait(false);
                 return;
             }
             return;
         }
-        public static async Task DispatchCommandAsync(SkuldCommandContext context)
+
+        #endregion HandleProcessing
+
+        #region Dispatching
+
+        public static async Task DispatchCommandAsync(ShardedCommandContext context)
         {
             watch.Start();
-            await CommandService.ExecuteAsync(context, cmdConfig.ArgPos, BotService.Services);
+            await CommandService.ExecuteAsync(context, cmdConfig.ArgPos, BotService.Services).ConfigureAwait(false);
             watch.Stop();
         }
-        public static async Task DispatchCommandAsync(SkuldCommandContext context, CustomCommand command)
+
+        public static async Task DispatchCommandAsync(ShardedCommandContext context, CustomCommand command)
         {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
             watch.Start();
             await BotService.DiscordClient.SendChannelAsync(context.Channel, command.Content).ConfigureAwait(false);
             watch.Stop();
 
-            DogStatsd.Histogram("commands.latency", watch.ElapsedMilliseconds(), 0.5, new[] { $"module:custom", $"cmd:{command.CommandName.ToLowerInvariant()}" });
+            DogStatsd.Histogram("commands.latency", watch.ElapsedMilliseconds(), 0.5, new[] { $"module:custom", $"cmd:{command.Name.ToLowerInvariant()}" });
 
-            await InsertCommandAsync(command, context.DBUser).ConfigureAwait(false);
+            await InsertCommandAsync(command, (await Database.GetUserAsync(context.User))).ConfigureAwait(false);
 
-            DogStatsd.Increment("commands.processed", 1, 1, new[] { $"module:custom", $"cmd:{command.CommandName.ToLowerInvariant()}" });
+            DogStatsd.Increment("commands.processed", 1, 1, new[] { $"module:custom", $"cmd:{command.Name.ToLowerInvariant()}" });
 
             watch = new Stopwatch();
         }
 
-        private static async Task InsertCommandAsync(CommandInfo command, SkuldUser user)
-            => await user.UpdateUserCommandCountAsync(command.Name ?? command.Module.Name);
+        #endregion Dispatching
 
-        private static async Task InsertCommandAsync(CustomCommand command, SkuldUser user)
-            => await user.UpdateUserCommandCountAsync(command.CommandName);
+        #region HandleInsertion
+
+        private static async Task InsertCommandAsync(CommandInfo command, User user)
+            => await InsertUserCommandUsageAsync(command.Name ?? command.Module.Name, user).ConfigureAwait(false);
+
+        private static async Task InsertCommandAsync(CustomCommand command, User user)
+            => await InsertUserCommandUsageAsync(command.Name, user).ConfigureAwait(false);
+
+        private static async Task InsertUserCommandUsageAsync(string name, User user)
+        {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var experience = Database.UserCommandUsage.FirstOrDefault(x => x.UserId == user.Id && x.Command.ToLower() == name.ToLower());
+            if (experience != null)
+            {
+                experience.Usage += 1;
+            }
+            else
+            {
+                Database.UserCommandUsage.Add(new UserCommandUsage
+                {
+                    Command = name,
+                    UserId = user.Id,
+                    Usage = 1
+                });
+            }
+
+            await Database.SaveChangesAsync().ConfigureAwait(false);
+        }
+
+        #endregion HandleInsertion
     }
 }

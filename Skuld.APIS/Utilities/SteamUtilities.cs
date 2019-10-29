@@ -17,7 +17,7 @@ namespace Skuld.APIS.Utilities
             var fulldesc = appdata.AboutTheGame;
             string desc = "";
 
-            if(fulldesc.Contains("<br"))
+            if (fulldesc.Contains("<br"))
             {
                 var clean = fulldesc.Replace("<br /> ", "").Replace("<br/> ", "").Replace("<br />", "").Replace("<br/>", "").Replace("<br> ", "\n").Replace("<br>", "\n");
                 var split = clean.Split('\n');

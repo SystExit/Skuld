@@ -1,18 +1,15 @@
-﻿using DiscordNet = Discord;
+﻿using Discord;
 using Discord.WebSocket;
 using Skuld.APIS;
-using Skuld.Core;
-using Skuld.Core.Models.Skuld;
-using Skuld.Database;
+using Skuld.Core.Generic.Models;
+using Skuld.Core.Utilities;
 using Skuld.Discord.Handlers;
 using StatsdClient;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Skuld.Discord.Utilities;
-using Skuld.Core.Models;
+
+using DiscordNet = Discord;
 
 namespace Skuld.Discord.Services
 {
@@ -55,48 +52,45 @@ namespace Skuld.Discord.Services
             BotService.DiscordClient.ShardDisconnected -= Bot_ShardDisconnected;
             BotService.DiscordClient.Log -= Bot_Log;
             BotService.DiscordClient.UserUpdated -= Bot_UserUpdated;
-            foreach(var shard in BotService.DiscordClient.Shards)
+            foreach (var shard in BotService.DiscordClient.Shards)
             {
                 shard.MessageReceived -= MessageHandler.HandleCommandAsync;
             }
         }
 
-        private static async Task Bot_Log(DiscordNet.LogMessage arg)
-            => await GenericLogger.AddToLogsAsync(new LogMessage("Discord-Log: " + arg.Source, arg.Message, arg.Severity, arg.Exception));
-
-        private static async Task Bot_ShardReady(DiscordSocketClient arg)
+        private static async Task Bot_Log(LogMessage arg)
         {
-            await BotService.DiscordClient.SetGameAsync($"{Configuration.Discord.Prefix}help | {arg.ShardId + 1}/{BotService.DiscordClient.Shards.Count}", type: DiscordNet.ActivityType.Listening);
-            if (!ShardsReady.Contains(arg.ShardId))
+            switch (arg.Severity)
             {
-                arg.MessageReceived += MessageHandler.HandleCommandAsync;
-                ShardsReady.Add(arg.ShardId);
-            }
-            await GenericLogger.AddToLogsAsync(new LogMessage($"Shard #{arg.ShardId}", "Shard Ready", DiscordNet.LogSeverity.Info));
-        }
+                case LogSeverity.Info:
+                    Log.Info("Discord-Log: " + arg.Source, arg.Message);
+                    break;
 
-        private static async Task Bot_UserUpdated(SocketUser arg1, SocketUser arg2)
-        {
-            if (arg1.IsBot || arg1.IsWebhook) return;
-            if (arg1.GetAvatarUrl() != arg2.GetAvatarUrl())
-            {
-                var usrResp = await DatabaseClient.GetUserAsync(arg2.Id);
+                case LogSeverity.Critical:
+                    Log.Critical("Discord-Log: " + arg.Source, arg.Message, arg.Exception);
+                    break;
 
-                if(usrResp.Successful)
-                {
-                    if(usrResp.Data is SkuldUser usr)
-                    {
-                        usr.AvatarUrl = arg2.GetAvatarUrl();
+                case LogSeverity.Warning:
+                    Log.Warning("Discord-Log: " + arg.Source, arg.Message, arg.Exception);
+                    break;
 
-                        await DatabaseClient.UpdateUserAsync(usr);
-                    }
-                }
+                case LogSeverity.Verbose:
+                    Log.Verbose("Discord-Log: " + arg.Source, arg.Message, arg.Exception);
+                    break;
+
+                case LogSeverity.Error:
+                    Log.Error("Discord-Log: " + arg.Source, arg.Message, arg.Exception);
+                    break;
+
+                case LogSeverity.Debug:
+                    Log.Debug("Discord-Log: " + arg.Source, arg.Message, arg.Exception);
+                    break;
             }
         }
 
-        private static async Task Bot_ReactionAdded(DiscordNet.Cacheable<DiscordNet.IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3)
+        private static async Task Bot_ReactionAdded(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3)
         {
-            if(arg3.User.IsSpecified)
+            if (arg3.User.IsSpecified)
             {
                 var usr = arg3.User.GetValueOrDefault(null);
                 if (usr != null)
@@ -104,13 +98,13 @@ namespace Skuld.Discord.Services
                     if (usr.IsBot || usr.IsWebhook) return;
                 }
             }
-            if (await DatabaseClient.CheckConnectionAsync())
+            /*if (await DatabaseClient.CheckConnectionAsync())
             {
                 var gld = BotService.DiscordClient.Guilds.FirstOrDefault(x => x.TextChannels.FirstOrDefault(z => z.Id == arg2.Id) != null);
                 var guildResp = await DatabaseClient.GetGuildAsync(gld.Id);
                 if (guildResp.Successful && gld != null)
                 {
-                    if (guildResp.Data is SkuldGuild guild)
+                    if (guildResp.Data is Guild guild)
                     {
                         if (guild.Features.Pinning)
                         {
@@ -135,12 +129,26 @@ namespace Skuld.Discord.Services
                         }
                     }
                 }
+            }*/
+        }
+
+        #region Shards
+
+        private static async Task Bot_ShardReady(DiscordSocketClient arg)
+        {
+            await BotService.DiscordClient.SetGameAsync($"{Configuration.Discord.Prefix}help | {arg.ShardId + 1}/{BotService.DiscordClient.Shards.Count}", type: DiscordNet.ActivityType.Listening);
+            if (!ShardsReady.Contains(arg.ShardId))
+            {
+                arg.MessageReceived += MessageHandler.HandleCommandAsync;
+                ShardsReady.Add(arg.ShardId);
             }
+
+            Log.Info($"Shard #{arg.ShardId}", "Shard Ready");
         }
 
         private static async Task Bot_ShardConnected(DiscordSocketClient arg)
         {
-            await arg.SetGameAsync($"{Configuration.Discord.Prefix}help | {arg.ShardId+1}/{BotService.DiscordClient.Shards.Count}", type: DiscordNet.ActivityType.Listening);
+            await arg.SetGameAsync($"{Configuration.Discord.Prefix}help | {arg.ShardId + 1}/{BotService.DiscordClient.Shards.Count}", type: ActivityType.Listening).ConfigureAwait(false);
             DogStatsd.Event("shards.connected", $"Shard {arg.ShardId} Connected", alertType: "info");
         }
 
@@ -150,11 +158,15 @@ namespace Skuld.Discord.Services
             return Task.CompletedTask;
         }
 
-        //Start Users
+        #endregion Shards
+
+        #region Users
+
         private static async Task Bot_UserJoined(SocketGuildUser arg)
         {
-            await GenericLogger.AddToLogsAsync(new LogMessage("UsrJoin", $"User {arg.Username} joined {arg.Guild.Name}", DiscordNet.LogSeverity.Info));
-            if (await DatabaseClient.CheckConnectionAsync())
+            Log.Info("UsrJoin", $"User {arg.Username} joined {arg.Guild.Name}");
+
+            /*if (await DatabaseClient.CheckConnectionAsync())
             {
                 await DatabaseClient.InsertUserAsync(arg);
 
@@ -162,7 +174,7 @@ namespace Skuld.Discord.Services
 
                 if (guildResp.Successful)
                 {
-                    if (guildResp.Data is SkuldGuild guild)
+                    if (guildResp.Data is Guild guild)
                     {
                         if (guild.JoinRole != 0)
                         {
@@ -192,18 +204,19 @@ namespace Skuld.Discord.Services
                         }
                     }
                 }
-            }
+            }*/
         }
 
         private static async Task Bot_UserLeft(SocketGuildUser arg)
         {
-            await GenericLogger.AddToLogsAsync(new LogMessage("UsrLeft", $"User {arg.Username} just left {arg.Guild.Name}", DiscordNet.LogSeverity.Info));
-            if (await DatabaseClient.CheckConnectionAsync())
+            Log.Info("UsrLeft", $"User {arg.Username} just left {arg.Guild.Name}");
+
+            /*if (await DatabaseClient.CheckConnectionAsync())
             {
                 var guildResp = await DatabaseClient.GetGuildAsync(arg.Guild.Id);
                 if(guildResp.Successful)
                 {
-                    if(guildResp.Data is SkuldGuild guild)
+                    if(guildResp.Data is Guild guild)
                     {
                         string leavemessage = guild.LeaveMessage;
                         if (!string.IsNullOrEmpty(guild.LeaveMessage))
@@ -227,42 +240,46 @@ namespace Skuld.Discord.Services
                         }
                     }
                 }
+            }*/
+        }
+
+        private static async Task Bot_UserUpdated(SocketUser arg1, SocketUser arg2)
+        {
+            if (arg1.IsBot || arg1.IsWebhook) return;
+            if (arg1.GetAvatarUrl() != arg2.GetAvatarUrl())
+            {
+                /*var usrResp = await DatabaseClient.GetUserAsync(arg2.Id);
+
+                if (usrResp.Successful)
+                {
+                    if (usrResp.Data is User usr)
+                    {
+                        usr.AvatarUrl = arg2.GetAvatarUrl();
+
+                        await DatabaseClient.UpdateUserAsync(usr);
+                    }
+                }*/
             }
         }
 
-        //End Users
+        #endregion Users
 
-        //Start Guilds
+        #region Guilds
+
         private static async Task Bot_LeftGuild(SocketGuild arg)
         {
             DogStatsd.Increment("guilds.left");
 
-            await DatabaseClient.DropGuildAsync(arg);
-
-            Thread thd = new Thread(async () =>
-            {
-                await DatabaseClient.CheckGuildUsersAsync(BotService.DiscordClient, arg);
-            })
-            {
-                IsBackground = true
-            };
-            thd.Start();
-            await botListing.SendDataAsync(Configuration.BotListing.SysExToken, Configuration.BotListing.DiscordGGKey, Configuration.BotListing.DBotsOrgKey, Configuration.BotListing.B4DToken);
+            await botListing.SendDataAsync(Configuration.BotListing.DiscordGGKey, Configuration.BotListing.DBotsOrgKey, Configuration.BotListing.B4DToken).ConfigureAwait(false);
         }
 
         private static async Task Bot_JoinedGuild(SocketGuild arg)
         {
             DogStatsd.Increment("guilds.joined");
-            Thread thd = new Thread(async () =>
-            {
-                await DatabaseClient.InsertGuildAsync(arg.Id, Configuration.Discord.Prefix);
-            })
-            {
-                IsBackground = true
-            };
-            thd.Start();
-            await botListing.SendDataAsync(Configuration.BotListing.SysExToken, Configuration.BotListing.DiscordGGKey, Configuration.BotListing.DBotsOrgKey, Configuration.BotListing.B4DToken);
+
+            await botListing.SendDataAsync(Configuration.BotListing.DiscordGGKey, Configuration.BotListing.DBotsOrgKey, Configuration.BotListing.B4DToken).ConfigureAwait(false);
         }
-        //End Guilds
+
+        #endregion Guilds
     }
 }

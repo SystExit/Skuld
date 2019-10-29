@@ -1,5 +1,5 @@
-﻿using DiscNet = Discord;
-using System;
+﻿using System;
+using DiscNet = Discord;
 
 namespace Skuld.Discord.Models
 {
@@ -9,6 +9,7 @@ namespace Skuld.Discord.Models
         public double Timeout;
         public MessageType Type;
     }
+
     public struct SkuldMessageContent
     {
         public string Message;
@@ -16,6 +17,7 @@ namespace Skuld.Discord.Models
         public DiscNet.Embed Embed;
         public string File;
     }
+
     public struct SkuldMessage
     {
         public DiscNet.IMessageChannel Channel;

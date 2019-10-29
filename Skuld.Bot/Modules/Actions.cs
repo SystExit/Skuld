@@ -1,445 +1,230 @@
 ﻿using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
-using Skuld.Core;
+using Skuld.Bot.Services;
 using Skuld.Core.Extensions;
+using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
-using Skuld.Core.Models.Skuld;
 using Skuld.Core.Utilities;
-using Skuld.Database;
-using Skuld.Database.Extensions;
-using Skuld.Discord.Commands;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
-using Skuld.Discord.Utilities;
 using SysEx.Net;
 using SysEx.Net.Models;
 using System;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
     [Group, RequireEnabledModule]
-    public class Actions : InteractiveBase<SkuldCommandContext>
+    public class Actions : InteractiveBase<ShardedCommandContext>
     {
         public Random Random { get; set; }
-        public SkuldConfig Configuration { get; set; }
+        public SkuldConfig Configuration { get => HostSerivce.Configuration; }
         public SysExClient SysExClient { get; set; }
 
         [Command("slap"), Summary("Slap a user")]
-        public async Task Slap([Remainder]IGuildUser user)
+        public async Task Slap([Remainder]string target = null)
         {
-            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
-            {
-                try
-                {
-                    var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
-                    var gif = await SysExClient.GetWeebActionGifAsync(GifType.Slap).ConfigureAwait(false);
+            var gif = await SysExClient.GetWeebActionGifAsync(GifType.Slap).ConfigureAwait(false);
+            var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
 
-                    if (user == Context.User as IGuildUser)
-                    {
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"B-Baka.... {botguild.Mention} slapped {Context.User.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    }
-                    else
-                    {
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} slapped {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await ex.Message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel, null, ex);
-                    await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-SLAP", ex.Message, LogSeverity.Error, ex));
-                }
+            if (target == null || (MentionUtils.TryParseUser(target, out ulong userId) && userId == Context.User.Id))
+            {
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"B-Baka.... {botguild.Mention} slapped {Context.User.Mention}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                await GetBlockedMessage(Context.User, user, "slap").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} slaps {target}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
         [Command("kill"), Summary("Kills a user")]
-        public async Task Kill([Remainder]IGuildUser user)
+        public async Task Kill([Remainder]string target = null)
         {
-            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
-            {
-                try
-                {
-                    var gif = await SysExClient.GetWeebActionGifAsync(GifType.Kill).ConfigureAwait(false);
+            var gif = await SysExClient.GetWeebActionGifAsync(GifType.Kill).ConfigureAwait(false);
 
-                    if (user == Context.User as IGuildUser)
-                    {
-                        await EmbedUtils.EmbedImage(new Uri("http://i.giphy.com/l2JeiuwmhZlkrVOkU.gif"), embeddesc: $"{Context.User.Mention} killed themself").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    }
-                    else
-                    {
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} killed {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await ex.Message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel, null, ex);
-                    await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-KILL", ex.Message, LogSeverity.Error, ex));
-                }
+            if (target == null || (MentionUtils.TryParseUser(target, out ulong userId) && userId == Context.User.Id))
+            {
+                await EmbedUtils.EmbedImage(new Uri("http://i.giphy.com/l2JeiuwmhZlkrVOkU.gif"), embeddesc: $"{Context.User.Mention} killed themself").QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                await GetBlockedMessage(Context.User, user, "kill").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} kills {target}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
         [Command("stab"), Summary("Stabs a user")]
-        public async Task Stab([Remainder]IGuildUser user)
+        public async Task Stab([Remainder]string target = null)
         {
-            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
+            var gif = await SysExClient.GetWeebActionGifAsync(GifType.Stab).ConfigureAwait(false);
+            var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
+
+            if (target == null || (MentionUtils.TryParseUser(target, out ulong userId) && userId == Context.User.Id))
             {
-                try
-                {
-                    var gif = await SysExClient.GetWeebActionGifAsync(GifType.Stab).ConfigureAwait(false);
-
-                    if (user == Context.User as IGuildUser)
-                    {
-                        var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"URUSAI!! {botguild.Mention} stabbed {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                        return;
-                    }
-                    if (user.IsBot)
-                    {
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} stabbed {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                        return;
-                    }
-                    if (await DatabaseClient.CheckConnectionAsync())
-                    {
-                        uint dhp = (uint)Random.Next(0, 100);
-
-                        var usrResp = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
-
-                        if (usrResp.Successful)
-                        {
-                            var usr = usrResp.Data as SkuldUser;
-                            if (dhp < usr.HP)
-                            {
-                                usr.HP -= dhp;
-
-                                await DatabaseClient.UpdateUserAsync(usr);
-
-                                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} just stabbed {user.Mention} for {dhp} HP, they now have {usr.HP} HP left").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                            }
-                            else
-                            {
-                                usr.HP = 0;
-                                await DatabaseClient.UpdateUserAsync(usr);
-
-                                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} just stabbed {user.Mention} for {dhp} HP, they now have {usr.HP} HP left").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} stabbed {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                        return;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await ex.Message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel, null, ex);
-                    await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-STAB", ex.Message, LogSeverity.Error, ex));
-                }
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"URUSAI!! {botguild.Mention} stabs {target}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                await GetBlockedMessage(Context.User, user, "stab").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} stabs {target}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
         [Command("hug"), Summary("hugs a user")]
-        public async Task Hug([Remainder]IGuildUser user)
+        public async Task Hug([Remainder]string target = null)
         {
-            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
-            {
-                try
-                {
-                    var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
-                    var gif = await SysExClient.GetWeebActionGifAsync(GifType.Hug).ConfigureAwait(false);
+            var gif = await SysExClient.GetWeebActionGifAsync(GifType.Hug).ConfigureAwait(false);
+            var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
 
-                    if (user == Context.User as IGuildUser)
-                    {
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{botguild.Mention} hugs {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    }
-                    else
-                    {
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} just hugged {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await ex.Message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel, null, ex);
-                    await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-HUG", ex.Message, LogSeverity.Error, ex));
-                }
+            if (target == null || (MentionUtils.TryParseUser(target, out ulong userId) && userId == Context.User.Id))
+            {
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{botguild.Mention} hugs {Context.User.Mention}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                await GetBlockedMessage(Context.User, user, "hug").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} hugs {target}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
         [Command("punch"), Summary("Punch a user")]
-        public async Task Punch([Remainder]IGuildUser user)
+        public async Task Punch([Remainder]string target = null)
         {
-            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
-            {
-                try
-                {
-                    var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
-                    var gif = await SysExClient.GetWeebActionGifAsync(GifType.Punch).ConfigureAwait(false);
+            var gif = await SysExClient.GetWeebActionGifAsync(GifType.Punch).ConfigureAwait(false);
+            var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
 
-                    if (user == Context.User as IGuildUser)
-                    {
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"URUSAI!! {botguild.Mention} just punched {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    }
-                    else
-                    {
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} just punched {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await ex.Message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel, null, ex);
-                    await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-PUNCH", ex.Message, LogSeverity.Error, ex));
-                }
+            if (target == null || (MentionUtils.TryParseUser(target, out ulong userId) && userId == Context.User.Id))
+            {
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{botguild.Mention} punches {Context.User.Mention}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                await GetBlockedMessage(Context.User, user, "punch").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} punches {target}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
         [Command("shrug"), Summary("Shrugs")]
         public async Task Shrug()
         {
-            try
-            {
-                var gif = await SysExClient.GetWeebActionGifAsync(GifType.Shrug).ConfigureAwait(false);
-
-                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} shrugs.").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-            }
-            catch (Exception ex)
-            {
-                await ex.Message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel, null, ex);
-                await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-SHRUG", ex.Message, LogSeverity.Error, ex));
-            }
+            var gif = await SysExClient.GetWeebActionGifAsync(GifType.Shrug).ConfigureAwait(false);
+            await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} shrugs.").QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("adore"), Summary("Adore a user")]
-        public async Task Adore([Remainder]IGuildUser user)
+        public async Task Adore([Remainder]string target = null)
         {
-            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
-            {
-                try
-                {
-                    var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
-                    var gif = await SysExClient.GetWeebActionGifAsync(GifType.Adore).ConfigureAwait(false);
+            var gif = await SysExClient.GetWeebActionGifAsync(GifType.Adore).ConfigureAwait(false);
+            var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
 
-                    if (user == Context.User as IGuildUser)
-                    {
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"I-it's not like I like you or anything... {botguild.Mention} adores {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    }
-                    else
-                    {
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} adores {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await ex.Message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel, null, ex);
-                    await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-ADORE", ex.Message, LogSeverity.Error, ex));
-                }
+            if (target == null || (MentionUtils.TryParseUser(target, out ulong userId) && userId == Context.User.Id))
+            {
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"I-it's not like I like you or anything... {botguild.Mention} adores {Context.User.Mention}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                await GetBlockedMessage(Context.User, user, "adore").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} adores {target}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
         [Command("kiss"), Summary("Kiss a user")]
-        public async Task Kiss([Remainder]IGuildUser user)
+        public async Task Kiss([Remainder]string target = null)
         {
-            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
-            {
-                try
-                {
-                    var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
-                    var gif = await SysExClient.GetWeebActionGifAsync(GifType.Kiss).ConfigureAwait(false);
+            var gif = await SysExClient.GetWeebActionGifAsync(GifType.Kiss).ConfigureAwait(false);
+            var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
 
-                    if (user == Context.User as IGuildUser)
-                    {
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"I-it's not like I like you or anything... {botguild.Mention} just kissed {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    }
-                    else
-                    {
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} just kissed {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await ex.Message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel, null, ex);
-                    await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-KISS", ex.Message, LogSeverity.Error, ex));
-                }
+            if (target == null || (MentionUtils.TryParseUser(target, out ulong userId) && userId == Context.User.Id))
+            {
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"I-it's not like I like you or anything... {botguild.Mention} kisses {Context.User.Mention}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                await GetBlockedMessage(Context.User, user, "kiss").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} kisses {target}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
         [Command("grope"), Summary("Grope a user")]
-        public async Task Grope([Remainder]IGuildUser user)
+        public async Task Grope([Remainder]string target = null)
         {
-            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
-            {
-                try
-                {
-                    var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
-                    var gif = await SysExClient.GetWeebActionGifAsync(GifType.Grope).ConfigureAwait(false);
+            var gif = await SysExClient.GetWeebActionGifAsync(GifType.Grope).ConfigureAwait(false);
+            var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
 
-                    if (user == Context.User as IGuildUser)
-                    {
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{botguild.Mention} just groped {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    }
-                    else
-                    {
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} just groped {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await ex.Message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel, null, ex);
-                    await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-GROPE", ex.Message, LogSeverity.Error, ex));
-                }
+            if (target == null || (MentionUtils.TryParseUser(target, out ulong userId) && userId == Context.User.Id))
+            {
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{botguild.Mention} gropes {Context.User.Mention}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                await GetBlockedMessage(Context.User, user, "grope").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} gropes {target}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
         [Command("pat"), Summary("Pat a user"), Alias("pet", "headpat")]
-        public async Task Pat([Remainder]IGuildUser user)
+        public async Task Pat([Remainder]string target = null)
         {
-            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
+            var gif = await SysExClient.GetWeebActionGifAsync(GifType.Pet).ConfigureAwait(false);
+
+            if (Context.Message.MentionedUsers.Count > 0)
             {
-                try
+                using SkuldDatabaseContext Database = new SkuldDbContextFactory().CreateDbContext(null);
+                var initiator = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+
+                StringBuilder message = new StringBuilder();
+
+                var msg = target;
+
+                foreach (var usr in Context.Message.MentionedUsers)
                 {
-                    var gif = await SysExClient.GetWeebActionGifAsync(GifType.Pet).ConfigureAwait(false);
+                    if (usr.IsBot || usr.IsWebhook || usr.Discriminator == "0000")
+                        continue;
 
-                    if (user == Context.User as IGuildUser)
+                    var uzr = await Database.GetUserAsync(usr).ConfigureAwait(false);
+
+                    if (!(uzr.RecurringBlock && uzr.Patted.IsRecurring(2)))
                     {
-                        var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{botguild.Mention} just headpatted {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                        return;
-                    }
-                    if (user.IsBot)
-                    {
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} just headpatted {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                        return;
-                    }
-                    if (await DatabaseClient.CheckConnectionAsync())
-                    {
-                        var usrResp = await DatabaseClient.GetUserAsync(Context.User.Id).ConfigureAwait(false);
+                        uzr.Patted += 1;
+                        initiator.Pats += 1;
 
-                        if (usrResp.Successful)
-                        {
-                            var usr = usrResp.Data as SkuldUser;
+                        message.Append(usr.Mention + " ");
 
-                            var gusrResp = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
-                            if (gusrResp.Successful)
-                            {
-                                var gusr = gusrResp.Data as SkuldUser;
-                                if (!gusr.RecurringBlock || (!(gusr.Patted).IsRecurring(2) && gusr.RecurringBlock))
-                                {
-                                    usr.Pats += 1;
-                                    await DatabaseClient.UpdateUserAsync(usr).ConfigureAwait(false);
-
-                                    gusr.Patted += 1;
-
-                                    await DatabaseClient.UpdateUserAsync(gusr).ConfigureAwait(false);
-
-                                    await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} just headpatted {user.Mention}, they've been petted {gusr.Patted} time(s)!").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                                }
-                                else
-                                {
-                                    await EmbedUtils.EmbedImage(new Uri("https://cdn.discordapp.com/attachments/306137824023805953/552393620448215050/image0-7.jpg"), "", $"{user.Mention} doged your pet, pet someone else. (They've blocked users from petting them)").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                                }
-                            }
-                            else
-                            {
-                                await DatabaseClient.InsertUserAsync(user);
-                                gusrResp = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
-                                if (gusrResp.Successful)
-                                {
-                                    var gusr = gusrResp.Data as SkuldUser;
-                                    gusr.Patted += 1;
-                                    usr.Pats += 1;
-
-                                    await DatabaseClient.UpdateUserAsync(usr).ConfigureAwait(false);
-
-                                    await DatabaseClient.UpdateUserAsync(gusr).ConfigureAwait(false);
-
-                                    await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} just headpatted {user.Mention}, they've been petted {gusr.Patted} time(s)!").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            await DatabaseClient.InsertUserAsync(Context.User);
-                            await Pat(user);
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} just headpatted {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                        msg = msg.Replace($"<@{usr.Id}> ", "");
+                        msg = msg.Replace($"<@{usr.Id}>", "");
+                        msg = msg.Replace($"<@!{usr.Id}> ", "");
+                        msg = msg.Replace($"<@!{usr.Id}>", "");
                     }
                 }
-                catch (Exception ex)
-                {
-                    await ex.Message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel, null, ex);
-                    await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-PAT", ex.Message, LogSeverity.Error, ex));
-                }
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} pats {message} {msg}").QueueMessageAsync(Context).ConfigureAwait(false);
+
+                return;
+            }
+
+            var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
+
+            if (target == null || (MentionUtils.TryParseUser(target, out ulong userId) && userId == Context.User.Id))
+            {
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{botguild.Mention} pats {Context.User.Mention}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                await EmbedUtils.EmbedImage(new Uri("https://cdn.discordapp.com/attachments/306137824023805953/552393620448215050/image0-7.jpg"), "", GetBlockedMessage(Context.User, user, "pat")).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} pats {target}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
         [Command("glare"), Summary("Glares at a user")]
-        public async Task Glare([Remainder]IGuildUser user)
+        public async Task Glare([Remainder]string target = null)
         {
-            if (await CanPerformActionsAsync(await MessageTools.GetUserOrInsertAsync(user), Context.DBUser))
-            {
-                var gif = await SysExClient.GetWeebActionGifAsync(GifType.Glare).ConfigureAwait(false);
+            var gif = await SysExClient.GetWeebActionGifAsync(GifType.Glare).ConfigureAwait(false);
+            var botguild = Context.Guild.GetUser(Context.Client.CurrentUser.Id) as IGuildUser;
 
-                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} glares at {user.Mention}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            if (target == null || (MentionUtils.TryParseUser(target, out ulong userId) && userId == Context.User.Id))
+            {
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{botguild.Mention} glares at {Context.User.Mention}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                await GetBlockedMessage(Context.User, user, "glare").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await EmbedUtils.EmbedImage(gif.ToUri(), embeddesc: $"{Context.User.Mention} glares at {target}").QueueMessageAsync(Context).ConfigureAwait(false);
             }
-        }
-
-        private string GetBlockedMessage(IUser blocked, IUser blockee, string command)
-            => $"{blocked.Mention} the user {blockee.Mention} dodged your {command}";
-
-        public static async Task<bool> CanPerformActionsAsync(SkuldUser blocker, SkuldUser blockee)
-        {
-            var res = await blockee.IsBlockedFromPerformingActions(blocker.ID);
-
-            if (res.Successful)
-            {
-                return !Convert.ToBoolean(res.Data);
-            }
-
-            return true;
         }
     }
 }

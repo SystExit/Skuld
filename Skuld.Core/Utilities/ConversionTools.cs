@@ -1,5 +1,4 @@
-﻿using Discord;
-using System;
+﻿using System;
 
 namespace Skuld.Core.Utilities
 {

@@ -1,5 +1,5 @@
 ﻿using HtmlAgilityPack;
-using Skuld.Core;
+using Skuld.Core.Utilities;
 using System;
 using System.IO;
 using System.Net;
@@ -15,7 +15,6 @@ namespace Skuld.APIS
     {
         public BaseClient()
         {
-
         }
 
         public static string UAGENT = "Mozilla/5.0 (compatible; SkuldBot/" + Assembly.GetEntryAssembly().GetName().Version.ToString().Substring(0, 3) + "; +https://github.com/Skuldbot/Skuld/)";
@@ -42,7 +41,7 @@ namespace Skuld.APIS
             {
                 var client = CreateWebRequest(url, headers);
 
-                var resp = (HttpWebResponse)(await client.GetResponseAsync());
+                var resp = (HttpWebResponse)(await client.GetResponseAsync().ConfigureAwait(false));
                 if (resp.StatusCode == HttpStatusCode.OK)
                 {
                     var reader = new StreamReader(resp.GetResponseStream());
@@ -61,7 +60,7 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("WebHandler", ex.Message, Discord.LogSeverity.Error, ex));
+                Log.Error("WebHandler", ex.Message, ex);
                 return null;
             }
         }
@@ -104,7 +103,7 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("WebHandler", ex.Message, Discord.LogSeverity.Error, ex));
+                Log.Error("WebHandler", ex.Message, ex);
                 return null;
             }
         }

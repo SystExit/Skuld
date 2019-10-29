@@ -7,7 +7,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Skuld.Core\Skuld.Core.csproj" />
     <ProjectReference Include="..\Skuld.APIS\Skuld.APIS.csproj" />
-    <ProjectReference Include="..\Skuld.Database\Skuld.Database.csproj" />
+    <ProjectReference Include="..\Skuld.Core.Models\Skuld.Core.Models.csproj" />
   </ItemGroup>
 
   <ItemGroup>

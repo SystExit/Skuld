@@ -4,10 +4,9 @@ using Discord.Commands;
 using Skuld.APIS;
 using Skuld.APIS.NASA.Models;
 using Skuld.Core.Extensions;
-using Skuld.Core.Models;
+using Skuld.Core.Generic.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Attributes;
-using Skuld.Discord.Commands;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
 using StatsdClient;
@@ -18,7 +17,7 @@ using System.Threading.Tasks;
 namespace Skuld.Bot.Modules
 {
     [Group, RequireEnabledModule]
-    public class Space : InteractiveBase<SkuldCommandContext>
+    public class Space : InteractiveBase<ShardedCommandContext>
     {
         public NASAClient NASAClient { get; set; }
         public ISSClient ISSClient { get; set; }
@@ -43,11 +42,11 @@ namespace Skuld.Bot.Modules
                         Name = aPOD.CopyRight
                     }
                 };
-                await embed.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                await aPOD.Url.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await aPOD.Url.QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -69,7 +68,7 @@ namespace Skuld.Bot.Modules
             {
                 if (!(image.Data is RoverPhotoWrapper imgdata) || imgdata.Photos.Count() == 0)
                 {
-                    await $"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                    await $"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
                     return;
                 }
 
@@ -89,9 +88,9 @@ namespace Skuld.Bot.Modules
                     }
                 }.Build();
 
-                await embed.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await embed.QueueMessageAsync(Context).ConfigureAwait(false);
             }
-            else { await image.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel); }
+            else { await image.Error.QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false); }
         }
 
         [Command("opportunity"), Summary("Gets stuff from NASA's Opportunity Rover"), Ratelimit(20, 1, Measure.Minutes)]
@@ -112,7 +111,7 @@ namespace Skuld.Bot.Modules
             {
                 if (!(image.Data is RoverPhotoWrapper imgdata) || imgdata.Photos.Count() == 0)
                 {
-                    await $"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                    await $"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
                     return;
                 }
 
@@ -132,9 +131,9 @@ namespace Skuld.Bot.Modules
                     }
                 }.Build();
 
-                await embed.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await embed.QueueMessageAsync(Context).ConfigureAwait(false);
             }
-            else { await image.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel); }
+            else { await image.Error.QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false); }
         }
 
         [Command("spirit"), Summary("Gets stuff from NASA's Spirit Rover"), Ratelimit(20, 1, Measure.Minutes)]
@@ -149,13 +148,13 @@ namespace Skuld.Bot.Modules
                 camera = "pancam";
             }
 
-            var image = await GetRoverAsync(NasaRover.Spirit, cam, SOL);
+            var image = await GetRoverAsync(NasaRover.Spirit, cam, SOL).ConfigureAwait(false);
 
             if (image.Successful)
             {
                 if (!(image.Data is RoverPhotoWrapper imgdata) || imgdata.Photos.Count() == 0)
                 {
-                    await $"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                    await $"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
                     return;
                 }
 
@@ -175,60 +174,65 @@ namespace Skuld.Bot.Modules
                     }
                 }.Build();
 
-                await embed.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await embed.QueueMessageAsync(Context).ConfigureAwait(false);
             }
-            else { await image.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel); }
+            else { await image.Error.QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false); }
         }
 
         [Command("astronauts"), Summary("Gets a list of astronauts currently in space"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Astros()
         {
-            var astros = await ISSClient.GetAstronautsInSpace();
+            var astros = await ISSClient.GetAstronautsInSpace().ConfigureAwait(false);
 
             string msg = "Current list of astronauts in space:\n";
 
-            foreach(var astro in astros.Astronauts)
+            foreach (var astro in astros.Astronauts)
             {
                 msg += $"{astro.Name} - {astro.Craft}\n";
             }
 
-            await msg.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+            await msg.QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("iss"), Summary("Gets the current position of the International Space Station"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task ISS()
         {
-            var iss = await ISSClient.GetISSPositionAsync();
+            var iss = await ISSClient.GetISSPositionAsync().ConfigureAwait(false);
 
-            await $"The ISS is currently at:\nLAT: {iss.IISPosition.Latitude} LONG: {iss.IISPosition.Longitude}".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+            await $"The ISS is currently at:\nLAT: {iss.IISPosition.Latitude} LONG: {iss.IISPosition.Longitude}".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         private EventResult IncorrectCamera = EventResult.FromFailure("Incorrect camera for rover");
 
         private async Task<EventResult> GetRoverAsync(NasaRover rover, NasaRoverCamera camera, int SOL = 2199)
         {
-            if(rover == NasaRover.Opportunity || rover == NasaRover.Spirit)
+            if (rover == NasaRover.Opportunity || rover == NasaRover.Spirit)
             {
-                switch(camera)
+                switch (camera)
                 {
                     case NasaRoverCamera.MAST:
                         return IncorrectCamera;
+
                     case NasaRoverCamera.CHEMCAM:
                         return IncorrectCamera;
+
                     case NasaRoverCamera.MAHLI:
                         return IncorrectCamera;
+
                     case NasaRoverCamera.MARDI:
                         return IncorrectCamera;
                 }
             }
-            if(rover == NasaRover.Curiosity)
+            if (rover == NasaRover.Curiosity)
             {
-                switch(camera)
+                switch (camera)
                 {
                     case NasaRoverCamera.PANCAM:
                         return IncorrectCamera;
+
                     case NasaRoverCamera.ENTRY:
                         return IncorrectCamera;
+
                     case NasaRoverCamera.MINITES:
                         return IncorrectCamera;
                 }
@@ -236,14 +240,14 @@ namespace Skuld.Bot.Modules
 
             try
             {
-                var resp = await NASAClient.GetRoverPhotoAsync(rover, camera, SOL);
+                var resp = await NASAClient.GetRoverPhotoAsync(rover, camera, SOL).ConfigureAwait(false);
 
                 if (resp == null)
                     return EventResult.FromFailure("Error parsing JSON");
 
                 return EventResult.FromSuccess(resp);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return EventResult.FromFailureException(ex.Message, ex);
             }

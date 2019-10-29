@@ -2,19 +2,18 @@
 using Discord.Commands;
 using Skuld.Core.Extensions;
 using Skuld.Core.Utilities;
-using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace Skuld.Discord.Utilities
 {
-    public class DiscordUtilities
+    public static class DiscordUtilities
     {
-        public const double PHI = 1.618;
-
         public static Regex UserMentionRegex = new Regex("<@.?[0-9]*?>");
         public static Regex RoleMentionRegex = new Regex("<&[0-9]*?>");
         public static Regex ChannelMentionRegex = new Regex("<#[0-9]*?>");
+
+        public static GuildPermissions ModeratorPermissions = new GuildPermissions(268443650);
 
         public static string Level1ServerBoost = "server/level1.svg";
         public static string Level2ServerBoost = "server/level2.svg";
@@ -72,7 +71,7 @@ namespace Skuld.Discord.Utilities
 
         public static string GetSummary(IReadOnlyList<CommandMatch> Variants)
         {
-            if(Variants != null)
+            if (Variants != null)
             {
                 if (Variants.Count > 0)
                 {
@@ -124,10 +123,5 @@ namespace Skuld.Discord.Utilities
 
             return null;
         }
-
-        public static GuildPermissions ModeratorPermissions = new GuildPermissions(268443650);
-
-        public static ulong GetXPLevelRequirement(ulong level, double growthmod)
-            => (ulong)((level * 50) * (level * growthmod));
     }
 }

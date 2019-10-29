@@ -2,7 +2,7 @@
 using Newtonsoft.Json.Linq;
 using Skuld.APIS.Utilities;
 using Skuld.APIS.WebComics.XKCD.Models;
-using Skuld.Core;
+using Skuld.Core.Utilities;
 using System;
 using System.Threading.Tasks;
 
@@ -66,7 +66,7 @@ namespace Skuld.APIS.WebComics.XKCD
             }
             else
             {
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("XKCDClient", "Ratelimited", Discord.LogSeverity.Error));
+                Log.Error("XKCDClient", "Ratelimited");
                 return null;
             }
         }

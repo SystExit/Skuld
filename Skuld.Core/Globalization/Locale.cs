@@ -1,5 +1,4 @@
-﻿using Skuld.Core.Models;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Resources;
 using System.Threading.Tasks;
@@ -16,7 +15,6 @@ namespace Skuld.Core.Globalization
 
         public Locale()
         {
-
         }
 
         public async Task InitialiseLocalesAsync()
@@ -33,7 +31,7 @@ namespace Skuld.Core.Globalization
             locales.Add("tr-TR", tr_TR.ResourceManager);
             localehumannames.Add("Turkish (Turkey)", "tr-TR");
 
-            await GenericLogger.AddToLogsAsync(new LogMessage("LocaleInit", "Initialized all the languages", Discord.LogSeverity.Info));
+            //await GenericLogger.AddToLogsAsync(new LogMessage("LocaleInit", "Initialized all the languages", Discord.LogSeverity.Info));
         }
 
         public ResourceManager GetLocale(string id)

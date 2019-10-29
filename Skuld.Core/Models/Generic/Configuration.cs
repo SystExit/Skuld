@@ -1,11 +1,10 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using Discor = Discord;
 
-namespace Skuld.Core.Models
+namespace Skuld.Core.Generic.Models
 {
     public class SkuldConfig
     {
@@ -191,6 +190,7 @@ namespace Skuld.Core.Models
         public string DiscordGGKey { get; set; }
         public string SysExToken { get; set; }
         public string B4DToken { get; set; }
+        public bool IsDev { get; set; }
 
         public BotListingAPI()
         {
@@ -198,6 +198,7 @@ namespace Skuld.Core.Models
             DiscordGGKey = "";
             SysExToken = "";
             B4DToken = "";
+            IsDev = true;
         }
     }
 }

@@ -1,24 +1,22 @@
-﻿using Discord;
-using Discord.WebSocket;
+﻿using Discord.WebSocket;
 using Fleck;
 using Newtonsoft.Json;
-using Skuld.Core;
-using Skuld.Core.Models;
-using Skuld.Core.Utilities.Stats;
-using Skuld.Bot.Models;
 using Skuld.Bot.Models.Services.WebSocket;
+using Skuld.Core.Generic.Models;
+using Skuld.Core.Utilities;
+using Skuld.Core.Utilities.Stats;
 using Skuld.Discord.Services;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace Skuld.Bot.Services
 {
-    public class WebSocketService
+    public class WebSocketService : IDisposable
     {
-        public DiscordShardedClient Client { get => BotService.DiscordClient; }
+        public DiscordShardedClient Client => BotService.DiscordClient;
         private readonly WebSocketServer _server;
 
         public WebSocketService(SkuldConfig configuration)
@@ -26,19 +24,14 @@ namespace Skuld.Bot.Services
             _server = new WebSocketServer($"{(configuration.WebSocket.Secure ? "wss" : "ws")}://{configuration.WebSocket.Host}:{configuration.WebSocket.Port}");
             _server.Start(x =>
             {
-                x.OnMessage = async (message) => await HandleMessageAsync(x, message);
+                x.OnMessage = async (message) => await HandleMessageAsync(x, message).ConfigureAwait(false);
             });
-            GenericLogger.AddToLogsAsync(new Core.Models.LogMessage
-            {
-                Source = "WebSocketService - Ctr",
-                Message = "New WebSocketServer started on: "+_server.Location,
-                TimeStamp = DateTime.UtcNow,
-                Severity = LogSeverity.Info
-            }).GetAwaiter().GetResult();
+
+            Log.Info("WebSocketService - Ctr", "New WebSocketServer started on: " + _server.Location);
         }
 
         public void ShutdownServer()
-            => _server.Dispose();
+            => Dispose();
 
         public async Task HandleMessageAsync(IWebSocketConnection conn, string message)
         {
@@ -63,11 +56,11 @@ namespace Skuld.Bot.Services
 
                     var cnv = JsonConvert.SerializeObject(res);
 
-                    await conn.Send(cnv);
+                    await conn.Send(cnv).ConfigureAwait(false);
                 }
                 else
                 {
-                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("User not found")));
+                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("User not found"))).ConfigureAwait(false);
                 }
             }
             if (message.StartsWith("guild:"))
@@ -88,11 +81,11 @@ namespace Skuld.Bot.Services
 
                     var cnv = JsonConvert.SerializeObject(res);
 
-                    await conn.Send(cnv);
+                    await conn.Send(cnv).ConfigureAwait(false);
                 }
                 else
                 {
-                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found")));
+                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found"))).ConfigureAwait(false);
                 }
             }
             if (message.StartsWith("roles:"))
@@ -104,7 +97,7 @@ namespace Skuld.Bot.Services
                 {
                     List<WebSocketSnowFlake> snowflakes = new List<WebSocketSnowFlake>();
 
-                    foreach(var role in gld.Roles)
+                    foreach (var role in gld.Roles)
                     {
                         snowflakes.Add(new WebSocketSnowFlake
                         {
@@ -124,11 +117,11 @@ namespace Skuld.Bot.Services
 
                     var cnv = JsonConvert.SerializeObject(res);
 
-                    await conn.Send(cnv);
+                    await conn.Send(cnv).ConfigureAwait(false);
                 }
                 else
                 {
-                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found")));
+                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found"))).ConfigureAwait(false);
                 }
             }
             if (message.StartsWith("tchannels:"))
@@ -160,11 +153,11 @@ namespace Skuld.Bot.Services
 
                     var cnv = JsonConvert.SerializeObject(res);
 
-                    await conn.Send(cnv);
+                    await conn.Send(cnv).ConfigureAwait(false);
                 }
                 else
                 {
-                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found")));
+                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found"))).ConfigureAwait(false);
                 }
             }
             if (message.StartsWith("cchannels:"))
@@ -196,11 +189,11 @@ namespace Skuld.Bot.Services
 
                     var cnv = JsonConvert.SerializeObject(res);
 
-                    await conn.Send(cnv);
+                    await conn.Send(cnv).ConfigureAwait(false);
                 }
                 else
                 {
-                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found")));
+                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found"))).ConfigureAwait(false);
                 }
             }
             if (message.StartsWith("vchannels:"))
@@ -232,24 +225,23 @@ namespace Skuld.Bot.Services
 
                     var cnv = JsonConvert.SerializeObject(res);
 
-                    await conn.Send(cnv);
+                    await conn.Send(cnv).ConfigureAwait(false);
                 }
                 else
                 {
-                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found")));
+                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found"))).ConfigureAwait(false);
                 }
             }
             if (message.ToLower() == "stats" || message.ToLower() == "status")
             {
-                var mem = "";
-
+                string mem;
                 if (HardwareStats.Memory.GetMBUsage > 1024)
                     mem = HardwareStats.Memory.GetGBUsage + "GB";
                 else
                     mem = HardwareStats.Memory.GetMBUsage + "MB";
 
                 var rawjson = $"{{\"Skuld\":\"{SoftwareStats.Skuld.Key.Version.ToString()}\"," +
-                    $"\"Uptime\":\"{string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}\"," +
+                    $"\"Uptime\":\"{$"{DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime):dd}d {DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime):hh}:{DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime):mm}"}\"," +
                     $"\"Ping\":{Client.Latency}," +
                     $"\"Guilds\":{Client.Guilds.Count}," +
                     $"\"Users\":{BotService.Users}," +
@@ -257,8 +249,13 @@ namespace Skuld.Bot.Services
                     $"\"Commands\":{BotService.CommandService.Commands.Count()}," +
                     $"\"MemoryUsed\":\"{mem}\"}}";
 
-                await conn.Send(JsonConvert.SerializeObject(rawjson));
+                await conn.Send(JsonConvert.SerializeObject(rawjson)).ConfigureAwait(false);
             }
+        }
+
+        public void Dispose()
+        {
+            _server.Dispose();
         }
     }
 }

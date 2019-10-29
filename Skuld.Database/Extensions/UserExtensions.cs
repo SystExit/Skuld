@@ -1,7 +1,6 @@
 ﻿using Discord;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
-using Skuld.Core.Models.Skuld;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -57,56 +56,6 @@ namespace Skuld.Database.Extensions
 
         public static async Task<bool> DoDailyAsync(this SkuldUser user, SkuldConfig config, SkuldUser sender = null)
         {
-            if (sender == null)
-            {
-                if (user.Daily != 0)
-                {
-                    if (user.Daily < DateTime.UtcNow.Date.ToEpoch())
-                    {
-                        user.Daily = DateTime.UtcNow.ToEpoch();
-                        user.Money += config.Preferences.DailyAmount;
-                        await DatabaseClient.UpdateUserAsync(user);
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-                else
-                {
-                    user.Daily = DateTime.UtcNow.ToEpoch();
-                    user.Money += config.Preferences.DailyAmount;
-                    await DatabaseClient.UpdateUserAsync(user);
-                    return true;
-                }
-            }
-            else
-            {
-                if (sender.Daily != 0)
-                {
-                    if (sender.Daily < DateTime.UtcNow.Date.ToEpoch())
-                    {
-                        sender.Daily = DateTime.UtcNow.ToEpoch();
-                        user.Money += config.Preferences.DailyAmount;
-                        await DatabaseClient.UpdateUserAsync(sender);
-                        await DatabaseClient.UpdateUserAsync(user);
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-                else
-                {
-                    sender.Daily = DateTime.UtcNow.ToEpoch();
-                    user.Money += config.Preferences.DailyAmount;
-                    await DatabaseClient.UpdateUserAsync(sender);
-                    await DatabaseClient.UpdateUserAsync(user);
-                    return true;
-                }
-            }
         }
 
         public static async Task<Rank> GetGlobalRankAsync(this SkuldUser user)

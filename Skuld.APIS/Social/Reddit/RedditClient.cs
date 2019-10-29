@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Skuld.APIS.Social.Reddit.Models;
 using Skuld.APIS.Utilities;
-using Skuld.Core;
+using Skuld.Core.Utilities;
 using System;
 using System.Threading.Tasks;
 
@@ -25,12 +25,12 @@ namespace Skuld.APIS.Social.Reddit
             {
                 if (rateLimiter.IsRatelimited()) return null;
 
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("RedditGet", $"Attempting to access {subRedditName} for {amountOfPosts} posts", Discord.LogSeverity.Info));
+                Log.Verbose("RedditGet", $"Attempting to access {subRedditName} for {amountOfPosts} posts");
                 var uri = new Uri("https://www.reddit.com/" + subRedditName + "/.json?limit=" + amountOfPosts);
                 var response = await ReturnStringAsync(uri);
                 if (!string.IsNullOrEmpty(response) || !string.IsNullOrWhiteSpace(response))
                 {
-                    await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("RedditGet", "I got a response from " + subRedditName, Discord.LogSeverity.Verbose));
+                    Log.Verbose("RedditGet", "I got a response from " + subRedditName);
                     return JsonConvert.DeserializeObject<SubReddit>(response);
                 }
                 else
@@ -40,7 +40,7 @@ namespace Skuld.APIS.Social.Reddit
             }
             catch (Exception ex)
             {
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("RedditGet", ex.Message, Discord.LogSeverity.Error, ex));
+                Log.Error("RedditGet", ex.Message, ex);
                 return null;
             }
         }

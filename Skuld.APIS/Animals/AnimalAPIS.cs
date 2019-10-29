@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Skuld.APIS.Animals.Models;
 using Skuld.APIS.Utilities;
-using Skuld.Core;
+using Skuld.Core.Utilities;
 using System;
 using System.Net;
 using System.Threading.Tasks;
@@ -48,11 +48,11 @@ namespace Skuld.APIS
         {
             if (birdrateLimiter.IsRatelimited()) return null;
 
-            var rawresp = await ReturnStringAsync(BIRDAPI);
+            var rawresp = await ReturnStringAsync(BIRDAPI).ConfigureAwait(false);
             dynamic data = JsonConvert.DeserializeObject(rawresp);
             var birb = data["file"];
             if (birb == null) return null;
-            return "https://random.birb.pw/img/"+birb;
+            return "https://random.birb.pw/img/" + birb;
         }
 
         private async Task<string> GetKittyAsync()
@@ -61,7 +61,7 @@ namespace Skuld.APIS
             {
                 if (cat1rateLimiter.IsRatelimited()) return null;
 
-                var rawresp = await ReturnStringAsync(KITTYAPI);
+                var rawresp = await ReturnStringAsync(KITTYAPI).ConfigureAwait(false);
                 dynamic item = JsonConvert.DeserializeObject(rawresp);
                 var img = item["file"];
                 if (img == null) return "https://i.ytimg.com/vi/29AcbY5ahGo/hqdefault.jpg";
@@ -69,7 +69,7 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("RandomCat", ex.Message, Discord.LogSeverity.Error, ex));
+                Log.Error("RandomCat", ex.Message, ex);
                 try
                 {
                     if (cat2rateLimiter.IsRatelimited()) return null;
@@ -77,7 +77,7 @@ namespace Skuld.APIS
                     var webcli = (HttpWebRequest)WebRequest.Create(KITTYAPI2);
                     webcli.Headers.Add(HttpRequestHeader.UserAgent, UAGENT);
                     webcli.AllowAutoRedirect = true;
-                    WebResponse resp = await webcli.GetResponseAsync();
+                    WebResponse resp = await webcli.GetResponseAsync().ConfigureAwait(false);
                     if (resp != null)
                     {
                         if (resp.ResponseUri != null) return resp.ResponseUri.OriginalString;
@@ -87,7 +87,7 @@ namespace Skuld.APIS
                 }
                 catch (Exception ex2)
                 {
-                    await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("RandomCat", ex2.Message, Discord.LogSeverity.Error, ex2));
+                    Log.Error("RandomCat", ex2.Message, ex2);
                     return "https://i.ytimg.com/vi/29AcbY5ahGo/hqdefault.jpg";
                 }
             }
@@ -99,13 +99,13 @@ namespace Skuld.APIS
             {
                 if (dograteLimiter.IsRatelimited()) return null;
 
-                var resp = await ReturnStringAsync(DOGGOAPI);
+                var resp = await ReturnStringAsync(DOGGOAPI).ConfigureAwait(false);
                 if (resp == null) return "https://i.imgur.com/ZSMi3Zt.jpg";
                 return "https://random.dog/" + resp;
             }
             catch (Exception ex)
             {
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("RandomDog", ex.Message, Discord.LogSeverity.Error, ex));
+                Log.Error("RandomDog", ex.Message, ex);
                 return "https://i.imgur.com/ZSMi3Zt.jpg";
             }
         }

@@ -1,12 +1,10 @@
 ﻿using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
-using Skuld.Core;
+using Skuld.Bot.Services;
+using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
-using Skuld.Core.Models.Skuld;
 using Skuld.Core.Utilities;
-using Skuld.Database;
-using Skuld.Discord.Commands;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Handlers;
 using Skuld.Discord.Utilities;
@@ -19,19 +17,21 @@ using System.Threading.Tasks;
 namespace Skuld.Bot.Commands
 {
     [Group]
-    public class Core : InteractiveBase<SkuldCommandContext>
+    public class Core : InteractiveBase<ShardedCommandContext>
     {
-        public SkuldConfig Configuration { get; set; }
+        public SkuldConfig Configuration { get => HostSerivce.Configuration; }
         private CommandService CommandService { get => MessageHandler.CommandService; }
 
         [Command("help"), Summary("Gets all commands or a specific command's information")]
         public async Task Help([Remainder]string command = null)
         {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
             try
             {
                 if (command == null)
                 {
-                    string prefix = (Context.DBGuild != null ? Context.DBGuild.Prefix : Configuration.Discord.Prefix);
+                    string prefix = (await Database.GetGuildAsync(Context.Guild) != null ? (await Database.GetGuildAsync(Context.Guild)).Prefix : Configuration.Discord.Prefix);
 
                     string title = $"Commands of: {Context.Client.CurrentUser} that can be invoked in: ";
 
@@ -79,16 +79,15 @@ namespace Skuld.Bot.Commands
                         }
                     }
 
-                    if(Context.DBGuild != null)
+                    if (await Database.GetGuildAsync(Context.Guild) != null)
                     {
-                        var allCommandsResp = await DatabaseClient.GetAllCustomCommandsAsync(Context.Guild.Id);
-                        if (allCommandsResp.Successful)
+                        var commands = Database.CustomCommands.Where(x => x.GuildId == Context.Guild.Id);
+                        if (commands.Count() > 0)
                         {
-                            var commands = allCommandsResp.Data as IReadOnlyList<CustomCommand>;
                             string commandsText = "";
                             foreach (var cmd in commands)
                             {
-                                commandsText += $"{cmd.CommandName}, ";
+                                commandsText += $"{cmd.Name}, ";
                             }
                             commandsText = commandsText.Substring(0, commandsText.Length - 2);
                             embed.AddField("Custom Commands", $"`{commandsText}`");
@@ -97,25 +96,25 @@ namespace Skuld.Bot.Commands
 
                     var dmchan = await Context.User.GetOrCreateDMChannelAsync();
 
-                    await embed.Build().QueueMessage(Discord.Models.MessageType.DMS, Context.User, Context.Channel);
+                    await embed.Build().QueueMessageAsync(Context, Discord.Models.MessageType.DMS).ConfigureAwait(false);
                 }
                 else
                 {
                     var cmd = DiscordUtilities.GetCommandHelp(CommandService, Context, command);
                     if (cmd == null)
                     {
-                        await $"Sorry, I couldn't find a command like **{command}**.".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                        await $"Sorry, I couldn't find a command like **{command}**.".QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                     else
                     {
-                        await cmd.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                        await cmd.QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                 }
             }
             catch (Exception ex)
             {
-                await ex.Message.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel, null, ex);
-                await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-HELP", ex.Message, LogSeverity.Error, ex));
+                await ex.Message.QueueMessageAsync(Context, Discord.Models.MessageType.Failed, null, ex).ConfigureAwait(false);
+                Log.Error("CMD-HELP", ex.Message, ex);
             }
         }
     }

@@ -1,7 +1,8 @@
 ﻿using Discord;
-using Skuld.Core.Models.Skuld;
+using Skuld.Core.Models;
 using SysEx.Net.Models;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Skuld.Bot.Extensions
@@ -29,18 +30,18 @@ namespace Skuld.Bot.Extensions
             return pages;
         }
 
-        public static IList<string> Paginate(this IReadOnlyList<IAmRole> roles, SkuldGuild sguild, IGuild guild)
+        public static IList<string> Paginate(this IReadOnlyList<IAmRole> roles, Guild sguild, IGuild guild)
         {
             var pages = new List<string>();
 
             var s = new StringBuilder();
 
-            for (int x = 0; x < roles.Count; x++)
+            for (int x = 0; x < roles.Count(); x++)
             {
-                var rol = roles[x];
+                var rol = roles.ElementAt(x);
                 var role = guild.GetRole(rol.RoleId);
 
-                var sl = new StringBuilder($"{x+1}. {role.Name} | ");
+                var sl = new StringBuilder($"{x + 1}. {role.Name} | ");
 
                 if (rol.Price != 0)
                 {
@@ -57,7 +58,7 @@ namespace Skuld.Bot.Extensions
 
                 s.Append(sl.ToString().Substring(0, sl.Length - 3));
 
-                if ((x + 1) % 10 == 0 || (x + 1) == roles.Count)
+                if ((x + 1) % 10 == 0 || (x + 1) == roles.Count())
                 {
                     pages.Add(s.ToString());
                     s.Clear();

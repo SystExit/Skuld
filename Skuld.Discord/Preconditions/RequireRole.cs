@@ -1,7 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
-using Skuld.Core.Models;
-using Skuld.Core.Models.Discord;
+using Skuld.Core.Generic.Models;
+using Skuld.Discord.Models;
 using Skuld.Discord.Services;
 using System;
 using System.Linq;

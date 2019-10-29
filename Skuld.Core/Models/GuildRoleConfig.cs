@@ -2,7 +2,7 @@
 using Discord.Commands;
 using System.Linq;
 
-namespace Skuld.Core.Models
+namespace Skuld.Core.Generic.Models
 {
     public class GuildRoleConfig
     {
@@ -63,13 +63,13 @@ namespace Skuld.Core.Models
 
                     int firstIndex = 0;
                     int lastIndex = 0;
-                    for(var x = 0; x < inputsplit.Count(); x++)
+                    for (var x = 0; x < inputsplit.Count(); x++)
                     {
-                        if(inputsplit[x] == first)
+                        if (inputsplit[x] == first)
                         {
                             firstIndex = x;
                         }
-                        if(inputsplit[x] == last)
+                        if (inputsplit[x] == last)
                         {
                             lastIndex = x;
                         }
@@ -81,7 +81,7 @@ namespace Skuld.Core.Models
                 IRole role = null;
                 bool gottenRole = true;
 
-                if(MentionUtils.TryParseRole(roleraw, out ulong roleID))
+                if (MentionUtils.TryParseRole(roleraw, out ulong roleID))
                 {
                     role = context.Guild.GetRole(roleID);
                 }
@@ -104,7 +104,7 @@ namespace Skuld.Core.Models
                     role = context.Guild.Roles.FirstOrDefault(x => x.Name.ToLowerInvariant() == roleraw.ToLowerInvariant());
                 }
 
-                if(role != null)
+                if (role != null)
                 {
                     roleConfig.RequiredRole = role;
                 }
@@ -118,7 +118,7 @@ namespace Skuld.Core.Models
                 roleConfig.RequiredRole = null;
             }
 
-             return true;
+            return true;
         }
     }
 }

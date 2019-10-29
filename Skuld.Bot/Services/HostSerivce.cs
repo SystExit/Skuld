@@ -2,18 +2,16 @@
 using Booru.Net;
 using Discord;
 using Discord.Addons.Interactive;
-using DiscordNetCommands = Discord.Commands;
 using Discord.WebSocket;
 using Imgur.API.Authentication.Impl;
 using IqdbApi;
 using Microsoft.Extensions.DependencyInjection;
 using Octokit;
 using Skuld.APIS;
-using Skuld.Core;
+using Skuld.Core.Generic.Models;
 using Skuld.Core.Globalization;
-using Skuld.Core.Models;
+using Skuld.Core.Utilities;
 using Skuld.Core.Utilities.Stats;
-using Skuld.Database;
 using Skuld.Discord;
 using Skuld.Discord.Handlers;
 using Skuld.Discord.Services;
@@ -26,6 +24,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Voltaic;
 using YoutubeExplode;
+using DiscordNetCommands = Discord.Commands;
 
 namespace Skuld.Bot.Services
 {
@@ -34,7 +33,6 @@ namespace Skuld.Bot.Services
         public static SkuldConfig Configuration;
         public static WebSocketService WebSocket;
         public static IServiceProvider Services;
-        private static string logfile;
 
         public async Task CreateAsync()
         {
@@ -42,46 +40,58 @@ namespace Skuld.Bot.Services
             {
                 EnsureConfigExists();
                 Configuration = SkuldConfig.Load();
-                logfile = Path.Combine(AppContext.BaseDirectory, "logs", DateTime.Now.ToString("dd-MM-yyyy") + ".log");
 
-                GenericLogger.Configure(Configuration, true, true, logfile);
+                BotService.ConfigureBot(new DiscordSocketConfig
+                {
+                    LogLevel = LogSeverity.Debug,
+                    GuildSubscriptions = false,
+                    RateLimitPrecision = RateLimitPrecision.Millisecond,
+                    UseSystemClock = true,
+                    TotalShards = Configuration.Discord.Shards,
+                    LargeThreshold = 250,
+                    AlwaysDownloadUsers = false,
+                    ExclusiveBulkDelete = true,
+                    MessageCacheSize = 1000
+                });
+
+                await InstallServicesAsync().ConfigureAwait(false);
 
                 InitializeStaticClients();
 
-                await InstallServicesAsync();
+                await InitializeServicesAsync().ConfigureAwait(false);
 
-                await InitializeServicesAsync();
+                Log.Info("Framework", "Loaded Skuld v" + SoftwareStats.Skuld.Key.Version);
 
-                BotService.AddBotLister(Services.GetRequiredService<BotListingClient>());
+                var result = await MessageHandler.ConfigureCommandServiceAsync(
+                    new DiscordNetCommands.CommandServiceConfig
+                    {
+                        CaseSensitiveCommands = false,
+                        DefaultRunMode = DiscordNetCommands.RunMode.Async,
+                        LogLevel = LogSeverity.Verbose
+                    }, 
+                    new MessageServiceConfig
+                    {
+                        Prefix = Configuration.Discord.Prefix,
+                        AltPrefix = Configuration.Discord.AltPrefix,
+                        ArgPos = 0
+                    },
+                    Configuration,
+                    Assembly.GetExecutingAssembly(),
+                    Services
+                ).ConfigureAwait(false);
 
-                BotService.AddServices(Services);
-
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("Framework", "Loaded Skuld v" + SoftwareStats.Skuld.Key.Version, LogSeverity.Info));
-
-                var result = await MessageHandler.ConfigureCommandServiceAsync(new DiscordNetCommands.CommandServiceConfig
+                if (!result.Successful)
                 {
-                    CaseSensitiveCommands = false,
-                    DefaultRunMode = DiscordNetCommands.RunMode.Async,
-                    LogLevel = LogSeverity.Verbose
-                }, new MessageServiceConfig
-                {
-                    Prefix = Configuration.Discord.Prefix,
-                    AltPrefix = Configuration.Discord.AltPrefix,
-                    ArgPos = 0
-                }, Configuration, Assembly.GetExecutingAssembly(), Services);
-
-                if(!result.Successful)
-                {
-                    await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("CmdServ-Configure", result.Error, LogSeverity.Critical, result.Exception));
+                    Log.Critical("CmdServ-Configure", result.Error, result.Exception);
                 }
                 else
                 {
-                    await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("CmdServ-Configure", "Configured Command Service", LogSeverity.Info));
+                    Log.Info("CmdServ-Configure", "Configured Command Service");
                 }
 
-                await BotService.DiscordClient.LoginAsync(TokenType.Bot, Configuration.Discord.Token);
+                await BotService.DiscordClient.LoginAsync(TokenType.Bot, Configuration.Discord.Token).ConfigureAwait(false);
 
-                await BotService.DiscordClient.StartAsync();
+                await BotService.DiscordClient.StartAsync().ConfigureAwait(false);
 
                 WebSocket = new WebSocketService(Configuration);
 
@@ -89,17 +99,17 @@ namespace Skuld.Bot.Services
 
                 MessageQueue.Run();
 
-                await Task.Delay(-1);
+                await Task.Delay(-1).ConfigureAwait(false);
 
                 WebSocket.ShutdownServer();
 
                 Environment.Exit(0);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine(ex);
                 Console.ReadLine();
-                Environment.Exit(13);
+                Environment.Exit(0);
             }
         }
 
@@ -122,61 +132,57 @@ namespace Skuld.Bot.Services
             }
 
             APIS.SearchClient.Configure(Configuration);
-
-            DatabaseClient.Initialize(Configuration);
         }
 
         private static async Task InstallServicesAsync()
         {
             try
             {
+                var random = new Random();
                 var locale = new Locale();
-                await locale.InitialiseLocalesAsync();
+                await locale.InitialiseLocalesAsync().ConfigureAwait(false);
 
-                //var weebprovider = new WeebClient("Skuld", Assembly.GetEntryAssembly().GetName().Version.ToString());
-
-                Services = new ServiceCollection()
-                    .AddSingleton<BaseClient>()
-                    .AddSingleton(Configuration)
+                var sc = new ServiceCollection()
+                    .AddSingleton(random)
                     .AddSingleton(locale)
+                    .AddSingleton(BotService.DiscordClient)
                     .AddSingleton(new InteractiveService(BotService.DiscordClient, TimeSpan.FromSeconds(60)))
-                    .AddSingleton<YoutubeClient>()
                     .AddSingleton(new ImgurClient(Configuration.APIS.ImgurClientID, Configuration.APIS.ImgurClientSecret))
-                    .AddSingleton<Random>()
-                    .AddSingleton<SysExClient>()
-                    .AddSingleton<AnimalClient>()
-                    .AddSingleton<BooruClient>()
-                    .AddSingleton<SteamStore>()
-                    .AddSingleton<AnimalClient>()
-                    .AddSingleton<GiphyClient>()
+                    .AddSingleton(new ISSClient())
+                    .AddSingleton(new SocialAPIS())
+                    .AddSingleton(new SteamStore())
+                    .AddSingleton(new BaseClient())
+                    .AddSingleton(new IqdbClient())
+                    .AddSingleton(new BooruClient())
+                    .AddSingleton(new GiphyClient())
+                    .AddSingleton(new YNWTFClient())
+                    .AddSingleton(new SysExClient())
+                    .AddSingleton(new AnimalClient())
+                    .AddSingleton(new YoutubeClient())
+                    .AddSingleton(new NekosLifeClient())
+                    .AddSingleton(new WikipediaClient())
+                    .AddSingleton(new UrbanDictionaryClient())
+                    .AddSingleton(new WebComicClients(random))
                     .AddSingleton(new NASAClient(Configuration.APIS.NASAApiKey))
-                    .AddSingleton<NekosLifeClient>()
-                    .AddSingleton<SocialAPIS>()
-                    .AddSingleton(new Stands4Client(Configuration.APIS.STANDSUid, Configuration.APIS.STANDSToken))
-                    .AddSingleton<StrawPollClient>()
-                    .AddSingleton<UrbanDictionaryClient>()
-                    .AddSingleton<WebComicClients>()
-                    .AddSingleton<WikipediaClient>()
-                    .AddSingleton<YNWTFClient>()
-                    .AddSingleton<ISSClient>()
-                    .AddSingleton<IqdbClient>()
                     .AddSingleton(new BotListingClient(BotService.DiscordClient))
                     .AddSingleton(new GitHubClient(new ProductHeaderValue("Skuld")))
-                    .BuildServiceProvider();
+                    .AddSingleton(new Stands4Client(Configuration.APIS.STANDSUid, Configuration.APIS.STANDSToken));
 
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("Framework", "Successfully built service provider", LogSeverity.Info));
+                Services = sc.BuildServiceProvider();
+
+                Log.Debug("Framework", $"{sc.Count}");
+
+                Log.Info("Framework", "Successfully built service provider");
             }
             catch (Exception ex)
             {
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("Framework", ex.Message, LogSeverity.Critical, ex));
+                Log.Critical("Framework", ex.Message, ex);
             }
         }
 
         private static async Task InitializeServicesAsync()
         {
             ConfigureStatsCollector();
-
-            await DatabaseClient.CheckConnectionAsync();
         }
 
         private void EnsureConfigExists()
@@ -190,7 +196,6 @@ namespace Skuld.Bot.Services
                     Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs"));
 
                 string loc = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "configuration.json");
-                logfile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs") + "/" + String.Format("{0:dd-MM-yyyy}", DateTime.Now.Date) + ".log";
 
                 if (!File.Exists(loc))
                 {

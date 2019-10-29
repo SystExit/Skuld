@@ -2,15 +2,14 @@
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using ImageMagick;
+using Microsoft.EntityFrameworkCore.Internal;
 using Skuld.APIS;
+using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
+using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
-using Skuld.Core.Models.Skuld;
 using Skuld.Core.Utilities;
-using Skuld.Database;
-using Skuld.Database.Extensions;
-using Skuld.Discord.Commands;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
 using Skuld.Discord.Utilities;
@@ -22,97 +21,56 @@ using System.Threading.Tasks;
 namespace Skuld.Bot.Commands
 {
     [Group, RequireEnabledModule, RequireDatabase]
-    public class Profiles : InteractiveBase<SkuldCommandContext>
+    public class Profiles : InteractiveBase<ShardedCommandContext>
     {
-        public SkuldConfig Configuration { get; set; }
+        public SkuldConfig Configuration { get => HostSerivce.Configuration; }
         public BaseClient WebHandler { get; set; }
 
         [Command("money"), Summary("Gets a user's money")]
         public async Task Money([Remainder]IGuildUser user = null)
         {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await DiscordTools.NoBotsString.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                await DiscordTools.NoBotsString.QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
                 return;
             }
-            try
-            {
-                var skuser = Context.DBUser;
 
-                if (user != null)
-                {
-                    var resp = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
-                    if (resp.Successful)
-                        skuser = resp.Data as SkuldUser;
-                    else
-                    {
-                        await DatabaseClient.InsertUserAsync(user);
-                        await Money(user);
-                    }
-                }
+            if (user == null)
+                user = (IGuildUser)Context.User;
 
-                if (user == null)
-                {
-                    await $"You have: {Context.DBGuild.MoneyIcon}{skuser.Money.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                }
-                else
-                {
-                    await $"{user.Mention} has {Context.DBGuild.MoneyIcon}{skuser.Money.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                }
-            }
-            catch (Exception ex)
-            {
-                await ex.Message.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel, null, ex);
-                await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-MONEY", ex.Message, LogSeverity.Error, ex));
-            }
+            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+            var dbusr = await Database.GetUserAsync(user).ConfigureAwait(false);
+
+            await $"{user.Mention} has {gld.MoneyIcon}{dbusr.Money.ToString("N0")}".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("profile"), Summary("Get a users profile")]
         public async Task Profile([Remainder]IGuildUser user = null)
         {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await DiscordTools.NoBotsString.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                await DiscordTools.NoBotsString.QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
                 return;
             }
 
             if (user == null)
-            {
                 user = Context.User as IGuildUser;
-            }
 
-            if (await DatabaseClient.CheckConnectionAsync())
-            {
-                var resp = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
-                if (!resp.Successful)
-                {
-                    await DatabaseClient.InsertUserAsync(user);
-                    await Profile(user);
-                    return;
-                }
-            }
+            var profileuser = await Database.GetUserAsync(user).ConfigureAwait(false);
 
-            SkuldUser profileuser;
-
-            if (Context.User.Id == user.Id)
-            {
-                profileuser = Context.DBUser;
-            }
-            else
-            {
-                var res = await DatabaseClient.GetUserAsync(user.Id);
-                profileuser = res.Data as SkuldUser;
-            }
-
-            var imagickCache = Path.Combine(AppContext.BaseDirectory, "storage/imagickCache/");
-            var folder = Path.Combine(AppContext.BaseDirectory, "storage/profiles/");
-            var fontsFolder = Path.Combine(AppContext.BaseDirectory, "storage/fonts/");
+            var imagickCache = SkuldAppContext.IMagickCache;
+            var folder = SkuldAppContext.ProfileDirectory;
+            var fontsFolder = SkuldAppContext.FontDirectory;
             var fontFile = Path.Combine(fontsFolder, "NotoSans-Regular.ttf");
 
             if (!Directory.Exists(fontsFolder))
             {
                 Directory.CreateDirectory(fontsFolder);
-                await WebHandler.DownloadFileAsync(new Uri("https://static.skuldbot.uk/fonts/NotoSans-Regular.ttf"), fontFile);
+                await WebHandler.DownloadFileAsync(new Uri("https://static.skuldbot.uk/fonts/NotoSans-Regular.ttf"), fontFile).ConfigureAwait(false);
             }
 
             if (!Directory.Exists(imagickCache))
@@ -131,29 +89,31 @@ namespace Skuld.Bot.Commands
 
             var imageBackgroundFolder = Path.Combine(AppContext.BaseDirectory, "storage/backgroundCache/");
 
-            var imageBackgroundFile = Path.Combine(imageBackgroundFolder, profileuser.ID + "_background.png");
+            var imageBackgroundFile = Path.Combine(imageBackgroundFolder, profileuser.Id + "_background.png");
 
             if (!Directory.Exists(imageBackgroundFolder))
             {
                 Directory.CreateDirectory(imageBackgroundFolder);
             }
 
-            if (!profileuser.Background.StartsWith('#') && !(profileuser.Background == ""))
+            if (!string.IsNullOrEmpty(profileuser.Background))
             {
-                await WebHandler.DownloadFileAsync(new Uri(profileuser.Background), imageBackgroundFile);
+                if (!profileuser.Background.StartsWith('#'))
+                {
+                    await WebHandler.DownloadFileAsync(new Uri(profileuser.Background), imageBackgroundFile).ConfigureAwait(false);
+                }
             }
 
             using (MagickImage image = new MagickImage(new MagickColor("#212121"), 600, 510))
             {
                 image.Format = MagickFormat.Png;
-
-                if (profileuser.Background.StartsWith('#'))
-                {
-                    image.Draw(new DrawableFillColor(new MagickColor(profileuser.Background)), new DrawableRectangle(0, 0, 600, 228));
-                }
-                else if (profileuser.Background == "")
+                if (string.IsNullOrEmpty(profileuser.Background))
                 {
                     image.Draw(new DrawableFillColor(new MagickColor("#3F51B5")), new DrawableRectangle(0, 0, 600, 228));
+                }
+                else if (profileuser.Background.StartsWith('#'))
+                {
+                    image.Draw(new DrawableFillColor(new MagickColor(profileuser.Background)), new DrawableRectangle(0, 0, 600, 228));
                 }
                 else
                 {
@@ -176,7 +136,7 @@ namespace Skuld.Bot.Commands
                     Directory.CreateDirectory(avatarLocation);
                 }
 
-                await WebHandler.DownloadFileAsync(new Uri(avatar), avatarFile);
+                await WebHandler.DownloadFileAsync(new Uri(avatar), avatarFile).ConfigureAwait(false);
 
                 using (MagickImage profileBackground = new MagickImage(avatarFile, 128, 128))
                 {
@@ -203,7 +163,7 @@ namespace Skuld.Bot.Commands
                         profileBackground.Composite(statusBackground, 96, 96, CompositeOperator.Over);
                     }
 
-                    if(Context.Client.GetUser(user.Id).MutualGuilds.Any(x=>x.GetUser(user.Id).PremiumSince.HasValue))
+                    if (Context.Client.GetUser(user.Id).MutualGuilds.Any(x => x.GetUser(user.Id).PremiumSince.HasValue))
                     {
                         var prem = Context.Client.GetUser(user.Id).MutualGuilds.FirstOrDefault(x => x.GetUser(user.Id).PremiumSince.HasValue).GetUser(user.Id).PremiumSince;
 
@@ -230,7 +190,7 @@ namespace Skuld.Bot.Commands
                         img3.Alpha(AlphaOption.Set);
                         img3.ColorFuzz = new Percentage(10);
                         img3.FloodFill(MagickColors.None, 1, 1);
-                        
+
                         img3.Resize(48, 48);
 
                         profileBackground.Composite(img3, -4, 90, CompositeOperator.Over);
@@ -244,15 +204,15 @@ namespace Skuld.Bot.Commands
                 var fontsize = new DrawableFontPointSize(20);
                 var white = new DrawableFillColor(new MagickColor(65535, 65535, 65535));
 
-                var experience = await profileuser.GetUserExperienceAsync();
+                var experiences = Database.UserXp.Where(x => x.UserId == profileuser.Id);
 
-                GuildExperience totalExperience = new GuildExperience();
+                var exp = new UserExperience();
 
-                foreach (var exp in experience.GuildExperiences)
+                foreach (var experience in experiences)
                 {
-                    totalExperience.XP += exp.XP;
-                    totalExperience.TotalXP += exp.TotalXP;
-                    totalExperience.Level += exp.Level;
+                    exp.TotalXP += experience.TotalXP;
+                    exp.XP += experience.XP;
+                    exp.Level += exp.Level;
                 }
 
                 int ylevel1 = 365, ylevel2 = 405, ylevel3 = 445;
@@ -261,7 +221,7 @@ namespace Skuld.Bot.Commands
                 image.Draw(new DrawableFillColor(new MagickColor(0, 0, 0, 52428)), new DrawableRectangle(0, 188, 600, 228));
 
                 //Rep
-                using (MagickImage label = new MagickImage($"label:{profileuser.Reputation.Count()} Rep", new MagickReadSettings
+                using (MagickImage label = new MagickImage($"label:{Database.Reputations.Count(x => x.Repee == profileuser.Id)} Rep", new MagickReadSettings
                 {
                     BackgroundColor = MagickColors.Transparent,
                     FillColor = MagickColors.White,
@@ -276,7 +236,7 @@ namespace Skuld.Bot.Commands
                 }
 
                 //Money
-                using (MagickImage label2 = new MagickImage($"label:{Context.DBGuild.MoneyIcon}{profileuser.Money.ToString("N0")}", new MagickReadSettings
+                using (MagickImage label2 = new MagickImage($"label:{(await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{profileuser.Money.ToString("N0")}", new MagickReadSettings
                 {
                     BackgroundColor = MagickColors.Transparent,
                     FillColor = MagickColors.White,
@@ -305,7 +265,7 @@ namespace Skuld.Bot.Commands
                 }
 
                 //Title
-                if(profileuser.Title != "")
+                if (!string.IsNullOrEmpty(profileuser.Title))
                 {
                     using MagickImage label4 = new MagickImage($"label:{profileuser.Title}", new MagickReadSettings
                     {
@@ -317,42 +277,42 @@ namespace Skuld.Bot.Commands
                         Font = fontFile
                     });
                     image.Composite(label4, 0, 270, CompositeOperator.Over);
-
-                    label4.Dispose();
                 }
 
                 //YLevel 1
-                var dailyText = $"Daily: {profileuser.Daily.FromEpoch().ToString("yyyy/MM/dd HH:mm:ss")}";
+                var dailyText = $"Daily: {profileuser.LastDaily.FromEpoch().ToString("yyyy/MM/dd HH:mm:ss")}";
                 var dmetr = image.FontTypeMetrics(dailyText, true);
                 var rightPos = 600 - (dmetr.TextWidth * 2);
 
-                var rank = await profileuser.GetGlobalRankAsync();
+                var rankraw = Database.GetOrderedGlobalExperienceLeaderboard();
 
-                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: {rank.Position}/{rank.Total}"));
+                (ulong, ulong) rank = ((ulong)rankraw.IndexOf(rankraw.FirstOrDefault(x => x.UserId == profileuser.Id)) + 1, (ulong)rankraw.Count());
+
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: {rank.Item1}/{rank.Item2}"));
                 image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel1, dailyText));
 
                 //YLevel 2
-                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel2, $"Pasta Karma: {(await profileuser.GetPastaKarmaAsync()).ToString("N0")}"));
-                var favcommand = profileuser.GetFavouriteCommand();
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel2, $"Pasta Karma: {Database.GetPastaKarma(profileuser.Id).ToString("N0")}"));
+                var favcommand = Database.UserCommandUsage.Where(x => x.UserId == profileuser.Id).OrderByDescending(x => x.Usage).FirstOrDefault();
                 image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel2, $"Fav. Cmd: {(favcommand == null ? "N/A" : favcommand.Command)} ({(favcommand == null ? "0" : favcommand.Usage.ToString("N0"))})"));
 
                 //YLevel 3
-                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {totalExperience.Level} ({totalExperience.TotalXP.ToString("N0")})"));
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level} ({exp.TotalXP.ToString("N0")})"));
                 image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: {profileuser.Pats.ToString("N0")}/Patted: {profileuser.Patted.ToString("N0")}"));
 
-                ulong xpToNextLevel = DiscordUtilities.GetXPLevelRequirement(totalExperience.Level + 1, DiscordUtilities.PHI);
+                ulong xpToNextLevel = DiscordTools.GetXPLevelRequirement(exp.Level + 1, DiscordTools.PHI);
 
                 //Progressbar
                 image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, 471, 580, 500));
                 image.Draw(new DrawableFillColor(new MagickColor("#dfdfdf")), new DrawableRectangle(22, 473, 578, 498));
 
-                var percentage = (double)totalExperience.XP / xpToNextLevel * 100;
+                var percentage = (double)exp.XP / xpToNextLevel * 100;
                 var mapped = percentage.Remap(0, 100, 22, 578);
 
                 image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, 473, mapped, 498));
 
                 //Current XP
-                image.Draw(font, fontsize, encoding, new DrawableText(25, 493, (totalExperience.XP).ToString("N0") + "XP"));
+                image.Draw(font, fontsize, encoding, new DrawableText(25, 493, (exp.XP).ToString("N0") + "XP"));
 
                 //XP To Next
                 using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToString("N0")}XP", new MagickReadSettings
@@ -370,46 +330,11 @@ namespace Skuld.Bot.Commands
                 }
 
                 image.Write(imageLocation);
+
+                image.Dispose();
             }
 
-            await "".QueueMessage(Discord.Models.MessageType.File, Context.User, Context.Channel, imageLocation);
-        }
-
-        [Command("profile-ext"), Summary("Get a users extended profile")]
-        public async Task ExtProfile([Remainder]IGuildUser user = null)
-        {
-            if (user != null && (user.IsBot || user.IsWebhook))
-            {
-                await DiscordTools.NoBotsString.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                return;
-            }
-            try
-            {
-                var skuser = Context.DBUser;
-
-                if (user != null)
-                {
-                    var resp = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
-                    if (resp.Successful)
-                    {
-                        skuser = resp.Data as SkuldUser;
-                    }
-                    else
-                    {
-                        await DatabaseClient.InsertUserAsync(user);
-                        await ExtProfile(user);
-                    }
-                }
-
-                var embed = await skuser.GetExtendedProfileAsync(user ?? (IGuildUser)Context.User, Context.DBGuild);
-
-                await embed.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-            }
-            catch (Exception ex)
-            {
-                await ex.Message.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel, null, ex);
-                await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-PROFILEEXT", ex.Message, LogSeverity.Error, ex));
-            }
+            await "".QueueMessageAsync(Context, Discord.Models.MessageType.File, imageLocation).ConfigureAwait(false);
         }
 
         [Command("daily"), Summary("Daily Money")]
@@ -417,113 +342,83 @@ namespace Skuld.Bot.Commands
         {
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await DiscordTools.NoBotsString.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                await DiscordTools.NoBotsString.QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
                 return;
             }
-            try
+
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+
+            if (user == null)
+                user = (IGuildUser)Context.User;
+
+            bool isSelf = false;
+
+            if (user.Id == Context.User.Id)
+                isSelf = true;
+
+            var self = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var target = await Database.GetUserAsync(user).ConfigureAwait(false);
+
+            if (self.LastDaily == 0)
             {
-                var context = await DatabaseClient.GetUserAsync(Context.User.Id);
-                if (user == null)
+                self.LastDaily = DateTime.UtcNow.ToEpoch();
+                target.Money += Configuration.Preferences.DailyAmount;
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await $"You {(!isSelf ? $"just gave {user.Mention}" : "just got")} your daily of {gld.MoneyIcon}{Configuration.Preferences.DailyAmount}".QueueMessageAsync(Context).ConfigureAwait(false);
+
+                return;
+            }
+            else
+            {
+                if (self.LastDaily < DateTime.UtcNow.Date.ToEpoch())
                 {
-                    if (context.Data is SkuldUser)
-                    {
-                        var resp = await ((SkuldUser)context.Data).DoDailyAsync(Configuration);
+                    self.LastDaily = DateTime.UtcNow.ToEpoch();
+                    target.Money += Configuration.Preferences.DailyAmount;
+                    await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                        context = await DatabaseClient.GetUserAsync(Context.User.Id);
+                    await $"You {(!isSelf ? $"just gave {user.Mention}" : "just got")} your daily of {gld.MoneyIcon}{Configuration.Preferences.DailyAmount}".QueueMessageAsync(Context).ConfigureAwait(false);
 
-                        if (resp)
-                        {
-                            await $"You got your daily of: `{Context.DBGuild.MoneyIcon + Configuration.Preferences.DailyAmount}`, you now have: {Context.DBGuild.MoneyIcon}{((SkuldUser)context.Data).Money.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                        }
-                        else
-                        {
-                            var remain = new TimeSpan((DateTime.UtcNow.AddDays(1).Date.ToEpoch() - DateTime.UtcNow.ToEpoch()).FromEpoch().Ticks);
-                            string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
-                            await $"You must wait `{remaining}`".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                        }
-                    }
+                    return;
                 }
                 else
                 {
-                    var suser = await DatabaseClient.GetUserAsync(user.Id);
-                    if (suser.Data is SkuldUser)
-                    {
-                        var resp = await ((SkuldUser)suser.Data).DoDailyAsync(Configuration, (SkuldUser)context.Data);
-                        suser = await DatabaseClient.GetUserAsync(user.Id);
-                        if (resp)
-                        {
-                            await $"You just gave {user.Mention} your daily of: `{Context.DBGuild.MoneyIcon + Configuration.Preferences.DailyAmount}`, they now have: {Context.DBGuild.MoneyIcon}{((SkuldUser)suser.Data).Money.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                        }
-                        else
-                        {
-                            var remain = new TimeSpan((DateTime.UtcNow.AddDays(1).Date.ToEpoch() - DateTime.UtcNow.ToEpoch()).FromEpoch().Ticks);
-                            string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
-                            await $"You must wait `{remaining}`".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                        }
-                    }
+                    TimeSpan remain = TimeSpan.FromTicks((DateTime.Today.AddDays(1).ToEpoch() - DateTime.UtcNow.ToEpoch()).FromEpoch().Ticks);
+                    string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
+                    await $"You must wait `{remaining}`".QueueMessageAsync(Context).ConfigureAwait(false);
                 }
-            }
-            catch (Exception ex)
-            {
-                await ex.Message.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel, null, ex);
-                await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-DAILY", ex.Message, LogSeverity.Error, ex));
             }
         }
 
         [Command("give"), Summary("Give your money to people")]
         public async Task Give(IGuildUser user, ulong amount)
         {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await DiscordTools.NoBotsString.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                await DiscordTools.NoBotsString.QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
                 return;
             }
-            try
+
+            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+
+            if (usr.Money - amount > 0)
             {
-                var skuserResp = await DatabaseClient.GetUserAsync(Context.User.Id).ConfigureAwait(false);
-                SkuldUser skuser = null;
-                if(skuserResp.Data is SkuldUser)
-                {
-                    skuser = skuserResp.Data as SkuldUser;
-                    if (skuser.Money < amount)
-                    {
-                        await "You can't give more money than you have".QueueMessage(Discord.Models.MessageType.Mention, Context.User, Context.Channel);
-                        return;
-                    }
-                }
-                else
-                {
-                    await "Error parsing user information".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                }
+                var usr2 = await Database.GetUserAsync(user).ConfigureAwait(false);
 
-                var skuser2resp = await DatabaseClient.GetUserAsync(user.Id);
-                if(skuser2resp.Data is SkuldUser)
-                {
-                    var skuser2 = skuser2resp.Data as SkuldUser;
-                    skuser.Money -= amount;
-                    skuser2.Money += amount;
+                usr.Money -= amount;
+                usr2.Money += amount;
 
-                    var res1 = await DatabaseClient.UpdateUserAsync(skuser);
-                    var res2 = await DatabaseClient.UpdateUserAsync(skuser2);
+                await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                    if (res1.Successful && res2.Successful)
-                    {
-                        await $"You just gave {user.Mention} {Context.DBGuild.MoneyIcon}{amount.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Mention, Context.User, Context.Channel);
-                    }
-                    else
-                    {
-                        await "Updating Unsuccessful".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                    }
-                }
-                else
-                {
-                    await "Error parsing user information".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                }
+                await $"{Context.User.Mention} just gave {user.Mention} {(await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{amount.ToString("N0")}"
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            else
             {
-                await ex.Message.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel, null, ex);
-                await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-GIVE", ex.Message, LogSeverity.Error, ex));
+                await $"{Context.User.Mention} you can't give more than you have".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
             }
         }
 
@@ -531,15 +426,22 @@ namespace Skuld.Bot.Commands
         [Alias("exp")]
         public async Task Level(IGuildUser user = null)
         {
-            if (!Context.DBGuild.Features.Experience)
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            if (user == null)
+                user = (IGuildUser)Context.User;
+
+            var usr = await Database.GetUserAsync(user).ConfigureAwait(false);
+
+            if (!Database.Features.FirstOrDefault(x => x.Id == Context.Guild.Id).Experience)
             {
-                await "Module `Experience` is disabled for this guild, ask an administrator to enable it using: `sk!guild-feature experience 1`".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                await "Module `Experience` is disabled for this guild, ask an administrator to enable it using: `sk!guild-feature experience 1`".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
                 return;
             }
 
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await DiscordTools.NoBotsString.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                await DiscordTools.NoBotsString.QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false); ;
                 return;
             }
 
@@ -548,70 +450,47 @@ namespace Skuld.Bot.Commands
                 user = Context.User as IGuildUser;
             }
 
-            if (await DatabaseClient.CheckConnectionAsync())
-            {
-                var resp = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
-                if (!resp.Successful)
-                {
-                    await DatabaseClient.InsertUserAsync(user);
-                    await Profile(user);
-                    return;
-                }
-            }
-
-            SkuldUser profileuser;
-
-            if (Context.User.Id == user.Id)
-                profileuser = Context.DBUser;
-            else
-            {
-                var res = await DatabaseClient.GetUserAsync(user.Id);
-                profileuser = res.Data as SkuldUser;
-            }
-
-            var imagickCache = Path.Combine(AppContext.BaseDirectory, "/storage/imagickCache/");
             var folder = Path.Combine(AppContext.BaseDirectory, "/storage/exp/");
-            var fontsFolder = Path.Combine(AppContext.BaseDirectory, "/storage/fonts/");
-            var fontFile = Path.Combine(fontsFolder, "NotoSans-Regular.ttf");
+            var fontFile = Path.Combine(SkuldAppContext.FontDirectory, "NotoSans-Regular.ttf");
 
-            if (!Directory.Exists(fontsFolder))
+            if (!Directory.Exists(SkuldAppContext.FontDirectory))
             {
-                Directory.CreateDirectory(fontsFolder);
-                await WebHandler.DownloadFileAsync(new Uri("https://static.skuldbot.uk/fonts/NotoSans-Regular.ttf"), fontFile);
+                Directory.CreateDirectory(SkuldAppContext.FontDirectory);
+                await WebHandler.DownloadFileAsync(new Uri("https://static.skuldbot.uk/fonts/NotoSans-Regular.ttf"), fontFile).ConfigureAwait(false);
             }
 
-            if (!Directory.Exists(imagickCache))
-                Directory.CreateDirectory(imagickCache);
+            if (!Directory.Exists(SkuldAppContext.IMagickCache))
+                Directory.CreateDirectory(SkuldAppContext.IMagickCache);
 
             if (!Directory.Exists(folder))
                 Directory.CreateDirectory(folder);
 
-            MagickAnyCPU.CacheDirectory = imagickCache;
+            MagickAnyCPU.CacheDirectory = SkuldAppContext.IMagickCache;
 
             var imageLocation = folder + user.Id + ".png";
 
             var imageBackgroundFolder = Path.Combine(AppContext.BaseDirectory, "/storage/backgroundCache/");
 
-            var imageBackgroundFile = Path.Combine(imageBackgroundFolder, profileuser.ID + "_background.png");
+            var imageBackgroundFile = Path.Combine(imageBackgroundFolder, usr.Id + "_background.png");
 
             if (!Directory.Exists(imageBackgroundFolder))
                 Directory.CreateDirectory(imageBackgroundFolder);
 
-            if (!profileuser.Background.StartsWith('#') && !(profileuser.Background == ""))
+            if (!usr.Background.StartsWith('#') && !string.IsNullOrEmpty(usr.Background))
             {
-                await WebHandler.DownloadFileAsync(new Uri(profileuser.Background), imageBackgroundFile);
+                await WebHandler.DownloadFileAsync(new Uri(usr.Background), imageBackgroundFile).ConfigureAwait(false);
             }
 
-            using (MagickImage image = new MagickImage(new MagickColor("#212121"), 750, 300))
+            using (var image = new MagickImage(new MagickColor("#212121"), 750, 300))
             {
                 image.Format = MagickFormat.Png;
 
-                if (profileuser.Background.StartsWith('#'))
+                if (usr.Background.StartsWith('#'))
                 {
-                    var col = profileuser.Background.FromHex();
+                    var col = usr.Background.FromHex();
                     image.Draw(new DrawableFillColor(new MagickColor(col.R, col.G, col.B)), new DrawableRectangle(0, 0, 750, 300));
                 }
-                else if (profileuser.Background == "")
+                else if (string.IsNullOrEmpty(usr.Background))
                 {
                     image.Draw(new DrawableFillColor(new MagickColor("#3F51B5")), new DrawableRectangle(0, 0, 750, 300));
                 }
@@ -639,7 +518,7 @@ namespace Skuld.Bot.Commands
                     Directory.CreateDirectory(avatarLocation);
                 }
 
-                await WebHandler.DownloadFileAsync(new Uri(avatar), avatarFile);
+                await WebHandler.DownloadFileAsync(new Uri(avatar), avatarFile).ConfigureAwait(false);
 
                 using (MagickImage profileBackground = new MagickImage(avatarFile, 128, 128))
                 {
@@ -675,10 +554,19 @@ namespace Skuld.Bot.Commands
                 var fontmedd = new DrawableFontPointSize(26);
                 var white = new DrawableFillColor(new MagickColor(65535, 65535, 65535));
 
-                var userExperience = await profileuser.GetUserExperienceAsync();
-                var guildExperience = userExperience.GetGuildExperience(Context.Guild.Id);
+                var experiences = Database.UserXp.Where(x => x.GuildId == Context.Guild.Id);
 
-                var guildRank = await profileuser.GetGuildRankAsync(Context.Guild);
+                ulong index = 0;
+
+                foreach (var x in experiences)
+                {
+                    if (x.UserId == usr.Id)
+                        break;
+                    else
+                        index++;
+                }
+
+                var xp = experiences.FirstOrDefault(x => x.UserId == usr.Id);
 
                 //Username
                 using (MagickImage label3 = new MagickImage($"label:{user.FullName()}", new MagickReadSettings
@@ -694,24 +582,24 @@ namespace Skuld.Bot.Commands
                     image.Composite(label3, 220, 80, CompositeOperator.Over);
                 }
 
-                image.Draw(font, fontmed, encoding, white, new DrawableText(220, 170, $"Rank {guildRank.Position}/{guildRank.Total}"));
-                image.Draw(font, fontmed, encoding, white, new DrawableText(220, 210, $"Level: {guildExperience.Level} ({guildExperience.TotalXP.ToString("N0")})"));
+                image.Draw(font, fontmed, encoding, white, new DrawableText(220, 170, $"Rank {index + 1}/{experiences.Count()}"));
+                image.Draw(font, fontmed, encoding, white, new DrawableText(220, 210, $"Level: {xp.Level} ({xp.TotalXP.ToString("N0")})"));
 
-                ulong xpToNextLevel = DiscordUtilities.GetXPLevelRequirement(guildExperience.Level + 1, DiscordUtilities.PHI);
+                ulong xpToNextLevel = DiscordTools.GetXPLevelRequirement(xp.Level + 1, DiscordTools.PHI);
 
                 int innerHeight = 256;
 
                 //Progressbar
-                image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, innerHeight-2, 730, 280));
+                image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, innerHeight - 2, 730, 280));
                 image.Draw(new DrawableFillColor(new MagickColor("#dfdfdf")), new DrawableRectangle(22, innerHeight, 728, 278));
 
-                var percentage = (double)guildExperience.XP / xpToNextLevel * 100;
+                var percentage = (double)xp.XP / xpToNextLevel * 100;
                 var mapped = percentage.Remap(0, 100, 22, 728);
 
                 image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, innerHeight, mapped, 278));
 
                 //Current XP
-                image.Draw(font, fontmedd, encoding, new DrawableText(25, 275, (guildExperience.XP).ToString("N0") + "XP"));
+                image.Draw(font, fontmedd, encoding, new DrawableText(25, 275, (xp.XP).ToString("N0") + "XP"));
 
                 //XP To Next
                 using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToString("N0")}XP", new MagickReadSettings
@@ -731,30 +619,17 @@ namespace Skuld.Bot.Commands
                 image.Write(imageLocation);
             }
 
-            await "".QueueMessage(Discord.Models.MessageType.File, Context.User, Context.Channel, imageLocation);
+            await "".QueueMessageAsync(Context, Discord.Models.MessageType.File, imageLocation).ConfigureAwait(false);
         }
 
         [Command("heal"), Summary("Shows you how much you can heal by")]
         public async Task HealAmount()
         {
-            try
-            {
-                if(Context.DBUser != null)
-                {
-                    var amnt = Math.Round(Math.Ceiling(Context.DBUser.Money * 0.8));
-                    await $"You can heal for: `{Math.Floor(amnt)}`HP".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                }
-                else
-                {
-                    await DatabaseClient.InsertUserAsync(Context.User);
-                    await HealAmount();
-                }
-            }
-            catch (Exception ex)
-            {
-                await ex.Message.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel, null, ex);
-                await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-HEAL", ex.Message, LogSeverity.Error, ex));
-            }
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+
+            var amnt = Math.Round(Math.Ceiling(usr.Money * 0.8));
+            await $"You can heal for: `{Math.Floor(amnt)}`HP".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("heal"), Summary("Heal yourself or others here")]
@@ -762,87 +637,55 @@ namespace Skuld.Bot.Commands
         {
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await DiscordTools.NoBotsString.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                await DiscordTools.NoBotsString.QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
                 return;
             }
 
             if (user == null)
+                user = (IGuildUser)Context.User;
+
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var target = await Database.GetUserAsync(user).ConfigureAwait(false);
+
+            string pref = $"{(user == (IGuildUser)Context.User ? "You" : "They")}";
+
+            if (target.HP == 10000)
             {
-                var contextDB = Context.DBUser;
-                if (contextDB.HP == 10000)
-                {
-                    await "You're already at max health".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    return;
-                }
-                var amount = GetCostOfHP(hp);
-                if (contextDB.Money < amount)
-                {
-                    await "You don't have enough money for this action".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    return;
-                }
-                if (hp > (10000 - contextDB.HP))
-                {
-                    await ("You only need to heal by: " + (10000 - contextDB.HP)).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    return;
-                }
+                await $"{pref}'re already at max health".QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+            var amount = GetCostOfHP(hp);
+            if (usr.Money < amount)
+            {
+                await "You don't have enough money for this action".QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+            if (hp > (10000 - target.HP))
+            {
+                await ($"{pref} only need to heal by: " + (10000 - target.HP)).QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
 
-                contextDB.Money -= amount;
-                contextDB.HP += hp;
+            target.HP += (int)hp;
+            usr.Money -= amount;
 
-                if (contextDB.HP > 10000)
-                {
-                    contextDB.HP = 10000;
-                }
+            if (usr.HP > 10000)
+                usr.HP = 10000;
 
-                await DatabaseClient.UpdateUserAsync(contextDB);
+            await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                await $"You have healed your HP by {hp} for {Context.DBGuild.MoneyIcon}{amount.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            if (pref[^1] == 'y')
+            {
+                pref = "Their";
             }
             else
             {
-                var d = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
-                if (!d.Successful)
-                {
-                    await DatabaseClient.InsertUserAsync(user);
-                    await Heal(hp, user);
-                    return;
-                }
-                else
-                {
-                    var contextDB = Context.DBUser;
-                    var userDB = d.Data as SkuldUser;
-
-                    if (userDB.HP == 10000)
-                    {
-                        await "They're already at max health".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                        return;
-                    }
-                    var amount = GetCostOfHP(hp);
-                    if (contextDB.Money < amount)
-                    {
-                        await "You don't have enough money for this action".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                        return;
-                    }
-                    if (hp > (10000 - userDB.HP))
-                    {
-                        await ("You only need to heal them by: " + (10000 - userDB.HP)).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                        return;
-                    }
-
-                    contextDB.Money -= amount;
-                    userDB.HP += hp;
-
-                    if (userDB.HP > 10000)
-                    {
-                        userDB.HP = 10000;
-                    }
-
-                    await DatabaseClient.UpdateUserAsync(contextDB);
-                    await DatabaseClient.UpdateUserAsync(userDB);
-
-                    await $"You have healed {user.Mention}'s HP by {hp} for {Context.DBGuild.MoneyIcon}{amount.ToString("N0")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                }
+                pref += "r";
             }
+
+            await $"You have healed {pref} HP by {hp} for {gld.MoneyIcon}{amount.ToString("N0")}".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("rep"), Summary("Gives someone rep or checks your rep")]
@@ -850,53 +693,51 @@ namespace Skuld.Bot.Commands
         {
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await DiscordTools.NoBotsString.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                await DiscordTools.NoBotsString.QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
                 return;
             }
-            if (user == null)
-            {
-                if (Context.DBUser.Reputation.Count() > 0)
-                {
-                    var descending = Context.DBUser.Reputation.OrderByDescending(x => x.Timestamp);
-                    var mostRecent = descending.FirstOrDefault();
-                    await $"Your repuation is at: {Context.DBUser.Reputation.Count()}rep\nYour most recent rep was by {Context.Client.GetUser(mostRecent.Reper).FullName()} at {mostRecent.Timestamp.FromEpoch()}"
-                        .QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                }
-                else
-                {
-                    await "You have no reputation".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                }
-                return;
-            }
-            else
-            {
-                if(user.Id == Context.User.Id)
-                {
-                    await "Cannot give yourself rep".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                    return;
-                }
 
-                var dbUser = await DatabaseClient.GetUserAsync(user.Id);
-                if(dbUser.Successful && dbUser.Data is SkuldUser)
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            if ((user != null && user.Id == Context.User.Id) || user == null)
+            {
+                var count = Database.Reputations.Count(x => x.Repee == Context.User.Id);
+
+                if (count > 0)
                 {
-                    var data = dbUser.Data as SkuldUser;
-                    if(data.Reputation.Where(x=>x.Reper == Context.User.Id).Count() == 0)
-                    {
-                        await data.AddReputationAsync(Context.User.Id);
-                        await $"You gave rep to {user.Mention}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    }
-                    else
-                    {
-                        await "You have already given this person a reputation point.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                    }
+                    var ordered = Database.Reputations.OrderByDescending(x => x.Timestamp);
+                    var mostRecent = ordered.FirstOrDefault(x => x.Repee == Context.User.Id);
+
+                    await $"Your repuation is at: {count}rep\nYour most recent rep was by {Context.Client.GetUser(mostRecent.Reper).FullName()} at {mostRecent.Timestamp.FromEpoch()}"
+                        .QueueMessageAsync(Context).ConfigureAwait(false);
                 }
                 else
                 {
-                    await DatabaseClient.InsertUserAsync(user);
-                    await GiveRep(user);
-                    return;
+                    await "You have no reputation".QueueMessageAsync(Context).ConfigureAwait(false);
                 }
+                return;
             }
+
+            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var repee = await Database.GetUserAsync(user).ConfigureAwait(false);
+
+            if (Database.Reputations.Any(x => x.Repee == repee.Id && x.Reper == Context.User.Id))
+            {
+                await "You have already given this person a reputation point.".QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+
+            Database.Reputations.Add(new Reputation
+            {
+                Repee = repee.Id,
+                Reper = usr.Id,
+                Timestamp = DateTime.UtcNow.ToEpoch()
+            });
+
+            await Database.SaveChangesAsync().ConfigureAwait(false);
+
+            await $"You gave rep to {user.Mention}".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("unrep"), Summary("Removes a rep")]
@@ -904,34 +745,32 @@ namespace Skuld.Bot.Commands
         {
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await DiscordTools.NoBotsString.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                await DiscordTools.NoBotsString.QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
                 return;
             }
 
-            if (user.Id == Context.User.Id)
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            if ((user != null && user.Id == Context.User.Id) || user == null)
             {
-                await "Cannot remove rep from yourself".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                await "You can't modify your own reputation".QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
-            var dbUser = await DatabaseClient.GetUserAsync(user.Id);
-            if (dbUser.Successful && dbUser.Data is SkuldUser)
+            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+
+            if (Database.Reputations.Any(x => x.Repee == user.Id && x.Reper == Context.User.Id))
             {
-                var data = dbUser.Data as SkuldUser;
-                if (data.Reputation.Where(x => x.Reper == Context.User.Id).Count() != 0)
-                {
-                    await data.RemoveReputationAsync(Context.User.Id);
-                    await $"You removed your rep to {user.Mention}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                }
-                else
-                {
-                    await $"You haven't given {user.Mention} a reputation point.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                }
+                Database.Reputations.Remove(Database.Reputations.FirstOrDefault(x => x.Reper == usr.Id && x.Repee == user.Id));
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await $"You gave rep to {user.Mention}".QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
             }
-            else
-            {
-                await dbUser.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-            }
+
+            await "You haven't given this person a reputation point.".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         private ulong GetCostOfHP(uint hp)
@@ -939,226 +778,152 @@ namespace Skuld.Bot.Commands
     }
 
     [Group, Name("Accounts"), RequireDatabase]
-    public class Account : InteractiveBase<SkuldCommandContext>
+    public class Account : InteractiveBase<ShardedCommandContext>
     {
-        public SkuldConfig Configuration { get; set; }
+        public SkuldConfig Configuration { get => HostSerivce.Configuration; }
 
-        [Command("set-title"), Summary("Sets Title")]
-        public async Task SetTitle([Remainder]string title)
+        [Command("title"), Summary("Sets Title")]
+        public async Task SetTitle([Remainder]string title = null)
         {
-            try
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+
+            if (title == null)
             {
-                var userResp = await DatabaseClient.GetUserAsync(Context.User.Id).ConfigureAwait(false);
-                var user = userResp.Data as SkuldUser;
+                usr.Title = "";
 
-                user.Title = title;
+                await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                var result = await DatabaseClient.UpdateUserAsync(user);
-                if (result.Successful)
-                {
-                    await $"Successfully set your title to **{title}**".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                }
-                else
-                {
-                    await "Couldn't Parse User Information".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-
-                    await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("Accounts", result.Error, LogSeverity.Error, result.Exception));
-                }
+                await "Successfully cleared your title.".QueueMessageAsync(Context).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            else
             {
-                await ex.Message.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel, null, ex);
-                await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-SDESC", ex.Message, LogSeverity.Error, ex));
-            }
-        }
+                usr.Title = title;
 
-        [Command("clear-title"), Summary("Clears Title")]
-        public async Task ClearTitle()
-        {
-            try
-            {
-                var userResp = await DatabaseClient.GetUserAsync(Context.User.Id);
-                var user = userResp.Data as SkuldUser;
+                await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                user.Title = "";
-
-                var result = await DatabaseClient.UpdateUserAsync(user);
-                if (result.Successful)
-                {
-                    await "Successfully cleared your title.".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                }
-                else
-                {
-                    await "Couldn't Parse User Information".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-
-                    await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("Accounts", result.Error, LogSeverity.Error, result.Exception));
-                }
-            }
-            catch (Exception ex)
-            {
-                await ex.Message.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel, null, ex);
-                await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-CDESC", ex.Message, LogSeverity.Error, ex));
+                await $"Successfully set your title to **{title}**".QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
         [Command("recurring-block"), Summary("Blocks people from patting you on recurring digits")]
         public async Task BlockRecurring(bool action)
         {
-            Context.DBUser.RecurringBlock = action;
-            var res = await DatabaseClient.UpdateUserAsync(Context.DBUser);
-            if(res.Successful)
-            {
-                await $"Set RecurringBlock to: {action}".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
-            }
-            else
-            {
-                await res.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-            }
-        }
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-        [Command("action-block"), Summary("Blocks people from performing actions on you")]
-        public async Task BlockActions([Remainder]IUser user)
-        {
-            var res = await Context.DBUser.IsBlockedFromPerformingActions(user.Id);
-            var user2 = await MessageTools.GetUserOrInsertAsync(user);
-            if (res.Successful)
-            {
-                if (!(bool)res.Data)
-                {
-                    var res2 = await user2.BlockUserActionsAsync(Context.User.Id);
-                    if (res.Successful)
-                    {
-                        await $"Blocked {user.FullName()} from performing actions on you".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
-                    }
-                    else
-                    {
-                        await res2.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                    }
-                }
-                else
-                {
-                    var res2 = await user2.UnblockUserActionsAsync(Context.User.Id);
-                    if (res.Successful)
-                    {
-                        await $"Unblocked {user.FullName()} from performing actions on you".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
-                    }
-                    else
-                    {
-                        await res2.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                    }
-                }
-            }
+            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+
+            usr.RecurringBlock = action;
+
+            await Database.SaveChangesAsync().ConfigureAwait(false);
+
+            await $"Set RecurringBlock to: {action}".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
         }
 
         [Command("set-hexbg"), Summary("Sets your background to a Hex Color"), RequireDatabase]
         public async Task SetHexBG(string Hex = null)
         {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+
             if (Hex != null)
             {
-                if (Context.DBUser.Money >= 300)
+                if (usr.Money >= 300)
                 {
-                    Context.DBUser.Money -= 300;
-                    if (int.TryParse((Hex[0] != '#' ? Hex : Hex.Remove(0,1)), System.Globalization.NumberStyles.HexNumber, null, out _))
+                    usr.Money -= 300;
+                    if (int.TryParse((Hex[0] != '#' ? Hex : Hex.Remove(0, 1)), System.Globalization.NumberStyles.HexNumber, null, out _))
                     {
-                        Context.DBUser.Background = (Hex[0] != '#' ? "#"+Hex : Hex);
-                        var res = await DatabaseClient.UpdateUserAsync(Context.DBUser);
-                        if (res.Successful)
-                        {
-                            await "Set your Background".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
-                        }
-                        else
-                        {
-                            await res.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                        }
+                        usr.Background = (Hex[0] != '#' ? "#" + Hex : Hex);
+
+                        await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                        await "Set your Background".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
                     }
                     else
                     {
-                        await $"Malformed Entry".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                        await $"Malformed Entry".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
                         return;
                     }
                 }
                 else
                 {
-                    await $"You need at least {Context.DBGuild.MoneyIcon}300 to change your background".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    await $"You need at least {gld.MoneyIcon}300 to change your background".QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
             else
             {
-                Context.DBUser.Background = "#3F51B5";
-                var res = await DatabaseClient.UpdateUserAsync(Context.DBUser);
-                if (res.Successful)
-                {
-                    await $"Reset your background to: {Context.DBUser.Background}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                }
-                else
-                {
-                    await res.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                }
+                usr.Background = "#3F51B5";
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await $"Reset your background to: {usr.Background}".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
             }
         }
 
         [Command("buy-custombg"), Summary("Buy permanent custom backgrounds"), RequireDatabase]
         public async Task BuyCBG()
         {
-            if (!Context.DBUser.UnlockedCustBG)
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+
+            if (!usr.UnlockedCustBG)
             {
-                if (Context.DBUser.Money >= 40000)
+                if (usr.Money >= 40000)
                 {
-                    Context.DBUser.Money -= 40000;
-                    Context.DBUser.UnlockedCustBG = true;
-                    var res = await DatabaseClient.UpdateUserAsync(Context.DBUser);
-                    if (res.Successful)
-                    {
-                        await $"You've successfully unlocked custom backgrounds, use: {Context.DBGuild.Prefix ?? Configuration.Discord.Prefix}set-custombg [URL] to set your background".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                    }
+                    usr.Money -= 40000;
+                    usr.UnlockedCustBG = true;
+
+                    await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                    await $"You've successfully unlocked custom backgrounds, use: {gld.Prefix ?? Configuration.Discord.Prefix}set-custombg [URL] to set your background".QueueMessageAsync(Context).ConfigureAwait(false);
                 }
                 else
                 {
-                    await $"You need at least {Context.DBGuild.MoneyIcon}40,000 to unlock custom backgrounds".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    await $"You need at least {gld.MoneyIcon}40,000 to unlock custom backgrounds".QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
             else
             {
-                await $"You already unlocked custom backgrounds, use: {Context.DBGuild.Prefix ?? Configuration.Discord.Prefix}set-custombg [URL] to set your background".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await $"You already unlocked custom backgrounds, use: {gld.Prefix ?? Configuration.Discord.Prefix}set-custombg [URL] to set your background".QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
         [Command("set-custombg"), Summary("Sets your custom background Image"), RequireDatabase]
         public async Task SetCBG(Uri link = null)
         {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+
             if (link != null)
             {
-                if (Context.DBUser.Money >= 900)
+                if (usr.Money >= 900)
                 {
-                    Context.DBUser.Money -= 900;
-                    Context.DBUser.Background = link.OriginalString;
-                    var res = await DatabaseClient.UpdateUserAsync(Context.DBUser);
-                    if (res.Successful)
-                    {
-                        await "Set your Background".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
-                    }
-                    else
-                    {
-                        await res.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                    }
+                    usr.Money -= 900;
+                    usr.Background = link.OriginalString;
+
+                    await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                    await "Set your Background".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
                 }
                 else
                 {
-                    await $"You need at least {Context.DBGuild.MoneyIcon}900 to change your background".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    await $"You need at least {gld.MoneyIcon}900 to change your background".QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
             else
             {
-                Context.DBUser.Background = "#3F51B5";
-                var res = await DatabaseClient.UpdateUserAsync(Context.DBUser);
-                if (res.Successful)
-                {
-                    await $"Reset your background to: {Context.DBUser.Background}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                }
-                else
-                {
-                    await res.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                }
+                usr.Background = "#3F51B5";
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await $"Reset your background to: {usr.Background}".QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
     }

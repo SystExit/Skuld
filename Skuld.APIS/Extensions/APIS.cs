@@ -1,17 +1,14 @@
-﻿using Booru.Net;
-using Discord;
-using Imgur.API.Models;
-using Kitsu.Anime;
-using Kitsu.Manga;
-using Akitaux.Twitch.Helix;
+﻿using Akitaux.Twitch.Helix;
 using Akitaux.Twitch.Helix.Entities;
 using Akitaux.Twitch.Helix.Requests;
-using Skuld.APIS.Pokemon.Models;
+using Booru.Net;
+using Discord;
+using Kitsu.Anime;
+using Kitsu.Manga;
 using Skuld.APIS.Social.Reddit.Models;
 using Skuld.APIS.UrbanDictionary.Models;
 using Skuld.APIS.Utilities;
 using Skuld.Core.Extensions;
-using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Steam.Models.SteamStore;
 using SteamStoreQuery;
@@ -182,7 +179,7 @@ namespace Skuld.APIS.Extensions
                 ImageUrl = attr.PosterImage.Large
             };
 
-            if (attr.AbbreviatedTitles != null && attr.AbbreviatedTitles.Count() != 0)
+            if (attr.AbbreviatedTitles != null && attr.AbbreviatedTitles.Any())
                 embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNON"), attr.AbbreviatedTitles.CheckEmptyWithLocale(", ", loc));
 
             embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_EPS"), attr.EpisodeCount.CheckEmptyWithLocale(loc));
@@ -214,7 +211,7 @@ namespace Skuld.APIS.Extensions
                 ImageUrl = attr.PosterImage.Large
             };
 
-            if (attr.AbbreviatedTitles != null && attr.AbbreviatedTitles.Count() != 0)
+            if (attr.AbbreviatedTitles != null && attr.AbbreviatedTitles.Any())
                 embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNON"), attr.AbbreviatedTitles.CheckEmptyWithLocale(", ", loc));
 
             embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_EPS"), attr.ChapterCount.CheckEmptyWithLocale(loc));
@@ -289,14 +286,16 @@ namespace Skuld.APIS.Extensions
             string twitchStatus = "";
             string channelIcon = "";
 
-            switch(channel.Type.Value)
+            switch (channel.Type.Value)
             {
                 case UserType.Staff:
                     twitchStatus = DiscordTools.TwitchStaff;
                     break;
+
                 case UserType.Admin:
                     twitchStatus = DiscordTools.TwitchAdmins;
                     break;
+
                 case UserType.GlobalMod:
                     twitchStatus = DiscordTools.TwitchGlobalMod;
                     break;
@@ -307,6 +306,7 @@ namespace Skuld.APIS.Extensions
                 case BroadcasterType.Partner:
                     channelIcon = DiscordTools.TwitchVerified;
                     break;
+
                 case BroadcasterType.Affiliate:
                     channelIcon = DiscordTools.TwitchAffiliate;
                     break;
@@ -369,15 +369,15 @@ namespace Skuld.APIS.Extensions
 
                 string uptimeString = "";
 
-                if(uptime.Days > 0)
+                if (uptime.Days > 0)
                 {
                     uptimeString += $"{uptime.Days} days ";
                 }
-                if(uptime.Hours > 0)
+                if (uptime.Hours > 0)
                 {
                     uptimeString += $"{uptime.Hours} hours ";
                 }
-                if(uptime.Minutes > 0)
+                if (uptime.Minutes > 0)
                 {
                     uptimeString += $"{uptime.Minutes} minutes ";
                 }

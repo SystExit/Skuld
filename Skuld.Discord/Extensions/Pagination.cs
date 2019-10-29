@@ -1,49 +1,53 @@
 ﻿using Skuld.Core.Models;
-using Skuld.Core.Models.Skuld;
-using Skuld.Discord.Services;
-using Skuld.Discord.Utilities;
+using Skuld.Core.Utilities;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Skuld.Discord.Extensions
 {
     public static class Pagination
     {
-        public static IReadOnlyList<string> PaginateLeaderboard(this IList<MoneyLeaderboardEntry> list, SkuldGuild guild)
+        public static IReadOnlyList<string> PaginateLeaderboard(this IEnumerable<User> list, Guild guild)
         {
             var pages = new List<string>();
             string pagetext = "";
 
-            for (int x = 0; x < list.Count; x++)
+            int x = 0;
+            foreach (var usr in list)
             {
-                var usr = list[x];
+                pagetext += $"{x + 1}. {usr.Username} {guild.MoneyIcon}{usr.Money.ToString("N0")}\n";
 
-                pagetext += $"{x + 1}. {BotService.DiscordClient.GetUser(usr.ID).Username} {guild.MoneyIcon}{usr.Money.ToString("N0")}\n";
-
-                if ((x + 1) % 10 == 0 || (x + 1) == list.Count)
+                if ((x + 1) % 10 == 0 || (x + 1) == list.Count())
                 {
                     pages.Add(pagetext);
                     pagetext = "";
                 }
+
+                x++;
             }
 
             return pages;
         }
-        public static IReadOnlyList<string> PaginateLeaderboard(this IList<ExperienceLeaderboardEntry> list)
+
+        public static IReadOnlyList<string> PaginateLeaderboard(this IEnumerable<UserExperience> list)
         {
+            using var database = new SkuldDbContextFactory().CreateDbContext();
+
             var pages = new List<string>();
             string pagetext = "";
 
-            for (int x = 0; x < list.Count; x++)
+            int x = 0;
+            foreach (var usr in list)
             {
-                var usr = list[x];
+                pagetext += $"{x + 1}/{list.Count()}. {database.Users.FirstOrDefault(x => x.Id == usr.UserId).Username} - TotalXP: {usr.TotalXP} | Level: {usr.Level} | XP: {usr.XP}/{DiscordTools.GetXPLevelRequirement(usr.Level + 1, DiscordTools.PHI)}\n";
 
-                pagetext += $"{x + 1}/{list.Count}. {BotService.DiscordClient.GetUser(usr.ID).Username} - TotalXP: {usr.TotalXP} | Level: {usr.Level} | XP: {usr.XP}/{DiscordUtilities.GetXPLevelRequirement(usr.Level + 1, DiscordUtilities.PHI)}\n";
-
-                if ((x + 1) % 10 == 0 || (x + 1) == list.Count)
+                if ((x + 1) % 10 == 0 || (x + 1) == list.Count())
                 {
                     pages.Add(pagetext);
                     pagetext = "";
                 }
+
+                x++;
             }
 
             return pages;

@@ -11,9 +11,10 @@ namespace Skuld.Bot.Extensions
     public static class Search
     {
         private static readonly Random rnd = new Random(DateTime.UtcNow.Millisecond);
+
         public static async Task<Embed> GetEmbedAsync(this PokemonSpecies pokemon, PokemonDataGroup group)
         {
-            var poke = await DataFetcher.GetApiObject<Pokemon>(pokemon.ID);            
+            var poke = await DataFetcher.GetApiObject<Pokemon>(pokemon.ID);
 
             var embed = new EmbedBuilder
             {
@@ -41,7 +42,7 @@ namespace Skuld.Bot.Extensions
                 case PokemonDataGroup.Default:
                     embed.AddInlineField("Height", poke.Height + "dm");
                     //embed.AddInlineField("Weight", poke.Weight + "hg");
-                    embed.AddInlineField("Base Experience", poke.BaseExperience.ToString()+"xp");
+                    embed.AddInlineField("Base Experience", poke.BaseExperience.ToString() + "xp");
                     break;
 
                 case PokemonDataGroup.Abilities:

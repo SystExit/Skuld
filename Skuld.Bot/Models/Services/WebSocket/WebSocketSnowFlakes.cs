@@ -8,6 +8,7 @@ namespace Skuld.Bot.Models.Services.WebSocket
         public string Type;
         public List<WebSocketSnowFlake> Data;
     }
+
     public class WebSocketSnowFlake
     {
         public string Name;

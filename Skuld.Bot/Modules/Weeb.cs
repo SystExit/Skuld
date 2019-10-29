@@ -6,8 +6,8 @@ using Kitsu.Manga;
 using Skuld.APIS.Extensions;
 using Skuld.Core.Extensions;
 using Skuld.Core.Globalization;
+using Skuld.Core.Models;
 using Skuld.Core.Utilities;
-using Skuld.Discord.Commands;
 using Skuld.Discord.Extensions;
 using SysEx.Net;
 using System;
@@ -19,7 +19,7 @@ using TraceMoe.NET;
 namespace Skuld.Bot.Commands
 {
     [Group]
-    public class Weeb : InteractiveBase<SkuldCommandContext>
+    public class Weeb : InteractiveBase<ShardedCommandContext>
     {
         public Locale Locale { get; set; }
         public SysExClient SysExClient { get; set; }
@@ -27,7 +27,9 @@ namespace Skuld.Bot.Commands
         [Command("anime"), Summary("Gets information about an anime")]
         public async Task GetAnime([Remainder]string animetitle)
         {
-            var usr = Context.DBUser;
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var usr = await Database.GetUserAsync(Context.User);
             var loc = Locale.GetLocale(usr.Language ?? Locale.defaultLocale);
 
             var raw = await Anime.GetAnimeAsync(animetitle);
@@ -67,20 +69,22 @@ namespace Skuld.Bot.Commands
 
                 var anime = data[selection - 1];
 
-                await anime.ToEmbed(loc).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await anime.ToEmbed(loc).QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
                 var anime = data[0];
 
-                await anime.ToEmbed(loc).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await anime.ToEmbed(loc).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
         [Command("manga"), Summary("Gets information about a manga")]
         public async Task GetMangaAsync([Remainder]string mangatitle)
         {
-            var usr = Context.DBUser;
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var usr = await Database.GetUserAsync(Context.User);
             var loc = Locale.GetLocale(usr.Language ?? Locale.defaultLocale);
 
             var raw = await Manga.GetMangaAsync(mangatitle);
@@ -120,13 +124,13 @@ namespace Skuld.Bot.Commands
 
                 var manga = data[selection - 1];
 
-                await manga.ToEmbed(loc).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await manga.ToEmbed(loc).QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
                 var manga = data[0];
 
-                await manga.ToEmbed(loc).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await manga.ToEmbed(loc).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -139,13 +143,13 @@ namespace Skuld.Bot.Commands
             {
                 ImageUrl = gif,
                 Color = EmbedUtils.RandomColor()
-            }.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            }.Build().QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("whatanime"), Summary("Searches Trace.Moe")]
         public async Task WhatAnime(Uri url = null)
         {
-            if(url == null)
+            if (url == null)
             {
                 if (Context.Message.Attachments.Count() > 0)
                 {
@@ -155,11 +159,11 @@ namespace Skuld.Bot.Commands
 
                     if (data.docs.Count() > 0)
                     {
-                        await GetWhatAnimeMessage(data.docs.OrderByDescending(x => x.similarity)).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                        await GetWhatAnimeMessage(data.docs.OrderByDescending(x => x.similarity)).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                     else
                     {
-                        await "Couldn't find anything with the image provided".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                        await "Couldn't find anything with the image provided".QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                 }
             }
@@ -169,16 +173,16 @@ namespace Skuld.Bot.Commands
 
                 if (data.docs.Count() > 0)
                 {
-                    await GetWhatAnimeMessage(data.docs.OrderByDescending(x => x.similarity)).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    await GetWhatAnimeMessage(data.docs.OrderByDescending(x => x.similarity)).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
                 else
                 {
-                    await "Couldn't find anything with the image provided".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    await "Couldn't find anything with the image provided".QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
         }
 
-        string GetWhatAnimeMessage(IOrderedEnumerable<TraceMoe.NET.DataStructures.Doc> results)
+        private string GetWhatAnimeMessage(IOrderedEnumerable<TraceMoe.NET.DataStructures.Doc> results)
         {
             var mostLikely = results.First();
 
@@ -187,7 +191,7 @@ namespace Skuld.Bot.Commands
 
             var take = results.Skip(1).Where(x => x.similarity < mostLikely.similarity).Take(5);
 
-            if(!take.All(x=>x.mal_id == mostLikely.mal_id))
+            if (!take.All(x => x.mal_id == mostLikely.mal_id))
             {
                 string appendix = "\nOther potential candidates:\n";
 

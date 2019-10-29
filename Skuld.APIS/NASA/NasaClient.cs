@@ -34,40 +34,48 @@ namespace Skuld.APIS
             var client = (HttpWebRequest)WebRequest.Create(CuriosityEndpoint + $"?api_key={token}");
             client.Headers.Add(HttpRequestHeader.UserAgent, UAGENT);
 
-            var response = (HttpWebResponse)await client.GetResponseAsync();
+            var response = (HttpWebResponse)await client.GetResponseAsync().ConfigureAwait(false);
 
             var streamresp = response.GetResponseStream();
-            var sr = new StreamReader(streamresp);
-            var stringifiedresp = await sr.ReadToEndAsync().ConfigureAwait(false);
-            var data = JsonConvert.DeserializeObject<RoverWrapper>(stringifiedresp);
 
-            CuriosityMaxSOL = data.Rover.MaxSOL;
+            using (var sr = new StreamReader(streamresp))
+            {
+                var stringifiedresp = await sr.ReadToEndAsync().ConfigureAwait(false);
+                var data = JsonConvert.DeserializeObject<RoverWrapper>(stringifiedresp);
+
+                CuriosityMaxSOL = data.Rover.MaxSOL;
+            }
 
             //Opportunity
             client = (HttpWebRequest)WebRequest.Create(OpportunityEndpoint + $"?api_key={token}");
             client.Headers.Add(HttpRequestHeader.UserAgent, UAGENT);
 
-            response = (HttpWebResponse)await client.GetResponseAsync();
+            response = (HttpWebResponse)await client.GetResponseAsync().ConfigureAwait(false);
 
             streamresp = response.GetResponseStream();
-            sr = new StreamReader(streamresp);
-            stringifiedresp = await sr.ReadToEndAsync().ConfigureAwait(false);
-            data = JsonConvert.DeserializeObject<RoverWrapper>(stringifiedresp);
 
-            OpportunityMaxSOL = data.Rover.MaxSOL;
+            using (var sr = new StreamReader(streamresp))
+            {
+                var stringifiedresp = await sr.ReadToEndAsync().ConfigureAwait(false);
+                var data = JsonConvert.DeserializeObject<RoverWrapper>(stringifiedresp);
+
+                OpportunityMaxSOL = data.Rover.MaxSOL;
+            }
 
             //Spirit
             client = (HttpWebRequest)WebRequest.Create(SpiritEndpoint + $"?api_key={token}");
             client.Headers.Add(HttpRequestHeader.UserAgent, UAGENT);
 
-            response = (HttpWebResponse)await client.GetResponseAsync();
+            response = (HttpWebResponse)await client.GetResponseAsync().ConfigureAwait(false);
 
             streamresp = response.GetResponseStream();
-            sr = new StreamReader(streamresp);
-            stringifiedresp = await sr.ReadToEndAsync().ConfigureAwait(false);
-            data = JsonConvert.DeserializeObject<RoverWrapper>(stringifiedresp);
+            using (var sr = new StreamReader(streamresp))
+            {
+                var stringifiedresp = await sr.ReadToEndAsync().ConfigureAwait(false);
+                var data = JsonConvert.DeserializeObject<RoverWrapper>(stringifiedresp);
 
-            SpiritMaxSOL = data.Rover.MaxSOL;
+                SpiritMaxSOL = data.Rover.MaxSOL;
+            }
         }
 
         public async Task<APOD> GetAPODAsync()
@@ -77,7 +85,7 @@ namespace Skuld.APIS
             var client = (HttpWebRequest)WebRequest.Create("https://api.nasa.gov/planetary/apod?api_key=" + token);
             client.Headers.Add(HttpRequestHeader.UserAgent, UAGENT);
 
-            var response = (HttpWebResponse)await client.GetResponseAsync();
+            var response = (HttpWebResponse)await client.GetResponseAsync().ConfigureAwait(false);
             int remainingcalls = 0;
 
             for (int x = 0; x < response.Headers.Count; x++)
@@ -92,7 +100,7 @@ namespace Skuld.APIS
             if (remainingcalls >= 0)
             {
                 var streamresp = response.GetResponseStream();
-                var sr = new StreamReader(streamresp);
+                using var sr = new StreamReader(streamresp);
                 var stringifiedresp = await sr.ReadToEndAsync().ConfigureAwait(false);
                 return JsonConvert.DeserializeObject<APOD>(stringifiedresp);
             }
@@ -130,7 +138,7 @@ namespace Skuld.APIS
             var client = (HttpWebRequest)WebRequest.Create(request);
             client.Headers.Add(HttpRequestHeader.UserAgent, UAGENT);
 
-            var response = (HttpWebResponse)await client.GetResponseAsync();
+            var response = (HttpWebResponse)await client.GetResponseAsync().ConfigureAwait(false);
             int remainingcalls = 0;
 
             for (int x = 0; x < response.Headers.Count; x++)
@@ -145,20 +153,22 @@ namespace Skuld.APIS
             if (remainingcalls >= 0)
             {
                 var streamresp = response.GetResponseStream();
-                var sr = new StreamReader(streamresp);
+                using var sr = new StreamReader(streamresp);
                 var stringifiedresp = await sr.ReadToEndAsync().ConfigureAwait(false);
                 var data = JsonConvert.DeserializeObject<RoverPhotoWrapper>(stringifiedresp);
 
-                if(data != null)
+                if (data != null)
                 {
                     switch (rover)
                     {
                         case NasaRover.Curiosity:
                             CuriosityMaxSOL = data.Photos[0].Rover.MaxSOL;
                             break;
+
                         case NasaRover.Opportunity:
                             OpportunityMaxSOL = data.Photos[0].Rover.MaxSOL;
                             break;
+
                         case NasaRover.Spirit:
                             SpiritMaxSOL = data.Photos[0].Rover.MaxSOL;
                             break;

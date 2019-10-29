@@ -1,7 +1,5 @@
 ﻿using Discord;
-using Skuld.Core.Extensions;
 using System;
-using System.Diagnostics;
 
 namespace Skuld.Core.Utilities
 {
@@ -21,11 +19,11 @@ namespace Skuld.Core.Utilities
 
         public static Embed EmbedImage(Uri imageurl, string embedtitle = "", string embeddesc = "")
             => new EmbedBuilder
-                {
-                    Title = embedtitle,
-                    Description = embeddesc,
-                    Color = RandomColor(),
-                    ImageUrl = imageurl.OriginalString
-                }.Build();
+            {
+                Title = embedtitle,
+                Description = embeddesc,
+                Color = RandomColor(),
+                ImageUrl = imageurl.OriginalString
+            }.Build();
     }
 }

@@ -20,7 +20,7 @@ namespace Skuld.APIS.WebComics.Explosm
         {
             if (rateLimiter.IsRatelimited()) return null;
 
-            var doc = await ScrapeUrlAsync(new Uri("http://explosm.net/comics/random"));
+            var doc = await ScrapeUrlAsync(new Uri("http://explosm.net/comics/random")).ConfigureAwait(false);
             var html = doc.DocumentNode.ChildNodes.FirstOrDefault(x => x.Name == "html");
             var body = html.ChildNodes.FirstOrDefault(x => x.Name == "body");
 

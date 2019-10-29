@@ -110,7 +110,7 @@ namespace Skuld.Bot.Extensions
                         continue;
                     }
 
-                    ret.Append(regionalIndicator[alphabet.FirstOrDefault(x => x.Key == chr.ToString().ToLower()).Value]+" ");
+                    ret.Append(regionalIndicator[alphabet.FirstOrDefault(x => x.Key == chr.ToString().ToLower()).Value] + " ");
                 }
                 else
                 {
@@ -124,7 +124,7 @@ namespace Skuld.Bot.Extensions
         {
             StringBuilder ret = new StringBuilder();
 
-            foreach(var chr in value)
+            foreach (var chr in value)
             {
                 if (!char.IsWhiteSpace(chr))
                 {

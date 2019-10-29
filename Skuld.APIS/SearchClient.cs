@@ -1,13 +1,11 @@
 ﻿using Discord;
 using Google.Apis.Customsearch.v1;
-using Imgur.API;
 using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Imgur.API.Models;
 using Imgur.API.Models.Impl;
 using Skuld.APIS.Extensions;
-using Skuld.Core;
-using Skuld.Core.Models;
+using Skuld.Core.Generic.Models;
 using Skuld.Core.Utilities;
 using System;
 using System.Linq;
@@ -40,11 +38,11 @@ namespace Skuld.APIS
                 var images = await endpoint.SearchGalleryAsync(query);
                 var albm = images.GetRandomItem();
                 dynamic album = null;
-                if(albm is GalleryImage)
+                if (albm is GalleryImage)
                 {
                     album = albm as IGalleryImage;
                 }
-                if(albm is GalleryAlbum)
+                if (albm is GalleryAlbum)
                 {
                     album = albm as IGalleryAlbum;
                 }
@@ -60,7 +58,7 @@ namespace Skuld.APIS
             catch (Exception ex)
             {
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "exception" });
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("ImgrSch", "Error with Imgur search", LogSeverity.Error, ex));
+                Log.Error("ImgrSch", "Error with Imgur search", ex);
                 return $"Error with search: {ex.Message}";
             }
         }
@@ -93,7 +91,7 @@ namespace Skuld.APIS
             catch (Exception ex)
             {
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "exception" });
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("ImgrSch", "Error with Imgur search", LogSeverity.Error, ex));
+                Log.Error("ImgrSch", "Error with Imgur search", ex);
                 return $"Error with search: {ex.Message}";
             }
         }
@@ -116,7 +114,7 @@ namespace Skuld.APIS
             catch (Exception ex)
             {
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "exception" });
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("YTBSrch", "Error with Youtube Search", LogSeverity.Error, ex));
+                Log.Error("YTBSrch", "Error with Youtube Search", ex);
                 return $"Error with search: {ex.Message}";
             }
         }
@@ -177,7 +175,7 @@ namespace Skuld.APIS
             catch (Exception ex)
             {
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "exception" });
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("GogSrch", "Error with google search", LogSeverity.Error, ex));
+                Log.Error("GogSrch", "Error with google search", ex);
                 return new EmbedBuilder
                 {
                     Title = "Error with the command",

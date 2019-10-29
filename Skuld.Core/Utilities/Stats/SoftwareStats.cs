@@ -17,10 +17,12 @@ namespace Skuld.Core.Utilities.Stats
         public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Weebsh = new KeyValuePair<AssemblyName, GitRepoStruct>(Assembly.GetAssembly(typeof(WeebClient)).GetName(), new GitRepoStruct("Daniele122898", "Weeb.net"));
         public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Twitch = new KeyValuePair<AssemblyName, GitRepoStruct>(Assembly.GetAssembly(typeof(TwitchHelixClient)).GetName(), new GitRepoStruct("Akitaux", "Twitch"));
     }
+
     public struct GitRepoStruct
     {
         public string Owner { get; set; }
         public string Repo { get; set; }
+
         public GitRepoStruct(string o, string r)
         {
             Owner = o;

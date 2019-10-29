@@ -2,7 +2,8 @@
 using Newtonsoft.Json;
 using Skuld.APIS.BotListing.Models;
 using Skuld.APIS.Utilities;
-using Skuld.Core;
+using Skuld.Core.Generic.Models;
+using Skuld.Core.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -23,8 +24,19 @@ namespace Skuld.APIS
             rateLimiter = new RateLimiter();
         }
 
-        public async Task SendDataAsync(string sysextoken, string discordggtoken, string dbltoken, string b4dtoken)
+        private void LogData(string key, string message, bool error)
         {
+            if (error)
+                Log.Error(key, message);
+            else
+                Log.Info(key, message);
+        }
+
+        public async Task SendDataAsync(string discordggtoken, string dbltoken, string b4dtoken)
+        {
+            if (SkuldConfig.Load().BotListing.IsDev)
+                return;
+
             List<BotStats> botStats = new List<BotStats>();
 
             for (var x = 0; x < client.Shards.Count; x++)
@@ -40,14 +52,14 @@ namespace Skuld.APIS
                     using (var webclient = new HttpClient())
                     using (var content = new StringContent(JsonConvert.SerializeObject(botStats[x]), Encoding.UTF8, "application/json"))
                     {
+                        string key = "DBL";
+
                         webclient.DefaultRequestHeaders.Add("UserAgent", UAGENT);
                         webclient.DefaultRequestHeaders.Add("Authorization", dbltoken);
                         content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                        var _ = await webclient.PostAsync(new Uri($"https://discordbots.org/api/bots/"+client.CurrentUser.Id+"/stats"), content);
-                        if (_.IsSuccessStatusCode)
-                            await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("BLC", "Successfully sent data to DBL", Discord.LogSeverity.Info));
-                        else
-                            await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("BLC", "Error sending data to DBL | "+_.ReasonPhrase, Discord.LogSeverity.Error));
+                        var _ = await webclient.PostAsync(new Uri($"https://discordbots.org/api/bots/" + client.CurrentUser.Id + "/stats"), content).ConfigureAwait(false);
+
+                        LogData("BLC", _.IsSuccessStatusCode ? $"Successfully sent data to {key}" : $"Error sending data to {key} | " + _.ReasonPhrase, _.IsSuccessStatusCode);
                     }
                 }
                 //dbgg
@@ -55,33 +67,18 @@ namespace Skuld.APIS
                     using (var webclient = new HttpClient())
                     using (var content = new StringContent(JsonConvert.SerializeObject((DBGGStats)botStats[x]), Encoding.UTF8, "application/json"))
                     {
+                        string key = "D.B.GG";
+
                         webclient.DefaultRequestHeaders.Add("UserAgent", UAGENT);
                         webclient.DefaultRequestHeaders.Add("Authorization", discordggtoken);
                         content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                        var _ = await webclient.PostAsync(new Uri("https://discord.bots.gg/api/v1/bots/" + client.CurrentUser.Id+"/stats"), content);
-                        if (_.IsSuccessStatusCode)
-                            await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("BLC", "Successfully sent data to D.B.GG", Discord.LogSeverity.Info));
-                        else
-                            await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("BLC", "Error sending data to D.B.GG | " + _.ReasonPhrase, Discord.LogSeverity.Error));
+
+                        var _ = await webclient.PostAsync(new Uri("https://discord.bots.gg/api/v1/bots/" + client.CurrentUser.Id + "/stats"), content).ConfigureAwait(false);
+
+                        LogData("BLC", _.IsSuccessStatusCode ? $"Successfully sent data to {key}" : $"Error sending data to {key} | " + _.ReasonPhrase, _.IsSuccessStatusCode);
                     }
                 }
                 await Task.Delay(TimeSpan.FromSeconds(5).Milliseconds).ConfigureAwait(false);
-            }
-
-            //sysex
-            {
-                using (var webclient = new HttpClient())
-                using (var content = new StringContent(JsonConvert.SerializeObject(botStats), Encoding.UTF8, "application/json"))
-                {
-                    webclient.DefaultRequestHeaders.Add("UserAgent", UAGENT);
-                    webclient.DefaultRequestHeaders.Add("Authorization", sysextoken);
-                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                    var _ = await webclient.PostAsync(new Uri($"https://skuldbot.uk/tools/updateStats.php"), content).ConfigureAwait(false);
-                    if (_.IsSuccessStatusCode)
-                        await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("BLC", "Successfully sent data to SysEx", Discord.LogSeverity.Info));
-                    else
-                        await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("BLC", "Error sending data to SysEx | " + _.ReasonPhrase, Discord.LogSeverity.Error));
-                }
             }
 
             //b4d
@@ -100,18 +97,14 @@ namespace Skuld.APIS
                 using (var webclient = new HttpClient())
                 using (var content = new StringContent(JsonConvert.SerializeObject(stat), Encoding.UTF8, "application/json"))
                 {
+                    string key = "B4D";
+
                     webclient.DefaultRequestHeaders.Add("UserAgent", UAGENT);
                     webclient.DefaultRequestHeaders.Add("Authorization", b4dtoken);
                     content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
                     var _ = await webclient.PostAsync(new Uri("https://botsfordiscord.com/api/bot/" + client.CurrentUser.Id), content).ConfigureAwait(false);
-                    if (_.IsSuccessStatusCode)
-                    {
-                        await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("BLC", "Successfully sent data to B4D", Discord.LogSeverity.Info));
-                    }
-                    else
-                    {
-                        await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("BLC", "Error sending data to B4D | " + _.ReasonPhrase, Discord.LogSeverity.Error));
-                    }
+
+                    LogData("BLC", _.IsSuccessStatusCode ? $"Successfully sent data to {key}" : $"Error sending data to {key} | " + _.ReasonPhrase, _.IsSuccessStatusCode);
                 }
             }
         }

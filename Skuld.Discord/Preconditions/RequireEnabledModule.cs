@@ -1,31 +1,21 @@
 ﻿using Discord.Commands;
-using Skuld.Core.Models.Skuld;
-using Skuld.Database;
+using Skuld.Core.Models;
 using Skuld.Discord.Utilities;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Skuld.Discord.Preconditions
 {
-    public class RequireEnabledModule : PreconditionAttribute
+    public class RequireEnabledModuleAttribute : PreconditionAttribute
     {
-        public RequireEnabledModule()
-        {
-
-        }
-
         public override async Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
-            if (context.Guild == null) return PreconditionResult.FromSuccess();
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var gld = await DatabaseClient.GetGuildAsync(context.Guild.Id);
-
-            if(gld.Successful)
+            if (MessageTools.ModuleDisabled(Database.Modules.FirstOrDefault(x => x.Id == context.Guild.Id), command))
             {
-                var guild = gld.Data as SkuldGuild;
-
-                if (MessageTools.ModuleDisabled(guild.Modules, command))
-                    return PreconditionResult.FromError($"The module: `{command.Module.Name}` is disabled, contact a server administrator to enable it");
+                return PreconditionResult.FromError($"The module: `{command.Module.Name}` is disabled, contact a server administrator to enable it");
             }
 
             return PreconditionResult.FromSuccess();
