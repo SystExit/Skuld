@@ -140,7 +140,7 @@ namespace Skuld.Core.Models
 
         public IReadOnlyList<UserExperience> GetOrderedGlobalExperienceLeaderboard()
         {
-            if (UserXp.Count() > 0)
+            if (UserXp.Any())
             {
                 List<UserExperience> experiences = new List<UserExperience>();
                 List<UserExperience> entries = new List<UserExperience>();
@@ -176,7 +176,7 @@ namespace Skuld.Core.Models
 
         public IReadOnlyList<User> GetOrderedGlobalMoneyLeaderboard()
         {
-            if (Users.Count() > 0)
+            if (Users.Any())
             {
                 List<User> entries = new List<User>();
 
@@ -198,14 +198,14 @@ namespace Skuld.Core.Models
 
         public async Task<IReadOnlyList<UserExperience>> GetOrderedGuildExperienceLeaderboardAsync(IGuild guild)
         {
-            if (UserXp.Count() > 0)
+            if (UserXp.Any())
             {
                 List<UserExperience> experiences = new List<UserExperience>();
                 List<UserExperience> entries = new List<UserExperience>();
 
                 foreach (var xp in UserXp)
                 {
-                    if (await guild.GetUserAsync(xp.Id).ConfigureAwait(false) != null)
+                    if (await guild.GetUserAsync(xp.UserId).ConfigureAwait(false) != null)
                     {
                         experiences.Add(xp);
                     }
@@ -237,7 +237,7 @@ namespace Skuld.Core.Models
 
         public async Task<IReadOnlyList<User>> GetOrderedGuildMoneyLeaderboardAsync(IGuild guild)
         {
-            if (Users.Count() > 0)
+            if (Users.Any())
             {
                 List<User> entries = new List<User>();
 

@@ -8,10 +8,10 @@ using IqdbApi;
 using Microsoft.Extensions.DependencyInjection;
 using Octokit;
 using Skuld.APIS;
+using Skuld.Core;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Globalization;
 using Skuld.Core.Utilities;
-using Skuld.Core.Utilities.Stats;
 using Skuld.Discord;
 using Skuld.Discord.Handlers;
 using Skuld.Discord.Services;
@@ -60,7 +60,9 @@ namespace Skuld.Bot.Services
 
                 await InitializeServicesAsync().ConfigureAwait(false);
 
-                Log.Info("Framework", "Loaded Skuld v" + SoftwareStats.Skuld.Key.Version);
+                BotService.AddServices(Services);
+
+                Log.Info("Framework", "Loaded Skuld v" + SkuldAppContext.Skuld.Key.Version);
 
                 var result = await MessageHandler.ConfigureCommandServiceAsync(
                     new DiscordNetCommands.CommandServiceConfig
@@ -142,35 +144,31 @@ namespace Skuld.Bot.Services
                 var locale = new Locale();
                 await locale.InitialiseLocalesAsync().ConfigureAwait(false);
 
-                var sc = new ServiceCollection()
-                    .AddSingleton(random)
+                Services = new ServiceCollection()
                     .AddSingleton(locale)
-                    .AddSingleton(BotService.DiscordClient)
-                    .AddSingleton(new InteractiveService(BotService.DiscordClient, TimeSpan.FromSeconds(60)))
-                    .AddSingleton(new ImgurClient(Configuration.APIS.ImgurClientID, Configuration.APIS.ImgurClientSecret))
-                    .AddSingleton(new ISSClient())
-                    .AddSingleton(new SocialAPIS())
-                    .AddSingleton(new SteamStore())
-                    .AddSingleton(new BaseClient())
-                    .AddSingleton(new IqdbClient())
-                    .AddSingleton(new BooruClient())
-                    .AddSingleton(new GiphyClient())
-                    .AddSingleton(new YNWTFClient())
-                    .AddSingleton(new SysExClient())
-                    .AddSingleton(new AnimalClient())
-                    .AddSingleton(new YoutubeClient())
-                    .AddSingleton(new NekosLifeClient())
-                    .AddSingleton(new WikipediaClient())
-                    .AddSingleton(new UrbanDictionaryClient())
-                    .AddSingleton(new WebComicClients(random))
+                    .AddSingleton<Random>()
+                    .AddSingleton<ISSClient>()
+                    .AddSingleton<SocialAPIS>()
+                    .AddSingleton<SteamStore>()
+                    .AddSingleton<BaseClient>()
+                    .AddSingleton<IqdbClient>()
+                    .AddSingleton<BooruClient>()
+                    .AddSingleton<GiphyClient>()
+                    .AddSingleton<YNWTFClient>()
+                    .AddSingleton<SysExClient>()
+                    .AddSingleton<AnimalClient>()
+                    .AddSingleton<YoutubeClient>()
+                    .AddSingleton<NekosLifeClient>()
+                    .AddSingleton<WikipediaClient>()
+                    .AddSingleton<WebComicClients>()
+                    .AddSingleton<UrbanDictionaryClient>()
                     .AddSingleton(new NASAClient(Configuration.APIS.NASAApiKey))
                     .AddSingleton(new BotListingClient(BotService.DiscordClient))
                     .AddSingleton(new GitHubClient(new ProductHeaderValue("Skuld")))
-                    .AddSingleton(new Stands4Client(Configuration.APIS.STANDSUid, Configuration.APIS.STANDSToken));
-
-                Services = sc.BuildServiceProvider();
-
-                Log.Debug("Framework", $"{sc.Count}");
+                    .AddSingleton(new InteractiveService(BotService.DiscordClient, TimeSpan.FromSeconds(60)))
+                    .AddSingleton(new Stands4Client(Configuration.APIS.STANDSUid, Configuration.APIS.STANDSToken))
+                    .AddSingleton(new ImgurClient(Configuration.APIS.ImgurClientID, Configuration.APIS.ImgurClientSecret))
+                    .BuildServiceProvider();
 
                 Log.Info("Framework", "Successfully built service provider");
             }

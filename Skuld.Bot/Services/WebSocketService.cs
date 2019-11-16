@@ -2,9 +2,9 @@
 using Fleck;
 using Newtonsoft.Json;
 using Skuld.Bot.Models.Services.WebSocket;
+using Skuld.Core;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Utilities;
-using Skuld.Core.Utilities.Stats;
 using Skuld.Discord.Services;
 using System;
 using System.Collections.Generic;
@@ -235,12 +235,12 @@ namespace Skuld.Bot.Services
             if (message.ToLower() == "stats" || message.ToLower() == "status")
             {
                 string mem;
-                if (HardwareStats.Memory.GetMBUsage > 1024)
-                    mem = HardwareStats.Memory.GetGBUsage + "GB";
+                if (SkuldAppContext.Memory.GetMBUsage > 1024)
+                    mem = SkuldAppContext.Memory.GetGBUsage + "GB";
                 else
-                    mem = HardwareStats.Memory.GetMBUsage + "MB";
+                    mem = SkuldAppContext.Memory.GetMBUsage + "MB";
 
-                var rawjson = $"{{\"Skuld\":\"{SoftwareStats.Skuld.Key.Version.ToString()}\"," +
+                var rawjson = $"{{\"Skuld\":\"{SkuldAppContext.Skuld.Key.Version.ToString()}\"," +
                     $"\"Uptime\":\"{$"{DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime):dd}d {DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime):hh}:{DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime):mm}"}\"," +
                     $"\"Ping\":{Client.Latency}," +
                     $"\"Guilds\":{Client.Guilds.Count}," +

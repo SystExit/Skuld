@@ -134,7 +134,7 @@ namespace Skuld.Core.Utilities
 
         public static void Info(string source, string message)
         {
-            var msg = Message(source, message, LogSeverity.Critical);
+            var msg = Message(source, message, LogSeverity.Info);
 
             LogFile.WriteLine(msg);
 

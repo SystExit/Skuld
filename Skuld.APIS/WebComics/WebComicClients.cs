@@ -20,10 +20,8 @@ namespace Skuld.APIS
         }
 
         #region CAD
-
         public async Task<object> GetCADComicAsync()
             => await CADClient.GetComicAsync().ConfigureAwait(false);
-
         #endregion CAD
 
         #region CAH
@@ -31,7 +29,7 @@ namespace Skuld.APIS
         public async Task<object> GetCAHComicAsync()
             => await explosmClient.GetComicAsync().ConfigureAwait(false);
 
-        #endregion CAH
+        #endregion
 
         #region XKCD
 
@@ -41,6 +39,6 @@ namespace Skuld.APIS
         public async Task<object> GetXKCDComic(int id)
             => await XKCDClient.GetComicAsync(id).ConfigureAwait(false);
 
-        #endregion XKCD
+        #endregion
     }
 }

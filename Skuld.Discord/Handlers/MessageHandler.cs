@@ -40,42 +40,12 @@ namespace Skuld.Discord.Handlers
                 CommandService = new CommandService(Config);
 
                 CommandService.CommandExecuted += CommandService_CommandExecuted;
-
-                CommandService.Log += (arg) =>
-                   {
-                       var key = "CommandService - " + arg.Source;
-                       switch (arg.Severity)
-                       {
-                           case LogSeverity.Error:
-                               Log.Error(key, arg.Message, arg.Exception);
-                               break;
-
-                           case LogSeverity.Debug:
-                               Log.Debug(key, arg.Message, arg.Exception);
-                               break;
-
-                           case LogSeverity.Critical:
-                               Log.Critical(key, arg.Message, arg.Exception);
-                               break;
-
-                           case LogSeverity.Info:
-                               Log.Info(key, arg.Message);
-                               break;
-
-                           case LogSeverity.Verbose:
-                               Log.Verbose(key, arg.Message, arg.Exception);
-                               break;
-
-                           case LogSeverity.Warning:
-                               Log.Warning(key, arg.Message, arg.Exception);
-                               break;
-                       }
-                       return Task.CompletedTask;
-                   };
+                CommandService.Log += CommandService_Log;
 
                 CommandService.AddTypeReader<Uri>(new UriTypeReader());
                 CommandService.AddTypeReader<GuildRoleConfig>(new RoleConfigTypeReader());
                 CommandService.AddTypeReader<IPAddress>(new IPAddressTypeReader());
+                CommandService.AddTypeReader<Emoji>(new EmojiTypeReader());
                 await CommandService.AddModulesAsync(ModuleAssembly, ServiceProvider).ConfigureAwait(false);
 
                 return EventResult.FromSuccess();
@@ -84,6 +54,39 @@ namespace Skuld.Discord.Handlers
             {
                 return EventResult.FromFailureException(ex.Message, ex);
             }
+        }
+
+        #region CommandService Logs
+        private static Task CommandService_Log(LogMessage arg)
+        {
+            var key = "CommandService - " + arg.Source;
+            switch (arg.Severity)
+            {
+                case LogSeverity.Error:
+                    Log.Error(key, arg.Message, arg.Exception);
+                    break;
+
+                case LogSeverity.Debug:
+                    Log.Debug(key, arg.Message, arg.Exception);
+                    break;
+
+                case LogSeverity.Critical:
+                    Log.Critical(key, arg.Message, arg.Exception);
+                    break;
+
+                case LogSeverity.Info:
+                    Log.Info(key, arg.Message);
+                    break;
+
+                case LogSeverity.Verbose:
+                    Log.Verbose(key, arg.Message, arg.Exception);
+                    break;
+
+                case LogSeverity.Warning:
+                    Log.Warning(key, arg.Message, arg.Exception);
+                    break;
+            }
+            return Task.CompletedTask;
         }
 
         private static async Task CommandService_CommandExecuted(Optional<CommandInfo> arg1, ICommandContext arg2, IResult arg3)
@@ -167,40 +170,10 @@ namespace Skuld.Discord.Handlers
             }
             watch = new Stopwatch();
         }
-
-        public static async Task<bool> CheckPermissionToSendMessageAsync(ITextChannel channel)
-        {
-            if (channel.Guild != null)
-            {
-                var guild = channel.Guild;
-                var currentuser = await channel.Guild.GetCurrentUserAsync();
-                var chan = await channel.Guild.GetChannelAsync(channel.Id);
-                var po = chan.GetPermissionOverwrite(currentuser);
-
-                if (po.HasValue)
-                {
-                    if (po.Value.SendMessages != PermValue.Deny)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        }
+        #endregion
 
         #region HandleProcessing
-
-        public static void HandleMessageAsync(SocketMessage arg)
-        {
-            var _ = HandleCommandAsync(arg).ConfigureAwait(false);
-        }
-
-        public static async Task HandleCommandAsync(SocketMessage arg)
+        public static async Task HandleMessageAsync(SocketMessage arg)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
@@ -255,17 +228,8 @@ namespace Skuld.Discord.Handlers
                 if (message.Channel is ITextChannel)
                 {
                     var gld = (message.Channel as ITextChannel).Guild;
-                    if (!Database.Guilds.Any(x => x.Id == gld.Id))
-                    {
-                        sguild = await Database.InsertGuildAsync(gld,
-                                                                        cmdConfig.Prefix,
-                                                                        cmdConfig.MoneyName,
-                                                                        cmdConfig.MoneyIcon).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        sguild = await Database.GetGuildAsync(gld);
-                    }
+
+                    sguild = await Database.GetGuildAsync(gld).ConfigureAwait(false);
                 }
 
                 if (sguild != null)
@@ -273,7 +237,7 @@ namespace Skuld.Discord.Handlers
                     var features = Database.Features.FirstOrDefault(x => x.Id == sguild.Id);
                     if (features.Experience)
                     {
-                        var _ = HandleExperienceAsync(message.Author, ((message.Channel as ITextChannel).Guild), sguild, message.Channel);
+                        var _ = HandleExperienceAsync(message, message.Author, ((message.Channel as ITextChannel).Guild), sguild, message.Channel);
                     }
                 }
 
@@ -294,11 +258,11 @@ namespace Skuld.Discord.Handlers
             }
             catch (Exception ex)
             {
-                Log.Critical("HandleCommandAsync", ex.Message, ex);
+                Log.Critical("CommandProcessor", ex.Message, ex);
             }
         }
 
-        public static async Task HandleExperienceAsync(IUser user, IGuild guild, Guild sguild, IMessageChannel backupChannel)
+        public static async Task HandleExperienceAsync(IUserMessage message, IUser user, IGuild guild, Guild sguild, IMessageChannel backupChannel)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
@@ -321,6 +285,21 @@ namespace Skuld.Discord.Handlers
                         luxp.Level++;
                         luxp.LastGranted = DateTime.UtcNow.ToEpoch();
 
+                        string msg = sguild.LevelUpMessage;
+
+                        if(msg != null)
+                            msg = msg
+                                .Replace("-m", user.Mention)
+                                .Replace("-u", user.Username)
+                                .Replace("-l", luxp.Level.ToString("N0"));
+                        else
+                            msg = $"Congratulations {user.Mention}!! You're now level **{luxp.Level}**";
+
+                        string appendix = null;
+
+                        if ((sguild.LevelUpChannel != 0 && sguild.LevelUpChannel != backupChannel.Id) || sguild.LevelNotification == LevelNotification.DM)
+                            appendix = $"\n\nMessage that caused your level up: {message.GetJumpUrl()}";
+
                         if (sguild.LevelNotification == LevelNotification.Channel)
                         {
                             ulong ChannelID = 0;
@@ -330,32 +309,21 @@ namespace Skuld.Discord.Handlers
                                 ChannelID = backupChannel.Id;
 
                             if (string.IsNullOrEmpty(sguild.LevelUpMessage))
+                            {
                                 await (await guild.GetTextChannelAsync(ChannelID).ConfigureAwait(false))
-                                    .SendMessageAsync($"Congratulations {user.Mention}!! You're now level **{luxp.Level}**").ConfigureAwait(false);
+                                    .SendMessageAsync($"{msg}{appendix}").ConfigureAwait(false);
+                            }
                             else
                             {
-                                string msg = sguild.LevelUpMessage;
-
-                                msg = msg
-                                    .Replace("-m", user.Mention)
-                                    .Replace("-u", user.Username)
-                                    .Replace("-l", luxp.Level.ToString("N0"));
-
                                 await (await guild.GetTextChannelAsync(ChannelID).ConfigureAwait(false)).SendMessageAsync(msg).ConfigureAwait(false);
                             }
                         }
                         else if (sguild.LevelNotification == LevelNotification.DM)
                         {
                             if (string.IsNullOrEmpty(sguild.LevelUpMessage))
-                                await user.SendMessageAsync($"Congratulations {user.Mention}!! You're now level **{luxp.Level}** in {guild.Name}").ConfigureAwait(false);
+                                await user.SendMessageAsync($"{msg} in {guild.Name}{appendix}").ConfigureAwait(false);
                             else
                             {
-                                string msg = sguild.LevelUpMessage;
-                                msg = msg
-                                    .Replace("-m", user.Mention)
-                                    .Replace("-u", user.Username)
-                                    .Replace("-l", $"{luxp.Level}");
-
                                 await user.SendMessageAsync(msg).ConfigureAwait(false);
                             }
                         }
@@ -406,11 +374,9 @@ namespace Skuld.Discord.Handlers
             }
             return;
         }
-
-        #endregion HandleProcessing
+        #endregion
 
         #region Dispatching
-
         public static async Task DispatchCommandAsync(ShardedCommandContext context)
         {
             watch.Start();
@@ -434,11 +400,9 @@ namespace Skuld.Discord.Handlers
 
             watch = new Stopwatch();
         }
-
-        #endregion Dispatching
+        #endregion
 
         #region HandleInsertion
-
         private static async Task InsertCommandAsync(CommandInfo command, User user)
             => await InsertUserCommandUsageAsync(command.Name ?? command.Module.Name, user).ConfigureAwait(false);
 
@@ -466,7 +430,31 @@ namespace Skuld.Discord.Handlers
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
         }
+        #endregion
 
-        #endregion HandleInsertion
+        public static async Task<bool> CheckPermissionToSendMessageAsync(ITextChannel channel)
+        {
+            if (channel.Guild != null)
+            {
+                var guild = channel.Guild;
+                var currentuser = await channel.Guild.GetCurrentUserAsync();
+                var chan = await channel.Guild.GetChannelAsync(channel.Id);
+                var po = chan.GetPermissionOverwrite(currentuser);
+
+                if (po.HasValue)
+                {
+                    if (po.Value.SendMessages != PermValue.Deny)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
     }
 }

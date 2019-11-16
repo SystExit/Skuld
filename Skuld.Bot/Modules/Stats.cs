@@ -2,8 +2,8 @@
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using Octokit;
+using Skuld.Core;
 using Skuld.Core.Utilities;
-using Skuld.Core.Utilities.Stats;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
 using Skuld.Discord.Services;
@@ -55,15 +55,15 @@ namespace Skuld.Bot.Commands
                 };
 
                 string apiversions =
-                    $"[Booru: {SoftwareStats.Booru.Key.Version.ToString()}](https://github.com/{SoftwareStats.Booru.Value.Owner}/{SoftwareStats.Booru.Value.Repo})\n" +
-                    $"[SysEx: {SoftwareStats.SysEx.Key.Version.ToString()}](https://github.com/{SoftwareStats.SysEx.Value.Owner}/{SoftwareStats.SysEx.Value.Repo})\n" +
-                    $"[Twitch: {SoftwareStats.Twitch.Key.Version.ToString()}](https://github.com/{SoftwareStats.Twitch.Value.Owner}/{SoftwareStats.Twitch.Value.Repo})\n" +
-                    $"[Weebsh: {SoftwareStats.Weebsh.Key.Version.ToString()}](https://github.com/{SoftwareStats.Weebsh.Value.Owner}/{SoftwareStats.Weebsh.Value.Repo})";
+                    $"[Booru: {SkuldAppContext.Booru.Key.Version.ToString()}](https://github.com/{SkuldAppContext.Booru.Value.Owner}/{SkuldAppContext.Booru.Value.Repo})\n" +
+                    $"[SysEx: {SkuldAppContext.SysEx.Key.Version.ToString()}](https://github.com/{SkuldAppContext.SysEx.Value.Owner}/{SkuldAppContext.SysEx.Value.Repo})\n" +
+                    $"[Twitch: {SkuldAppContext.Twitch.Key.Version.ToString()}](https://github.com/{SkuldAppContext.Twitch.Value.Owner}/{SkuldAppContext.Twitch.Value.Repo})\n" +
+                    $"[Weebsh: {SkuldAppContext.Weebsh.Key.Version.ToString()}](https://github.com/{SkuldAppContext.Weebsh.Value.Owner}/{SkuldAppContext.Weebsh.Value.Repo})";
 
-                var commits = await GitClient.Repository.Commit.GetAll(SoftwareStats.Skuld.Value.Owner, SoftwareStats.Skuld.Value.Repo);
+                var commits = await GitClient.Repository.Commit.GetAll(SkuldAppContext.Skuld.Value.Owner, SkuldAppContext.Skuld.Value.Repo);
 
                 string botstats = "";
-                botstats += $"[Skuld: {SoftwareStats.Skuld.Key.Version.ToString()}](https://github.com/{SoftwareStats.Skuld.Value.Owner}/{SoftwareStats.Skuld.Value.Repo})\n";
+                botstats += $"[Skuld: {SkuldAppContext.Skuld.Key.Version.ToString()}](https://github.com/{SkuldAppContext.Skuld.Value.Owner}/{SkuldAppContext.Skuld.Value.Repo})\n";
                 botstats += $"Uptime: {string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}\n";
                 botstats += $"Ping: {Context.Client.GetShardFor(Context.Guild).Latency}ms\n";
                 botstats += $"Guilds: {Context.Client.Guilds.Count}\n";
@@ -74,8 +74,8 @@ namespace Skuld.Bot.Commands
                 botstats += $"Most Recent Commit: [`{commits.First().Sha.Substring(0, 7)}`]({commits.First().HtmlUrl}) {commits.First().Commit.Message}";
 
                 string systemstats =
-                    "Memory Used: " + HardwareStats.Memory.GetMBUsage + "MB\n" +
-                    "Operating System: " + SoftwareStats.WindowsVersion;
+                    "Memory Used: " + SkuldAppContext.Memory.GetMBUsage + "MB\n" +
+                    "Operating System: " + SkuldAppContext.WindowsVersion;
 
                 embed.AddField("Bot", botstats);
                 embed.AddField("APIs", apiversions);

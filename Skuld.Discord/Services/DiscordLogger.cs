@@ -4,6 +4,7 @@ using Skuld.APIS;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Handlers;
+using Skuld.Core.Models;
 using StatsdClient;
 using System;
 using System.Collections.Generic;
@@ -54,38 +55,40 @@ namespace Skuld.Discord.Services
             BotService.DiscordClient.UserUpdated -= Bot_UserUpdated;
             foreach (var shard in BotService.DiscordClient.Shards)
             {
-                shard.MessageReceived -= MessageHandler.HandleCommandAsync;
+                shard.MessageReceived -= MessageHandler.HandleMessageAsync;
             }
         }
 
-        private static async Task Bot_Log(LogMessage arg)
+        private static Task Bot_Log(LogMessage arg)
         {
+            string key = "Discord-Log: ";
             switch (arg.Severity)
             {
                 case LogSeverity.Info:
-                    Log.Info("Discord-Log: " + arg.Source, arg.Message);
+                    Log.Info(key + arg.Source, arg.Message);
                     break;
 
                 case LogSeverity.Critical:
-                    Log.Critical("Discord-Log: " + arg.Source, arg.Message, arg.Exception);
+                    Log.Critical(key + arg.Source, arg.Message, arg.Exception);
                     break;
 
                 case LogSeverity.Warning:
-                    Log.Warning("Discord-Log: " + arg.Source, arg.Message, arg.Exception);
+                    Log.Warning(key + arg.Source, arg.Message, arg.Exception);
                     break;
 
                 case LogSeverity.Verbose:
-                    Log.Verbose("Discord-Log: " + arg.Source, arg.Message, arg.Exception);
+                    Log.Verbose(key + arg.Source, arg.Message, arg.Exception);
                     break;
 
                 case LogSeverity.Error:
-                    Log.Error("Discord-Log: " + arg.Source, arg.Message, arg.Exception);
+                    Log.Error(key + arg.Source, arg.Message, arg.Exception);
                     break;
 
                 case LogSeverity.Debug:
-                    Log.Debug("Discord-Log: " + arg.Source, arg.Message, arg.Exception);
+                    Log.Debug(key + arg.Source, arg.Message, arg.Exception);
                     break;
             }
+            return Task.CompletedTask;
         }
 
         private static async Task Bot_ReactionAdded(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3)
@@ -133,13 +136,12 @@ namespace Skuld.Discord.Services
         }
 
         #region Shards
-
         private static async Task Bot_ShardReady(DiscordSocketClient arg)
         {
             await BotService.DiscordClient.SetGameAsync($"{Configuration.Discord.Prefix}help | {arg.ShardId + 1}/{BotService.DiscordClient.Shards.Count}", type: DiscordNet.ActivityType.Listening);
             if (!ShardsReady.Contains(arg.ShardId))
             {
-                arg.MessageReceived += MessageHandler.HandleCommandAsync;
+                arg.MessageReceived += MessageHandler.HandleMessageAsync;
                 ShardsReady.Add(arg.ShardId);
             }
 
@@ -157,11 +159,9 @@ namespace Skuld.Discord.Services
             DogStatsd.Event($"Shard.disconnected", $"Shard {arg2.ShardId} Disconnected, error: {arg1}", alertType: "error");
             return Task.CompletedTask;
         }
-
         #endregion Shards
 
         #region Users
-
         private static async Task Bot_UserJoined(SocketGuildUser arg)
         {
             Log.Info("UsrJoin", $"User {arg.Username} joined {arg.Guild.Name}");
@@ -261,25 +261,34 @@ namespace Skuld.Discord.Services
                 }*/
             }
         }
-
         #endregion Users
 
         #region Guilds
-
         private static async Task Bot_LeftGuild(SocketGuild arg)
         {
+            using var database = new SkuldDbContextFactory().CreateDbContext();
+
             DogStatsd.Increment("guilds.left");
 
             await botListing.SendDataAsync(Configuration.BotListing.DiscordGGKey, Configuration.BotListing.DBotsOrgKey, Configuration.BotListing.B4DToken).ConfigureAwait(false);
+
+            Log.Verbose("Bot - LGuild", $"Left guild {arg.Name}");
+
+            await database.DropGuildAsync(arg.Id);
         }
 
         private static async Task Bot_JoinedGuild(SocketGuild arg)
         {
+            using var database = new SkuldDbContextFactory().CreateDbContext();
+
             DogStatsd.Increment("guilds.joined");
 
             await botListing.SendDataAsync(Configuration.BotListing.DiscordGGKey, Configuration.BotListing.DBotsOrgKey, Configuration.BotListing.B4DToken).ConfigureAwait(false);
-        }
 
-        #endregion Guilds
+            Log.Verbose("Bot - JGuild", $"Joined guild {arg.Name}");
+
+            await database.InsertGuildAsync(arg, Configuration.Discord.Prefix, MessageHandler.cmdConfig.MoneyName, MessageHandler.cmdConfig.MoneyIcon);
+        }
+        #endregion
     }
 }

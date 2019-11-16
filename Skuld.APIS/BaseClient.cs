@@ -1,11 +1,11 @@
 ﻿using HtmlAgilityPack;
+using Skuld.Core;
 using Skuld.Core.Utilities;
 using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -17,7 +17,7 @@ namespace Skuld.APIS
         {
         }
 
-        public static string UAGENT = "Mozilla/5.0 (compatible; SkuldBot/" + Assembly.GetEntryAssembly().GetName().Version.ToString().Substring(0, 3) + "; +https://github.com/Skuldbot/Skuld/)";
+        public static string UAGENT = "Mozilla/5.0 (compatible; SkuldBot/" + SkuldAppContext.Skuld.Key.Version.ToString().Substring(0, 3) + "; +https://github.com/Skuldbot/Skuld/)";
 
         public HttpWebRequest CreateWebRequest(Uri uri, byte[] auth = null)
         {
@@ -65,7 +65,7 @@ namespace Skuld.APIS
             }
         }
 
-        public async Task<HtmlDocument> ScrapeUrlAsync(Uri url)
+        public async Task<(HtmlDocument, Uri)> ScrapeUrlAsync(Uri url)
         {
             try
             {
@@ -84,27 +84,27 @@ namespace Skuld.APIS
                         request.Abort();
                     }
                     if (doc != null)
-                        return doc;
+                        return (doc, response.ResponseUri);
                     else
-                        return null;
+                        return (null, response.ResponseUri);
                 }
                 catch (WebException ex)
                 {
                     if (ex.Status == WebExceptionStatus.Timeout)
                     {
-                        return null;
+                        return (null, null);
                     }
                     throw;
                 }
                 catch
                 {
-                    return null;
+                    return (null, null);
                 }
             }
             catch (Exception ex)
             {
                 Log.Error("WebHandler", ex.Message, ex);
-                return null;
+                return (null, null);
             }
         }
 
@@ -112,7 +112,7 @@ namespace Skuld.APIS
         {
             var client = new WebClient();
             client.Headers.Add("User-Agent", UAGENT);
-            await client.DownloadFileTaskAsync(url, filepath);
+            await client.DownloadFileTaskAsync(url, filepath).ConfigureAwait(false);
             StatsdClient.DogStatsd.Increment("web.download");
             client.Dispose();
             return filepath;

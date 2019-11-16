@@ -30,7 +30,6 @@ namespace Skuld.Bot.Commands
             => await channel.SendMessageAsync(message).ConfigureAwait(false);
 
         #region GeneralManagement
-
         [Command("guild-feature"), Summary("Configures guild features"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task ConfigureGuildFeatures(string module, int value)
@@ -220,6 +219,38 @@ namespace Skuld.Bot.Commands
                 }
                 .Build().QueueMessageAsync(Context).ConfigureAwait(false);
             }
+        }
+
+        [Command("guild-money"), Summary("Set's the guilds money name or money icon"), RequireDatabase]
+        public async Task GuildMoney(Emoji icon = null, [Remainder]string name = null)
+        {
+            using var database = new SkuldDbContextFactory().CreateDbContext();
+            var guild = await database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+
+            if (icon == null && name == null)
+            {
+                guild.MoneyIcon = "💠";
+                guild.MoneyName = "Diamonds";
+
+                await database.SaveChangesAsync();
+
+                await $"Reset the icon to: `{guild.MoneyIcon}` & the name to: `{guild.MoneyName}`".QueueMessageAsync(Context);
+
+                return;
+            }
+
+            if(icon != null && name == null)
+            {
+                await $"Parameter \"{nameof(name)}\" needs a value".QueueMessageAsync(Context, Discord.Models.MessageType.Failed);
+                return;
+            }
+
+            guild.MoneyIcon = icon.ToString();
+            guild.MoneyName = name;
+
+            await database.SaveChangesAsync();
+
+            await $"Set the icon to: `{guild.MoneyIcon}` & the name to: `{guild.MoneyName}`".QueueMessageAsync(Context);
         }
 
         #endregion GeneralManagement
@@ -794,7 +825,7 @@ namespace Skuld.Bot.Commands
                 await "Cleared Welcome message!".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
         }
 
-        #endregion Welcome
+        #endregion
 
         #region Leave
 
@@ -875,7 +906,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        #endregion Leave
+        #endregion
 
         #region Levels
 
@@ -960,7 +991,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        #endregion Levels
+        #endregion
 
         #region CustomCommands
 
@@ -1074,6 +1105,6 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        #endregion CustomCommands
+        #endregion
     }
 }

@@ -308,7 +308,7 @@ namespace Skuld.Bot.Commands
                 case "level":
                 case "levels":
                     {
-                        if (database.Features.FirstOrDefault(x => x.Id == dbguild.Id).Experience && !global)
+                        if (!database.Features.FirstOrDefault(x => x.Id == dbguild.Id).Experience && !global)
                         {
                             await $"Guild not opted into Experience module. Use: `{dbguild.Prefix}guild-feature levels 1`".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
                             return;
@@ -408,7 +408,7 @@ namespace Skuld.Bot.Commands
         [Command("isup"), Summary("Check if a website is online"), Alias("downforeveryone", "isitonline")]
         public async Task IsUp(Uri website)
         {
-            var res = await WebHandler.ScrapeUrlAsync(website).ConfigureAwait(false);
+            (var res, var redirect) = await WebHandler.ScrapeUrlAsync(website).ConfigureAwait(false);
 
             if (res != null)
             {
@@ -580,8 +580,8 @@ namespace Skuld.Bot.Commands
             => amFail switch
             {
                 IAmFail.Price => $"You don\'t have enough money. You need at least {sguild.MoneyIcon}{role.Price}",
-                IAmFail.Level => $"You don\'t have the level required for this role (Level: {role.LevelRequired}",
-                IAmFail.RequiredRole => $"You don\'t have the required role for this role. You need the role {guild.GetRole(role.RequiredRoleId).Name}",
+                IAmFail.Level => $"You don\'t have the level required for this role (Level: {role.LevelRequired})",
+                IAmFail.RequiredRole => $"You don\'t have the required role for this role. You need the role \"{guild.GetRole(role.RequiredRoleId).Name}\"",
                 _ => "",
             };
 

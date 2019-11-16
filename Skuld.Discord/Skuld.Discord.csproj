@@ -3,6 +3,10 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.0</TargetFramework>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EmojiOne" Version="4.0.1" />
+  </ItemGroup>
   
   <ItemGroup>
     <ProjectReference Include="..\Skuld.Core\Skuld.Core.csproj" />

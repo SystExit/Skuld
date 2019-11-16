@@ -18,7 +18,8 @@ namespace Skuld.APIS.WebComics.CAD
         public async Task<CADComic> GetComicAsync()
         {
             if (rateLimiter.IsRatelimited()) return null;
-            var doc = await ScrapeUrlAsync(new Uri("https://cad-comic.com/random")).ConfigureAwait(false);
+            (var doc, var redirect) = await ScrapeUrlAsync(new Uri("https://cad-comic.com/random")).ConfigureAwait(false);
+
             var html = doc.DocumentNode.ChildNodes.FirstOrDefault(x => x.Name == "html");
             var body = html.ChildNodes.FirstOrDefault(x => x.Name == "body");
             var container = body.ChildNodes.Where(x => x.Attributes.Contains("class") && x.Attributes["class"].Value.Contains("container")).FirstOrDefault(z => z.ChildNodes.Any(x => x.Attributes.Contains("class") && x.Attributes["class"].Value.Contains("col-md-8 main-content")));

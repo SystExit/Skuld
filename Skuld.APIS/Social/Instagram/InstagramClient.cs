@@ -22,7 +22,9 @@ namespace Skuld.APIS.Social.Instagram
             if (rateLimiter.IsRatelimited()) return null;
 
             var url = new Uri(BaseURL.Replace("{{USERNAME}}", username));
-            var doc = await ScrapeUrlAsync(url);
+
+            (var doc, var redirect) = await ScrapeUrlAsync(url);
+
             var hook = doc.GetElementbyId("react-root");
             var script = hook.NextSibling.NextSibling;
             var scriptraw = script.InnerHtml;
