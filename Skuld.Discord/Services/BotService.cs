@@ -35,9 +35,6 @@ namespace Skuld.Discord.Services
         public static void AddServices(IServiceProvider services)
             => Services = services;
 
-        public static void AddBotLister(BotListingClient botLister)
-            => DiscordLogger.AddBotLister(botLister);
-
         public static async Task StopBotAsync(string source)
         {
             DiscordLogger.UnRegisterEvents();

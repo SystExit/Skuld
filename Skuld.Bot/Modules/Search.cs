@@ -10,8 +10,8 @@ using Skuld.Bot.Extensions;
 using Skuld.Bot.Services;
 using Skuld.Core.Extensions;
 using Skuld.Core.Generic.Models;
+using Skuld.Core.Models;
 using Skuld.Core.Utilities;
-using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
 using Skuld.Discord.Services;
@@ -39,8 +39,7 @@ namespace Skuld.Bot.Commands
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }
 
         #region SocialMedia
-
-        [Command("twitch"), Summary("Finds a twitch user"), RequireTwitch]
+        [Command("twitch"), Summary("Finds a twitch user")]
         public async Task TwitchSearch([Remainder]string twitchStreamer)
         {
             var channel = await BotService.TwitchClient.GetUsersAsync(new GetUsersParams
@@ -51,52 +50,9 @@ namespace Skuld.Bot.Commands
             var user = channel.Data.FirstOrDefault();
 
             if (user != null)
-                await (await user.GetEmbedAsync(BotService.TwitchClient)).QueueMessageAsync(Context).ConfigureAwait(false);
+                await (await user.GetEmbedAsync(BotService.TwitchClient).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
             else
-                await $"Couldn't find user `{twitchStreamer}`. Check your spelling and try again".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
-        }
-
-        [Command("instagram"), Alias("insta"), Ratelimit(20, 1, Measure.Minutes)]
-        public async Task Instagram(string usr)
-        {
-            var data = await Social.GetInstagramUserAsync(usr).ConfigureAwait(false);
-            if (data != null)
-            {
-                if (!data.PrivateAccount)
-                {
-                    if (data.TimelineMedia.Images.Count() > 0)
-                    {
-                        var post = data.TimelineMedia.Images.FirstOrDefault().Node;
-
-                        var embed = new EmbedBuilder
-                        {
-                            Author = new EmbedAuthorBuilder
-                            {
-                                Name = $"{data.FullName} ({data.Username})",
-                                IconUrl = data.ProfilePicture,
-                                Url = "https://instagr.am/" + data.Username
-                            },
-                            ImageUrl = post.DisplaySrc,
-                            Description = post.PrimaryCaption,
-                            Title = "Recent Post",
-                            Url = "https://www.instagr.am/p/" + post.Code + "/",
-                            Timestamp = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(post.Date),
-                            Footer = new EmbedFooterBuilder
-                            {
-                                Text = "Uploaded"
-                            },
-                            Color = EmbedUtils.RandomColor()
-                        };
-                        await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
-                    }
-                    else
-                        await "This account has no images in their feed".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
-                }
-                else
-                    await "This account is a Private Account, so I can't access their feed.".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
-            }
-            else
-                await $"I can't find an account named: `{usr}`. Check your spelling and try again.".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                await Messages.FromError($"Couldn't find user `{twitchStreamer}`. Check your spelling and try again", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("reddit"), Summary("Gets a subreddit")]
@@ -104,45 +60,24 @@ namespace Skuld.Bot.Commands
         {
             var channel = (ITextChannel)Context.Channel;
 
-            var subReddit = await Social.GetSubRedditAsync(subreddit);
-            var paginatedMessage = new PaginatedMessage
+            var subReddit = await Social.GetSubRedditAsync(subreddit).ConfigureAwait(false);
+
+            var embed = new EmbedBuilder
             {
                 Title = "https://reddit.com/" + subreddit,
-                Color = Color.Blue,
-                Options = new PaginatedAppearanceOptions
+                Description = subReddit.Data.Posts.PaginatePosts(channel, 25)[0],
+                Footer = new EmbedFooterBuilder
                 {
-                    DisplayInformationIcon = false,
-                    JumpDisplayOptions = JumpDisplayOptions.WithManageMessages
-                }
+                    Text = "Page 1/1"
+                },
+                Color = Color.Blue
             };
 
-            paginatedMessage.Pages = subReddit.Data.Posts.PaginatePosts(channel);
-
-            if (paginatedMessage.Pages.Count() > 1)
-            {
-                await PagedReplyAsync(paginatedMessage);
-            }
-            else
-            {
-                var embed = new EmbedBuilder
-                {
-                    Title = paginatedMessage.Title,
-                    Description = paginatedMessage.Pages.FirstOrDefault().ToString(),
-                    Footer = new EmbedFooterBuilder
-                    {
-                        Text = "Page 1/1"
-                    },
-                    Color = Color.Blue
-                };
-
-                await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
-            }
+            await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
         }
-
-        #endregion SocialMedia
+        #endregion
 
         #region SearchEngines
-
         [Command("search"), Summary("Use \"g\" as a short cut for google,\n\"yt\" for youtube,\nor search for images on imgur"), Alias("s")]
         public async Task GetSearch(string platform, [Remainder]string query)
         {
@@ -170,6 +105,10 @@ namespace Skuld.Bot.Commands
         [Command("lmgtfy"), Summary("Creates a \"lmgtfy\"(Let me google that for you) link")]
         public async Task LMGTFY(string engine, [Remainder]string query)
         {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var prefix = (await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix ?? Configuration.Prefix;
+            
             string url = "https://lmgtfy.com/";
             engine = engine.ToLowerInvariant();
             if (engine == "g" || engine == "google")
@@ -188,15 +127,13 @@ namespace Skuld.Bot.Commands
                 await url.QueueMessageAsync(Context).ConfigureAwait(false);
             else
             {
-                await new EmbedBuilder { Author = new EmbedAuthorBuilder { Name = "Error with command" }, Color = Color.Red, Description = $"Ensure your parameters are correct, example: `{Configuration.Discord.Prefix}lmgtfy g How to use lmgtfy`" }.Build().QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                await Messages.FromError($"Ensure your parameters are correct, example: `{Configuration.Prefix}lmgtfy g How to use lmgtfy`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new[] { "generic" });
             }
         }
-
-        #endregion SearchEngines
+        #endregion
 
         #region Definitions/Information
-
         [Command("urban"), Summary("Gets a thing from urban dictionary if empty, it gets a random thing"), RequireNsfw]
         public async Task Urban([Remainder]string phrase = null)
         {
@@ -243,11 +180,9 @@ namespace Skuld.Bot.Commands
 
             await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
         }
-
-        #endregion Definitions/Information
+        #endregion
 
         #region Games
-
         [Command("steam"), Summary("Searches steam store")]
         public async Task SteamStore([Remainder]string game)
         {
@@ -257,43 +192,31 @@ namespace Skuld.Bot.Commands
             {
                 if (steam.Count > 1)
                 {
-                    var Pages = steam.PaginateList();
+                    var Pages = steam.PaginateList(25);
 
-                    if (Pages.Count > 1)
-                    {
-                        await PagedReplyAsync(new PaginatedMessage
-                        {
-                            Pages = Pages,
-                            Title = "Type the number of what you want",
-                            Color = Color.Purple
-                        });
-                    }
-                    else
-                    {
-                        await $"Type the number of what you want:\n{string.Join("\n", Pages)}".QueueMessageAsync(Context).ConfigureAwait(false);
-                    }
+                    await $"Type the number of what you want:\n{string.Join("\n", Pages)}".QueueMessageAsync(Context).ConfigureAwait(false);
 
                     var message = await NextMessageAsync();
 
                     int.TryParse(message.Content, out int selectedapp);
                     if (selectedapp <= 0)
                     {
-                        await "Incorrect input".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                        await Messages.FromError("Incorrect input", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         return;
                     }
 
                     selectedapp--;
 
-                    await (await steam[selectedapp].GetEmbedAsync()).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await (await steam[selectedapp].GetEmbedAsync().ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
                 else
                 {
-                    await (await steam[0].GetEmbedAsync()).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await (await steam[0].GetEmbedAsync().ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
             else
             {
-                await "I found nothing from steam".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                await Messages.FromError("I found nothing from steam", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -350,77 +273,6 @@ namespace Skuld.Bot.Commands
                 await embed.QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
-
-        #endregion Games
-
-        #region Osu
-
-        /*
-        [Command("osu!"), Summary("Get a person's Osu! Sig")]
-        public async Task OsuSig([Remainder]string User) => await SendSigAsync(0, User);
-
-        [Command("osu!taiko"), Summary("Gets a person's Osu!Taiko Sig")]
-        public async Task TaikoSig([Remainder]string User) => await SendSigAsync(1, User);
-
-        [Command("osu!ctb"), Summary("Gets a person's Osu!CTB Sig")]
-        public async Task CTBSig([Remainder]string User) => await SendSigAsync(2, User);
-
-        [Command("osu!mania"), Summary("Gets a person's Osu!Mania Sig")]
-        public async Task ManiaSig([Remainder]string User) => await SendSigAsync(3, User);
-
-        private async Task SendSigAsync(int mode, string User)
-        {
-            Uri url = null;
-
-            var folder = AppContext.BaseDirectory + "/storage/OsuSigs/";
-
-            string msgmode = "";
-
-            if (mode == 0)
-            {
-                url = new Uri($"http://lemmmy.pw/osusig/sig.php?colour=pink&uname={User}&pp=1&countryrank&rankedscore&onlineindicator=undefined&xpbar");
-                folder += "Standard/";
-            }
-            if (mode == 1)
-            {
-                url = new Uri($"http://lemmmy.pw/osusig/sig.php?colour=pink&uname={User}&mode=1&pp=1&countryrank&rankedscore&onlineindicator=undefined&xpbar");
-                folder += "Taiko/";
-                msgmode = "Taiko";
-            }
-            if (mode == 2)
-            {
-                url = new Uri($"http://lemmmy.pw/osusig/sig.php?colour=pink&uname={User}&mode=2&pp=1&countryrank&rankedscore&onlineindicator=undefined&xpbar");
-                folder += "CTB/";
-                msgmode = "CTB";
-            }
-            if (mode == 3)
-            {
-                url = new Uri($"http://lemmmy.pw/osusig/sig.php?colour=pink&uname={User}&mode=3&pp=1&countryrank&rankedscore&onlineindicator=undefined&xpbar");
-                folder += "Mania/";
-                msgmode = "Mania";
-            }
-
-            if (!Directory.Exists(folder))
-            { Directory.CreateDirectory(folder); }
-
-            var filepath = folder + User + ".png";
-            await WebHandler.DownloadFileAsync(url, filepath);
-
-            var file = File.OpenRead(filepath);
-
-            if (file.IsValidOsuSig())
-            {
-                await "".QueueMessage(Discord.Models.MessageType.File, Context.User, Context.Channel, filepath);
-            }
-            else
-            {
-                await $"The user either doesn't exist or they haven't played osu!{msgmode}".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-            }
-
-            file.Close();
-        }
-        */
-
-        #endregion Osu
+        #endregion
     }
 }

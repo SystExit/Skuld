@@ -1,5 +1,4 @@
 ﻿using Discord;
-using Discord.Addons.Interactive;
 using Discord.Commands;
 using Skuld.Bot.Services;
 using Skuld.Core.Generic.Models;
@@ -17,7 +16,7 @@ using System.Threading.Tasks;
 namespace Skuld.Bot.Commands
 {
     [Group]
-    public class Core : InteractiveBase<ShardedCommandContext>
+    public class Core : ModuleBase<ShardedCommandContext>
     {
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }
         private CommandService CommandService { get => MessageHandler.CommandService; }
@@ -31,7 +30,7 @@ namespace Skuld.Bot.Commands
             {
                 if (command == null)
                 {
-                    string prefix = (await Database.GetGuildAsync(Context.Guild) != null ? (await Database.GetGuildAsync(Context.Guild)).Prefix : Configuration.Discord.Prefix);
+                    string prefix = (await Database.GetGuildAsync(Context.Guild) != null ? (await Database.GetGuildAsync(Context.Guild)).Prefix : Configuration.Prefix);
 
                     string title = $"Commands of: {Context.Client.CurrentUser} that can be invoked in: ";
 
@@ -61,10 +60,10 @@ namespace Skuld.Bot.Commands
                         string desc = "";
                         foreach (var cmd in module.Commands)
                         {
-                            var result = await cmd.CheckPreconditionsAsync(Context);
+                            var result = await cmd.CheckPreconditionsAsync(Context).ConfigureAwait(false);
                             if (result.IsSuccess)
                             {
-                                desc += $"{cmd.Aliases.First()}, ";
+                                desc += $"{cmd.Aliases[0]}, ";
                             }
                             else continue;
                         }
@@ -89,7 +88,7 @@ namespace Skuld.Bot.Commands
                             {
                                 commandsText += $"{cmd.Name}, ";
                             }
-                            commandsText = commandsText.Substring(0, commandsText.Length - 2);
+                            commandsText = commandsText[0..^2];
                             embed.AddField("Custom Commands", $"`{commandsText}`");
                         }
                     }
@@ -113,7 +112,7 @@ namespace Skuld.Bot.Commands
             }
             catch (Exception ex)
             {
-                await ex.Message.QueueMessageAsync(Context, Discord.Models.MessageType.Failed, null, ex).ConfigureAwait(false);
+                await Messages.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 Log.Error("CMD-HELP", ex.Message, ex);
             }
         }

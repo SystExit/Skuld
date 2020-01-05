@@ -1,5 +1,6 @@
 ﻿using Discord.Commands;
-using Skuld.Core.Generic.Models;
+using Skuld.Core.Models;
+using Skuld.Core.Utilities;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,8 +15,10 @@ namespace Skuld.Discord.Preconditions
 
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
-            if (SkuldConfig.Load().Discord.BotAdmins.Contains(context.User.Id) || (context.Client.GetApplicationInfoAsync().Result).Owner.Id == context.User.Id)
-            { return Task.FromResult(PreconditionResult.FromSuccess()); }
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            if(Database.Users.FirstOrDefault(x=>x.Id == context.User.Id).Flags >= Utils.BotAdmin || (context.Client.GetApplicationInfoAsync().Result).Owner.Id == context.User.Id)
+                return Task.FromResult(PreconditionResult.FromSuccess());
             else
                 return Task.FromResult(PreconditionResult.FromError("Not a bot owner/developer"));
         }

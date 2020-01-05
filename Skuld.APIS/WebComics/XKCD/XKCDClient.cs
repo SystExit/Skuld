@@ -24,6 +24,9 @@ namespace Skuld.APIS.WebComics.XKCD
         private async Task<int?> GetLastPageAsync()
         {
             var rawresp = await ReturnStringAsync(new Uri("https://xkcd.com/info.0.json"));
+
+            if (string.IsNullOrEmpty(rawresp) || string.IsNullOrWhiteSpace(rawresp)) return null;
+
             var jsonresp = JObject.Parse(rawresp);
             dynamic item = jsonresp;
             if (item["num"].ToString() != null)

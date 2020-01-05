@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using DiscNet = Discord;
 
 namespace Skuld.Discord.Models
@@ -15,11 +16,13 @@ namespace Skuld.Discord.Models
         public string Message;
         public DiscNet.IUser User;
         public DiscNet.Embed Embed;
-        public string File;
+        public Stream File;
+        public string FileName;
     }
 
     public struct SkuldMessage
     {
+        public Guid IdempotencyKey;
         public DiscNet.IMessageChannel Channel;
         public SkuldMessageMeta Meta;
         public SkuldMessageContent Content;

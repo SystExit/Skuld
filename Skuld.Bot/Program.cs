@@ -4,7 +4,7 @@ namespace Skuld.Bot
 {
     internal class Program
     {
-        private static void Main()
-            => new HostSerivce().CreateAsync().GetAwaiter().GetResult();
+        private static void Main(string[] args)
+            => HostSerivce.CreateAsync(args).GetAwaiter().GetResult();
     }
 }

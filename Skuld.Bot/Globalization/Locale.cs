@@ -3,7 +3,7 @@ using System.Linq;
 using System.Resources;
 using System.Threading.Tasks;
 
-namespace Skuld.Core.Globalization
+namespace Skuld.Bot.Globalization
 {
     public class Locale
     {

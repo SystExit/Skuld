@@ -2,6 +2,7 @@
 using PokeAPI;
 using Skuld.APIS.Pokemon.Models;
 using Skuld.Core.Extensions;
+using Skuld.Discord.Extensions;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,13 +15,15 @@ namespace Skuld.Bot.Extensions
 
         public static async Task<Embed> GetEmbedAsync(this PokemonSpecies pokemon, PokemonDataGroup group)
         {
-            var poke = await DataFetcher.GetApiObject<Pokemon>(pokemon.ID);
+            if (pokemon == null) return null;
+
+            var poke = await DataFetcher.GetApiObject<Pokemon>(pokemon.ID).ConfigureAwait(false);
 
             var embed = new EmbedBuilder
             {
                 Author = new EmbedAuthorBuilder
                 {
-                    Name = $"{char.ToUpper(pokemon.Name[0])}{pokemon.Name.Substring(1)} - {pokemon.ID.ToString()}"
+                    Name = $"{char.ToUpperInvariant(pokemon.Name[0])}{pokemon.Name.Substring(1)} - {pokemon.ID}"
                 },
                 Color = Color.Blue
             };
@@ -42,7 +45,7 @@ namespace Skuld.Bot.Extensions
                 case PokemonDataGroup.Default:
                     embed.AddInlineField("Height", poke.Height + "dm");
                     //embed.AddInlineField("Weight", poke.Weight + "hg");
-                    embed.AddInlineField("Base Experience", poke.BaseExperience.ToString() + "xp");
+                    embed.AddInlineField("Base Experience", $"{poke.BaseExperience}xp");
                     break;
 
                 case PokemonDataGroup.Abilities:

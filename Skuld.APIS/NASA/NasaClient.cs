@@ -30,6 +30,8 @@ namespace Skuld.APIS
 
         private async void FeedSOL()
         {
+            if (token == null) return;
+
             //Curiosity
             var client = (HttpWebRequest)WebRequest.Create(CuriosityEndpoint + $"?api_key={token}");
             client.Headers.Add(HttpRequestHeader.UserAgent, UAGENT);
@@ -80,6 +82,7 @@ namespace Skuld.APIS
 
         public async Task<APOD> GetAPODAsync()
         {
+            if (token == null) return null;
             if (rateLimiter.IsRatelimited()) return null;
 
             var client = (HttpWebRequest)WebRequest.Create("https://api.nasa.gov/planetary/apod?api_key=" + token);
@@ -112,6 +115,7 @@ namespace Skuld.APIS
 
         public async Task<RoverPhotoWrapper> GetRoverPhotoAsync(NasaRover rover, NasaRoverCamera camera, int SOL = 2199)
         {
+            if (token == null) return null;
             if (rateLimiter.IsRatelimited()) return null;
 
             string requestbase = "";

@@ -20,6 +20,7 @@ namespace Skuld.Discord.Handlers
 {
     public static class MessageHandler
     {
+        private const string Key = "MsgHand";
         private static SkuldConfig SkuldConfig;
         public static CommandService CommandService;
         public static MessageServiceConfig cmdConfig;
@@ -59,7 +60,7 @@ namespace Skuld.Discord.Handlers
         #region CommandService Logs
         private static Task CommandService_Log(LogMessage arg)
         {
-            var key = "CommandService - " + arg.Source;
+            var key = $"{Key}-{arg.Source}";
             switch (arg.Severity)
             {
                 case LogSeverity.Error:
@@ -125,7 +126,7 @@ namespace Skuld.Discord.Handlers
 
                 if (arg3.Error != CommandError.UnknownCommand && displayerror)
                 {
-                    Log.Error("CmdHand", "Error with command, Error is: " + arg3);
+                    Log.Error(Key, "Error with command, Error is: " + arg3);
                     await new EmbedBuilder
                     {
                         Author = new EmbedAuthorBuilder { Name = "Error with the command" },
@@ -180,30 +181,20 @@ namespace Skuld.Discord.Handlers
             try
             {
                 DogStatsd.Increment("messages.recieved");
-                if (arg.Author.IsBot || arg.Author.IsWebhook || arg.Author.Discriminator.Equals("0000")) { return; }
-
-                var message = arg as SocketUserMessage;
-                if (message is null) { return; }
+                if (arg.Author.IsBot || arg.Author.IsWebhook || arg.Author.Discriminator.Equals("0000") || !(arg is SocketUserMessage message)) return;
 
                 if (message.Channel is ITextChannel)
                 {
-                    if (!await CheckPermissionToSendMessageAsync(message.Channel as ITextChannel))
-                    {
-                        return;
-                    }
-                }
-
-                if (message.Channel is ITextChannel)
-                {
+                    if (!await CheckPermissionToSendMessageAsync(message.Channel as ITextChannel)) return;
+                    
                     var gldtemp = (message.Channel as ITextChannel).Guild;
                     if (gldtemp != null)
                     {
                         var guser = await gldtemp.GetUserAsync(BotService.DiscordClient.CurrentUser.Id);
 
                         if (!guser.GetPermissions(message.Channel as IGuildChannel).SendMessages) return;
+                        if (!MessageTools.IsEnabledChannel(await (message.Channel as ITextChannel).Guild.GetUserAsync(message.Author.Id), (ITextChannel)message.Channel)) return;
                     }
-
-                    if (!MessageTools.IsEnabledChannel(await (message.Channel as ITextChannel).Guild.GetUserAsync(message.Author.Id), (ITextChannel)message.Channel)) { return; }
                 }
 
                 User suser = null;
@@ -216,7 +207,7 @@ namespace Skuld.Discord.Handlers
                 else
                 {
                     suser = await Database.GetUserAsync(arg.Author);
-                    if (suser != null && suser.Banned) return;
+                    if (suser != null && suser.Flags.IsBitSet(Utils.Banned) && (!suser.Flags.IsBitSet(Utils.BotCreator) || !suser.Flags.IsBitSet(Utils.BotAdmin))) return;
                     if (!suser.IsUpToDate(message.Author))
                     {
                         suser.AvatarUrl = new Uri(message.Author.GetAvatarUrl() ?? message.Author.GetDefaultAvatarUrl());
@@ -241,7 +232,7 @@ namespace Skuld.Discord.Handlers
                     }
                 }
 
-                if (!MessageTools.HasPrefix(message, BotService.DiscordClient, SkuldConfig, cmdConfig, sguild?.Prefix)) return;
+                if (!MessageTools.HasPrefix(message, BotService.DiscordClient, cmdConfig, suser, sguild?.Prefix)) return;
 
                 ShardedCommandContext context = new ShardedCommandContext(BotService.DiscordClient, message);
 
@@ -258,13 +249,15 @@ namespace Skuld.Discord.Handlers
             }
             catch (Exception ex)
             {
-                Log.Critical("CommandProcessor", ex.Message, ex);
+                Log.Critical(Key, ex.Message, ex);
             }
         }
 
         public static async Task HandleExperienceAsync(IUserMessage message, IUser user, IGuild guild, Guild sguild, IMessageChannel backupChannel)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var rewardsForGuild = Database.LevelRewards.Where(x => x.GuildId == guild.Id);
 
             var luxp = Database.UserXp.FirstOrDefault(x => x.UserId == user.Id && x.GuildId == guild.Id);
 
@@ -328,7 +321,16 @@ namespace Skuld.Discord.Handlers
                             }
                         }
 
-                        Log.Info("MessageService", "User leveled up");
+                        if(rewardsForGuild.Any(x=>(ulong)x.LevelRequired <= luxp.Level))
+                        {
+                            var guser = await guild.GetUserAsync(user.Id).ConfigureAwait(false);
+                            foreach(var reward in rewardsForGuild.Where(x=>(ulong)x.LevelRequired <= luxp.Level))
+                            {
+                                await guser.AddRoleAsync(guild.GetRole(reward.RoleId)).ConfigureAwait(false);
+                            }
+                        }
+
+                        Log.Info(Key, "User leveled up");
                         DogStatsd.Increment("user.levels.levelup");
                     }
                     else //otherwise append current status
@@ -436,7 +438,6 @@ namespace Skuld.Discord.Handlers
         {
             if (channel.Guild != null)
             {
-                var guild = channel.Guild;
                 var currentuser = await channel.Guild.GetCurrentUserAsync();
                 var chan = await channel.Guild.GetChannelAsync(channel.Id);
                 var po = chan.GetPermissionOverwrite(currentuser);

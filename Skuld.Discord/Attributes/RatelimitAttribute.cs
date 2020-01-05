@@ -35,7 +35,6 @@ namespace Skuld.Discord.Attributes
             _noLimitForAdmins = noLimitForAdmins;
             _applyPerGuild = applyPerGuild;
 
-            //TODO: C# 7 candidate switch expression
             switch (measure)
             {
                 case Measure.Days:

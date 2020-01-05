@@ -4,8 +4,9 @@ using Discord.Commands;
 using Kitsu.Anime;
 using Kitsu.Manga;
 using Skuld.APIS.Extensions;
+using Skuld.Bot.Extensions;
+using Skuld.Bot.Globalization;
 using Skuld.Core.Extensions;
-using Skuld.Core.Globalization;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
@@ -29,40 +30,26 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database.GetUserAsync(Context.User);
+            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
             var loc = Locale.GetLocale(usr.Language ?? Locale.defaultLocale);
 
-            var raw = await Anime.GetAnimeAsync(animetitle);
+            var raw = await Anime.GetAnimeAsync(animetitle).ConfigureAwait(false);
             var data = raw.Data;
             if (data.Count > 1) // do pagination
             {
-                var pages = data.PaginateList();
+                var pages = data.PaginateList(25);
 
-                IUserMessage sentmessage = null;
-
-                if (pages.Count() > 1)
+                IUserMessage sentmessage = await ReplyAsync(null, false, new EmbedBuilder
                 {
-                    sentmessage = await PagedReplyAsync(new PaginatedMessage
-                    {
-                        Title = loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s",
-                        Color = Color.Purple,
-                        Pages = pages
-                    }, true);
-                }
-                else
-                {
-                    sentmessage = await ReplyAsync(null, false, new EmbedBuilder
-                    {
-                        Title = loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s",
-                        Color = Color.Purple,
-                        Description = pages[0]
-                    }.Build());
-                }
+                    Title = loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s",
+                    Color = Color.Purple,
+                    Description = pages[0]
+                }.Build()).ConfigureAwait(false);
 
                 var response = await NextMessageAsync(true, true, TimeSpan.FromSeconds(30));
                 if (response == null)
                 {
-                    await sentmessage.DeleteAsync();
+                    await sentmessage.DeleteAsync().ConfigureAwait(false);
                 }
 
                 var selection = Convert.ToInt32(response.Content);
@@ -84,40 +71,26 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database.GetUserAsync(Context.User);
+            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
             var loc = Locale.GetLocale(usr.Language ?? Locale.defaultLocale);
 
-            var raw = await Manga.GetMangaAsync(mangatitle);
+            var raw = await Manga.GetMangaAsync(mangatitle).ConfigureAwait(false);
             var data = raw.Data;
             if (data.Count > 1) // do pagination
             {
-                var pages = data.PaginateList();
+                var pages = data.PaginateList(25);
 
-                IUserMessage sentmessage = null;
-
-                if (pages.Count > 1)
+                IUserMessage sentmessage = await ReplyAsync(null, false, new EmbedBuilder
                 {
-                    sentmessage = await PagedReplyAsync(new PaginatedMessage
-                    {
-                        Title = loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s",
-                        Color = Color.Purple,
-                        Pages = pages
-                    }, true);
-                }
-                else
-                {
-                    sentmessage = await ReplyAsync(null, false, new EmbedBuilder
-                    {
-                        Title = loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s",
-                        Color = Color.Purple,
-                        Description = pages[0]
-                    }.Build());
-                }
+                    Title = loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s",
+                    Color = Color.Purple,
+                    Description = pages[0]
+                }.Build()).ConfigureAwait(false);
 
                 var response = await NextMessageAsync(true, true, TimeSpan.FromSeconds(30));
                 if (response == null)
                 {
-                    await sentmessage.DeleteAsync();
+                    await sentmessage.DeleteAsync().ConfigureAwait(false);
                 }
 
                 var selection = Convert.ToInt32(response.Content);
@@ -137,7 +110,7 @@ namespace Skuld.Bot.Commands
         [Command("weebgif"), Summary("Gets a weeb gif")]
         public async Task WeebGif()
         {
-            var gif = await SysExClient.GetWeebReactionGifAsync();
+            var gif = await SysExClient.GetWeebReactionGifAsync().ConfigureAwait(false);
 
             await new EmbedBuilder
             {
@@ -151,13 +124,13 @@ namespace Skuld.Bot.Commands
         {
             if (url == null)
             {
-                if (Context.Message.Attachments.Count() > 0)
+                if (Context.Message.Attachments.Any())
                 {
                     var attach = Context.Message.Attachments.First();
 
-                    var data = await new ApiConversion().TraceAnimeByUrlAsync(attach.Url);
+                    var data = await new ApiConversion().TraceAnimeByUrlAsync(attach.Url).ConfigureAwait(false);
 
-                    if (data.docs.Count() > 0)
+                    if (data.docs.Any())
                     {
                         await GetWhatAnimeMessage(data.docs.OrderByDescending(x => x.similarity)).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
@@ -169,9 +142,9 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                var data = await new ApiConversion().TraceAnimeByUrlAsync(url.OriginalString);
+                var data = await new ApiConversion().TraceAnimeByUrlAsync(url.OriginalString).ConfigureAwait(false);
 
-                if (data.docs.Count() > 0)
+                if (data.docs.Any())
                 {
                     await GetWhatAnimeMessage(data.docs.OrderByDescending(x => x.similarity)).QueueMessageAsync(Context).ConfigureAwait(false);
                 }

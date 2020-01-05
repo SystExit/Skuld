@@ -23,15 +23,13 @@ namespace Skuld.Core.Models
         /// </summary>
         public ulong Pats { get; set; } = 0;
 
-        public int HP { get; set; } = 10000;
-        public ulong GlaredAt { get; set; } = 0;
-        public ulong Glares { get; set; } = 0;
         public Uri AvatarUrl { get; set; } = null;
-        public bool Banned { get; set; } = false;
         public string BanReason { get; set; } = null;
         public bool RecurringBlock { get; set; } = false;
         public bool UnlockedCustBG { get; set; } = false;
         public string Background { get; set; } = "#3F51B5";
+        public ulong Flags { get; set; } = 0;
+        public TimeZoneInfo TimeZone = null;
 
         public bool IsUpToDate(SocketUser user)
         {

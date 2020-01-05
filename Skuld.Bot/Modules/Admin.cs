@@ -36,8 +36,8 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            if (value > 1) await new EmbedBuilder { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build().QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
-            if (value < 0) await new EmbedBuilder { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build().QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+            if (value > 1) await Messages.FromError("Value over max limit: `1`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            if (value < 0) await Messages.FromError("Value under min limit: `0`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             else
             {
                 module = module.ToLowerInvariant();
@@ -78,7 +78,8 @@ namespace Skuld.Bot.Commands
                     foreach (var mod in settings) modulelist += mod.Key + " (" + mod.Value + ")" + ", ";
 
                     modulelist = modulelist.Remove(modulelist.Length - 2);
-                    await new EmbedBuilder { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules (raw name in brackets). \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build().QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+
+                    await Messages.FromError($"Cannot find module: `{module}` in a list of all available modules (raw name in brackets). \nList of available modules: \n{modulelist}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
         }
@@ -89,9 +90,8 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            if (value > 1) await new EmbedBuilder { Description = "Value over max limit: `1`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build().QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
-
-            if (value < 0) await new EmbedBuilder { Description = "Value under min limit: `0`", Title = "ERROR With Command", Color = new Color(255, 0, 0) }.Build().QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+            if (value > 1) await Messages.FromError("Value over max limit: `1`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            if (value < 0) await Messages.FromError("Value under min limit: `0`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             else
             {
                 module = module.ToLowerInvariant();
@@ -131,6 +131,10 @@ namespace Skuld.Bot.Commands
                                 gldmods.Fun = Convert.ToBoolean(value);
                                 break;
 
+                            case "gambling":
+                                gldmods.Gambling = Convert.ToBoolean(value);
+                                break;
+
                             case "information":
                                 gldmods.Information = Convert.ToBoolean(value);
                                 break;
@@ -157,14 +161,14 @@ namespace Skuld.Bot.Commands
                         }
 
                         await Database.SaveChangesAsync().ConfigureAwait(false);
-                        if (value == 0) await $"I disabled the `{module}` module".QueueMessageAsync(Context).ConfigureAwait(false);
-                        else await $"I enabled the `{module}` module".QueueMessageAsync(Context).ConfigureAwait(false);
+                        if (value == 0) await Messages.FromSuccess($"I disabled the `{module}` module", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        else await Messages.FromSuccess($"I enabled the `{module}` module", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                 }
                 else
                 {
                     string modulelist = string.Join(", ", modules);
-                    await new EmbedBuilder { Title = "Error with command", Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Color = new Color(255, 0, 0) }.Build().QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                    await Messages.FromError($"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
         }
@@ -229,34 +233,32 @@ namespace Skuld.Bot.Commands
 
             if (icon == null && name == null)
             {
-                guild.MoneyIcon = "💠";
-                guild.MoneyName = "Diamonds";
+                guild.MoneyIcon = MessageHandler.cmdConfig.MoneyIcon;
+                guild.MoneyName = MessageHandler.cmdConfig.MoneyName;
 
-                await database.SaveChangesAsync();
+                await database.SaveChangesAsync().ConfigureAwait(false);
 
-                await $"Reset the icon to: `{guild.MoneyIcon}` & the name to: `{guild.MoneyName}`".QueueMessageAsync(Context);
+                await Messages.FromSuccess($"Reset the icon to: `{guild.MoneyIcon}` & the name to: `{guild.MoneyName}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
 
                 return;
             }
 
             if(icon != null && name == null)
             {
-                await $"Parameter \"{nameof(name)}\" needs a value".QueueMessageAsync(Context, Discord.Models.MessageType.Failed);
+                await Messages.FromError($"Parameter \"{nameof(name)}\" needs a value", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
             guild.MoneyIcon = icon.ToString();
             guild.MoneyName = name;
 
-            await database.SaveChangesAsync();
+            await database.SaveChangesAsync().ConfigureAwait(false);
 
-            await $"Set the icon to: `{guild.MoneyIcon}` & the name to: `{guild.MoneyName}`".QueueMessageAsync(Context);
+            await Messages.FromSuccess($"Set the icon to: `{guild.MoneyIcon}` & the name to: `{guild.MoneyName}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
-
-        #endregion GeneralManagement
+        #endregion
 
         #region Mute/Prune
-
         [Command("mute"), Summary("Mutes a user")]
         [RequireBotAndUserPermission(GuildPermission.ManageRoles)]
         public async Task Mute(IUser usertomute)
@@ -285,18 +287,18 @@ namespace Skuld.Bot.Commands
                     await Database.SaveChangesAsync().ConfigureAwait(false);
 
                     await user.AddRoleAsync(role).ConfigureAwait(false);
-                    await $"{Context.User.Mention} just muted **{usertomute.Username}**".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                    await Messages.FromInfo($"{Context.User.Mention} just muted **{usertomute.Username}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
                 else
                 {
                     var role = guild.GetRole(gld.MutedRole);
                     await user.AddRoleAsync(role).ConfigureAwait(false);
-                    await $"{Context.User.Mention} just muted **{usertomute.Username}**".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                    await Messages.FromInfo($"{Context.User.Mention} just muted **{usertomute.Username}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
             catch
             {
-                await $"Failed to give {usertomute.Username} the muted role, ensure I have `MANAGE_ROLES` an that my highest role is above the mute role".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                await Messages.FromError($"Failed to give {usertomute.Username} the muted role, ensure I have `MANAGE_ROLES` an that my highest role is above the mute role", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -315,7 +317,7 @@ namespace Skuld.Bot.Commands
 
                 if (dbGuild.MutedRole == 0)
                 {
-                    await "Role doesn't exist, so I cannot unmute".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                    await Messages.FromError("Role doesn't exist, so I cannot unmute", Context).QueueMessageAsync(Context).ConfigureAwait(false);
 
                     DogStatsd.Increment("commands.errors", 1, 1, new[] { "generic" });
                 }
@@ -323,12 +325,12 @@ namespace Skuld.Bot.Commands
                 {
                     var role = guild.GetRole(dbGuild.MutedRole);
                     await user.RemoveRoleAsync(role).ConfigureAwait(false);
-                    await $"{Context.User.Mention} just unmuted **{usertounmute.Username}**".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                    await Messages.FromInfo($"{Context.User.Mention} just unmuted **{usertounmute.Username}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
             catch
             {
-                await $"Failed to remove the muted role from {usertounmute.Username}, ensure I have `MANAGE_ROLES` an that my highest role is above the mute role".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                await Messages.FromError($"Failed to remove the muted role from {usertounmute.Username}, ensure I have `MANAGE_ROLES` an that my highest role is above the mute role", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -338,7 +340,7 @@ namespace Skuld.Bot.Commands
         {
             if (amount < 0)
             {
-                await $"{Context.User.Mention} Your amount `{amount}` is under 0.".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                await Messages.FromError($"{Context.User.Mention} Your amount `{amount}` is under 0.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
 
                 DogStatsd.Increment("commands.errors", 1, 1, new[] { "unm-precon" });
                 return;
@@ -352,7 +354,7 @@ namespace Skuld.Bot.Commands
                 {
                     if (x.IsCompleted)
                     {
-                        await ":ok_hand: Done!".QueueMessageAsync(Context, Discord.Models.MessageType.Timed, null, null, 5).ConfigureAwait(false);
+                        await Messages.FromSuccess(":ok_hand: Done!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                 }).ConfigureAwait(false);
             }
@@ -366,16 +368,14 @@ namespace Skuld.Bot.Commands
                 {
                     if (x.IsCompleted)
                     {
-                        await ":ok_hand: Done!".QueueMessageAsync(Context, Discord.Models.MessageType.Timed, null, null, 5).ConfigureAwait(false);
+                        await Messages.FromSuccess(":ok_hand: Done!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                 }).ConfigureAwait(false);
             }
         }
-
-        #endregion Mute/Prune
+        #endregion
 
         #region Ban/Kick
-
         [Command("kick"), Summary("Kicks a user"), Alias("dab", "dabon")]
         [RequireBotAndUserPermission(GuildPermission.KickMembers)]
         public async Task Kick(IGuildUser user, [Remainder]string reason = null)
@@ -389,12 +389,12 @@ namespace Skuld.Bot.Commands
                     await user.KickAsync($"Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}").ConfigureAwait(false);
                     if (await guild.GetUserAsync(user.Id).ConfigureAwait(false) == null)
                     {
-                        await $"Successfully kicked: `{user.Username}`\tResponsible Moderator:  {Context.User.Username}#{Context.User.Discriminator}".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                        await Messages.FromInfo($"Successfully kicked: `{user.Username}`\tResponsible Moderator:  {Context.User.Username}#{Context.User.Discriminator}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
 
                         try
                         {
                             var dmchan = await user.GetOrCreateDMChannelAsync().ConfigureAwait(false);
-                            await dmchan.SendMessageAsync(msg);
+                            await dmchan.SendMessageAsync(msg).ConfigureAwait(false);
                         }
                         catch { }
                     }
@@ -405,12 +405,12 @@ namespace Skuld.Bot.Commands
                     await user.KickAsync(reason + $" Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}").ConfigureAwait(false);
                     if (await guild.GetUserAsync(user.Id).ConfigureAwait(false) == null)
                     {
-                        await ($"Successfully kicked: `{user}`\tResponsible Moderator:  {Context.User.Username}#{Context.User.Discriminator}\nReason: " + reason).QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                        await Messages.FromInfo($"Successfully kicked: `{user}`\tResponsible Moderator:  {Context.User.Username}#{Context.User.Discriminator}\nReason: {reason}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
 
                         try
                         {
                             var dmchan = await user.GetOrCreateDMChannelAsync().ConfigureAwait(false);
-                            await dmchan.SendMessageAsync(msg);
+                            await dmchan.SendMessageAsync(msg).ConfigureAwait(false);
                         }
                         catch { }
                     }
@@ -418,7 +418,7 @@ namespace Skuld.Bot.Commands
             }
             catch
             {
-                await $"Couldn't kick {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                await Messages.FromSuccess($"Couldn't kick {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -435,11 +435,11 @@ namespace Skuld.Bot.Commands
                     await Context.Guild.AddBanAsync(user, 7, $"Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}").ConfigureAwait(false);
                     if (await guild.GetUserAsync(user.Id).ConfigureAwait(false) == null)
                     {
-                        await $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                        await Messages.FromSuccess($"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         try
                         {
                             var dmchan = await user.GetOrCreateDMChannelAsync().ConfigureAwait(false);
-                            await dmchan.SendMessageAsync(msg);
+                            await dmchan.SendMessageAsync(msg).ConfigureAwait(false);
                         }
                         catch { }
                     }
@@ -450,11 +450,11 @@ namespace Skuld.Bot.Commands
                     await Context.Guild.AddBanAsync(user, 7, reason + $" Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}").ConfigureAwait(false);
                     if (await guild.GetUserAsync(user.Id).ConfigureAwait(false) == null)
                     {
-                        await $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}\nReason given: {reason}".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                        await Messages.FromSuccess($"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}\nReason given: {reason}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         try
                         {
                             var dmchan = await user.GetOrCreateDMChannelAsync().ConfigureAwait(false);
-                            await dmchan.SendMessageAsync(msg);
+                            await dmchan.SendMessageAsync(msg).ConfigureAwait(false);
                         }
                         catch { }
                     }
@@ -462,7 +462,7 @@ namespace Skuld.Bot.Commands
             }
             catch
             {
-                await $"Couldn't ban {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                await Messages.FromError($"Couldn't ban {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -479,11 +479,11 @@ namespace Skuld.Bot.Commands
                     await Context.Guild.AddBanAsync(user, daystoprune, $"Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}").ConfigureAwait(false);
                     if (await guild.GetUserAsync(user.Id).ConfigureAwait(false) == null)
                     {
-                        await $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                        await Messages.FromSuccess($"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         try
                         {
                             var dmchan = await user.GetOrCreateDMChannelAsync().ConfigureAwait(false);
-                            await dmchan.SendMessageAsync(msg);
+                            await dmchan.SendMessageAsync(msg).ConfigureAwait(false);
                         }
                         catch { }
                     }
@@ -494,11 +494,11 @@ namespace Skuld.Bot.Commands
                     await Context.Guild.AddBanAsync(user, daystoprune, reason + $" Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}").ConfigureAwait(false);
                     if (await guild.GetUserAsync(user.Id).ConfigureAwait(false) == null)
                     {
-                        await $"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}\nReason given: {reason}".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                        await Messages.FromSuccess($"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}\nReason given: {reason}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         try
                         {
                             var dmchan = await user.GetOrCreateDMChannelAsync().ConfigureAwait(false);
-                            await dmchan.SendMessageAsync(msg);
+                            await dmchan.SendMessageAsync(msg).ConfigureAwait(false);
                         }
                         catch { }
                     }
@@ -506,7 +506,7 @@ namespace Skuld.Bot.Commands
             }
             catch
             {
-                await $"Couldn't ban {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                await Messages.FromError($"Couldn't ban {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -514,16 +514,16 @@ namespace Skuld.Bot.Commands
         [RequireBotAndUserPermission(GuildPermission.BanMembers)]
         public async Task HackBan(params string[] ids)
         {
-            if (ids.Count() > 0)
+            if (ids.Any())
             {
                 foreach (var id in ids)
                     await Context.Guild.AddBanAsync(Convert.ToUInt64(id)).ConfigureAwait(false);
 
-                await $"Banned IDs: {string.Join(", ", ids)}".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                await Messages.FromSuccess($"Banned IDs: {string.Join(", ", ids)}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                await $"Couldn't parse list of ID's.".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                await Messages.FromError($"Couldn't parse list of ID's.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 DogStatsd.Increment("commands.errors", 1, 1, new[] { "parse-fail" });
             }
         }
@@ -536,22 +536,20 @@ namespace Skuld.Bot.Commands
             if (reason == null)
             {
                 await Context.Guild.AddBanAsync(user, 7, newreason).ConfigureAwait(false);
-                await $"Successfully softbanned: `{user.Username}#{user.Discriminator}`".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                await Messages.FromSuccess($"Successfully softbanned: `{user.Username}#{user.Discriminator}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 await Context.Guild.RemoveBanAsync(user).ConfigureAwait(false);
             }
             else
             {
                 newreason += " - Reason: " + reason;
                 await Context.Guild.AddBanAsync(user, 7, newreason).ConfigureAwait(false);
-                await $"Successfully softbanned: `{user.Username}#{user.Discriminator}`\nReason given: {reason}".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                await Messages.FromSuccess($"Successfully softbanned: `{user.Username}#{user.Discriminator}`\nReason given: {reason}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 await Context.Guild.RemoveBanAsync(user).ConfigureAwait(false);
             }
         }
-
-        #endregion Ban/Kick
+        #endregion
 
         #region RoleManagement
-
         [Command("roleids"), Summary("Gets all role ids")]
         public async Task GetRoleIds()
         {
@@ -568,9 +566,12 @@ namespace Skuld.Bot.Commands
             {
                 var paddedlines = lines.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
 
-                var pages = paddedlines.PaginateCodeBlockList();
+                var pages = paddedlines.PaginateCodeBlockList(25);
 
-                await PagedReplyAsync(pages, fromSourceUser: true);
+                foreach(var page in pages)
+                {
+                    await page.QueueMessageAsync(Context).ConfigureAwait(false);
+                }
             }
             else
             {
@@ -585,7 +586,7 @@ namespace Skuld.Bot.Commands
 
             var guild = Context.Guild;
 
-            var gld = await Database.GetGuildAsync(guild);
+            var gld = await Database.GetGuildAsync(guild).ConfigureAwait(false);
 
             if (role == null)
             {
@@ -594,13 +595,13 @@ namespace Skuld.Bot.Commands
                     gld.JoinRole = 0;
                     await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                    if ((await Database.GetGuildAsync(guild)).JoinRole == 0)
+                    if ((await Database.GetGuildAsync(guild).ConfigureAwait(false)).JoinRole == 0)
                     {
-                        await $"Successfully removed the member join role".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                        await Messages.FromSuccess($"Successfully removed the member join role", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                     else
                     {
-                        await $"Error Removing Join Role, reason unknown.".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                        await Messages.FromError($"Error Removing Join Role, reason unknown.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                 }
             }
@@ -611,13 +612,13 @@ namespace Skuld.Bot.Commands
                 gld.JoinRole = role.Id;
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                if ((await Database.GetGuildAsync(guild)).JoinRole != roleidprev)
+                if ((await Database.GetGuildAsync(guild).ConfigureAwait(false)).JoinRole != roleidprev)
                 {
-                    await $"Successfully set **{role.Name}** as the member join role".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                    await Messages.FromSuccess($"Successfully set **{role.Name}** as the member join role", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
                 else
                 {
-                    await $"Error Changing Join Role, reason unknown.".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                    await Messages.FromError($"Error Changing Join Role, reason unknown.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
         }
@@ -641,18 +642,14 @@ namespace Skuld.Bot.Commands
 
         [Command("addassignablerole"), Summary("Adds a new self assignable role. Supported:cost=[cost] require-level=[level] require-role=[rolename/roleid/mention]")]
         [Alias("asar")]
-        public async Task AddSARole(IRole role, [Remainder]GuildRoleConfig config = null)
+        public async Task AddSARole(IRole role, [Remainder]GuildRoleConfig config)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            if (config == null)
-                config = new GuildRoleConfig();
-
             var features = Database.Features.FirstOrDefault(x => x.Id == Context.Guild.Id);
 
             if (config.RequireLevel != 0 && !features.Experience)
             {
-                await $"Enable Experience module first by using `{(await Database.GetGuildAsync(Context.Guild)).Prefix}guild-feature experience 1`".QueueMessageAsync(Context).ConfigureAwait(false);
+                await Messages.FromError("Configuration Error!", $"Enable Experience module first by using `{(await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix}guild-feature experience 1`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -668,41 +665,97 @@ namespace Skuld.Bot.Commands
             try
             {
                 await Database.SaveChangesAsync().ConfigureAwait(false);
-                await "".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                await Messages.FromSuccess(Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                await ex.Message.QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                await Messages.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
 
                 Log.Error("ASAR-CMD", ex.Message, ex);
             }
         }
 
-        [Command("addlevelrole"), Summary("Adds a new self assignable role. Supported:cost=[cost] require-level=[level] require-role=[rolename/roleid/mention]")]
+        [Command("addlevelrole"), Summary("Adds a new self assignable role. Supported:automatic=[true/false] require-level=[level] require-role=[rolename/roleid/mention]")]
         [Alias("alr")]
-        [Disabled]
         public async Task AddLRole(IRole role, [Remainder]GuildRoleConfig config)
         {
+            var levelReward = new LevelRewards
+            {
+                GuildId = Context.Guild.Id,
+                LevelRequired = config.RequireLevel,
+                RoleId = role.Id
+            };
+
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            if(Database.LevelRewards.Contains(levelReward))
+            {
+                await Messages.FromError("Level reward already exists in this configuration", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+
+            Database.LevelRewards.Add(levelReward);
+
+            try
+            {
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await Messages.FromInfo($"Added new Level Reward with configuration `{config}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                await Messages.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+
+                Log.Error("ALR-CMD", ex.Message, ex);
+            }
         }
 
-        [Disabled]
-        [Command("deleteasr"), Summary("Removes a Self Assignable Role from the list")]
+        [Command("deletesr"), Summary("Removes a Self Assignable Role from the list")]
         public async Task DeleteSelfRole([Remainder]IRole role)
         {
-            //await DatabaseClient.DropCustomRole(role, false)
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+            var r = Database.IAmRoles.FirstOrDefault(x => x.RoleId == role.Id);
+            
+            try
+            {
+                Database.IAmRoles.Remove(r);
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await Messages.FromInfo("Command Successful", $"Removed Self Assignable Role `{role}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                await Messages.FromError($"Command Error", ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+
+                Log.Error("DA-CMD", ex.Message, ex);
+            }
         }
 
-        [Disabled]
-        [Command("deletealr"), Summary("Removes a Level Grant Role from the list")]
+        [Command("deletelr"), Summary("Removes a Level Grant Role from the list")]
         public async Task DeleteLevelRole([Remainder]IRole role)
         {
-            //await DatabaseClient.DropCustomRole(role, true)
-        }
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+            var r = Database.LevelRewards.FirstOrDefault(x => x.RoleId == role.Id);
 
-        #endregion RoleManagement
+            try
+            {
+                Database.LevelRewards.Remove(r);
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await Messages.FromInfo("Command Successful", $"Removed Self Assignable Role `{role}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                await Messages.FromError($"Command Error", ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+
+                Log.Error("DLR-CMD", ex.Message, ex);
+            }
+        }
+        #endregion
 
         #region Prefix
-
         [Command("setprefix"), Summary("Sets the prefix, or resets on empty prefix"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetPrefix(string prefix = null)
@@ -719,20 +772,20 @@ namespace Skuld.Bot.Commands
                 await Database.SaveChangesAsync();
 
                 if ((await Database.GetGuildAsync(Context.Guild)).Prefix != oldprefix)
-                    await $"Successfully set `{prefix}` as the Guild's prefix".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                    await Messages.FromSuccess($"Successfully set `{prefix}` as the Guild's prefix", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 else
-                    await $":thinking: It didn't change. Probably because it is the same as the current prefix.".QueueMessageAsync(Context).ConfigureAwait(false);
+                    await Messages.FromError($":thinking: It didn't change. Probably because it is the same as the current prefix.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                gld.Prefix = Configuration.Discord.Prefix;
+                gld.Prefix = Configuration.Prefix;
 
                 await Database.SaveChangesAsync();
 
-                if ((await Database.GetGuildAsync(Context.Guild)).Prefix == Configuration.Discord.Prefix)
-                    await $"Successfully reset the Guild's prefix".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                if ((await Database.GetGuildAsync(Context.Guild)).Prefix == Configuration.Prefix)
+                    await Messages.FromSuccess($"Successfully reset the Guild's prefix", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 else
-                    await $":thinking: It didn't change.".QueueMessageAsync(Context).ConfigureAwait(false);
+                    await Messages.FromError($":thinking: It didn't change.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -757,11 +810,9 @@ namespace Skuld.Bot.Commands
                 await Database.InsertGuildAsync(Context.Guild, MessageHandler.cmdConfig.Prefix, MessageHandler.cmdConfig.MoneyName, MessageHandler.cmdConfig.MoneyIcon).ConfigureAwait(false);
             }
         }
-
-        #endregion Prefix
+        #endregion
 
         #region Welcome
-
         //Set Channel
         [Command("setwelcome"), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
@@ -779,7 +830,7 @@ namespace Skuld.Bot.Commands
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
             if ((await Database.GetGuildAsync(Context.Guild)).JoinMessage != oldmessage)
-                await $"Set Welcome message!".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                await Messages.FromSuccess($"Set Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         //Current Channel
@@ -802,7 +853,7 @@ namespace Skuld.Bot.Commands
             var ngld = await Database.GetGuildAsync(Context.Guild);
 
             if (ngld.JoinChannel != oldchannel && ngld.JoinMessage != oldmessage)
-                await "Set Welcome message!".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                await Messages.FromSuccess("Set Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         //Deletes
@@ -822,13 +873,11 @@ namespace Skuld.Bot.Commands
             var ngld = await Database.GetGuildAsync(Context.Guild);
 
             if (ngld.JoinChannel == 0 && ngld.JoinMessage == "")
-                await "Cleared Welcome message!".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                await Messages.FromSuccess("Cleared Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
-
         #endregion
 
         #region Leave
-
         //Set Channel
         [Command("setleave"), RequireDatabase]
         [Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
@@ -851,7 +900,7 @@ namespace Skuld.Bot.Commands
 
             if (ngld.LeaveMessage != oldmessg && ngld.LeaveChannel != oldleave)
             {
-                await "Set Leave message!".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                await Messages.FromSuccess("Set Leave message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -877,7 +926,7 @@ namespace Skuld.Bot.Commands
 
             if (ngld.LeaveMessage != oldmessg && ngld.LeaveChannel != oldleave)
             {
-                await "Set Leave message!".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                await Messages.FromSuccess("Set Leave message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -902,21 +951,19 @@ namespace Skuld.Bot.Commands
 
             if (ngld.LeaveMessage != oldmessg && ngld.LeaveChannel != oldleave)
             {
-                await "Set Leave message!".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                await Messages.FromSuccess("Set Leave message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
-
         #endregion
 
         #region Levels
-
         [Command("setlevelupmessage"), Summary("Sets the level up message, -u says the users name, -m mentions the user, -l shows the level they achieved"), RequireDatabase]
         [RequireRole(AccessLevel.ServerMod)]
         public async Task SetLevelUp([Remainder]string message)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var gld = await Database.GetGuildAsync(Context.Guild);
+            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
 
             var oldmessg = gld.LeaveMessage;
 
@@ -924,11 +971,11 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            var ngld = await Database.GetGuildAsync(Context.Guild);
+            var ngld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
 
             if (ngld.LevelUpMessage != oldmessg)
             {
-                await "".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                await Messages.FromSuccess(Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -938,7 +985,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var gld = await Database.GetGuildAsync(Context.Guild);
+            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
             var oldchan = gld.LevelUpChannel;
 
             if (channel == null)
@@ -947,11 +994,11 @@ namespace Skuld.Bot.Commands
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                var ngld = await Database.GetGuildAsync(Context.Guild);
+                var ngld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
 
                 if (ngld.LevelUpChannel != oldchan)
                 {
-                    await "".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                    await Messages.FromSuccess(Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
             else
@@ -960,11 +1007,11 @@ namespace Skuld.Bot.Commands
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                var ngld = await Database.GetGuildAsync(Context.Guild);
+                var ngld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
 
                 if (ngld.LevelUpChannel != oldchan)
                 {
-                    await "".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                    await Messages.FromSuccess(Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
         }
@@ -975,7 +1022,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var gld = await Database.GetGuildAsync(Context.Guild);
+            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
 
             var old = gld.LevelNotification;
 
@@ -983,18 +1030,16 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            var ngld = await Database.GetGuildAsync(Context.Guild);
+            var ngld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
 
             if (ngld.LevelNotification != old)
             {
-                await "".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                await Messages.FromSuccess(Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
-
         #endregion
 
         #region CustomCommands
-
         [Command("addcommand"), Summary("Adds a custom command"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task AddCustomCommand(string name, [Remainder]string content)
@@ -1003,12 +1048,12 @@ namespace Skuld.Bot.Commands
 
             if (name.IsWebsite())
             {
-                await "Commands can't be a url/website".QueueMessageAsync(Context, Discord.Models.MessageType.Timed, null, null, 5).ConfigureAwait(false);
+                await Messages.FromError("Commands can't be a url/website", Context).QueueMessageAsync(Context, Discord.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
                 return;
             }
             if (name.Split(' ').Length > 1)
             {
-                await "Commands can't contain a space".QueueMessageAsync(Context, Discord.Models.MessageType.Timed, null, null, 5).ConfigureAwait(false);
+                await Messages.FromError("Commands can't contain a space", Context).QueueMessageAsync(Context, Discord.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
                 return;
             }
             else
@@ -1016,7 +1061,7 @@ namespace Skuld.Bot.Commands
                 var cmdsearch = CommandService.Search(Context, name);
                 if (cmdsearch.Commands != null)
                 {
-                    await "The bot already has this command".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                    await Messages.FromError("The bot already has this command", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
                 else
                 {
@@ -1024,7 +1069,7 @@ namespace Skuld.Bot.Commands
 
                     if (cmd != null)
                     {
-                        await $"Custom command named `{name}` already exists, overwrite with new content? Y/N".QueueMessageAsync(Context, Discord.Models.MessageType.Timed, null, null, 5).ConfigureAwait(false);
+                        await Messages.FromInfo($"Custom command named `{name}` already exists, overwrite with new content? Y/N", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         var msg = await NextMessageAsync(true, true, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
                         if (msg != null)
                         {
@@ -1040,17 +1085,17 @@ namespace Skuld.Bot.Commands
 
                                 if (cmd2.Content != c)
                                 {
-                                    await "Updated the command.".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                                    await Messages.FromInfo("Updated the command.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                                 }
                                 else
                                 {
-                                    await "Couldn't update the command".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                                    await Messages.FromError("Couldn't update the command", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                                 }
                             }
                         }
                         else
                         {
-                            await "Reply timed out, not updating.".QueueMessageAsync(Context, Discord.Models.MessageType.Timed, null, null, 5).ConfigureAwait(false);
+                            await "Reply timed out, not updating.".QueueMessageAsync(Context, Discord.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
                         }
                         return;
                     }
@@ -1067,9 +1112,9 @@ namespace Skuld.Bot.Commands
                         cmd = Database.CustomCommands.FirstOrDefault(x => x.Name.ToLower() == name.ToLower() && x.GuildId == Context.Guild.Id);
 
                         if (cmd != null)
-                            await "Added the command.".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                            await Messages.FromInfo("Added the command.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         else
-                            await "Couldn't insert the command".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                            await Messages.FromError("Couldn't insert the command", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                 }
             }
@@ -1088,7 +1133,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                await "Are you sure? Y/N".QueueMessageAsync(Context, Discord.Models.MessageType.Timed, null, null, 5).ConfigureAwait(false);
+                await "Are you sure? Y/N".QueueMessageAsync(Context, Discord.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
 
                 var msg = await NextMessageAsync(true, true, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
                 if (msg != null)
@@ -1099,12 +1144,13 @@ namespace Skuld.Bot.Commands
                         await Database.SaveChangesAsync();
 
                         if (Database.CustomCommands.FirstOrDefault(x => x.GuildId == Context.Guild.Id && x.Name.ToLower() == name.ToLower()) == null)
-                            await "Deleted the command.".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                            await Messages.FromInfo("Deleted the command.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        else
+                            await Messages.FromError("Failed removing the command, try again", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                 }
             }
         }
-
         #endregion
     }
 }

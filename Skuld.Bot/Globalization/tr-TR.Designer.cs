@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Skuld.Core.Globalization
+namespace Skuld.Bot.Globalization
 {
     using System;
     
@@ -40,7 +40,7 @@ namespace Skuld.Core.Globalization
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Skuld.Core.Globalization.tr-TR", typeof(tr_TR).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Skuld.Bot.Globalization.tr-TR", typeof(tr_TR).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;

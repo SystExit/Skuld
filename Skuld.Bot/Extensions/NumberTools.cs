@@ -7,7 +7,7 @@ namespace Skuld.Bot.Extensions
     {
         public static bool CheckRecurring(this long value)
         {
-            string temp = Convert.ToString(value);
+            string temp = Convert.ToString(value, null);
 
             bool res = false;
 

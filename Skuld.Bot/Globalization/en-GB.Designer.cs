@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Skuld.Core.Globalization
+namespace Skuld.Bot.Globalization
 {
     using System;
     
@@ -20,17 +20,17 @@ namespace Skuld.Core.Globalization
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class nl_nl {
+    internal class en_GB {
         
         private static global::System.Resources.ResourceManager resourceMan;
         
         private static global::System.Globalization.CultureInfo resourceCulture;
         
         [global::System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
-        internal nl_nl() {
+        internal en_GB() {
         }
         
         /// <summary>
@@ -40,7 +40,7 @@ namespace Skuld.Core.Globalization
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Skuld.Core.Globalization.nl-nl", typeof(nl_nl).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Skuld.Bot.Globalization.en-GB", typeof(en_GB).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -58,15 +58,6 @@ namespace Skuld.Core.Globalization
             }
             set {
                 resourceCulture = value;
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to fout met de opdracht.
-        /// </summary>
-        internal static string SKULD_GENERIC_ERROR {
-            get {
-                return ResourceManager.GetString("SKULD_GENERIC_ERROR", resourceCulture);
             }
         }
     }

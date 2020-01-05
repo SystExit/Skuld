@@ -1,5 +1,4 @@
 ﻿using Discord;
-using Discord.Addons.Interactive;
 using Discord.Commands;
 using Octokit;
 using Skuld.Core;
@@ -17,7 +16,7 @@ using System.Threading.Tasks;
 namespace Skuld.Bot.Commands
 {
     [Group, RequireEnabledModule]
-    public class Stats : InteractiveBase<ShardedCommandContext>
+    public class Stats : ModuleBase<ShardedCommandContext>
     {
         public GitHubClient GitClient { get; set; }
 
@@ -43,16 +42,18 @@ namespace Skuld.Bot.Commands
             try
             {
                 var currentuser = Context.Client.CurrentUser;
+                var avatar = currentuser.GetAvatarUrl() ?? currentuser.GetDefaultAvatarUrl();
+                var color = Color.Teal;
 
-                var embed = new EmbedBuilder
-                {
-                    Footer = new EmbedFooterBuilder { Text = "Generated" },
-                    Author = new EmbedAuthorBuilder { IconUrl = currentuser.GetAvatarUrl(), Name = currentuser.Username },
-                    ThumbnailUrl = currentuser.GetAvatarUrl(),
-                    Timestamp = DateTime.Now,
-                    Title = "Stats",
-                    Color = EmbedUtils.RandomColor()
-                };
+                if (!Context.IsPrivate)
+                    color = Context.Guild.GetUser(currentuser.Id).GetHighestRoleColor(Context.Guild);
+
+                var embed = new EmbedBuilder()
+                    .WithFooter("Generated")
+                    .WithAuthor(currentuser.Username, "", SkuldAppContext.Website)
+                    .WithThumbnailUrl(avatar)
+                    .WithCurrentTimestamp()
+                    .WithColor(color);
 
                 string apiversions =
                     $"[Booru: {SkuldAppContext.Booru.Key.Version.ToString()}](https://github.com/{SkuldAppContext.Booru.Value.Owner}/{SkuldAppContext.Booru.Value.Repo})\n" +
@@ -86,7 +87,7 @@ namespace Skuld.Bot.Commands
             catch (Exception ex)
             {
                 Log.Error("Stats-Cmd", ex.Message, ex);
-                await ex.Message.QueueMessageAsync(Context, Discord.Models.MessageType.Failed);
+                await Messages.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
     }

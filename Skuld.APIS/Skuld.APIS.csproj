@@ -30,6 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Skuld.Core.Models\Skuld.Core.Models.csproj" />
     <ProjectReference Include="..\Skuld.Core\Skuld.Core.csproj" />
   </ItemGroup>
   

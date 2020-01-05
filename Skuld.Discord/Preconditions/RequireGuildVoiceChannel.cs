@@ -7,14 +7,14 @@ namespace Skuld.Discord.Preconditions
 {
     public class RequireGuildVoiceChannelAttribute : PreconditionAttribute
     {
-        public override async Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
+        public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
             bool isInChannel = (context.User as IGuildUser)?.VoiceChannel != null;
 
             if (isInChannel)
-                return PreconditionResult.FromSuccess();
+                return Task.FromResult(PreconditionResult.FromSuccess());
             else
-                return PreconditionResult.FromError($"Not in a voice channel");
+                return Task.FromResult(PreconditionResult.FromError($"Not in a voice channel"));
         }
     }
 }

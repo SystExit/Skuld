@@ -6,11 +6,13 @@ using Discord.WebSocket;
 using Imgur.API.Authentication.Impl;
 using IqdbApi;
 using Microsoft.Extensions.DependencyInjection;
+using Miki.API.Images;
 using Octokit;
 using Skuld.APIS;
+using Skuld.Bot.Globalization;
 using Skuld.Core;
 using Skuld.Core.Generic.Models;
-using Skuld.Core.Globalization;
+using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord;
 using Skuld.Discord.Handlers;
@@ -19,7 +21,7 @@ using StatsdClient;
 using SteamWebAPI2.Interfaces;
 using SysEx.Net;
 using System;
-using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Voltaic;
@@ -28,18 +30,37 @@ using DiscordNetCommands = Discord.Commands;
 
 namespace Skuld.Bot.Services
 {
-    public class HostSerivce
+    public static class HostSerivce
     {
         public static SkuldConfig Configuration;
         public static WebSocketService WebSocket;
         public static IServiceProvider Services;
 
-        public async Task CreateAsync()
+        public static async Task CreateAsync(string[] args = null)
         {
             try
             {
-                EnsureConfigExists();
-                Configuration = SkuldConfig.Load();
+                {
+                    var database = new SkuldDbContextFactory().CreateDbContext();
+
+                    if (!database.Configurations.Any() || args.Contains("--newconf") || args.Contains("-nc"))
+                    {
+                        var conf = new SkuldConfig();
+                        database.Configurations.Add(conf);
+                        await database.SaveChangesAsync().ConfigureAwait(false);
+                        Log.Verbose("HostService", $"Created new configuration with Id: {conf.Id}");
+                    }
+
+                    var configId = SkuldAppContext.GetEnvVar(Utils.ConfigEnvVar);
+
+                    var c = database.Configurations.FirstOrDefault(x=>x.Id == configId);
+
+                    Configuration = c ?? database.Configurations.FirstOrDefault();
+
+                    SkuldAppContext.SetConfigurationId(Configuration.Id);
+
+                    DiscordLogger.FeedConfiguration(Configuration);
+                }
 
                 BotService.ConfigureBot(new DiscordSocketConfig
                 {
@@ -47,7 +68,7 @@ namespace Skuld.Bot.Services
                     GuildSubscriptions = false,
                     RateLimitPrecision = RateLimitPrecision.Millisecond,
                     UseSystemClock = true,
-                    TotalShards = Configuration.Discord.Shards,
+                    TotalShards = Configuration.Shards,
                     LargeThreshold = 250,
                     AlwaysDownloadUsers = false,
                     ExclusiveBulkDelete = true,
@@ -58,7 +79,7 @@ namespace Skuld.Bot.Services
 
                 InitializeStaticClients();
 
-                await InitializeServicesAsync().ConfigureAwait(false);
+                InitializeServices();
 
                 BotService.AddServices(Services);
 
@@ -73,8 +94,8 @@ namespace Skuld.Bot.Services
                     }, 
                     new MessageServiceConfig
                     {
-                        Prefix = Configuration.Discord.Prefix,
-                        AltPrefix = Configuration.Discord.AltPrefix,
+                        Prefix = Configuration.Prefix,
+                        AltPrefix = Configuration.AltPrefix,
                         ArgPos = 0
                     },
                     Configuration,
@@ -91,15 +112,13 @@ namespace Skuld.Bot.Services
                     Log.Info("CmdServ-Configure", "Configured Command Service");
                 }
 
-                await BotService.DiscordClient.LoginAsync(TokenType.Bot, Configuration.Discord.Token).ConfigureAwait(false);
+                await BotService.DiscordClient.LoginAsync(TokenType.Bot, Configuration.DiscordToken).ConfigureAwait(false);
 
                 await BotService.DiscordClient.StartAsync().ConfigureAwait(false);
 
                 WebSocket = new WebSocketService(Configuration);
 
                 BotService.BackgroundTasks();
-
-                MessageQueue.Run();
 
                 await Task.Delay(-1).ConfigureAwait(false);
 
@@ -122,16 +141,13 @@ namespace Skuld.Bot.Services
                 MessageCacheSize = 1000,
                 DefaultRetryMode = RetryMode.AlwaysRetry,
                 LogLevel = LogSeverity.Verbose,
-                TotalShards = Configuration.Discord.Shards
+                TotalShards = Configuration.Shards
             });
 
-            if (Configuration.Modules.TwitchModule)
+            BotService.TwitchClient = new TwitchHelixClient
             {
-                BotService.TwitchClient = new TwitchHelixClient
-                {
-                    ClientId = new Utf8String(Configuration.APIS.TwitchClientID)
-                };
-            }
+                ClientId = new Utf8String(Configuration.TwitchClientID)
+            };
 
             APIS.SearchClient.Configure(Configuration);
         }
@@ -158,16 +174,16 @@ namespace Skuld.Bot.Services
                     .AddSingleton<SysExClient>()
                     .AddSingleton<AnimalClient>()
                     .AddSingleton<YoutubeClient>()
+                    .AddSingleton<ImghoardClient>()
                     .AddSingleton<NekosLifeClient>()
                     .AddSingleton<WikipediaClient>()
                     .AddSingleton<WebComicClients>()
                     .AddSingleton<UrbanDictionaryClient>()
-                    .AddSingleton(new NASAClient(Configuration.APIS.NASAApiKey))
-                    .AddSingleton(new BotListingClient(BotService.DiscordClient))
+                    .AddSingleton(new NASAClient(Configuration.NASAApiKey))
                     .AddSingleton(new GitHubClient(new ProductHeaderValue("Skuld")))
+                    .AddSingleton(new Stands4Client(Configuration.STANDSUid, Configuration.STANDSToken))
                     .AddSingleton(new InteractiveService(BotService.DiscordClient, TimeSpan.FromSeconds(60)))
-                    .AddSingleton(new Stands4Client(Configuration.APIS.STANDSUid, Configuration.APIS.STANDSToken))
-                    .AddSingleton(new ImgurClient(Configuration.APIS.ImgurClientID, Configuration.APIS.ImgurClientSecret))
+                    .AddSingleton(new ImgurClient(Configuration.ImgurClientID, Configuration.ImgurClientSecret))
                     .BuildServiceProvider();
 
                 Log.Info("Framework", "Successfully built service provider");
@@ -178,45 +194,17 @@ namespace Skuld.Bot.Services
             }
         }
 
-        private static async Task InitializeServicesAsync()
+        private static void InitializeServices()
         {
             ConfigureStatsCollector();
-        }
-
-        private void EnsureConfigExists()
-        {
-            try
-            {
-                if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "storage")))
-                    Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "storage"));
-
-                if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs")))
-                    Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs"));
-
-                string loc = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "configuration.json");
-
-                if (!File.Exists(loc))
-                {
-                    var config = new SkuldConfig();
-                    config.Save();
-                    Console.WriteLine("The Configuration file has been created at '" + loc + "'");
-                    Console.ReadLine();
-                    Environment.Exit(0);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-                Console.ReadLine();
-            }
         }
 
         private static void ConfigureStatsCollector()
         {
             DogStatsd.Configure(new StatsdConfig
             {
-                StatsdServerName = Configuration.APIS.DataDogHost,
-                StatsdPort = Configuration.APIS.DataDogPort ?? 8125,
+                StatsdServerName = Configuration.DataDogHost,
+                StatsdPort = Configuration.DataDogPort ?? 8125,
                 Prefix = "skuld"
             });
         }

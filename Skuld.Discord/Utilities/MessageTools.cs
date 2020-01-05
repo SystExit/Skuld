@@ -4,6 +4,7 @@ using Skuld.Core.Extensions;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using Skuld.Discord.Extensions;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ namespace Skuld.Discord.Utilities
 {
     public static class MessageTools
     {
+        private static readonly string Key = "MsgTools";
         public static string ModAdminBypass = "-!{MA_commands}";
         public static string NoOneCommands = "-!commands";
 
@@ -32,9 +34,9 @@ namespace Skuld.Discord.Utilities
         {
             if (guild != null) { if (command.StartsWith(guild.Prefix)) { return guild.Prefix; } }
 
-            if (command.StartsWith(config.Discord.Prefix)) { return config.Discord.Prefix; }
+            if (command.StartsWith(config.Prefix)) { return config.Prefix; }
 
-            if (command.StartsWith(config.Discord.AltPrefix)) { return config.Discord.AltPrefix; }
+            if (command.StartsWith(config.AltPrefix)) { return config.AltPrefix; }
 
             return null;
         }
@@ -65,7 +67,7 @@ namespace Skuld.Discord.Utilities
             return true;
         }
 
-        public static string GetCmdName(DiscordNet.IUserMessage arg, DiscordConfig config, DiscordShardedClient client, Guild sguild = null, ulong[] BotAdmins = null)
+        public static string GetCmdName(DiscordNet.IUserMessage arg, SkuldConfig config, DiscordShardedClient client, User initiator, Guild sguild = null)
         {
             string content = "";
             var contentsplit = arg.Content.Split(' ')[0];
@@ -87,7 +89,7 @@ namespace Skuld.Discord.Utilities
                     if (contentsplit.StartsWith(config.AltPrefix))
                         content = contentsplit.Replace(config.AltPrefix, "");
                 }
-                if (BotAdmins.Contains(arg.Author.Id) && contentsplit.StartsWith("ayo"))
+                if ((initiator.Flags & Utils.BotAdmin) != 0 && contentsplit.StartsWith("ayo"))
                 {
                     var split = arg.Content.Split(' ');
 
@@ -119,7 +121,7 @@ namespace Skuld.Discord.Utilities
                     if (contentsplit.StartsWith(config.Prefix))
                         content = contentsplit.Replace(config.Prefix, "");
                 }
-                if (SkuldConfig.Load().Discord.BotAdmins.Contains(arg.Author.Id) && contentsplit.StartsWith("ayo"))
+                if ((initiator.Flags & Utils.BotAdmin) != 0 && contentsplit.StartsWith("ayo"))
                 {
                     var split = arg.Content.Split(' ');
 
@@ -140,11 +142,11 @@ namespace Skuld.Discord.Utilities
             return content;
         }
 
-        public static bool HasPrefix(DiscordNet.IUserMessage message, DiscordShardedClient client, SkuldConfig sconf, MessageServiceConfig config, string gprefix = null)
+        public static bool HasPrefix(DiscordNet.IUserMessage message, DiscordShardedClient client, MessageServiceConfig config, User initiator, string gprefix = null)
         {
             if (gprefix != null)
             {
-                if (sconf.Discord.BotAdmins.Contains(message.Author.Id))
+                if ((initiator.Flags & Utils.BotAdmin) != 0)
                     return message.HasStringPrefix(gprefix, ref config.ArgPos) ||
                        message.HasStringPrefix(config.Prefix, ref config.ArgPos) ||
                        message.HasStringPrefix(config.AltPrefix, ref config.ArgPos) ||
@@ -157,7 +159,7 @@ namespace Skuld.Discord.Utilities
             }
             else
             {
-                if (sconf.Discord.BotAdmins.Contains(message.Author.Id))
+                if ((initiator.Flags & Utils.BotAdmin) != 0)
                     return message.HasStringPrefix(config.Prefix, ref config.ArgPos) ||
                        message.HasStringPrefix(config.AltPrefix, ref config.ArgPos) ||
                        message.HasStringPrefix($"ayo {client.CurrentUser.Username.ToLower()} do ", ref config.ArgPos) ||
@@ -218,12 +220,12 @@ namespace Skuld.Discord.Utilities
                 var mesgChan = (DiscordNet.IMessageChannel)channel;
                 if (channel == null || textChan == null || mesgChan == null) { return null; }
                 await mesgChan.TriggerTypingAsync();
-                Log.Info("MsgDisp", $"Dispatched message to {(channel as DiscordNet.IGuildChannel).Guild} in {(channel as DiscordNet.IGuildChannel).Name}");
+                Log.Info(Key, $"Dispatched message to {(channel as DiscordNet.IGuildChannel).Guild} in {(channel as DiscordNet.IGuildChannel).Name}");
                 return await mesgChan.SendMessageAsync(message);
             }
             catch (Exception ex)
             {
-                Log.Error("MH-ChNV", "Error dispatching Message, printed exception to logs.", ex);
+                Log.Error(Key, $"Error dispatching Message - {ex.Message}", ex);
                 return null;
             }
         }
@@ -255,12 +257,12 @@ namespace Skuld.Discord.Utilities
                 {
                     msg = await mesgChan.SendMessageAsync(message, false, embed);
                 }
-                Log.Info("MsgDisp", $"Dispatched message to {(channel as DiscordNet.IGuildChannel).Guild} in {(channel as DiscordNet.IGuildChannel).Name}");
+                Log.Info(Key, $"Dispatched message to {(channel as DiscordNet.IGuildChannel).Guild} in {(channel as DiscordNet.IGuildChannel).Name}");
                 return msg;
             }
             catch (Exception ex)
             {
-                Log.Error("MH-ChNV", "Error dispatching Message, printed exception to logs.", ex);
+                Log.Error(Key, $"Error dispatching Message - {ex.Message}", ex);
                 return null;
             }
         }

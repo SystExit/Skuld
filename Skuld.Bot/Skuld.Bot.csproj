@@ -13,6 +13,10 @@
     <PackageReference Include="FIGlet.Net" Version="1.1.1" />
     <PackageReference Include="IqdbApi" Version="1.4.0" />
     <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="7.14.5" />
+    <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="2.9.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3-beta2" />
     <PackageReference Include="Octokit" Version="0.36.0" />
     <PackageReference Include="PokeApi.NET" Version="1.1.2" />
@@ -30,6 +34,9 @@
   <ItemGroup>
     <Reference Include="Discord.Addons.Interactive">
       <HintPath>..\References\Discord.Addons.Interactive.dll</HintPath>
+    </Reference>
+    <Reference Include="Miki.API.Images">
+      <HintPath>..\References\Miki.API.Images.dll</HintPath>
     </Reference>
     <Reference Include="SteamStoreQuery">
       <HintPath>..\References\SteamStoreQuery.dll</HintPath>

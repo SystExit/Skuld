@@ -4,8 +4,6 @@
     {
         Standard,
         Timed,
-        Success,
-        Failed,
         DMS,
         DMFail,
         File,

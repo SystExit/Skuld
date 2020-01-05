@@ -1,7 +1,9 @@
 ﻿using Discord;
 using Skuld.Core.Extensions;
 using Skuld.Core.Utilities;
+using Skuld.Discord.Extensions;
 using System;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace Skuld.Discord.Handlers
@@ -31,20 +33,20 @@ namespace Skuld.Discord.Handlers
             return await channel.SendMessageAsync(message, false, embed ?? null).ConfigureAwait(false);
         }
 
-        public static async Task<IUserMessage> ReplyWithFileAsync(IMessageChannel channel, string message, string filepath)
+        public static async Task<IUserMessage> ReplyWithFileAsync(IMessageChannel channel, string message, Stream file, string fileName, Embed embed = null)
         {
             if (channel == null) return null;
 
             await channel.TriggerTypingAsync().ConfigureAwait(false);
             Log.Info(Key, $"Dispatched message to {(channel as IGuildChannel).Guild} in {(channel as IGuildChannel).Name}");
-            return await channel.SendFileAsync(filepath, message).ConfigureAwait(false);
+            return await channel.SendFileAsync(file, fileName, message, false, embed).ConfigureAwait(false);
         }
 
         public static async Task<IUserMessage> ReplyWithMentionAsync(IMessageChannel channel, IUser user, string message, Embed embed = null)
             => await ReplyAsync(channel, user.Mention + " " + message, embed).ConfigureAwait(false);
 
-        public static async Task<IUserMessage> ReplyWithMentionAndFileAsync(IMessageChannel channel, IUser user, string message, string filepath)
-            => await ReplyWithFileAsync(channel, user.Mention + " " + message, filepath).ConfigureAwait(false);
+        public static async Task<IUserMessage> ReplyWithMentionAndFileAsync(IMessageChannel channel, IUser user, string message, Stream file, string fileName)
+            => await ReplyWithFileAsync(channel, user.Mention + " " + message, file, fileName).ConfigureAwait(false);
 
         public static async Task<IUserMessage> ReplyDMsAsync(IDMChannel channel, IMessageChannel backupchannel, string message, Embed embed = null)
         {
@@ -80,16 +82,16 @@ namespace Skuld.Discord.Handlers
             await msg.DeleteAfterSecondsAsync((int)timeout).ConfigureAwait(false);
         }
 
-        public static async Task ReplyFailedAsync(IMessageChannel channel)
+        public static async Task<IUserMessage> ReplyFailedAsync(IMessageChannel channel)
             => await ReplyAsync(channel, DiscordTools.Failed_Emoji + " Command Execution failed with reason: \"Unknown\"").ConfigureAwait(false);
 
-        public static async Task ReplyFailedAsync(IMessageChannel channel, string reason)
+        public static async Task<IUserMessage> ReplyFailedAsync(IMessageChannel channel, string reason)
             => await ReplyAsync(channel, DiscordTools.Failed_Emoji + " Command Execution failed with reason: \"" + reason + "\"").ConfigureAwait(false);
 
-        public static async Task ReplySuccessAsync(IMessageChannel channel)
+        public static async Task<IUserMessage> ReplySuccessAsync(IMessageChannel channel)
             => await ReplyAsync(channel, DiscordTools.Successful_Emoji + " Command Execution was successful").ConfigureAwait(false);
 
-        public static async Task ReplySuccessAsync(IMessageChannel channel, string reason)
+        public static async Task<IUserMessage> ReplySuccessAsync(IMessageChannel channel, string reason)
             => await ReplyAsync(channel, DiscordTools.Successful_Emoji + " Command Execution was successful. Extra Information: \"" + reason + "\"").ConfigureAwait(false);
     }
 }

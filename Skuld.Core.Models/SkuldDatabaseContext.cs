@@ -11,10 +11,10 @@ namespace Skuld.Core.Models
 {
     public class SkuldDatabaseContext : DbContext
     {
-        public SkuldDatabaseContext(DbContextOptions<SkuldDatabaseContext> options) : base(options)
-        {
-        }
+        public SkuldDatabaseContext(DbContextOptions<SkuldDatabaseContext> options) : base(options) {}
 
+        public DbSet<BlockedAction> BlockedActions { get; set; }
+        public DbSet<SkuldConfig> Configurations { get; set; }
         public DbSet<CustomCommand> CustomCommands { get; set; }
         public DbSet<GuildFeatures> Features { get; set; }
         public DbSet<IAmRole> IAmRoles { get; set; }
@@ -264,10 +264,10 @@ namespace Skuld.Core.Models
         {
             var gld = Guilds.FirstOrDefault(x => x.Id == guild.Id);
 
-            var config = SkuldConfig.Load();
+            var config = await GetConfigAsync(SkuldAppContext.ConfigurationId).ConfigureAwait(false);
 
             if (gld == null)
-                return await InsertGuildAsync(guild, config.Discord.Prefix, "💠", "Diamonds").ConfigureAwait(false);
+                return await InsertGuildAsync(guild, config.Prefix, "Diamonds", "💠").ConfigureAwait(false);
 
             return gld;
         }
@@ -280,6 +280,14 @@ namespace Skuld.Core.Models
                 return await InsertUserAsync(user).ConfigureAwait(false);
 
             return usr;
+        }
+
+        public async Task<SkuldConfig> GetConfigAsync(string configId = null)
+        {
+            if (configId == null)
+                return await Configurations.FirstOrDefaultAsync().ConfigureAwait(false);
+            else
+                return await Configurations.FirstOrDefaultAsync(x=>x.Id == configId).ConfigureAwait(false);
         }
     }
 }

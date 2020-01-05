@@ -2,6 +2,7 @@
 using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Resources;
@@ -54,6 +55,18 @@ namespace Skuld.Core.Extensions
                 list[k] = list[n];
                 list[n] = value;
             }
+        }
+
+        public static T RandomValue<T>(this IEnumerable<T> entries, Random random = null) where T : class
+        {
+            if (random == null)
+                random = new Random((int)Math.Clamp(Process.GetCurrentProcess().StartTime.ToEpoch(), 0, int.MaxValue));
+
+            var list = entries.ToList();
+
+            var index = random.Next(0, list.Count);
+
+            return list[index];
         }
 
         #region Conversion
@@ -215,8 +228,7 @@ namespace Skuld.Core.Extensions
         #endregion Localisation
 
         #region Pagination
-
-        public static IList<string> PaginateList(this string[] list)
+        public static IList<string> PaginateList(this string[] list, int maxrows = 10)
         {
             var pages = new List<string>();
             string pagetext = "";
@@ -225,7 +237,7 @@ namespace Skuld.Core.Extensions
             {
                 pagetext += $"{list[x]}\n";
 
-                if ((x + 1) % 10 == 0 || (x + 1) == list.Count())
+                if ((x + 1) % maxrows == 0 || (x + 1) == list.Count())
                 {
                     pages.Add(pagetext);
                     pagetext = "";
@@ -235,7 +247,7 @@ namespace Skuld.Core.Extensions
             return pages;
         }
 
-        public static IList<string> PaginateCodeBlockList(this string[] list)
+        public static IList<string> PaginateCodeBlockList(this string[] list, int maxrows = 10)
         {
             var pages = new List<string>();
             string pagetext = "```cs\n";
@@ -244,7 +256,7 @@ namespace Skuld.Core.Extensions
             {
                 pagetext += $"{list[x]}\n";
 
-                if ((x + 1) % 10 == 0 || (x + 1) == list.Count())
+                if ((x + 1) % maxrows == 0 || (x + 1) == list.Count())
                 {
                     pagetext += "```";
                     pages.Add(pagetext);
@@ -254,8 +266,23 @@ namespace Skuld.Core.Extensions
 
             return pages;
         }
+        #endregion
 
-        #endregion Pagination
+        public static string CapitaliseFirstLetter(this string input)
+            => input switch
+            {
+                null => throw new ArgumentNullException(nameof(input)),
+                "" => throw new ArgumentException($"{nameof(input)} cannot be empty", nameof(input)),
+                _ => input.First().ToString().ToUpper() + input.Substring(1)
+            };
+
+        public static string LowercaseFirstLetter(this string input)
+            => input switch
+            {
+                null => throw new ArgumentNullException(nameof(input)),
+                "" => throw new ArgumentException($"{nameof(input)} cannot be empty", nameof(input)),
+                _ => input.First().ToString().ToLower() + input.Substring(1)
+            };
 
         public static string GetStringfromOffset(this DateTimeOffset dateTimeOffset, DateTime dateTime)
         {

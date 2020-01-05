@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
-using Skuld.APIS.Extensions;
 using Skuld.APIS.UrbanDictionary.Models;
 using Skuld.APIS.Utilities;
+using Skuld.Core.Extensions;
 using System;
 using System.Threading.Tasks;
 
@@ -23,7 +23,7 @@ namespace Skuld.APIS
         {
             if (rateLimiter.IsRatelimited()) return null;
 
-            var raw = await ReturnStringAsync(RandomEndpoint);
+            var raw = await ReturnStringAsync(RandomEndpoint).ConfigureAwait(false);
             return JsonConvert.DeserializeObject<UrbanWord>(raw);
         }
 
@@ -31,9 +31,9 @@ namespace Skuld.APIS
         {
             if (rateLimiter.IsRatelimited()) return null;
 
-            var raw = await ReturnStringAsync(new Uri(QueryEndPoint + phrase));
+            var raw = await ReturnStringAsync(new Uri(QueryEndPoint + phrase)).ConfigureAwait(false);
 
-            return JsonConvert.DeserializeObject<UrbanWordContainer>(raw).List.GetRandomItem();
+            return JsonConvert.DeserializeObject<UrbanWordContainer>(raw).List.RandomValue();
         }
     }
 }

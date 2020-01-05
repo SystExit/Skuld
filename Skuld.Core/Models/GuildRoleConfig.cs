@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using System.Linq;
+using System.Text;
 
 namespace Skuld.Core.Generic.Models
 {
@@ -8,6 +9,7 @@ namespace Skuld.Core.Generic.Models
     {
         public int Cost;
         public int RequireLevel;
+        public bool Giveable;
         public IRole RequiredRole;
 
         public GuildRoleConfig()
@@ -22,7 +24,7 @@ namespace Skuld.Core.Generic.Models
             roleConfig = new GuildRoleConfig();
             string[] inputsplit = input.Split(' ');
 
-            if (inputsplit.Where(x => x.StartsWith("cost=")).Count() > 0)
+            if (inputsplit.Where(x => x.StartsWith("cost=")).Any())
             {
                 if (int.TryParse(inputsplit.FirstOrDefault(x => x.StartsWith("cost=")).Replace("cost=", ""), out int result))
                 {
@@ -38,7 +40,7 @@ namespace Skuld.Core.Generic.Models
                 roleConfig.Cost = 0;
             }
 
-            if (inputsplit.Where(x => x.StartsWith("require-level=")).Count() > 0)
+            if (inputsplit.Where(x => x.StartsWith("require-level=")).Any())
             {
                 if (int.TryParse(inputsplit.FirstOrDefault(x => x.StartsWith("require-level=")).Replace("require-level=", ""), out int result))
                 {
@@ -54,7 +56,7 @@ namespace Skuld.Core.Generic.Models
                 roleConfig.RequireLevel = 0;
             }
 
-            if (inputsplit.Where(x => x.StartsWith("require-role=")).Count() > 0)
+            if (inputsplit.Where(x => x.StartsWith("require-role=")).Any())
             {
                 var first = inputsplit.FirstOrDefault(x => x.StartsWith("require-role="));
                 if (first["require-role=".Count()] == '"')
@@ -119,6 +121,20 @@ namespace Skuld.Core.Generic.Models
             }
 
             return true;
+        }
+
+        public override string ToString()
+        {
+            StringBuilder message = new StringBuilder();
+
+            if (Cost != 0)
+                message.Append($"cost={Cost} ");
+            if (RequireLevel != 0)
+                message.Append($"require-level={RequireLevel} ");
+            if (RequiredRole != null)
+                message.Append($"require-role={RequiredRole.Id} ");
+
+            return message.ToString()[0..^1];
         }
     }
 }

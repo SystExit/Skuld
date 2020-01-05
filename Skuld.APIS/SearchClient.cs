@@ -4,7 +4,7 @@ using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Imgur.API.Models;
 using Imgur.API.Models.Impl;
-using Skuld.APIS.Extensions;
+using Skuld.Core.Extensions;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Utilities;
 using System;
@@ -25,9 +25,9 @@ namespace Skuld.APIS
         {
             Configuration = conf;
             GoogleSearchService = new CustomsearchService();
-            ImgurClient = new ImgurClient(conf.APIS.ImgurClientID, conf.APIS.ImgurClientSecret);
+            ImgurClient = new ImgurClient(conf.ImgurClientID, conf.ImgurClientSecret);
             Youtube = new YoutubeClient();
-            GoogleSearchService = new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer { ApiKey = Configuration.APIS.GoogleAPI, ApplicationName = "Skuld" });
+            GoogleSearchService = new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer { ApiKey = Configuration.GoogleAPI, ApplicationName = "Skuld" });
         }
 
         public static async Task<string> SearchImgurAsync(string query)
@@ -36,7 +36,7 @@ namespace Skuld.APIS
             {
                 var endpoint = new GalleryEndpoint(ImgurClient);
                 var images = await endpoint.SearchGalleryAsync(query);
-                var albm = images.GetRandomItem();
+                var albm = images.RandomValue();
                 dynamic album = null;
                 if (albm is GalleryImage)
                 {
@@ -69,7 +69,7 @@ namespace Skuld.APIS
             {
                 var endpoint = new GalleryEndpoint(ImgurClient);
                 var images = await endpoint.SearchGalleryAsync(query);
-                var albm = images.GetRandomItem();
+                var albm = images.RandomValue();
                 dynamic album = null;
                 if (albm is GalleryImage)
                 {
@@ -124,7 +124,7 @@ namespace Skuld.APIS
             try
             {
                 var listRequest = GoogleSearchService.Cse.List(query);
-                listRequest.Cx = Configuration.APIS.GoogleCx;
+                listRequest.Cx = Configuration.GoogleCx;
                 listRequest.Safe = CseResource.ListRequest.SafeEnum.High;
                 var search = await listRequest.ExecuteAsync();
                 var items = search.Items;

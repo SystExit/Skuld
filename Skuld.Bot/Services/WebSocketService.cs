@@ -21,7 +21,7 @@ namespace Skuld.Bot.Services
 
         public WebSocketService(SkuldConfig configuration)
         {
-            _server = new WebSocketServer($"{(configuration.WebSocket.Secure ? "wss" : "ws")}://{configuration.WebSocket.Host}:{configuration.WebSocket.Port}");
+            _server = new WebSocketServer($"{(configuration.WebsocketSecure ? "wss" : "ws")}://{configuration.WebsocketHost}:{configuration.WebsocketPort}");
             _server.Start(x =>
             {
                 x.OnMessage = async (message) => await HandleMessageAsync(x, message).ConfigureAwait(false);
@@ -196,9 +196,9 @@ namespace Skuld.Bot.Services
                     await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found"))).ConfigureAwait(false);
                 }
             }
-            if (message.StartsWith("vchannels:"))
+            if (message.StartsWith("vchannels:", StringComparison.InvariantCultureIgnoreCase))
             {
-                ulong.TryParse(message.Replace("vchannels:", ""), out var guildid);
+                ulong.TryParse(message.Replace("vchannels:", "", StringComparison.InvariantCultureIgnoreCase), System.Globalization.NumberStyles.Integer, null, out var guildid);
 
                 var gld = Client.GetGuild(guildid);
                 if (gld != null)

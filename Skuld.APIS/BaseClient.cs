@@ -44,12 +44,73 @@ namespace Skuld.APIS
                 var resp = (HttpWebResponse)(await client.GetResponseAsync().ConfigureAwait(false));
                 if (resp.StatusCode == HttpStatusCode.OK)
                 {
-                    var reader = new StreamReader(resp.GetResponseStream());
-                    var responce = await reader.ReadToEndAsync().ConfigureAwait(false);
+                    using var response = new StreamReader(resp.GetResponseStream());
                     StatsdClient.DogStatsd.Increment("web.get");
                     resp.Dispose();
                     client.Abort();
-                    return responce;
+                    return await response.ReadToEndAsync().ConfigureAwait(false);
+                }
+                else
+                {
+                    resp.Dispose();
+                    client.Abort();
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error("WebHandler", ex.Message, ex);
+                return null;
+            }
+        }
+
+        public async Task<byte[]> ReturnByteArrayAsync(Uri url, byte[] headers = null)
+        {
+            try
+            {
+                var client = CreateWebRequest(url, headers);
+
+                var resp = (HttpWebResponse)(await client.GetResponseAsync().ConfigureAwait(false));
+                if (resp.StatusCode == HttpStatusCode.OK)
+                {
+                    using var response = new MemoryStream();
+                    await resp.GetResponseStream().CopyToAsync(response).ConfigureAwait(false);
+                    StatsdClient.DogStatsd.Increment("web.get");
+                    resp.Dispose();
+                    client.Abort();
+                    response.Position = 0;
+                    return response.ToArray();
+                }
+                else
+                {
+                    resp.Dispose();
+                    client.Abort();
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error("WebHandler", ex.Message, ex);
+                return null;
+            }
+        }
+
+        public async Task<Stream> ReturnStreamAsync(Uri url, byte[] headers = null)
+        {
+            try
+            {
+                var client = CreateWebRequest(url, headers);
+
+                var resp = (HttpWebResponse)(await client.GetResponseAsync().ConfigureAwait(false));
+                if (resp.StatusCode == HttpStatusCode.OK)
+                {
+                    var response = new MemoryStream();
+                    await resp.GetResponseStream().CopyToAsync(response).ConfigureAwait(false);
+                    StatsdClient.DogStatsd.Increment("web.get");
+                    resp.Dispose();
+                    client.Abort();
+                    response.Position = 0;
+                    return response;
                 }
                 else
                 {

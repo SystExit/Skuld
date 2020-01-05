@@ -11,14 +11,14 @@ namespace Skuld.Discord.Preconditions
         {
         }
 
-        public override async Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
+        public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
             if (Database.IsConnected)
-                return PreconditionResult.FromSuccess();
+                return Task.FromResult(PreconditionResult.FromSuccess());
 
-            return PreconditionResult.FromError("Command requires an active Database Connection");
+            return Task.FromResult(PreconditionResult.FromError("Command requires an active Database Connection"));
         }
     }
 }

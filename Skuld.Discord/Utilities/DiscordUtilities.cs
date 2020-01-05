@@ -23,6 +23,8 @@ namespace Skuld.Discord.Utilities
         public static string Level2UserBoost = "profile/level2.svg";
         public static string Level3UserBoost = "profile/level3.svg";
 
+        public static string Empty = "<:empty:663083920992239638>";
+
         public static Embed GetCommandHelp(CommandService commandService, ICommandContext context, string commandname)
         {
             if (commandname.ToLower() != "pasta")

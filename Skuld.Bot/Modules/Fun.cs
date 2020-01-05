@@ -1,11 +1,9 @@
-﻿#pragma warning disable IDE0060
-
-using Booru.Net;
+﻿using Booru.Net;
 using Discord;
-using Discord.Addons.Interactive;
 using Discord.Commands;
 using ImageMagick;
 using IqdbApi;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Skuld.APIS;
 using Skuld.APIS.Animals.Models;
@@ -15,9 +13,8 @@ using Skuld.APIS.WebComics.CAD.Models;
 using Skuld.APIS.WebComics.Explosm.Models;
 using Skuld.APIS.WebComics.XKCD.Models;
 using Skuld.Bot.Extensions;
-using Skuld.Core;
+using Skuld.Bot.Globalization;
 using Skuld.Core.Extensions;
-using Skuld.Core.Globalization;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Attributes;
@@ -40,7 +37,7 @@ using WenceyWang.FIGlet;
 namespace Skuld.Bot.Commands
 {
     [Group, RequireEnabledModule]
-    public class Fun : InteractiveBase<ShardedCommandContext>
+    public class Fun : ModuleBase<ShardedCommandContext>
     {
         public Random Random { get; set; }
         public AnimalClient Animals { get; set; }
@@ -80,27 +77,24 @@ namespace Skuld.Bot.Commands
         [Command("fuse"), Summary("Fuses 2 of the 1st generation pokemon")]
         public async Task Fuse(int int1, int int2)
         {
-            if (int1 > 151 || int1 < 0) await $"{int1} over/under limit. (151)".QueueMessageAsync(Context).ConfigureAwait(false);
-            else if (int2 > 151 || int2 < 0) await $"{int2} over/under limit. (151)".QueueMessageAsync(Context).ConfigureAwait(false);
+            if (int1 > 151 || int1 < 0) await Messages.FromError($"{int1} over/under limit. (151)", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            else if (int2 > 151 || int2 < 0) await Messages.FromError($"{int2} over/under limit. (151)", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             else
             {
-                await new EmbedBuilder
-                {
-                    Color = EmbedUtils.RandomColor(),
-                    ImageUrl = $"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png"
-                }.Build().QueueMessageAsync(Context).ConfigureAwait(false);
+                await Messages.FromMessage(Context)
+                    .WithImageUrl($"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png")
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
         #region WeebAnimals
-
         [Command("neko"), Summary("neko grill"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Neko()
         {
             var neko = await NekoLife.GetAsync(NekoImageType.Neko).ConfigureAwait(false);
             DogStatsd.Increment("web.get");
-            if (neko != null) await new EmbedBuilder { ImageUrl = neko }.Build().QueueMessageAsync(Context).ConfigureAwait(false);
-            else await "Hmmm <:Thunk:350673785923567616>, I got an empty response.".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+            if (neko != null) await Messages.FromMessage(Context).WithImageUrl(neko).QueueMessageAsync(Context).ConfigureAwait(false);
+            else await Messages.FromError("Hmmm <:Thunk:350673785923567616> I got an empty response.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("kitsune"), Summary("Kitsunemimi Grill"), Ratelimit(20, 1, Measure.Minutes)]
@@ -108,13 +102,11 @@ namespace Skuld.Bot.Commands
         {
             var kitsu = await SysExClient.GetKitsuneAsync().ConfigureAwait(false);
             DogStatsd.Increment("web.get");
-            await new EmbedBuilder { ImageUrl = kitsu }.Build().QueueMessageAsync(Context).ConfigureAwait(false);
+            await Messages.FromMessage(Context).WithImageUrl(kitsu).QueueMessageAsync(Context).ConfigureAwait(false);
         }
-
-        #endregion WeebAnimals
+        #endregion
 
         #region Animals
-
         [Command("kitty"), Summary("kitty"), Ratelimit(20, 1, Measure.Minutes)]
         [Alias("cat", "cats", "kittycat", "kitty cat", "meow", "kitties", "kittys")]
         public async Task Kitty()
@@ -175,11 +167,9 @@ namespace Skuld.Bot.Commands
             DogStatsd.Increment("web.get");
             await new EmbedBuilder { Color = EmbedUtils.RandomColor(), ImageUrl = seal }.Build().QueueMessageAsync(Context).ConfigureAwait(false);
         }
-
-        #endregion Animals
+        #endregion
 
         #region RNG
-
         [Command("eightball"), Summary("Eightball")]
         [Alias("8ball")]
         public async Task Eightball([Remainder]string question = null)
@@ -216,76 +206,89 @@ namespace Skuld.Bot.Commands
                 Color = EmbedUtils.RandomColor()
             }.Build().QueueMessageAsync(Context).ConfigureAwait(false);
         }
-
-        #endregion RNG
+        #endregion
 
         #region Pasta
-
         [Command("pasta"), Summary("Pastas are nice"), RequireDatabase]
         public async Task Pasta(string cmd, string title, [Remainder]string content)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            if (cmd == "new" || cmd == "+" || cmd == "create")
+            switch(cmd.ToLowerInvariant())
             {
-                if (title == "list" || title == "help")
-                {
-                    await $"Cannot create a Pasta with the name: {title}".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
-                    DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-                }
-                else
-                {
-                    var pasta = Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower());
-                    if (pasta != null)
+                case "new":
+                case "+":
+                case "create":
                     {
-                        await $"Pasta already exists with name: **{title}**".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
-                        DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-                    }
-                    else
-                    {
-                        Database.Pastas.Add(new Pasta
+                        switch(title.ToLowerInvariant())
                         {
-                            OwnerId = Context.User.Id,
-                            Name = title,
-                            Content = content,
-                            Created = DateTime.UtcNow.ToEpoch()
-                        });
+                            case "list":
+                            case "help":
+                                {
+                                    await Messages.FromError($"Cannot create a Pasta with the name: {title}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                                    DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+                                }
+                                break;
+                            default:
+                                {
+                                    var pasta = Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower());
+                                    if (pasta != null)
+                                    {
+                                        await Messages.FromError($"Pasta already exists with name: **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                                        DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+                                    }
+                                    else
+                                    {
+                                        Database.Pastas.Add(new Pasta
+                                        {
+                                            OwnerId = Context.User.Id,
+                                            Name = title,
+                                            Content = content,
+                                            Created = DateTime.UtcNow.ToEpoch()
+                                        });
 
-                        await Database.SaveChangesAsync().ConfigureAwait(false);
+                                        await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                        if (Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower()) != null)
-                        {
-                            await $"Added: **{title}**".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                                        if (Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower()) != null)
+                                        {
+                                            await Messages.FromSuccess($"Added: **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                                        }
+                                    }
+                                }
+                                break;
                         }
                     }
-                }
-            }
-            if (cmd == "edit" || cmd == "change" || cmd == "modify")
-            {
-                var pasta = Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower());
-
-                if (pasta != null)
-                {
-                    if (pasta.OwnerId == Context.User.Id)
+                    break;
+                case "edit":
+                case "change":
+                case "modify":
                     {
-                        content = content.Replace("\'", "\\\'");
-                        content = content.Replace("\"", "\\\"");
+                        var pasta = Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower());
 
-                        pasta.Content = content;
-
-                        await Database.SaveChangesAsync();
-
-                        if (Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower()) != pasta)
+                        if (pasta != null)
                         {
-                            await $"Changed the content of **{title}**".QueueMessageAsync(Context, Discord.Models.MessageType.Success).ConfigureAwait(false);
+                            if (pasta.OwnerId == Context.User.Id)
+                            {
+                                content = content.Replace("\'", "\\\'");
+                                content = content.Replace("\"", "\\\"");
+
+                                pasta.Content = content;
+
+                                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                                if (Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower()) != pasta)
+                                {
+                                    await Messages.FromSuccess($"Changed the content of **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                                }
+                            }
+                            else
+                            {
+                                DogStatsd.Increment("commands.errors", 1, 1, new string[] { "unm-precon" });
+                                await Messages.FromError("I'm sorry, but you don't own the Pasta", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            }
                         }
                     }
-                    else
-                    {
-                        DogStatsd.Increment("commands.errors", 1, 1, new string[] { "unm-precon" });
-                        await "I'm sorry, but you don't own the Pasta".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
-                    }
-                }
+                    break;
             }
         }
 
@@ -298,69 +301,77 @@ namespace Skuld.Bot.Commands
 
             if (pasta != null)
             {
-                if (cmd == "who" || cmd == "?")
+                switch(cmd.ToLowerInvariant())
                 {
-                    var embed = new EmbedBuilder
-                    {
-                        Color = EmbedUtils.RandomColor(),
-                        Title = pasta.Name
-                    };
-
-                    var usr = Context.Client.GetUser(pasta.OwnerId);
-                    if (usr != null)
-                        embed.AddField("Author", usr.Username + "#" + usr.Discriminator, inline: true);
-                    else
-                        embed.AddField("Author", $"Unknown User ({pasta.OwnerId})");
-                    embed.AddField("Created", pasta.Created.FromEpoch().ToString(new CultureInfo((await Database.GetUserAsync(Context.User)).Language)), inline: true);
-                    //embed.AddField("UpVotes", ":arrow_double_up: " + pasta.Upvotes, inline: true);
-                    //embed.AddField("DownVotes", ":arrow_double_down: " + pasta.Downvotes, inline: true);
-
-                    await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
-                }
-                if (cmd == "upvote")
-                {
-                    /*var result = await await Database.GetUserAsync(Context.User).CastPastaVoteAsync(pastaLocal, true);
-
-                    if (result.Successful)
-                    {
-                        await $"Added your vote to `{pastaLocal.Name}`".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
-                    }
-                    else
-                    {
-                        await result.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                    }*/
-                }
-                if (cmd == "downvote")
-                {
-                    /*var result = await await Database.GetUserAsync(Context.User).CastPastaVoteAsync(pastaLocal, false);
-
-                    if (result.Successful)
-                    {
-                        await $"Added your vote to `{pastaLocal.Name}`".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
-                    }
-                    else
-                    {
-                        await result.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                    }*/
-                }
-                if (cmd == "delete")
-                {
-                    if (Convert.ToUInt64(pasta.OwnerId) == Context.User.Id)
-                    {
-                        Database.Pastas.Remove(pasta);
-                        await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                        if (Database.Pastas.FirstOrDefault(x => x == pasta) == null)
+                    case "who":
+                    case "?":
                         {
-                            await $"Successfully deleted: **{title}**".QueueMessageAsync(Context).ConfigureAwait(false);
+                            var embed = new EmbedBuilder
+                            {
+                                Color = EmbedUtils.RandomColor(),
+                                Title = pasta.Name
+                            };
+
+                            var usr = Context.Client.GetUser(pasta.OwnerId);
+                            if (usr != null)
+                                embed.AddField("Author", usr.Username + "#" + usr.Discriminator, inline: true);
+                            else
+                                embed.AddField("Author", $"Unknown User ({pasta.OwnerId})");
+                            embed.AddField("Created", pasta.Created.FromEpoch().ToString(new CultureInfo((await Database.GetUserAsync(Context.User).ConfigureAwait(false)).Language)), inline: true);
+                            //embed.AddField("UpVotes", ":arrow_double_up: " + pasta.Upvotes, inline: true);
+                            //embed.AddField("DownVotes", ":arrow_double_down: " + pasta.Downvotes, inline: true);
+
+                            await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
                         }
-                    }
+                        break;
+                    case "upvote":
+                        {
+                            /*var result = await await Database.GetUserAsync(Context.User).CastPastaVoteAsync(pastaLocal, true);
+
+                            if (result.Successful)
+                            {
+                                await $"Added your vote to `{pastaLocal.Name}`".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
+                            }
+                            else
+                            {
+                                await result.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                            }*/
+                        }
+                        break;
+                    case "downvote":
+                        {
+                            /*var result = await await Database.GetUserAsync(Context.User).CastPastaVoteAsync(pastaLocal, false);
+
+                            if (result.Successful)
+                            {
+                                await $"Added your vote to `{pastaLocal.Name}`".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
+                            }
+                            else
+                            {
+                                await result.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                            }*/
+                        }
+                        break;
+                    case "delete":
+                        {
+                            if (Convert.ToUInt64(pasta.OwnerId) == Context.User.Id)
+                            {
+                                Database.Pastas.Remove(pasta);
+                                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                                if (Database.Pastas.FirstOrDefault(x => x == pasta) == null)
+                                {
+                                    await Messages.FromSuccess($"Successfully deleted: **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                                }
+                            }
+                        }
+                        break;
                 }
             }
             else
             {
                 DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-                await $"Pasta `{title}` doesn't exist. :/ Sorry.".QueueMessageAsync(Context).ConfigureAwait(false);
+                await Messages.FromError($"Pasta `{title}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -368,67 +379,72 @@ namespace Skuld.Bot.Commands
         public async Task Pasta(string title)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
+            var pastas = Database.Pastas;
 
-            if (title == "list")
+            switch (title.ToLowerInvariant())
             {
-                var pastas = Database.Pastas;
-
-                if (pastas.Count() > 0)
-                {
-                    string top = "```\n";
-
-                    string pastanames = "";
-
-                    foreach (var pasta in pastas)
+                case "list":
                     {
-                        if (pasta == pastas.LastOrDefault())
-                        { pastanames += pasta.Name; }
+                        if (pastas.Any())
+                        {
+                            string top = "```\n";
+
+                            string pastanames = "";
+
+                            foreach (var pasta in pastas)
+                            {
+                                if (pasta == pastas.LastOrDefault())
+                                { pastanames += pasta.Name; }
+                                else
+                                { pastanames += pasta.Name + ", "; }
+                            }
+
+                            string bottom = "\n```";
+
+                            if ((top + pastanames + bottom).Length < 2000)
+                            {
+                                await $"I found:\n{pastanames}".QueueMessageAsync(Context).ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                using var stream = new MemoryStream();
+                                using var sw = new StreamWriter(stream);
+                                sw.Write(pastanames);
+
+                                await $"Here's a list".QueueMessageAsync(Context, Discord.Models.MessageType.File, stream).ConfigureAwait(false);
+                            }
+                        }
                         else
-                        { pastanames += pasta.Name + ", "; }
+                        {
+                            await Messages.FromError("No pastas exist", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        }
                     }
-
-                    string bottom = "\n```";
-
-                    if ((top + pastanames + bottom).Length < 2000)
+                    break;
+                case "help":
                     {
-                        await $"I found:\n{pastanames}".QueueMessageAsync(Context).ConfigureAwait(false);
+                        await DiscordUtilities.GetCommandHelp(CommandService, Context, "pasta").QueueMessageAsync(Context).ConfigureAwait(false);
                     }
-                    else
+                    break;
+                default:
                     {
-                        var path = Path.Combine(SkuldAppContext.TempDirectory, "Pastas.txt");
-                        File.WriteAllText(path, pastanames);
-                        await $"Here's a list".QueueMessageAsync(Context, Discord.Models.MessageType.File, path).ConfigureAwait(false);
-                    }
-                }
-                else
-                {
-                    await "No pastas exist".QueueMessageAsync(Context).ConfigureAwait(false);
-                }
-            }
-            else if (title == "help")
-            {
-                await DiscordUtilities.GetCommandHelp(CommandService, Context, "pasta").QueueMessageAsync(Context).ConfigureAwait(false);
-            }
-            else
-            {
-                var pasta = Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower());
+                        var pasta = Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower());
 
-                if (pasta != null)
-                {
-                    await pasta.Content.QueueMessageAsync(Context).ConfigureAwait(false);
-                }
-                else
-                {
-                    DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-                    await $"Whoops, `{title}` doesn't exist".QueueMessageAsync(Context).ConfigureAwait(false);
-                }
+                        if (pasta != null)
+                        {
+                            await pasta.Content.QueueMessageAsync(Context).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+                            await $"Whoops, `{title}` doesn't exist".QueueMessageAsync(Context).ConfigureAwait(false);
+                        }
+                    }
+                    break;
             }
         }
-
-        #endregion Pasta
+        #endregion
 
         #region Emoji
-
         [Command("emoji"), Summary("Turns text into bigmoji")]
         public async Task Emojify([Remainder]string message)
             => await message.ToRegionalIndicator().QueueMessageAsync(Context).ConfigureAwait(false);
@@ -436,11 +452,9 @@ namespace Skuld.Bot.Commands
         [Command("emojidance"), Summary("Dancing Emoji")]
         public async Task DanceEmoji([Remainder]string message)
             => await message.ToDancingEmoji().QueueMessageAsync(Context).ConfigureAwait(false);
+        #endregion
 
-        #endregion Emoji
-
-        #region webcomics
-
+        #region Webcomics
         [Command("xkcd"), Summary("Get's Random XKCD comic"), Ratelimit(5, 1, Measure.Minutes)]
         public async Task XKCD(int comicid = -1)
         {
@@ -483,25 +497,24 @@ namespace Skuld.Bot.Commands
                 {
                     dateTime = DateTime.ParseExact($"{comic.day} {comic.month} {comic.year}", "dd MM yyyy", CultureInfo.InvariantCulture);
                 }
-                await new EmbedBuilder
-                {
-                    Author = new EmbedAuthorBuilder
-                    {
-                        Name = "Randall Patrick Munroe - XKCD",
-                        Url = "https://xkcd.com/" + comic.num + "/",
-                        IconUrl = "https://pbs.twimg.com/profile_images/602808103281692673/8lIim6cB_400x400.png"
-                    },
-                    Footer = new EmbedFooterBuilder
-                    {
-                        Text = "Strip released on"
-                    },
-                    Color = EmbedUtils.RandomColor(),
-                    Timestamp = dateTime,
-                    ImageUrl = comic.img,
-                    Title = comic.safe_title,
-                    Description = comic.alt,
-                    Url = comic.link
-                }.Build().QueueMessageAsync(Context).ConfigureAwait(false);
+
+                await new EmbedBuilder()
+                    .WithAuthor(
+                        new EmbedAuthorBuilder()
+                        .WithName("Randall Patrick Munroe - XKCD")
+                        .WithUrl($"https://xkcd.com/{comic.num}/")
+                        .WithIconUrl("https://pbs.twimg.com/profile_images/602808103281692673/8lIim6cB_400x400.png")
+                    )
+                    .WithColor(Color.Teal)
+                    .WithFooter(
+                        new EmbedFooterBuilder()
+                        .WithText("Strip released on")
+                    )
+                    .WithTimestamp(dateTime)
+                    .WithImageUrl(comic.img)
+                    .WithDescription(comic.alt)
+                    .WithUrl(comic.link)
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -512,18 +525,18 @@ namespace Skuld.Bot.Commands
             {
                 var comic = await ComicClients.GetCAHComicAsync().ConfigureAwait(false) as CAHComic;
                 DogStatsd.Increment("web.get");
-                await new EmbedBuilder
-                {
-                    Author = new EmbedAuthorBuilder
-                    {
-                        Name = "Strip done " + comic.Author,
-                        Url = comic.AuthorURL,
-                        IconUrl = comic.AuthorAvatar
-                    },
-                    ImageUrl = comic.ImageURL,
-                    Url = comic.URL,
-                    Color = EmbedUtils.RandomColor()
-                }.Build().QueueMessageAsync(Context).ConfigureAwait(false);
+
+                await new EmbedBuilder()
+                    .WithAuthor(
+                    new EmbedAuthorBuilder()
+                        .WithName($"Strip done {comic.Author}")
+                        .WithUrl(comic.AuthorURL)
+                        .WithIconUrl(comic.AuthorAvatar)
+                    )
+                    .WithImageUrl(comic.ImageURL)
+                    .WithUrl(comic.URL)
+                    .WithColor(Color.Teal)
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -555,11 +568,9 @@ namespace Skuld.Bot.Commands
                 Log.Error("CAD-Cmd", "Error parsing website", ex);
             }
         }
-
-        #endregion webcomics
+        #endregion
 
         #region Magik
-
         [Command("magik"), Summary("Magiks an image"), Alias("magick", "magic", "liquify"), Ratelimit(5, 1, Measure.Minutes)]
         public async Task Magik()
         {
@@ -570,12 +581,12 @@ namespace Skuld.Bot.Commands
 
             foreach (var msg in msgs)
             {
-                if (msg.Attachments.Count > 0)
+                if (msg.Attachments.Any())
                 {
                     url = msg.Attachments.FirstOrDefault().Url;
                     break;
                 }
-                if (msg.Embeds.Count > 0)
+                if (msg.Embeds.Any())
                 {
                     var embed = msg.Embeds.FirstOrDefault();
                     if (embed.Image.HasValue)
@@ -605,24 +616,13 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            await "Couldn't find an image".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+            await Messages.FromError("Couldn't find an image", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("magik"), Summary("Magiks an image"), Alias("magick", "magic", "liquify"), Ratelimit(5, 1, Measure.Minutes)]
         public async Task Magik(Uri image)
         {
-            var guid = new Guid();
-            var imageLocation = Path.Combine(AppContext.BaseDirectory, "storage/magikCache");
-            var imageFile = Path.Combine(imageLocation, guid + ".png");
-
-            if (!Directory.Exists(imageLocation))
-            {
-                Directory.CreateDirectory(imageLocation);
-            }
-
-            await WebHandler.DownloadFileAsync(image, imageFile).ConfigureAwait(false);
-
-            using var magikImag = new MagickImage(imageFile);
+            using var magikImag = new MagickImage(await WebHandler.ReturnStreamAsync(image).ConfigureAwait(false));
             using var magik2 = magikImag.Clone();
 
             magik2.Resize(800, 600);
@@ -642,19 +642,21 @@ namespace Skuld.Bot.Commands
 
             magik2.Resize(magikImag.Width, magikImag.Height);
 
-            magik2.Write(imageFile);
+            MemoryStream stream = new MemoryStream();
 
-            await "".QueueMessageAsync(Context, Discord.Models.MessageType.File, imageFile).ConfigureAwait(false);
+            magik2.Write(stream);
+
+            stream.Position = 0;
+
+            await "".QueueMessageAsync(Context, Discord.Models.MessageType.File, stream).ConfigureAwait(false);
         }
 
         [Command("magik"), Summary("Magiks an image"), Alias("magick", "magic", "liquify"), Ratelimit(5, 1, Measure.Minutes)]
         public async Task Magik([Remainder]IGuildUser user)
             => await Magik(new Uri(user.GetAvatarUrl() ?? user.GetDefaultAvatarUrl())).ConfigureAwait(false);
-
-        #endregion Magik
+        #endregion
 
         #region Time
-
         [Command("time"), Summary("Gets current time")]
         public async Task Time()
             => await new DateTimeOffset(DateTime.UtcNow).ToString().QueueMessageAsync(Context).ConfigureAwait(false);
@@ -670,11 +672,9 @@ namespace Skuld.Bot.Commands
 
             await ndtof.ToString().QueueMessageAsync(Context).ConfigureAwait(false);
         }
-
-        #endregion Time
+        #endregion
 
         #region Jokes
-
         [Command("roast"), Summary("\"Roasts\" a user, these are all taken as jokes, and aren't actually meant to cause harm.")]
         public async Task RoastCmd(IUser user = null)
         {
@@ -713,11 +713,9 @@ namespace Skuld.Bot.Commands
                 Color = EmbedUtils.RandomColor()
             }.Build().QueueMessageAsync(Context).ConfigureAwait(false);
         }
-
-        #endregion Jokes
+        #endregion
 
         #region Figlet
-
         private const int FIGLETWIDTH = 16;
 
         [Command("figlet"), Summary("Make a big ascii text lol")]
@@ -768,11 +766,9 @@ namespace Skuld.Bot.Commands
 
             await result.QueueMessageAsync(Context).ConfigureAwait(false);
         }
-
-        #endregion Figlet
+        #endregion
 
         #region Images
-
         [Command("meme"), Summary("Does a funny haha meme"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Memay(string template = null, params string[] sources)
         {
@@ -780,20 +776,15 @@ namespace Skuld.Bot.Commands
             {
                 var endpoints = JsonConvert.DeserializeObject<MemeResponse>(await WebHandler.ReturnStringAsync(new Uri("https://api.skuldbot.uk/fun/meme/?endpoints")).ConfigureAwait(false)).Endpoints;
 
-                var paginatedMessage = new PaginatedMessage
+                var pages = endpoints.PaginateList();
+
+                int index = 0;
+                foreach(var page in pages)
                 {
-                    Title = "__Current Templates__",
-                    Color = Color.Blue,
-                    Options = new PaginatedAppearanceOptions
-                    {
-                        DisplayInformationIcon = false,
-                        JumpDisplayOptions = JumpDisplayOptions.WithManageMessages
-                    }
-                };
+                    await Messages.FromMessage("__Current Templates ({index+1}/{pages.Count})__", page, Context)
+                        .QueueMessageAsync(Context).ConfigureAwait(false);
+                }
 
-                paginatedMessage.Pages = endpoints.PaginateList();
-
-                await PagedReplyAsync(paginatedMessage).ConfigureAwait(false);
                 return;
             }
 
@@ -808,7 +799,7 @@ namespace Skuld.Bot.Commands
 
                 if (DiscordUtilities.UserMentionRegex.IsMatch(str))
                 {
-                    var userid = str.Replace("<@", "").Replace(">", "");
+                    var userid = str.Replace("<@", "").Replace("<@!", "").Replace(">", "");
                     ulong.TryParse(userid, out ulong useridl);
 
                     var user = Context.Guild.GetUser(useridl);
@@ -839,27 +830,22 @@ namespace Skuld.Bot.Commands
                                 Directory.CreateDirectory(folderPath);
                             }
 
-                            using (var file = System.Drawing.Image.FromStream((Stream)resp))
-                            {
-                                file.Save(filePath);
-                            }
-
-                            await "".QueueMessageAsync(Context, Discord.Models.MessageType.File, filePath).ConfigureAwait(false);
+                            await "".QueueMessageAsync(Context, Discord.Models.MessageType.File, resp as Stream).ConfigureAwait(false);
                         }
                     }
                     else
                     {
-                        await $"You don't have enough sources. You need {endpoint.RequiredSources} source images".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                        await Messages.FromError($"You don't have enough sources. You need {endpoint.RequiredSources} source images", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                 }
                 else
                 {
-                    await $"Template `{template}` does not exist".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                    await Messages.FromError($"Template `{template}` does not exist", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
             else
             {
-                await "Sources need to be an image link".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                await Messages.FromError("Sources need to be an image link", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -873,11 +859,13 @@ namespace Skuld.Bot.Commands
                 var sorted = results.Matches.OrderByDescending(x => x.Similarity);
                 var mostlikely = sorted.FirstOrDefault();
                 string url = !mostlikely.Url.Contains("https:") && !mostlikely.Url.Contains("http:") ? "https:" + mostlikely.Url : mostlikely.Url;
-                await $"Similarity: {mostlikely.Similarity}%\n{url}".QueueMessageAsync(Context).ConfigureAwait(false);
+
+                await Messages.FromMessage(Utils.GetCaller(), $"Similarity: {mostlikely.Similarity}%", Context)
+                    .WithImageUrl(url).QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                await "No results found".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                await Messages.FromError("No results found", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -897,13 +885,13 @@ namespace Skuld.Bot.Commands
                     await post.GetMessage(post.PostUrl).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
-                await "Couldn't find an image".QueueMessageAsync(Context, Discord.Models.MessageType.Failed).ConfigureAwait(false);
+                await Messages.FromError("Couldn't find an image", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
         public SafebooruImage GetSafeImage(IReadOnlyList<SafebooruImage> posts, int EdgeCase = 0)
         {
-            var post = posts.GetRandomItem();
+            var post = posts.RandomValue(BotService.Services.GetRequiredService<Random>());
             EdgeCase++;
             if (EdgeCase <= 5)
             {
@@ -921,9 +909,6 @@ namespace Skuld.Bot.Commands
                 return null;
             }
         }
-
-        #endregion Images
+        #endregion
     }
 }
-
-#pragma warning restore IDE0060
