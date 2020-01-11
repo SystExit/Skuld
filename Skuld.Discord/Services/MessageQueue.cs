@@ -1,12 +1,5 @@
-﻿using Discord;
-using Skuld.Core.Utilities;
-using Skuld.Discord.Handlers;
-using Skuld.Discord.Models;
-using System;
+﻿using Skuld.Discord.Models;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Skuld.Discord.Services
 {

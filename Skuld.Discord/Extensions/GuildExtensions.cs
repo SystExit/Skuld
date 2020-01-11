@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Skuld.Core.Extensions.Discord
+namespace Skuld.Discord.Extensions
 {
     public static class GuildExtensions
     {
@@ -38,6 +38,14 @@ namespace Skuld.Core.Extensions.Discord
             }
 
             return users;
+        }
+
+        public static async Task<IReadOnlyList<IGuildUser>> GetRoleMembersAsync(this IGuild guild, IRole role)
+        {
+            await guild.DownloadUsersAsync().ConfigureAwait(false);
+            var users = await guild.GetUsersAsync().ConfigureAwait(false);
+
+            return users.Where(x => x.RoleIds.Contains(role.Id)).ToList();
         }
     }
 }

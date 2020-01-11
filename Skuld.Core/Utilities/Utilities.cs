@@ -33,12 +33,12 @@ namespace Skuld.Core.Utilities
         /// <param name="maxExperience">Maximum XP to grant</param>
         /// <param name="timeInVoice">Users time in voice by minutes</param>
         /// <returns></returns>
-        public static int GetExpMultiFromMinutesInVoice(float expIndeterminate, ulong minMinutes, ulong maxExperience, ulong timeInVoice)
+        public static int GetExpMultiFromMinutesInVoice(float expDeterminate, ulong minMinutes, ulong maxExperience, ulong timeInVoice)
         {
             if (timeInVoice < minMinutes)
                 return 0; //if less than minimum minutes return 0 multiplier
 
-           var result = Math.Pow(expIndeterminate * (timeInVoice - minMinutes), 2); //do math
+            var result = Math.Pow(expDeterminate * (timeInVoice - minMinutes), 2); //do math
 
             if (result > maxExperience)
                 result = maxExperience; //clamp to 100 as limit

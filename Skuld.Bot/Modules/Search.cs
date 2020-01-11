@@ -9,10 +9,8 @@ using Skuld.APIS.Pokemon.Models;
 using Skuld.Bot.Extensions;
 using Skuld.Bot.Services;
 using Skuld.Core.Extensions;
-using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
-using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
 using Skuld.Discord.Services;
@@ -36,10 +34,10 @@ namespace Skuld.Bot.Commands
         public WikipediaClient Wikipedia { get; set; }
         public GiphyClient Giphy { get; set; }
         public Stands4Client Stands4 { get; set; }
-        public BaseClient WebHandler { get; set; }
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }
 
         #region SocialMedia
+
         [Command("twitch"), Summary("Finds a twitch user")]
         public async Task TwitchSearch([Remainder]string twitchStreamer)
         {
@@ -76,9 +74,11 @@ namespace Skuld.Bot.Commands
 
             await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
         }
-        #endregion
+
+        #endregion SocialMedia
 
         #region SearchEngines
+
         [Command("search"), Summary("Use \"g\" as a short cut for google,\n\"yt\" for youtube,\nor search for images on imgur"), Alias("s")]
         public async Task GetSearch(string platform, [Remainder]string query)
         {
@@ -86,8 +86,37 @@ namespace Skuld.Bot.Commands
             if (platform == "google" || platform == "g")
             {
                 await $"🔍 Searching Google for: {query}".QueueMessageAsync(Context).ConfigureAwait(false);
-                var result = await SearchClient.SearchGoogleAsync(query, Context);
-                await result.QueueMessageAsync(Context).ConfigureAwait(false);
+                var result = await SearchClient.SearchGoogleAsync(query).ConfigureAwait(false);
+
+                if (result == null)
+                {
+                    await EmbedExtensions.FromError($"I couldn't find anything matching: `{query}`, please try again.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    return;
+                }
+
+                var item1 = result.FirstOrDefault();
+                var item2 = result.ElementAt(1);
+                var item3 = result.LastOrDefault();
+
+                string desc = "I found this:\n" +
+                    $"**{item1.Title}**\n" +
+                    $"<{item1.Link}>\n\n" +
+                    "__**Also Relevant**__\n" +
+                    $"**{item2.Title}**\n<{item2.Link}>\n\n" +
+                    $"**{item3.Title}**\n<{item3.Link}>\n\n" +
+                    "If I didn't find what you're looking for, use this link:\n" +
+                    $"https://google.com/search?q={query.Replace(" ", "%20")}";
+
+                await
+                    new EmbedBuilder()
+                    .WithAuthor(new EmbedAuthorBuilder()
+                        .WithName($"Google search for: {query}")
+                        .WithIconUrl("https://upload.wikimedia.org/wikipedia/commons/0/09/IOS_Google_icon.png")
+                        .WithUrl($"https://google.com/search?q={query.Replace(" ", "%20")}")
+                    )
+                    .AddFooter(Context)
+                    .WithDescription(desc)
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
             }
             if (platform == "youtube" || platform == "yt")
             {
@@ -109,7 +138,7 @@ namespace Skuld.Bot.Commands
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
             var prefix = (await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix ?? Configuration.Prefix;
-            
+
             string url = "https://lmgtfy.com/";
             engine = engine.ToLowerInvariant();
             if (engine == "g" || engine == "google")
@@ -132,9 +161,11 @@ namespace Skuld.Bot.Commands
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new[] { "generic" });
             }
         }
-        #endregion
+
+        #endregion SearchEngines
 
         #region Definitions/Information
+
         [Command("urban"), Summary("Gets a thing from urban dictionary if empty, it gets a random thing"), RequireNsfw]
         public async Task Urban([Remainder]string phrase = null)
         {
@@ -181,9 +212,11 @@ namespace Skuld.Bot.Commands
 
             await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
         }
-        #endregion
+
+        #endregion Definitions/Information
 
         #region Games
+
         [Command("steam"), Summary("Searches steam store")]
         public async Task SteamStore([Remainder]string game)
         {
@@ -233,47 +266,52 @@ namespace Skuld.Bot.Commands
         {
             if (pokemon == null)
             {
-                await new EmbedBuilder
-                {
-                    Color = Color.Red,
-                    Title = "Command Error!",
-                    Description = "This pokemon doesn't exist. Please try again."
-                }.Build().QueueMessageAsync(Context).ConfigureAwait(false);
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+
+                await
+                    EmbedExtensions.FromError("This pokemon doesn't exist. Please try again.", Context)
+                    .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
             }
             else
             {
-                Embed embed = null;
+                switch (group.ToLowerInvariant())
+                {
+                    case "stat":
+                    case "stats":
+                        await (await pokemon.GetEmbedAsync(PokemonDataGroup.Stats).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
+                        break;
 
-                group = group.ToLower();
+                    case "abilities":
+                    case "ability":
+                        await (await pokemon.GetEmbedAsync(PokemonDataGroup.Abilities).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
+                        break;
 
-                if (group == "stat" || group == "stats")
-                {
-                    embed = await pokemon.GetEmbedAsync(PokemonDataGroup.Stats);
+                    case "helditems":
+                    case "hitems":
+                    case "hitem":
+                    case "items":
+                        await (await pokemon.GetEmbedAsync(PokemonDataGroup.HeldItems).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
+                        break;
+
+                    case "move":
+                    case "moves":
+                        await (await pokemon.GetEmbedAsync(PokemonDataGroup.Moves).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
+                        break;
+
+                    case "games":
+                    case "game":
+                        await (await pokemon.GetEmbedAsync(PokemonDataGroup.Games).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
+                        break;
+
+                    case "default":
+                    default:
+                        await (await pokemon.GetEmbedAsync(PokemonDataGroup.Default).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
+                        break;
                 }
-                if (group == "abilities" || group == "ability")
-                {
-                    embed = await pokemon.GetEmbedAsync(PokemonDataGroup.Abilities);
-                }
-                if (group == "helditems" || group == "hitems" || group == "hitem" || group == "items")
-                {
-                    embed = await pokemon.GetEmbedAsync(PokemonDataGroup.HeldItems);
-                }
-                if (group == "default")
-                {
-                    embed = await pokemon.GetEmbedAsync(PokemonDataGroup.Default);
-                }
-                if (group == "move" || group == "moves")
-                {
-                    embed = await pokemon.GetEmbedAsync(PokemonDataGroup.Moves);
-                }
-                if (group == "games" || group == "game")
-                {
-                    embed = await pokemon.GetEmbedAsync(PokemonDataGroup.Games);
-                }
-                await embed.QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
-        #endregion
+
+        #endregion Games
     }
 }

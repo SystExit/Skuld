@@ -36,7 +36,7 @@ namespace Skuld.Bot.Services
         public async Task HandleMessageAsync(IWebSocketConnection conn, string message)
         {
             if (string.IsNullOrEmpty(message)) return;
-            if (message.StartsWith("user:"))
+            if (message.StartsWith("user:", StringComparison.InvariantCultureIgnoreCase))
             {
                 ulong.TryParse(message.Replace("user:", ""), out var userid);
 
@@ -63,7 +63,7 @@ namespace Skuld.Bot.Services
                     await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("User not found"))).ConfigureAwait(false);
                 }
             }
-            if (message.StartsWith("guild:"))
+            if (message.StartsWith("guild:", StringComparison.InvariantCultureIgnoreCase))
             {
                 ulong.TryParse(message.Replace("guild:", ""), out var guildid);
 
@@ -88,7 +88,7 @@ namespace Skuld.Bot.Services
                     await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found"))).ConfigureAwait(false);
                 }
             }
-            if (message.StartsWith("roles:"))
+            if (message.StartsWith("roles:", StringComparison.InvariantCultureIgnoreCase))
             {
                 ulong.TryParse(message.Replace("roles:", ""), out var guildid);
 
@@ -124,7 +124,7 @@ namespace Skuld.Bot.Services
                     await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found"))).ConfigureAwait(false);
                 }
             }
-            if (message.StartsWith("tchannels:"))
+            if (message.StartsWith("tchannels:", StringComparison.InvariantCultureIgnoreCase))
             {
                 ulong.TryParse(message.Replace("tchannels:", ""), out var guildid);
 
@@ -160,7 +160,7 @@ namespace Skuld.Bot.Services
                     await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found"))).ConfigureAwait(false);
                 }
             }
-            if (message.StartsWith("cchannels:"))
+            if (message.StartsWith("cchannels:", StringComparison.InvariantCultureIgnoreCase))
             {
                 ulong.TryParse(message.Replace("cchannels:", ""), out var guildid);
 
@@ -232,7 +232,7 @@ namespace Skuld.Bot.Services
                     await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found"))).ConfigureAwait(false);
                 }
             }
-            if (message.ToLower() == "stats" || message.ToLower() == "status")
+            if (message.ToLowerInvariant() == "stats" || message.ToLowerInvariant() == "status")
             {
                 string mem;
                 if (SkuldAppContext.Memory.GetMBUsage > 1024)
@@ -256,6 +256,7 @@ namespace Skuld.Bot.Services
         public void Dispose()
         {
             _server.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 }

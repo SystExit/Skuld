@@ -16,7 +16,6 @@ using Skuld.APIS.WebComics.XKCD.Models;
 using Skuld.Bot.Extensions;
 using Skuld.Bot.Globalization;
 using Skuld.Core.Extensions;
-using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Attributes;
@@ -50,7 +49,6 @@ namespace Skuld.Bot.Commands
         public BooruClient BooruClient { get; set; }
         public NekosLifeClient NekoLife { get; set; }
         public IqdbClient IqdbClient { get; set; }
-        public BaseClient WebHandler { get; set; }
         private CommandService CommandService { get => BotService.CommandService; }
 
         private static readonly string[] eightball = {
@@ -90,6 +88,7 @@ namespace Skuld.Bot.Commands
         }
 
         #region WeebAnimals
+
         [Command("neko"), Summary("neko grill"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Neko()
         {
@@ -106,9 +105,11 @@ namespace Skuld.Bot.Commands
             DogStatsd.Increment("web.get");
             await EmbedExtensions.FromMessage(Context).WithImageUrl(kitsu).QueueMessageAsync(Context).ConfigureAwait(false);
         }
-        #endregion
+
+        #endregion WeebAnimals
 
         #region Animals
+
         [Command("kitty"), Summary("kitty"), Ratelimit(20, 1, Measure.Minutes)]
         [Alias("cat", "cats", "kittycat", "kitty cat", "meow", "kitties", "kittys")]
         public async Task Kitty()
@@ -133,7 +134,7 @@ namespace Skuld.Bot.Commands
             if (doggo.IsVideoFile())
                 await doggo.QueueMessageAsync(Context).ConfigureAwait(false);
             if (doggo == "https://i.imgur.com/ZSMi3Zt.jpg")
-            await EmbedExtensions.FromImage(doggo, Color.Red, Context).QueueMessageAsync(Context, content: "Both the api's are down, that makes the sad a big sad. <:blobcry:350681079415439361>").ConfigureAwait(false);
+                await EmbedExtensions.FromImage(doggo, Color.Red, Context).QueueMessageAsync(Context, content: "Both the api's are down, that makes the sad a big sad. <:blobcry:350681079415439361>").ConfigureAwait(false);
             else
                 await EmbedExtensions.FromImage(doggo, EmbedExtensions.RandomEmbedColor(), Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
@@ -165,9 +166,11 @@ namespace Skuld.Bot.Commands
             DogStatsd.Increment("web.get");
             await EmbedExtensions.FromImage(seal, EmbedExtensions.RandomEmbedColor(), Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
-        #endregion
+
+        #endregion Animals
 
         #region RNG
+
         [Command("eightball"), Summary("Eightball")]
         [Alias("8ball")]
         public async Task Eightball([Remainder]string question = null)
@@ -184,7 +187,7 @@ namespace Skuld.Bot.Commands
 
             message += $"And the :8ball: says:\n{answer}";
 
-            await 
+            await
                 new EmbedBuilder()
                     .AddAuthor(Context.Client)
                     .AddFooter(Context)
@@ -197,7 +200,7 @@ namespace Skuld.Bot.Commands
         [Command("roll"), Summary("Roll a die")]
         public async Task Roll(string roll)
         {
-            if(int.TryParse(roll, out int upper))
+            if (int.TryParse(roll, out int upper))
             {
                 await
                     EmbedExtensions.FromMessage(Utils.GetCaller(),
@@ -209,14 +212,13 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-
             }
         }
 
         [Command("choose"), Summary("Choose from things, eg: \"reading books\" \"playing games\"")]
         public async Task Choose(params string[] choices)
         {
-            if(choices.Any())
+            if (choices.Any())
             {
                 var choice = choices[Random.Next(0, choices.Length)];
 
@@ -274,7 +276,7 @@ namespace Skuld.Bot.Commands
             if (YNResp.Answer.ToLowerInvariant() != "yes" && YNResp.Answer.ToLowerInvariant() != "no")
                 message += "¯\\_(ツ)_/¯";
 
-            await 
+            await
                 new EmbedBuilder()
                     .AddAuthor(Context.Client)
                     .AddFooter(Context)
@@ -284,9 +286,11 @@ namespace Skuld.Bot.Commands
                 .QueueMessageAsync(Context)
                 .ConfigureAwait(false);
         }
-        #endregion
+
+        #endregion RNG
 
         #region Pasta
+
         [Command("pasta"), Summary("Pastas are nice"), RequireDatabase]
         public async Task Pasta(string cmd, string title, [Remainder]string content)
         {
@@ -308,6 +312,7 @@ namespace Skuld.Bot.Commands
                                     DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
                                 }
                                 break;
+
                             default:
                                 {
                                     var pasta = Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower());
@@ -338,6 +343,7 @@ namespace Skuld.Bot.Commands
                         }
                     }
                     break;
+
                 case "edit":
                 case "change":
                 case "modify":
@@ -377,6 +383,7 @@ namespace Skuld.Bot.Commands
                         }
                     }
                     break;
+
                 default:
                     break;
             }
@@ -392,7 +399,7 @@ namespace Skuld.Bot.Commands
 
             if (pasta != null)
             {
-                switch(cmd.ToLowerInvariant())
+                switch (cmd.ToLowerInvariant())
                 {
                     case "who":
                     case "?":
@@ -415,6 +422,7 @@ namespace Skuld.Bot.Commands
                             await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
+
                     case "upvote":
                         {
                             /*var result = await await Database.GetUserAsync(Context.User).CastPastaVoteAsync(pastaLocal, true);
@@ -429,6 +437,7 @@ namespace Skuld.Bot.Commands
                             }*/
                         }
                         break;
+
                     case "downvote":
                         {
                             /*var result = await await Database.GetUserAsync(Context.User).CastPastaVoteAsync(pastaLocal, false);
@@ -443,6 +452,7 @@ namespace Skuld.Bot.Commands
                             }*/
                         }
                         break;
+
                     case "delete":
                         {
                             if (pasta.IsOwner(user))
@@ -485,11 +495,11 @@ namespace Skuld.Bot.Commands
                             foreach (var pasta in pastas)
                             {
                                 if (pasta == pastas.LastOrDefault())
-                                { 
+                                {
                                     pastanames += pasta.Name;
                                 }
                                 else
-                                { 
+                                {
                                     pastanames += pasta.Name + ", ";
                                 }
                             }
@@ -515,11 +525,13 @@ namespace Skuld.Bot.Commands
                         }
                     }
                     break;
+
                 case "help":
                     {
                         await DiscordUtilities.GetCommandHelp(CommandService, Context, "pasta").QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                     break;
+
                 default:
                     {
                         var pasta = pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower());
@@ -537,9 +549,11 @@ namespace Skuld.Bot.Commands
                     break;
             }
         }
-        #endregion
+
+        #endregion Pasta
 
         #region Emoji
+
         [Command("emoji"), Summary("Turns text into bigmoji")]
         public async Task Emojify([Remainder]string message)
             => await message.ToRegionalIndicator().QueueMessageAsync(Context).ConfigureAwait(false);
@@ -547,9 +561,11 @@ namespace Skuld.Bot.Commands
         [Command("emojidance"), Summary("Dancing Emoji")]
         public async Task DanceEmoji([Remainder]string message)
             => await message.ToDancingEmoji().QueueMessageAsync(Context).ConfigureAwait(false);
-        #endregion
+
+        #endregion Emoji
 
         #region Webcomics
+
         [Command("xkcd"), Summary("Get's Random XKCD comic"), Ratelimit(5, 1, Measure.Minutes)]
         public async Task XKCD(int comicid = -1)
         {
@@ -662,9 +678,11 @@ namespace Skuld.Bot.Commands
                 await EmbedExtensions.FromError($"Error parsing website, try again later", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
-        #endregion
+
+        #endregion Webcomics
 
         #region Magik
+
         [Command("magik"), Summary("Magiks an image"), Alias("magick", "magic", "liquify"), Ratelimit(5, 1, Measure.Minutes)]
         public async Task Magik()
         {
@@ -716,7 +734,7 @@ namespace Skuld.Bot.Commands
         [Command("magik"), Summary("Magiks an image"), Alias("magick", "magic", "liquify"), Ratelimit(5, 1, Measure.Minutes)]
         public async Task Magik(Uri image)
         {
-            using var magikImag = new MagickImage(await WebHandler.ReturnStreamAsync(image).ConfigureAwait(false));
+            using var magikImag = new MagickImage(await HttpWebClient.ReturnStreamAsync(image).ConfigureAwait(false));
             using var magik2 = magikImag.Clone();
 
             magik2.Resize(800, 600);
@@ -748,9 +766,11 @@ namespace Skuld.Bot.Commands
         [Command("magik"), Summary("Magiks an image"), Alias("magick", "magic", "liquify"), Ratelimit(5, 1, Measure.Minutes)]
         public async Task Magik([Remainder]IGuildUser user)
             => await Magik(new Uri(user.GetAvatarUrl() ?? user.GetDefaultAvatarUrl())).ConfigureAwait(false);
-        #endregion
+
+        #endregion Magik
 
         #region Time
+
         [Command("time"), Summary("Gets current time")]
         public async Task Time()
             => await new DateTimeOffset(DateTime.UtcNow).ToString().QueueMessageAsync(Context).ConfigureAwait(false);
@@ -766,9 +786,11 @@ namespace Skuld.Bot.Commands
 
             await ndtof.ToString().QueueMessageAsync(Context).ConfigureAwait(false);
         }
-        #endregion
+
+        #endregion Time
 
         #region Jokes
+
         [Command("roast"), Summary("\"Roasts\" a user, these are all taken as jokes, and aren't actually meant to cause harm.")]
         public async Task RoastCmd(IUser user = null)
         {
@@ -807,9 +829,11 @@ namespace Skuld.Bot.Commands
                 Color = EmbedExtensions.RandomEmbedColor()
             }.QueueMessageAsync(Context).ConfigureAwait(false);
         }
-        #endregion
+
+        #endregion Jokes
 
         #region Figlet
+
         private const int FIGLETWIDTH = 16;
 
         [Command("figlet"), Summary("Make a big ascii text lol")]
@@ -860,20 +884,22 @@ namespace Skuld.Bot.Commands
 
             await result.QueueMessageAsync(Context).ConfigureAwait(false);
         }
-        #endregion
+
+        #endregion Figlet
 
         #region Images
+
         [Command("meme"), Summary("Does a funny haha meme"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Memay(string template = null, params string[] sources)
         {
             if (template == null && !sources.Any())
             {
-                var endpoints = JsonConvert.DeserializeObject<MemeResponse>(await WebHandler.ReturnStringAsync(new Uri("https://api.skuldbot.uk/fun/meme/?endpoints")).ConfigureAwait(false)).Endpoints;
+                var endpoints = JsonConvert.DeserializeObject<MemeResponse>(await HttpWebClient.ReturnStringAsync(new Uri("https://api.skuldbot.uk/fun/meme/?endpoints")).ConfigureAwait(false)).Endpoints;
 
                 var pages = endpoints.PaginateList();
 
                 int index = 0;
-                foreach(var page in pages)
+                foreach (var page in pages)
                 {
                     await EmbedExtensions.FromMessage("__Current Templates ({index+1}/{pages.Count})__", page, Context)
                         .QueueMessageAsync(Context).ConfigureAwait(false);
@@ -904,7 +930,7 @@ namespace Skuld.Bot.Commands
 
             if (imageLinks.All(x => x.IsImageExtension()))
             {
-                var endpoints = JsonConvert.DeserializeObject<MemeResponse>(await WebHandler.ReturnStringAsync(new Uri("https://api.skuldbot.uk/fun/meme/?endpoints")).ConfigureAwait(false)).Endpoints;
+                var endpoints = JsonConvert.DeserializeObject<MemeResponse>(await HttpWebClient.ReturnStringAsync(new Uri("https://api.skuldbot.uk/fun/meme/?endpoints")).ConfigureAwait(false)).Endpoints;
 
                 if (endpoints.Any(x => x.Name.ToLower() == template.ToLower()))
                 {
@@ -1003,6 +1029,7 @@ namespace Skuld.Bot.Commands
                 return null;
             }
         }
-        #endregion
+
+        #endregion Images
     }
 }

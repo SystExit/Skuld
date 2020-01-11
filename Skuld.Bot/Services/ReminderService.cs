@@ -1,6 +1,6 @@
 ﻿using Discord;
-using Skuld.Core.Extensions;
 using Skuld.Bot.Models.Services.Reminder;
+using Skuld.Core.Extensions;
 using Skuld.Discord.Handlers;
 using System;
 using System.Collections.Generic;
@@ -14,9 +14,9 @@ namespace Skuld.Bot.Services
         private static readonly List<Reminder> reminders = new List<Reminder>();
         public static IReadOnlyList<Reminder> Reminders { get => reminders.AsReadOnly(); }
 
-        static async Task ExecuteAsync()
+        private static async Task ExecuteAsync()
         {
-            while(true)
+            while (true)
             {
                 if (reminders.Any())
                 {
@@ -34,7 +34,7 @@ namespace Skuld.Bot.Services
                         }
                     }
 
-                    foreach(var rem in RemoveReminders)
+                    foreach (var rem in RemoveReminders)
                     {
                         reminders.Remove(rem);
                     }

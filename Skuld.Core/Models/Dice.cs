@@ -15,7 +15,7 @@ namespace Skuld.Core.Models
         public Dice(int amount) : this()
         {
             var random = new Random();
-            for(int x=0;x<amount;x++)
+            for (int x = 0; x < amount; x++)
             {
                 dies.Add(new Die(random));
             }
@@ -33,7 +33,7 @@ namespace Skuld.Core.Models
         {
             dies.Clear();
 
-            for(int x = 0; x < amount; x++)
+            for (int x = 0; x < amount; x++)
             {
                 dies.Add(new Die(random ?? new Random()));
             }
@@ -43,7 +43,7 @@ namespace Skuld.Core.Models
         {
             ulong amount = 0;
 
-            foreach(var die in dies)
+            foreach (var die in dies)
             {
                 amount += die.Face;
             }
@@ -53,7 +53,7 @@ namespace Skuld.Core.Models
         public ushort[] GetFaces()
         {
             List<ushort> Face = new List<ushort>();
-            foreach(var die in dies)
+            foreach (var die in dies)
             {
                 Face.Add(die.Face);
             }

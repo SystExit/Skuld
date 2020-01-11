@@ -3,7 +3,6 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Skuld.Bot.Services;
 using Skuld.Core.Extensions;
-using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
@@ -32,6 +31,7 @@ namespace Skuld.Bot.Commands
             => await channel.SendMessageAsync(message).ConfigureAwait(false);
 
         #region GeneralManagement
+
         [Command("guild-feature"), Summary("Configures guild features"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task ConfigureGuildFeatures(string module = null, int? value = null)
@@ -260,7 +260,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            if(icon != null && name == null)
+            if (icon != null && name == null)
             {
                 await EmbedExtensions.FromError($"Parameter \"{nameof(name)}\" needs a value", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
@@ -273,9 +273,11 @@ namespace Skuld.Bot.Commands
 
             await EmbedExtensions.FromSuccess($"Set the icon to: `{guild.MoneyIcon}` & the name to: `{guild.MoneyName}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
-        #endregion
+
+        #endregion GeneralManagement
 
         #region Mute/Prune
+
         [Command("mute"), Summary("Mutes a user")]
         [RequireBotAndUserPermission(GuildPermission.ManageRoles)]
         public async Task Mute(IUser usertomute)
@@ -390,9 +392,11 @@ namespace Skuld.Bot.Commands
                 }).ConfigureAwait(false);
             }
         }
-        #endregion
+
+        #endregion Mute/Prune
 
         #region Ban/Kick
+
         [Command("kick"), Summary("Kicks a user"), Alias("dab", "dabon")]
         [RequireBotAndUserPermission(GuildPermission.KickMembers)]
         public async Task Kick(IGuildUser user, [Remainder]string reason = null)
@@ -564,9 +568,11 @@ namespace Skuld.Bot.Commands
                 await Context.Guild.RemoveBanAsync(user).ConfigureAwait(false);
             }
         }
-        #endregion
+
+        #endregion Ban/Kick
 
         #region RoleManagement
+
         [Command("roleids"), Summary("Gets all role ids")]
         public async Task GetRoleIds()
         {
@@ -585,7 +591,7 @@ namespace Skuld.Bot.Commands
 
                 var pages = paddedlines.PaginateCodeBlockList(25);
 
-                foreach(var page in pages)
+                foreach (var page in pages)
                 {
                     await page.QueueMessageAsync(Context).ConfigureAwait(false);
                 }
@@ -708,7 +714,7 @@ namespace Skuld.Bot.Commands
 
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            if(Database.LevelRewards.Contains(levelReward))
+            if (Database.LevelRewards.Contains(levelReward))
             {
                 await EmbedExtensions.FromError("Level reward already exists in this configuration", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
@@ -735,7 +741,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
             var r = Database.IAmRoles.FirstOrDefault(x => x.RoleId == role.Id);
-            
+
             try
             {
                 Database.IAmRoles.Remove(r);
@@ -777,7 +783,7 @@ namespace Skuld.Bot.Commands
         [Command("modifyrole"), Summary("Modify a role's settings")]
         public async Task ModifyRole(IRole role, [Remainder]RoleConfig config = null)
         {
-            if(config == null)
+            if (config == null)
             {
                 await RoleSettingsToEmbed(role)
                     .AddFooter(Context)
@@ -790,7 +796,7 @@ namespace Skuld.Bot.Commands
             var currentUser = Context.Guild.GetUser(Context.Client.CurrentUser.Id);
             var highestRole = currentUser.Roles.OrderByDescending(x => x.Position).FirstOrDefault();
 
-            if(role.Position > highestRole.Position)
+            if (role.Position > highestRole.Position)
             {
                 await EmbedExtensions.FromError($"{role.Name} is higher than my current role, so can't modify it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
@@ -815,14 +821,14 @@ namespace Skuld.Bot.Commands
 
                 await EmbedExtensions.FromSuccess(Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Log.Error(Utils.GetCaller(), ex.Message, ex);
                 await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
-        static EmbedBuilder RoleSettingsToEmbed(IRole role)
+        private static EmbedBuilder RoleSettingsToEmbed(IRole role)
             => new EmbedBuilder()
             .WithTitle(role.Name)
             .WithColor(role.Color)
@@ -832,9 +838,11 @@ namespace Skuld.Bot.Commands
             .AddInlineField("Position", role.Position)
             .AddInlineField("Color", role.Color.ToHex())
             .AddField("Created", role.CreatedAt);
-        #endregion
+
+        #endregion RoleManagement
 
         #region Prefix
+
         [Command("setprefix"), Summary("Sets the prefix, or resets on empty prefix"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetPrefix(string prefix = null)
@@ -889,9 +897,11 @@ namespace Skuld.Bot.Commands
                 await Database.InsertGuildAsync(Context.Guild, MessageHandler.cmdConfig.Prefix, MessageHandler.cmdConfig.MoneyName, MessageHandler.cmdConfig.MoneyIcon).ConfigureAwait(false);
             }
         }
-        #endregion
+
+        #endregion Prefix
 
         #region Welcome
+
         //Set Channel
         [Command("setwelcome"), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
@@ -954,9 +964,11 @@ namespace Skuld.Bot.Commands
             if (ngld.JoinChannel == 0 && ngld.JoinMessage == "")
                 await EmbedExtensions.FromSuccess("Cleared Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
-        #endregion
+
+        #endregion Welcome
 
         #region Leave
+
         //Set Channel
         [Command("setleave"), RequireDatabase]
         [Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
@@ -1033,9 +1045,11 @@ namespace Skuld.Bot.Commands
                 await EmbedExtensions.FromSuccess("Set Leave message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
-        #endregion
+
+        #endregion Leave
 
         #region Levels
+
         [Command("setlevelupmessage"), Summary("Sets the level up message, -u says the users name, -m mentions the user, -l shows the level they achieved"), RequireDatabase]
         [RequireRole(AccessLevel.ServerMod)]
         public async Task SetLevelUp([Remainder]string message)
@@ -1116,9 +1130,11 @@ namespace Skuld.Bot.Commands
                 await EmbedExtensions.FromSuccess(Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
-        #endregion
+
+        #endregion Levels
 
         #region CustomCommands
+
         [Command("addcommand"), Summary("Adds a custom command"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task AddCustomCommand(string name, [Remainder]string content)
@@ -1230,6 +1246,7 @@ namespace Skuld.Bot.Commands
                 }
             }
         }
-        #endregion
+
+        #endregion CustomCommands
     }
 }

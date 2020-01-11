@@ -1,8 +1,6 @@
 ﻿using Discord;
 using PokeAPI;
 using Skuld.APIS.Pokemon.Models;
-using Skuld.Core.Extensions;
-using Skuld.Core.Extensions.Discord;
 using Skuld.Discord.Extensions;
 using System;
 using System.Linq;

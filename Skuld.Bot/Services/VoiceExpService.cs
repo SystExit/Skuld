@@ -4,6 +4,7 @@ using Skuld.Core.Extensions;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using Skuld.Discord.Extensions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -14,12 +15,10 @@ namespace Skuld.Bot.Services
 {
     public class VoiceExpService
     {
-        const string Key = "VoiceExpService";
-
-        static DiscordShardedClient DiscordClient;
+        private static DiscordShardedClient DiscordClient;
         static SkuldConfig Configuration => HostSerivce.Configuration;
 
-        static ConcurrentBag<VoiceEvent> Targets;
+        private static ConcurrentBag<VoiceEvent> Targets;
 
         public VoiceExpService(DiscordShardedClient client)
         {
@@ -30,9 +29,9 @@ namespace Skuld.Bot.Services
             DiscordClient.UserVoiceStateUpdated += Client_UserVoiceStateUpdated;
         }
 
-        static SocketVoiceChannel GetVoiceChannel(SocketVoiceState previousState, SocketVoiceState currentState)
+        private static SocketVoiceChannel GetVoiceChannel(SocketVoiceState previousState, SocketVoiceState currentState)
         {
-            if(previousState.VoiceChannel != null && currentState.VoiceChannel != null)
+            if (previousState.VoiceChannel != null && currentState.VoiceChannel != null)
             {
                 if (previousState.VoiceChannel.Guild == currentState.VoiceChannel.Guild)
                     return currentState.VoiceChannel;
@@ -42,9 +41,9 @@ namespace Skuld.Bot.Services
                 return currentState.VoiceChannel;
 
             return previousState.VoiceChannel;
-        }        
+        }
 
-        static void CalculateXP(SocketGuildUser user, SocketVoiceChannel channel)
+        private static async Task DoLeaveXpGrantAsync(SocketGuildUser user, SocketVoiceChannel channel)
         {
             var userEvents = Targets.Where(x => x.User == user && x.VoiceChannel.Id == channel.Id).ToList();
 
@@ -53,7 +52,7 @@ namespace Skuld.Bot.Services
 
                 foreach (var Target in Targets)
                 {
-                    if(Target.User != user)
+                    if (Target.User != user)
                     {
                         events.Add(Target);
                     }
@@ -75,7 +74,7 @@ namespace Skuld.Bot.Services
 
             ulong totalTime = 0;
 
-            if(disallowedPoints.Any())
+            if (disallowedPoints.Any() && disallowedPoints.Count >= 2)
             {
                 var disallowedTime = disallowedPoints.LastOrDefault().Time - disallowedPoints.FirstOrDefault().Time;
 
@@ -86,12 +85,17 @@ namespace Skuld.Bot.Services
                 totalTime = timeDiff;
             }
 
-            var xpToGrant = Utils.GetExpMultiFromMinutesInVoice(Configuration.VoiceExpIndeterminate, Configuration.VoiceExpMinMinutes, 100000, totalTime);
+            var xpToGrant = Utils.GetExpMultiFromMinutesInVoice(Configuration.VoiceExpDeterminate, Configuration.VoiceExpMinMinutes, 100000, totalTime);
 
-            Log.Debug(Key, $"user: {user} xpToGrant: {xpToGrant} timeInVoice: {totalTime} disallowedPoints: {disallowedPoints.Count}");
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                var skUser = await Database.GetUserAsync(user).ConfigureAwait(false);
+                await skUser.GrantExperienceAsync((ulong)xpToGrant, channel.Guild).ConfigureAwait(false);
+            }
         }
 
-        static async Task Client_UserVoiceStateUpdated(SocketUser user, SocketVoiceState previousState, SocketVoiceState currentState)
+        private static async Task Client_UserVoiceStateUpdated(SocketUser user, SocketVoiceState previousState, SocketVoiceState currentState)
         {
             var difference = new VoiceStateDifference(previousState, currentState);
 
@@ -104,7 +108,7 @@ namespace Skuld.Bot.Services
                 feats = Database.Features.FirstOrDefault(x => x.Id == guild.Id);
             }
 
-            if(feats != null && feats.Experience)
+            if (feats != null && feats.Experience)
             {
                 if (previousState.VoiceChannel == null && currentState.VoiceChannel != null) // Connect
                 {
@@ -113,9 +117,9 @@ namespace Skuld.Bot.Services
                 }
                 if (previousState.VoiceChannel != null && currentState.VoiceChannel == null) // Disconnect
                 {
-                    if(Targets.Any(x=>x.User.Id == user.Id))
+                    if (Targets.Any(x => x.User.Id == user.Id))
                     {
-                        CalculateXP(channel.Guild.GetUser(user.Id), channel);
+                        await DoLeaveXpGrantAsync(channel.Guild.GetUser(user.Id), channel).ConfigureAwait(false);
                     }
                     return;
                 }
@@ -140,7 +144,7 @@ namespace Skuld.Bot.Services
             }
         }
 
-        class VoiceStateDifference
+        private class VoiceStateDifference
         {
             public bool DidSelfMute { get; private set; }
             public bool DidSelfDeafen { get; private set; }

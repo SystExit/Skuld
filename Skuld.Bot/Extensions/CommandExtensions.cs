@@ -2,9 +2,7 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using Skuld.Core;
-using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Models;
-using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
 using SysEx.Net.Models;
 using System;
@@ -51,7 +49,7 @@ namespace Skuld.Bot.Extensions
 
             if (!string.IsNullOrEmpty(afkchan?.Name)) embed.AddInlineField("AFK Channel", $"[#{afkchan.Name}]({afkchan.JumpLink()})");
 
-            if(!string.IsNullOrEmpty(guild.IconUrl)) embed.WithThumbnailUrl(guild.IconUrl);
+            if (!string.IsNullOrEmpty(guild.IconUrl)) embed.WithThumbnailUrl(guild.IconUrl);
 
             return embed.Build();
         }

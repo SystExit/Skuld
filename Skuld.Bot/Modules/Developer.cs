@@ -8,7 +8,6 @@ using Skuld.APIS;
 using Skuld.Bot.Models.Commands;
 using Skuld.Bot.Services;
 using Skuld.Core;
-using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
@@ -32,6 +31,7 @@ namespace Skuld.Bot.Commands
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }
 
         #region BotAdmin
+
         [Command("bean")]
         public async Task Bean(IGuildUser user, [Remainder]string reason = null)
         {
@@ -43,18 +43,24 @@ namespace Skuld.Bot.Commands
             {
                 usr.Flags -= Utils.Banned;
                 usr.BanReason = null;
-                await $"Un-beaned {user.Mention}".QueueMessageAsync(Context).ConfigureAwait(false);
+                await
+                    EmbedExtensions.FromSuccess(Utils.GetCaller(), $"Un-beaned {user.Mention}", Context)
+                .QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                if(reason == null)
+                if (reason == null)
                 {
-                    await $"{nameof(reason)} needs a value".QueueMessageAsync(Context).ConfigureAwait(false);
+                    await
+                        EmbedExtensions.FromError($"{nameof(reason)} needs a value", Context)
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
                 usr.Flags += Utils.Banned;
                 usr.BanReason = reason;
-                await $"Beaned {user.Mention}".QueueMessageAsync(Context).ConfigureAwait(false);
+                await
+                    EmbedExtensions.FromSuccess(Utils.GetCaller(), $"Beaned {user.Mention} for reason: `{reason}`", Context)
+                .QueueMessageAsync(Context).ConfigureAwait(false);
             }
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
@@ -154,9 +160,11 @@ namespace Skuld.Bot.Commands
         {
             await Context.Client.SetGameAsync(status, null, activityType).ConfigureAwait(false);
         }
-        #endregion
+
+        #endregion BotAdmin
 
         #region BotOwner
+
         [Command("stop")]
         [RequireBotFlag(BotAccessLevel.BotOwner)]
         public async Task Stop()
@@ -178,7 +186,7 @@ namespace Skuld.Bot.Commands
 
             bool added = false;
 
-            switch(level)
+            switch (level)
             {
                 case BotAccessLevel.BotOwner:
                     if (!dbUser.Flags.IsBitSet(Utils.BotCreator))
@@ -187,6 +195,7 @@ namespace Skuld.Bot.Commands
                         added = true;
                     }
                     break;
+
                 case BotAccessLevel.BotAdmin:
                     if (!dbUser.Flags.IsBitSet(Utils.BotAdmin))
                     {
@@ -194,6 +203,7 @@ namespace Skuld.Bot.Commands
                         added = true;
                     }
                     break;
+
                 case BotAccessLevel.BotTester:
                     if (!dbUser.Flags.IsBitSet(Utils.BotTester))
                     {
@@ -201,6 +211,7 @@ namespace Skuld.Bot.Commands
                         added = true;
                     }
                     break;
+
                 case BotAccessLevel.BotDonator:
                     if (!dbUser.Flags.IsBitSet(Utils.BotDonator))
                     {
@@ -210,7 +221,7 @@ namespace Skuld.Bot.Commands
                     break;
             }
 
-            if(added)
+            if (added)
             {
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
@@ -245,7 +256,7 @@ namespace Skuld.Bot.Commands
 
             flags.Add(BotAccessLevel.Normal);
 
-            $"{user.Mention} has the flags `{string.Join(", ", flags)}`".QueueMessageAsync(Context);
+            await $"{user.Mention} has the flags `{string.Join(", ", flags)}`".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("jsoncommands")]
@@ -308,25 +319,31 @@ namespace Skuld.Bot.Commands
                 case "online":
                     await Context.Client.SetStatusAsync(UserStatus.Online).ConfigureAwait(false);
                     break;
+
                 case "afk":
                     await Context.Client.SetStatusAsync(UserStatus.AFK).ConfigureAwait(false);
                     break;
+
                 case "dnd":
                 case "do not disturb":
                 case "donotdisturb":
                 case "busy":
                     await Context.Client.SetStatusAsync(UserStatus.DoNotDisturb).ConfigureAwait(false);
                     break;
+
                 case "idle":
                 case "away":
                     await Context.Client.SetStatusAsync(UserStatus.Idle).ConfigureAwait(false);
                     break;
+
                 case "offline":
                     await Context.Client.SetStatusAsync(UserStatus.Offline).ConfigureAwait(false);
                     break;
+
                 case "invisible":
                     await Context.Client.SetStatusAsync(UserStatus.Invisible).ConfigureAwait(false);
                     break;
+
                 default:
                     break;
             }
@@ -443,8 +460,6 @@ namespace Skuld.Bot.Commands
                 {
                     //TODO: Add When implemented
                     using var db = new SkuldDbContextFactory().CreateDbContext();
-
-
                 }
 
                 //CommandUsage
@@ -536,7 +551,7 @@ namespace Skuld.Bot.Commands
             await "Ok, publishing stats to the Discord Bot lists.".QueueMessageAsync(Context).ConfigureAwait(false);
             string list = "";
             int shardcount = Context.Client.Shards.Count;
-            await Context.Client.SendDataAsync(Configuration.DiscordGGKey, Configuration.DBotsOrgKey, Configuration.B4DToken).ConfigureAwait(false);
+            await Context.Client.SendDataAsync(Configuration.IsDevelopmentBuild, Configuration.DiscordGGKey, Configuration.DBotsOrgKey, Configuration.B4DToken).ConfigureAwait(false);
             foreach (var shard in Context.Client.Shards)
             {
                 list += $"I sent ShardID: {shard.ShardId} Guilds: {shard.Guilds.Count} Shards: {shardcount}\n";
@@ -613,6 +628,7 @@ namespace Skuld.Bot.Commands
         {
             public ShardedCommandContext Context { get; set; }
         }
-        #endregion
+
+        #endregion BotOwner
     }
 }

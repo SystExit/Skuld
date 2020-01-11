@@ -5,7 +5,6 @@ using Skuld.Bot.Extensions;
 using Skuld.Bot.Globalization;
 using Skuld.Bot.Models;
 using Skuld.Bot.Models.Commands.GamblingModule;
-using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
@@ -22,22 +21,24 @@ namespace Skuld.Bot.Commands
 {
     public class Gambling : ModuleBase<ShardedCommandContext>
     {
-        public Locale locale { get; set; }
+        public Locale Locale { get; set; }
 
         public Dice Dice = new Dice();
 
-        readonly Dictionary<string, string> coinflip = new Dictionary<string, string>
+        private readonly Dictionary<string, string> coinflip = new Dictionary<string, string>
         {
             { "SKULD_COINFLIP_HEADS", "https://static.skuldbot.uk/img/flip/heads.png" },
             { "SKULD_COINFLIP_TAILS", "https://static.skuldbot.uk/img/flip/tails.png" }
         };
-        readonly Dictionary<RockPaperScissors, string> rps = new Dictionary<RockPaperScissors, string>()
+
+        private readonly Dictionary<RockPaperScissors, string> rps = new Dictionary<RockPaperScissors, string>()
         {
             { RockPaperScissors.Rock, "SKULD_RPS_ROCK" },
             { RockPaperScissors.Paper, "SKULD_RPS_PAPER" },
             { RockPaperScissors.Scissors, "SKULD_RPS_SCISSORS" }
         };
-        readonly Weightable<RockPaperScissors>[] rpsWeights = new[]
+
+        private readonly Weightable<RockPaperScissors>[] rpsWeights = new[]
         {
             new Weightable<RockPaperScissors>
             {
@@ -55,7 +56,8 @@ namespace Skuld.Bot.Commands
                 Value = RockPaperScissors.Scissors
             }
         };
-        static readonly Weightable<SlotIcon>[] slotsWeights = new[]
+
+        private static readonly Weightable<SlotIcon>[] slotsWeights = new[]
         {
             new Weightable<SlotIcon>
             {
@@ -93,7 +95,8 @@ namespace Skuld.Bot.Commands
                 Value = SlotIcon.Star
             }
         };
-        static readonly Dictionary<SlotIcon, string> slotIcons = new Dictionary<SlotIcon, string>
+
+        private static readonly Dictionary<SlotIcon, string> slotIcons = new Dictionary<SlotIcon, string>
         {
             { SlotIcon.Bell, "🔔" },
             { SlotIcon.Cherry, "🍒" },
@@ -103,7 +106,8 @@ namespace Skuld.Bot.Commands
             { SlotIcon.Melon, "🍉" },
             { SlotIcon.Star, "⭐" }
         };
-        static readonly List<ushort[]> miaValues = new List<ushort[]>
+
+        private static readonly List<ushort[]> miaValues = new List<ushort[]>
         {
             new ushort[] { 2, 1 },
             new ushort[] { 1, 1 },
@@ -168,10 +172,11 @@ namespace Skuld.Bot.Commands
                                 suffix = "You Lost! <:blobcrying:662304318531305492>";
 
                             await EmbedExtensions.FromImage(res.Item2, didWin ? Color.Green : Color.Red, Context)
-                                .WithDescription($"Result are: {locale.GetLocale(user.Language).GetString(res.Item1)} {suffix}")
+                                .WithDescription($"Result are: {Locale.GetLocale(user.Language).GetString(res.Item1)} {suffix}")
                                 .QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
+
                     default:
                         await EmbedExtensions.FromError($"Incorrect guess value. Try; `{guild.Prefix}flip heads`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         return;
@@ -191,7 +196,6 @@ namespace Skuld.Bot.Commands
                         {
                             if (user.Money < bet.Value)
                             {
-
                                 return;
                             }
 
@@ -221,10 +225,11 @@ namespace Skuld.Bot.Commands
                                 suffix = $"You Lost! <:blobcrying:662304318531305492> Your money is now `{guild.MoneyIcon}{user.Money}`";
 
                             await EmbedExtensions.FromImage(res.Item2, didWin ? Color.Green : Color.Red, Context)
-                                .WithDescription($"Result are: {locale.GetLocale(user.Language).GetString(res.Item1)} {suffix}")
+                                .WithDescription($"Result are: {Locale.GetLocale(user.Language).GetString(res.Item1)} {suffix}")
                                 .QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
+
                     default:
                         await EmbedExtensions.FromError($"Incorrect guess value. Try; `{guild.Prefix}flip heads`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         return;
@@ -234,6 +239,7 @@ namespace Skuld.Bot.Commands
         }
 
         #region Rock Paper Scissors
+
         [Command("rps")]
         public async Task RPS(string shoot, ulong? bet = null)
         {
@@ -246,7 +252,7 @@ namespace Skuld.Bot.Commands
 
             var result = DidPlayerWinRPS(playerThrow, skuldThrow);
 
-            var throwName = locale.GetLocale(user.Language).GetString(rps.FirstOrDefault(x => x.Key == skuldThrow).Value);
+            var throwName = Locale.GetLocale(user.Language).GetString(rps.FirstOrDefault(x => x.Key == skuldThrow).Value);
 
             if (bet.HasValue)
             {
@@ -282,6 +288,7 @@ namespace Skuld.Bot.Commands
                             await EmbedExtensions.FromError("Rock Paper Scissors", $"I draw {throwName} and... You lost, you now have `{MoneyPrefix}{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
+
                     case WinResult.PlayerWin:
                         {
                             if (bet.Value < ulong.MaxValue)
@@ -294,6 +301,7 @@ namespace Skuld.Bot.Commands
                             await EmbedExtensions.FromSuccess("Rock Paper Scissors", $"I draw {throwName} and... You won, you now have `{MoneyPrefix}{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
+
                     case WinResult.Draw:
                         {
                             await EmbedExtensions.FromInfo("Rock Paper Scissors", $"I draw {throwName} and... It's a draw, your money has not been affected", Context).QueueMessageAsync(Context).ConfigureAwait(false);
@@ -310,11 +318,13 @@ namespace Skuld.Bot.Commands
                             await EmbedExtensions.FromError("Rock Paper Scissors", $"I draw {throwName} and... You lost", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
+
                     case WinResult.PlayerWin:
                         {
                             await EmbedExtensions.FromInfo("Rock Paper Scissors", $"I draw {throwName} and... You won", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
+
                     case WinResult.Draw:
                         {
                             await EmbedExtensions.FromMessage("Rock Paper Scissors", $"I draw {throwName} and... It's a draw", DiscordTools.Warning_Color, Context).QueueMessageAsync(Context).ConfigureAwait(false);
@@ -324,7 +334,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        static WinResult DidPlayerWinRPS(RockPaperScissors userThrow, RockPaperScissors skuldThrow)
+        private static WinResult DidPlayerWinRPS(RockPaperScissors userThrow, RockPaperScissors skuldThrow)
         {
             switch (userThrow)
             {
@@ -347,6 +357,7 @@ namespace Skuld.Bot.Commands
                         }
                     }
                     break;
+
                 case RockPaperScissors.Paper:
                     {
                         switch (skuldThrow)
@@ -366,6 +377,7 @@ namespace Skuld.Bot.Commands
                         }
                     }
                     break;
+
                 case RockPaperScissors.Scissors:
                     {
                         switch (skuldThrow)
@@ -388,15 +400,17 @@ namespace Skuld.Bot.Commands
             }
             return WinResult.Draw;
         }
-        #endregion
+
+        #endregion Rock Paper Scissors
 
         #region Slots
+
         [Command("slots")]
         public async Task Slots(ulong? bet = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
             var user = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
-            
+
             string MoneyPrefix;
 
             if (!Context.IsPrivate)
@@ -409,7 +423,7 @@ namespace Skuld.Bot.Commands
                 MoneyPrefix = MessageHandler.cmdConfig.MoneyIcon;
             }
 
-            if(bet.HasValue)
+            if (bet.HasValue)
             {
                 if (user.Money < bet.Value)
                 {
@@ -473,7 +487,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        static double GetPercentageModifier(double mod, SlotIcon[] icons, SlotIcon icon, double is2, double is3)
+        private static double GetPercentageModifier(double mod, SlotIcon[] icons, SlotIcon icon, double is2, double is3)
         {
             if (icons.Count(x => x == icon) == 3)
                 return is3;
@@ -483,7 +497,7 @@ namespace Skuld.Bot.Commands
                 return mod;
         }
 
-        static SlotIcon[] GetSlotsRow()
+        private static SlotIcon[] GetSlotsRow()
             => new SlotIcon[]
             {
                 slotsWeights.GetRandomWeightedValue().Value,
@@ -491,14 +505,14 @@ namespace Skuld.Bot.Commands
                 slotsWeights.GetRandomWeightedValue().Value
             };
 
-        static SlotIcon[][] GetSlotsRows()
+        private static SlotIcon[][] GetSlotsRows()
         {
             var middleRow = GetSlotsRow();
 
             var slotRow1 = GetSlotsRow();
             var slotRow3 = GetSlotsRow();
 
-            for(int x = 0; x < middleRow.Length; x++)
+            for (int x = 0; x < middleRow.Length; x++)
             {
                 if (middleRow[x] == slotRow1[x])
                     slotRow1[x] = slotsWeights.GetRandomWeightedValue().Value;
@@ -518,9 +532,9 @@ namespace Skuld.Bot.Commands
             };
         }
 
-        static string GetStringRow(SlotIcon[] row, bool isMiddle)
+        private static string GetStringRow(SlotIcon[] row, bool isMiddle)
         {
-            if(!isMiddle)
+            if (!isMiddle)
             {
                 return $"{DiscordUtilities.Empty}" +
                     $"{slotIcons.GetValueOrDefault(row[0])} {slotIcons.GetValueOrDefault(row[1])} {slotIcons.GetValueOrDefault(row[2])}" +
@@ -534,13 +548,15 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        static string GetStringRows(SlotIcon[][] slots)
+        private static string GetStringRows(SlotIcon[][] slots)
         {
             return $"{GetStringRow(slots[0], false)}\n{GetStringRow(slots[1], true)}\n{GetStringRow(slots[2], false)}";
         }
-        #endregion
+
+        #endregion Slots
 
         #region Mia
+
         [Command("mia"), Summary("Play a game of mia")]
         public async Task Mia(ulong? bet = null)
         {
@@ -553,14 +569,14 @@ namespace Skuld.Bot.Commands
             string botRoll = "";
             string plaRoll = "";
 
-            foreach(var roll in bot.GetDies())
+            foreach (var roll in bot.GetDies())
             {
                 botRoll += $"{roll.Face}, ";
             }
 
             botRoll = botRoll[0..^2];
 
-            foreach(var roll in player.GetDies())
+            foreach (var roll in player.GetDies())
             {
                 plaRoll += $"{roll.Face}, ";
             }
@@ -572,7 +588,7 @@ namespace Skuld.Bot.Commands
             using var Database = new SkuldDbContextFactory().CreateDbContext();
             var user = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
 
-            if(bet.HasValue)
+            if (bet.HasValue)
             {
                 user.Money -= bet.Value;
 
@@ -591,7 +607,7 @@ namespace Skuld.Bot.Commands
                 MoneyPrefix = MessageHandler.cmdConfig.MoneyIcon;
             }
 
-            switch(gameresult)
+            switch (gameresult)
             {
                 case WinResult.PlayerWin:
                     {
@@ -615,6 +631,7 @@ namespace Skuld.Bot.Commands
                         }
                     }
                     break;
+
                 case WinResult.BotWin:
                     {
                         if (bet.HasValue)
@@ -633,6 +650,7 @@ namespace Skuld.Bot.Commands
                         }
                     }
                     break;
+
                 case WinResult.Draw:
                     {
                         await EmbedExtensions.FromInfo("Mia", $"It's a draw!", Context)
@@ -644,7 +662,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        static WinResult DidPlayerWin(Die[] bot, Die[] player)
+        private static WinResult DidPlayerWin(Die[] bot, Die[] player)
         {
             var botDies = bot.OrderByDescending(x => x.Face).ToArray();
             var playerDies = player.OrderByDescending(x => x.Face).ToArray();
@@ -659,6 +677,7 @@ namespace Skuld.Bot.Commands
             else
                 return WinResult.Draw;
         }
-        #endregion
+
+        #endregion Mia
     }
 }

@@ -1,8 +1,6 @@
 ﻿using Discord;
 using Discord.Commands;
-using Skuld.Core.Extensions;
-using Skuld.Core.Extensions.Discord;
-using Skuld.Core.Utilities;
+using Skuld.Discord.Extensions;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 

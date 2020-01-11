@@ -1,12 +1,10 @@
 ﻿using Discord.Commands;
 using Discord.WebSocket;
-using Skuld.Core.Extensions;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using DiscordNet = Discord;
 

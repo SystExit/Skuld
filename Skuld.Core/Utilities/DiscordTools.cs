@@ -68,6 +68,7 @@ namespace Skuld.Core.Utilities
         public const double PHI = 1.618;
 
         #region Levels
+
         public static ulong GetXPLevelRequirement(ulong level, double growthmod)
             => (ulong)Math.Round(Math.Pow(level, 2) * 50 * growthmod, MidpointRounding.AwayFromZero);
 

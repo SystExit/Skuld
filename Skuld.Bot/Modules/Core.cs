@@ -1,7 +1,6 @@
 ﻿using Discord;
 using Discord.Commands;
 using Skuld.Bot.Services;
-using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;

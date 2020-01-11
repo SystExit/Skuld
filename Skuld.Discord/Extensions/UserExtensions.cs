@@ -1,9 +1,10 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using Skuld.Core.Extensions;
-using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Generic.Models;
+using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using StatsdClient;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace Skuld.Discord.Extensions
 {
-    public static class UserProfile
+    public static class UserExtensions
     {
         public static string FullName(this IUser usr)
             => $"{usr.Username}#{usr.Discriminator}";
@@ -25,7 +26,68 @@ namespace Skuld.Discord.Extensions
                 return $"{usr.Username} ({usr.Nickname})#{usr.Discriminator}";
         }
 
-        public static Embed GetWhois(this IUser user, IGuildUser guildUser, IReadOnlyCollection<ulong> roles, Color EmbedColor, DiscordShardedClient Client, SkuldConfig Configuration)
+        public static async Task<object> GrantExperienceAsync(this User user, ulong amount, IGuild guild)
+        {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+            var luxp = Database.UserXp.FirstOrDefault(x => x.UserId == user.Id && x.GuildId == guild.Id);
+
+            var xptonextlevel = DiscordTools.GetXPLevelRequirement(luxp.Level + 1, DiscordTools.PHI); //get next level xp requirement based on phi
+
+            bool didLevelUp = false;
+
+            if (luxp != null)
+            {
+                if (luxp.LastGranted < (DateTime.UtcNow.ToEpoch() - 60))
+                {
+                    if ((luxp.XP + amount) >= xptonextlevel) //if over or equal to next level requirement, update accordingly
+                    {
+                        luxp.XP = 0;
+                        luxp.TotalXP += amount;
+                        luxp.Level++;
+                        luxp.LastGranted = DateTime.UtcNow.ToEpoch();
+
+                        didLevelUp = true;
+
+                        DogStatsd.Increment("user.levels.processed");
+                    }
+                    else
+                    {
+                        luxp.XP += amount;
+                        luxp.TotalXP += amount;
+                        luxp.LastGranted = DateTime.UtcNow.ToEpoch();
+
+                        didLevelUp = false;
+
+                        DogStatsd.Increment("user.levels.processed");
+                    }
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                Database.UserXp.Add(new UserExperience
+                {
+                    LastGranted = DateTime.UtcNow.ToEpoch(),
+                    XP = amount,
+                    UserId = user.Id,
+                    GuildId = guild.Id,
+                    TotalXP = amount
+                });
+
+                didLevelUp = false;
+                
+                DogStatsd.Increment("user.levels.processed");
+            }
+
+            await Database.SaveChangesAsync().ConfigureAwait(false);
+
+            return didLevelUp;
+        }
+
+        public static EmbedBuilder GetWhois(this IUser user, IGuildUser guildUser, IReadOnlyCollection<ulong> roles, IDiscordClient Client, SkuldConfig Configuration)
         {
             string status;
             if (user.Activity != null)
@@ -35,35 +97,30 @@ namespace Skuld.Discord.Extensions
             }
             else status = user.Status.StatusToEmote();
 
-            var embed = new EmbedBuilder
-            {
-                Color = EmbedColor,
-                Author = new EmbedAuthorBuilder
-                {
-                    IconUrl = user.GetAvatarUrl(ImageFormat.Png),
-                    Name = $"{user.Username}{(guildUser != null ? (guildUser.Nickname != null ? $" ({guildUser.Nickname})" : "") : "")}#{user.DiscriminatorValue}"
-                },
-                ThumbnailUrl = user.GetAvatarUrl() ?? user.GetDefaultAvatarUrl()
-            };
+            var embed = new EmbedBuilder()
+                .AddAuthor(Client)
+                .WithTitle($"{user.Username}{(guildUser != null ? (guildUser.Nickname != null ? $" ({guildUser.Nickname})" : "") : "")}#{user.DiscriminatorValue}")
+                .WithThumbnailUrl(user.GetAvatarUrl() ?? user.GetDefaultAvatarUrl())
+                .WithColor(guildUser?.GetHighestRoleColor(guildUser?.Guild) ?? EmbedExtensions.RandomEmbedColor());
 
-            embed.AddInlineField(":id:", user.Id.ToString() ?? "Unknown");
-            embed.AddInlineField(":vertical_traffic_light:", status ?? "Unknown");
+            embed.AddInlineField(":id: User ID", user.Id.ToString() ?? "Unknown");
+            embed.AddInlineField(":vertical_traffic_light: Status", status ?? "Unknown");
 
             if (user.Activity != null)
             {
-                embed.AddInlineField(":video_game:", user.Activity.ActivityToString());
+                embed.AddInlineField(":video_game: Status", user.Activity.ActivityToString());
             }
 
-            embed.AddInlineField("🤖", user.IsBot ? "✔️" : "❌");
+            embed.AddInlineField("🤖 Is a bot?", user.IsBot ? "✔️" : "❌");
 
-            embed.AddInlineField("Mutual Servers", $"{Client.GetUser(user.Id).MutualGuilds.Count()}");
+            embed.AddInlineField("👀 Mutual Servers", $"{(user as SocketUser).MutualGuilds.Count}");
 
             StringBuilder clientString = new StringBuilder();
             foreach (var client in user.ActiveClients)
             {
                 clientString = clientString.Append(client.ToEmoji());
 
-                if (user.ActiveClients.Count > 1 && client != user.ActiveClients.Last())
+                if (user.ActiveClients.Count > 1 && client != user.ActiveClients.LastOrDefault())
                     clientString.Append(", ");
             }
 
@@ -92,7 +149,7 @@ namespace Skuld.Discord.Extensions
                 embed.AddField(DiscordTools.NitroBoostEmote + " Boosting Since", $"{(icon == null ? "" : icon + " ")}{guildUser.PremiumSince.Value.UtcDateTime.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")} ({offsetString})\t`DD/MM/YYYY`");
             }
 
-            return embed.Build();
+            return embed;
         }
 
         public static string HexFromStatus(this UserStatus status)
@@ -215,23 +272,23 @@ namespace Skuld.Discord.Extensions
 
         public static async Task<int> RobotMembersAsync(this IGuild guild)
         {
-            await guild.DownloadUsersAsync();
+            await guild.DownloadUsersAsync().ConfigureAwait(false);
 
             return (await guild.GetUsersAsync(CacheMode.AllowDownload)).Count(x => x.IsBot);
         }
 
         public static async Task<int> HumanMembersAsync(this IGuild guild)
         {
-            await guild.DownloadUsersAsync();
+            await guild.DownloadUsersAsync().ConfigureAwait(false);
 
             return (await guild.GetUsersAsync(CacheMode.AllowDownload)).Count(x => !x.IsBot);
         }
 
         public static async Task<decimal> GetBotUserRatioAsync(this IGuild guild)
         {
-            await guild.DownloadUsersAsync();
-            var botusers = await guild.RobotMembersAsync();
-            var userslist = await guild.GetUsersAsync();
+            await guild.DownloadUsersAsync().ConfigureAwait(false);
+            var botusers = await guild.RobotMembersAsync().ConfigureAwait(false);
+            var userslist = await guild.GetUsersAsync().ConfigureAwait(false);
             var users = userslist.Count;
             return Math.Round((((decimal)botusers / users) * 100m), 2);
         }

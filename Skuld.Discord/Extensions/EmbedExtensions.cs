@@ -1,9 +1,10 @@
 ﻿using Discord;
 using Discord.Commands;
+using Skuld.Core;
 using Skuld.Core.Utilities;
 using System;
 
-namespace Skuld.Core.Extensions.Discord
+namespace Skuld.Discord.Extensions
 {
     public static class EmbedExtensions
     {

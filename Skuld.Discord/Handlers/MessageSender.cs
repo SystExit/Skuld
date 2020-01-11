@@ -1,5 +1,4 @@
 ﻿using Discord;
-using Skuld.Core.Extensions;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
 using System;

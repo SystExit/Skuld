@@ -21,7 +21,7 @@ namespace Skuld.Core.Models
         {
             ushort counter = 0;
 
-            while(counter <= 10)
+            while (counter <= 10)
             {
                 Face = (ushort)Random.Next(1, 7);
                 counter++;

@@ -9,7 +9,6 @@ namespace Skuld.Core.Utilities
 {
     public class Log
     {
-
         public readonly static string CurrentLogFileName = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + ".log";
 
         private static StreamWriter LogFile = new StreamWriter(
@@ -64,7 +63,6 @@ namespace Skuld.Core.Utilities
                 if (SkuldAppContext.GetLogLevel() >= LogSeverity.Critical)
                     Console.Out.WriteLine(msg);
             }
-
 
             Console.ForegroundColor = ConsoleColor.White;
 
@@ -172,7 +170,7 @@ namespace Skuld.Core.Utilities
 
             LogFile.WriteLine(msg);
 
-            if(SkuldAppContext.GetLogLevel() >= LogSeverity.Info)
+            if (SkuldAppContext.GetLogLevel() >= LogSeverity.Info)
                 Console.Out.WriteLine(msg);
 
             Console.ForegroundColor = ConsoleColor.White;

@@ -6,7 +6,6 @@ using Skuld.APIS;
 using Skuld.APIS.Extensions;
 using Skuld.APIS.NekoLife.Models;
 using Skuld.Core.Extensions;
-using Skuld.Core.Extensions.Discord;
 using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
@@ -47,6 +46,7 @@ namespace Skuld.Bot.Commands
         }
 
         #region ImageBoards
+
         [Command("danbooru"), Summary("Gets stuff from danbooru"), Ratelimit(20, 1, Measure.Minutes)]
         [Alias("dan")]
         public async Task Danbooru(params string[] tags)
@@ -309,6 +309,7 @@ namespace Skuld.Bot.Commands
 
             await msg.QueueMessageAsync(Context).ConfigureAwait(false);
         }
-        #endregion
+
+        #endregion ImageBoards
     }
 }

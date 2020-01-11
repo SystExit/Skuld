@@ -1,10 +1,7 @@
-﻿using Discord;
-using Discord.Commands;
-using Skuld.Core.Generic.Models;
+﻿using Discord.Commands;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Models;
-using Skuld.Discord.Services;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -24,7 +21,7 @@ namespace Skuld.Discord.Preconditions
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var access = await GetPermissionAsync(context, Database.Users.FirstOrDefault(x=>x.Id == context.User.Id)).ConfigureAwait(false);
+            var access = await GetPermissionAsync(context, Database.Users.FirstOrDefault(x => x.Id == context.User.Id)).ConfigureAwait(false);
             if (access >= Level)
                 return PreconditionResult.FromSuccess();
             else

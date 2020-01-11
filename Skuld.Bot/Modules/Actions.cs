@@ -1,9 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using Miki.API.Images;
-using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
-using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
@@ -216,7 +214,7 @@ namespace Skuld.Bot.Commands
 
             var image = images.Images.RandomValue().Url;
 
-            var action = 
+            var action =
                 new EmbedBuilder()
                 .WithImageUrl(image)
                 .WithTitle(Utils.GetCaller().CapitaliseFirstLetter())
@@ -263,7 +261,7 @@ namespace Skuld.Bot.Commands
                             message.Append(usr.Mention + " ");
                         }
                         else
-                        { 
+                        {
                             msg.PruneMention(usr.Id);
                         }
                     }

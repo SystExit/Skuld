@@ -1,20 +1,17 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using Skuld.APIS;
 using Skuld.Core.Generic.Models;
-using Skuld.Core.Utilities;
-using Skuld.Discord.Handlers;
 using Skuld.Core.Models;
+using Skuld.Core.Utilities;
+using Skuld.Discord.Extensions;
+using Skuld.Discord.Handlers;
+using Skuld.Discord.Utilities;
 using StatsdClient;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using DiscordNet = Discord;
-using Skuld.Discord.Utilities;
-using Skuld.Discord.Extensions;
-using Skuld.APIS;
 using System.Linq;
-using Discord.Commands;
-using Skuld.Core.Extensions.Discord;
+using System.Threading.Tasks;
 
 namespace Skuld.Discord.Services
 {
@@ -95,6 +92,7 @@ namespace Skuld.Discord.Services
                 case LogSeverity.Debug:
                     Log.Debug(key, arg.Message, arg.Exception);
                     break;
+
                 default:
                     break;
             }
@@ -102,6 +100,7 @@ namespace Skuld.Discord.Services
         }
 
         #region Reactions
+
         private static async Task Bot_ReactionAdded(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3)
         {
             DogStatsd.Increment("messages.reactions.added");
@@ -118,13 +117,13 @@ namespace Skuld.Discord.Services
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
             var guild = BotService.DiscordClient.Guilds.FirstOrDefault(x => x.TextChannels.FirstOrDefault(z => z.Id == arg2.Id) != null);
-            var feats = Database.Features.FirstOrDefault(x=>x.Id == guild.Id);
+            var feats = Database.Features.FirstOrDefault(x => x.Id == guild.Id);
 
-            if(feats.Pinning)
+            if (feats.Pinning)
             {
                 var pins = await arg2.GetPinnedMessagesAsync();
 
-                if(pins.Count < 50)
+                if (pins.Count < 50)
                 {
                     var dldedmsg = await arg1.GetOrDownloadAsync();
 
@@ -170,9 +169,11 @@ namespace Skuld.Discord.Services
             DogStatsd.Increment("messages.reactions.removed");
             return Task.CompletedTask;
         }
-        #endregion
+
+        #endregion Reactions
 
         #region Shards
+
         private static async Task Bot_ShardReady(DiscordSocketClient arg)
         {
             await BotService.DiscordClient.SetGameAsync($"{Configuration.Prefix}help | {arg.ShardId + 1}/{BotService.DiscordClient.Shards.Count}", type: ActivityType.Listening);
@@ -196,9 +197,11 @@ namespace Skuld.Discord.Services
             DogStatsd.Event($"Shard.disconnected", $"Shard {arg2.ShardId} Disconnected, error: {arg1}", alertType: "error");
             return Task.CompletedTask;
         }
+
         #endregion Shards
 
         #region Users
+
         private static async Task Bot_UserJoined(SocketGuildUser arg)
         {
             DogStatsd.Increment("guild.users.joined");
@@ -266,6 +269,7 @@ namespace Skuld.Discord.Services
                 await db.SaveChangesAsync().ConfigureAwait(false);
             }
         }
+
         #endregion Users
 
         #region Guilds
@@ -275,7 +279,7 @@ namespace Skuld.Discord.Services
 
             DogStatsd.Increment("guilds.left");
 
-            await BotService.DiscordClient.SendDataAsync(Configuration.DiscordGGKey, Configuration.DBotsOrgKey, Configuration.B4DToken).ConfigureAwait(false);
+            await BotService.DiscordClient.SendDataAsync(Configuration.IsDevelopmentBuild, Configuration.DiscordGGKey, Configuration.DBotsOrgKey, Configuration.B4DToken).ConfigureAwait(false);
 
             MessageQueue.CheckForEmptyGuilds = true;
 
@@ -288,13 +292,12 @@ namespace Skuld.Discord.Services
 
             DogStatsd.Increment("guilds.joined");
 
-            await BotService.DiscordClient.SendDataAsync(Configuration.DiscordGGKey, Configuration.DBotsOrgKey, Configuration.B4DToken).ConfigureAwait(false);
+            await BotService.DiscordClient.SendDataAsync(Configuration.IsDevelopmentBuild, Configuration.DiscordGGKey, Configuration.DBotsOrgKey, Configuration.B4DToken).ConfigureAwait(false);
 
             await database.InsertGuildAsync(arg, Configuration.Prefix, MessageHandler.cmdConfig.MoneyName, MessageHandler.cmdConfig.MoneyIcon);
 
             MessageQueue.CheckForEmptyGuilds = true;
             Log.Verbose(Key, $"Just left {arg}");
-
         }
 
         private static async Task Bot_RoleDeleted(SocketRole arg)
@@ -302,6 +305,7 @@ namespace Skuld.Discord.Services
             DogStatsd.Increment("guilds.role.deleted");
 
             #region LevelRewards
+
             {
                 using var database = new SkuldDbContextFactory().CreateDbContext();
 
@@ -312,9 +316,11 @@ namespace Skuld.Discord.Services
                     await database.SaveChangesAsync().ConfigureAwait(false);
                 }
             }
-            #endregion
+
+            #endregion LevelRewards
 
             #region IAmRoles
+
             {
                 using var database = new SkuldDbContextFactory().CreateDbContext();
 
@@ -329,9 +335,9 @@ namespace Skuld.Discord.Services
             {
                 using var database = new SkuldDbContextFactory().CreateDbContext();
 
-                if (database.IAmRoles.Any(x=>x.RequiredRoleId == arg.Id))
+                if (database.IAmRoles.Any(x => x.RequiredRoleId == arg.Id))
                 {
-                    foreach(var role in database.IAmRoles.Where(x=>x.RequiredRoleId == arg.Id))
+                    foreach (var role in database.IAmRoles.Where(x => x.RequiredRoleId == arg.Id))
                     {
                         role.RequiredRoleId = 0;
                     }
@@ -339,7 +345,8 @@ namespace Skuld.Discord.Services
                     await database.SaveChangesAsync().ConfigureAwait(false);
                 }
             }
-            #endregion
+
+            #endregion IAmRoles
 
             Log.Verbose(Key, $"{arg} deleted in {arg.Guild}");
         }

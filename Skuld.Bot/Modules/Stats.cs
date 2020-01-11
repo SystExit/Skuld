@@ -2,7 +2,6 @@
 using Discord.Commands;
 using Octokit;
 using Skuld.Core;
-using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;

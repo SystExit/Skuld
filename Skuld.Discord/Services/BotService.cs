@@ -2,7 +2,6 @@
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using Skuld.APIS;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Handlers;
 using StatsdClient;

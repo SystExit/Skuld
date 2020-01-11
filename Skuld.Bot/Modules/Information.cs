@@ -2,23 +2,21 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using NodaTime;
-using Skuld.APIS;
 using Skuld.Bot.Extensions;
 using Skuld.Bot.Globalization;
 using Skuld.Bot.Services;
 using Skuld.Core;
-using Skuld.Core.Extensions.Discord;
+using Skuld.Core.Extensions;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
+using Skuld.Discord.Services;
 using Skuld.Discord.Utilities;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Net.NetworkInformation;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -28,8 +26,8 @@ namespace Skuld.Bot.Commands
     [Group, RequireEnabledModule]
     public class Information : ModuleBase<ShardedCommandContext>
     {
+        public CommandService CommandService { get => BotService.CommandService; }
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }
-        public BaseClient WebHandler { get; set; }
         public Locale Locale { get; set; }
 
         [Command("server"), Summary("Gets information about the server")]
@@ -104,6 +102,48 @@ namespace Skuld.Bot.Commands
         [Command("id"), Summary("Get id of channel"), RequireContext(ContextType.Guild)]
         public async Task ChanID(IChannel channel) =>
             await $"The ID of **{channel?.Name}** is `{channel.Id}`".QueueMessageAsync(Context).ConfigureAwait(false);
+
+        [Command("roleinfo")]
+        public async Task RoleInfo([Remainder] IRole role)
+        {
+            var memberString = new StringBuilder();
+
+            if(role != Context.Guild.EveryoneRole)
+            {
+                var members = await Context.Guild.GetRoleMembersAsync(role).ConfigureAwait(false);
+
+                foreach (var member in members)
+                {
+                    memberString.Append(member.Mention);
+
+                    if (member != members.LastOrDefault())
+                    {
+                        memberString.Append(", ");
+                    }
+                }
+            }
+            else
+            {
+                memberString.Append(role.Mention);
+                memberString.Append(" ");
+                memberString.Append("😝");
+            }
+
+            await
+                new EmbedBuilder()
+                    .AddFooter(Context)
+                    .WithTitle(role.Name)
+                    .WithColor(role.Color)
+                    .AddAuthor(Context.Client)
+                    .AddInlineField("Hoisted", role.IsHoisted)
+                    .AddInlineField("Managed", role.IsManaged)
+                    .AddInlineField("Mentionable", role.IsMentionable)
+                    .AddInlineField("Position", role.Position)
+                    .AddInlineField("Color", role.Color.ToHex())
+                    .AddField("Members", memberString)
+                    .AddField("Created", role.CreatedAt)
+                .QueueMessageAsync(Context).ConfigureAwait(false);
+        }
 
         [Command("screenshare"), Summary("Get's the screenshare channel link"), RequireContext(ContextType.Guild), RequireGuildVoiceChannel]
         [Alias("sc")]
@@ -221,19 +261,19 @@ namespace Skuld.Bot.Commands
         {
             IInviteMetadata invite;
             if (maxAge > 0 && maxUses < 0)
-            { 
+            {
                 invite = await channel.CreateInviteAsync(maxAge, null, permanent, unique).ConfigureAwait(false);
             }
             else if (maxAge < 0 && maxUses > 0)
-            { 
+            {
                 invite = await channel.CreateInviteAsync(null, maxUses, permanent, unique).ConfigureAwait(false);
             }
             else if (maxAge < 0 && maxUses < 0)
-            { 
+            {
                 invite = await channel.CreateInviteAsync(null, null, permanent, unique).ConfigureAwait(false);
             }
             else
-            { 
+            {
                 invite = await channel.CreateInviteAsync(maxAge, maxUses, permanent, unique).ConfigureAwait(false);
             }
 
@@ -257,7 +297,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                await Context.User.GetWhois(null, null, EmbedExtensions.RandomEmbedColor(), Context.Client, Configuration).QueueMessageAsync(Context).ConfigureAwait(false);
+                await Context.User.GetWhois(null, null, Context.Client, Configuration).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
         }
@@ -265,19 +305,13 @@ namespace Skuld.Bot.Commands
         [Command("whois"), Summary("Get's information about a user"), Alias("user")]
         public async Task GetProileAsync([Remainder]IGuildUser whois = null)
         {
-            Color color = Color.Default;
-
             if (!Context.IsPrivate)
             {
                 if (whois == null)
                     whois = (IGuildUser)Context.User;
-
-                color = whois.GetHighestRoleColor(Context.Guild);
             }
 
-            color = color == Color.Default ? EmbedExtensions.RandomEmbedColor() : color;
-
-            await whois.GetWhois(whois, whois.RoleIds, color, Context.Client, Configuration).QueueMessageAsync(Context).ConfigureAwait(false);
+            await whois.GetWhois(whois, whois.RoleIds, Context.Client, Configuration).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("roles"), Summary("Gets a users current roles")]
@@ -303,7 +337,7 @@ namespace Skuld.Bot.Commands
                 case "money":
                 case "credits":
                     {
-                        if(global)
+                        if (global)
                         {
                             await EmbedExtensions.FromInfo($"View the global money leaderboard at: {SkuldAppContext.LeaderboardMoney}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
@@ -323,7 +357,7 @@ namespace Skuld.Bot.Commands
                             return;
                         }
 
-                        if(global)
+                        if (global)
                         {
                             await EmbedExtensions.FromInfo($"View the global experience leaderboard at: {SkuldAppContext.LeaderboardExperience}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
@@ -340,7 +374,98 @@ namespace Skuld.Bot.Commands
             }
         }
 
+        [Command("commandusage"), Summary("Get the usage for the command specified or all")]
+        public async Task GetCommandUsage([Remainder]string command)
+        {
+            bool existsButNoData = false;
+            CommandLeaderboardInfo info = null;
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+                if(Database.CustomCommands.Any(x=>x.Name == command))
+                {
+                    var first = Database.CustomCommands.FirstOrDefault(x => x.Name == command);
+                    var usage = Database.UserCommandUsage.FirstOrDefault(x => x.UserId == Context.User.Id && x.Command == command);
+                    var ranking = Database.UserCommandUsage.Where(x => x.Command == command).OrderByDescending(x => x.Usage).ToList();
+
+                    if(first != null && usage != null && ranking.Any())
+                    {
+                        info = new CommandLeaderboardInfo
+                        {
+                            Name = first.Name,
+                            Usage = usage.Usage,
+                            Rank = (ulong)ranking.IndexOf(ranking.FirstOrDefault(x=>x.UserId == Context.User.Id))+1,
+                            Total = (ulong)ranking.Count
+                        };
+                    }
+                    else if (first != null)
+                    {
+                        existsButNoData = true;
+                    }
+                }
+            }
+
+            if(info == null)
+            {
+                var result = CommandService.Search(command);
+
+                if (result.IsSuccess)
+                {
+                    using var Database = new SkuldDbContextFactory().CreateDbContext();
+                    var usage = Database.UserCommandUsage.FirstOrDefault(x => x.UserId == Context.User.Id && x.Command == command);
+                    var ranking = Database.UserCommandUsage.Where(x => x.Command == command).OrderByDescending(x => x.Usage).ToList();
+
+                    if (usage != null && ranking.Any())
+                    {
+                        info = new CommandLeaderboardInfo
+                        {
+                            Name = result.Commands.FirstOrDefault().Command.Name,
+                            Usage = usage.Usage,
+                            Rank = (ulong)ranking.IndexOf(ranking.FirstOrDefault(x => x.UserId == Context.User.Id)) + 1,
+                            Total = (ulong)ranking.Count
+                        };
+                    }
+                    else
+                    {
+                        existsButNoData = true;
+                    }
+                }
+            }
+
+            if(info == null && !existsButNoData)
+            {
+                await
+                    EmbedExtensions.FromError($"Couldn't find a command like: `{command}`. Please verify input and try again.", Context)
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+            else if(existsButNoData)
+            {
+                await
+                    EmbedExtensions.FromError($"You haven't used the command: `{command}`. Please use it and try again", Context)
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+
+            await
+                new EmbedBuilder()
+                .AddAuthor(Context.Client)
+                .AddFooter(Context)
+                .AddInlineField("Command", info.Name)
+                .AddInlineField("Usage", info.Usage)
+                .AddInlineField("Rank", $"{info.Rank}/{info.Total}")
+            .QueueMessageAsync(Context).ConfigureAwait(false);
+        }
+
+        class CommandLeaderboardInfo
+        {
+            public string Name;
+            public ulong Usage;
+            public ulong Rank;
+            public ulong Total;
+        }
+
         [Command("time"), Summary("Converts a time to a set of times")]
+        [Disabled]
         public async Task ConvertTime(params IGuildUser[] users)
         {
             /*try
@@ -398,7 +523,7 @@ namespace Skuld.Bot.Commands
                 {
                     var paged = iamlist.Paginate(await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild, Context.Guild.GetUser(Context.User.Id));
 
-                    if(page >= paged.Count)
+                    if (page >= paged.Count)
                     {
                         await EmbedExtensions.FromError($"There are only {paged.Count} pages to scroll through", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         return;

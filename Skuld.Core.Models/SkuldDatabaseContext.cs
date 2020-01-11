@@ -11,7 +11,9 @@ namespace Skuld.Core.Models
 {
     public class SkuldDatabaseContext : DbContext
     {
-        public SkuldDatabaseContext(DbContextOptions<SkuldDatabaseContext> options) : base(options) {}
+        public SkuldDatabaseContext(DbContextOptions<SkuldDatabaseContext> options) : base(options)
+        {
+        }
 
         public DbSet<BlockedAction> BlockedActions { get; set; }
         public DbSet<SkuldConfig> Configurations { get; set; }
@@ -287,7 +289,7 @@ namespace Skuld.Core.Models
             if (configId == null)
                 return await Configurations.FirstOrDefaultAsync().ConfigureAwait(false);
             else
-                return await Configurations.FirstOrDefaultAsync(x=>x.Id == configId).ConfigureAwait(false);
+                return await Configurations.FirstOrDefaultAsync(x => x.Id == configId).ConfigureAwait(false);
         }
     }
 }

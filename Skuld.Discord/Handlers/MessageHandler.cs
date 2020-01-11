@@ -2,7 +2,6 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using Skuld.Core.Extensions;
-using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
@@ -12,6 +11,7 @@ using Skuld.Discord.TypeReaders;
 using Skuld.Discord.Utilities;
 using StatsdClient;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -184,7 +184,7 @@ namespace Skuld.Discord.Handlers
                 if (message.Channel is ITextChannel)
                 {
                     if (!await CheckPermissionToSendMessageAsync(message.Channel as ITextChannel)) return;
-                    
+
                     var gldtemp = (message.Channel as ITextChannel).Guild;
                     if (gldtemp != null)
                     {
@@ -253,108 +253,90 @@ namespace Skuld.Discord.Handlers
 
         public static async Task HandleExperienceAsync(IUserMessage message, IUser user, IGuild guild, Guild sguild, IMessageChannel backupChannel)
         {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            var rewardsForGuild = Database.LevelRewards.Where(x => x.GuildId == guild.Id);
-
-            var luxp = Database.UserXp.FirstOrDefault(x => x.UserId == user.Id && x.GuildId == guild.Id);
-
-            var User = Database.GetUserAsync(user);
-
-            ulong amount = (ulong)rnd.Next(1, 26);
-
-            if (luxp != null)
+            User User = null;
             {
-                if (luxp.LastGranted < (DateTime.UtcNow.ToEpoch() - 60))
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                User = await Database.GetUserAsync(user).ConfigureAwait(false);
+            }
+
+            var result = await User.GrantExperienceAsync((ulong)rnd.Next(1, 26), guild);
+
+            if(result != null)
+            {
+                if(result is bool b && b)
                 {
-                    var xptonextlevel = DiscordTools.GetXPLevelRequirement(luxp.Level + 1, DiscordTools.PHI); //get next level xp requirement based on phi
+                    UserExperience luxp;
+                    List<LevelRewards> rewardsForGuild;
 
-                    if ((luxp.XP + amount) >= xptonextlevel) //if over or equal to next level requirement, update accordingly
                     {
-                        luxp.XP = 0;
-                        luxp.TotalXP += amount;
-                        luxp.Level++;
-                        luxp.LastGranted = DateTime.UtcNow.ToEpoch();
+                        using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-                        string msg = sguild.LevelUpMessage;
-
-                        if(msg != null)
-                            msg = msg
-                                .Replace("-m", user.Mention)
-                                .Replace("-u", user.Username)
-                                .Replace("-l", luxp.Level.ToString("N0"));
-                        else
-                            msg = $"Congratulations {user.Mention}!! You're now level **{luxp.Level}**";
-
-                        string appendix = null;
-
-                        if ((sguild.LevelUpChannel != 0 && sguild.LevelUpChannel != backupChannel.Id) || sguild.LevelNotification == LevelNotification.DM)
-                            appendix = $"\n\nMessage that caused your level up: {message.GetJumpUrl()}";
-
-                        if (sguild.LevelNotification == LevelNotification.Channel)
-                        {
-                            ulong ChannelID = 0;
-                            if (sguild.LevelUpChannel != 0)
-                                ChannelID = sguild.LevelUpChannel;
-                            else
-                                ChannelID = backupChannel.Id;
-
-                            if (string.IsNullOrEmpty(sguild.LevelUpMessage))
-                            {
-                                await (await guild.GetTextChannelAsync(ChannelID).ConfigureAwait(false))
-                                    .SendMessageAsync($"{msg}{appendix}").ConfigureAwait(false);
-                            }
-                            else
-                            {
-                                await (await guild.GetTextChannelAsync(ChannelID).ConfigureAwait(false)).SendMessageAsync(msg).ConfigureAwait(false);
-                            }
-                        }
-                        else if (sguild.LevelNotification == LevelNotification.DM)
-                        {
-                            if (string.IsNullOrEmpty(sguild.LevelUpMessage))
-                                await user.SendMessageAsync($"{msg} in {guild.Name}{appendix}").ConfigureAwait(false);
-                            else
-                            {
-                                await user.SendMessageAsync(msg).ConfigureAwait(false);
-                            }
-                        }
-
-                        if(rewardsForGuild.Any(x=>(ulong)x.LevelRequired <= luxp.Level))
-                        {
-                            var guser = await guild.GetUserAsync(user.Id).ConfigureAwait(false);
-                            foreach(var reward in rewardsForGuild.Where(x=>(ulong)x.LevelRequired <= luxp.Level))
-                            {
-                                await guser.AddRoleAsync(guild.GetRole(reward.RoleId)).ConfigureAwait(false);
-                            }
-                        }
-
-                        Log.Info(Key, "User leveled up");
-                        DogStatsd.Increment("user.levels.levelup");
-                    }
-                    else //otherwise append current status
-                    {
-                        luxp.XP += amount;
-                        luxp.TotalXP += amount;
-                        luxp.LastGranted = DateTime.UtcNow.ToEpoch();
+                        luxp = Database.UserXp.FirstOrDefault(x => x.UserId == user.Id && x.GuildId == guild.Id);
+                        rewardsForGuild = Database.LevelRewards.Where(x => x.GuildId == guild.Id).ToList();
                     }
 
-                    DogStatsd.Increment("user.levels.processed");
+                    string msg = sguild.LevelUpMessage;
+
+                    if (msg != null)
+                        msg = msg
+                            .Replace("-m", user.Mention)
+                            .Replace("-u", user.Username)
+                            .Replace("-l", luxp.Level.ToString("N0"));
+                    else
+                        msg = $"Congratulations {user.Mention}!! You're now level **{luxp.Level}**";
+
+                    string appendix = null;
+
+                    if ((sguild.LevelUpChannel != 0 && sguild.LevelUpChannel != backupChannel.Id) || sguild.LevelNotification == LevelNotification.DM)
+                        appendix = $"\n\nMessage that caused your level up: {message.GetJumpUrl()}";
+
+                    switch(sguild.LevelNotification)
+                    {
+                        case LevelNotification.Channel:
+                            {
+                                ulong ChannelID = 0;
+                                if (sguild.LevelUpChannel != 0)
+                                    ChannelID = sguild.LevelUpChannel;
+                                else
+                                    ChannelID = backupChannel.Id;
+
+                                if (string.IsNullOrEmpty(sguild.LevelUpMessage))
+                                {
+                                    await (await guild.GetTextChannelAsync(ChannelID).ConfigureAwait(false))
+                                        .SendMessageAsync($"{msg}{appendix}").ConfigureAwait(false);
+                                }
+                                else
+                                {
+                                    await (await guild.GetTextChannelAsync(ChannelID).ConfigureAwait(false)).SendMessageAsync(msg).ConfigureAwait(false);
+                                }
+                            }
+                            break;
+                        case LevelNotification.DM:
+                            {
+                                if (string.IsNullOrEmpty(sguild.LevelUpMessage))
+                                    await user.SendMessageAsync($"{msg} in {guild.Name}{appendix}").ConfigureAwait(false);
+                                else
+                                {
+                                    await user.SendMessageAsync(msg).ConfigureAwait(false);
+                                }
+                            }
+                            break;
+                    }
+
+                    if (rewardsForGuild.Any(x => (ulong)x.LevelRequired <= luxp.Level))
+                    {
+                        var guser = await guild.GetUserAsync(user.Id).ConfigureAwait(false);
+                        foreach (var reward in rewardsForGuild.Where(x => (ulong)x.LevelRequired <= luxp.Level))
+                        {
+                            await guser.AddRoleAsync(guild.GetRole(reward.RoleId)).ConfigureAwait(false);
+                        }
+                    }
+
+                    Log.Info(Key, "User leveled up");
+                    DogStatsd.Increment("user.levels.levelup");
                 }
             }
-            else
-            {
-                Database.UserXp.Add(new UserExperience
-                {
-                    LastGranted = DateTime.UtcNow.ToEpoch(),
-                    XP = amount,
-                    UserId = user.Id,
-                    GuildId = guild.Id,
-                    TotalXP = amount
-                });
-                DogStatsd.Increment("user.levels.processed");
-            }
-
-            await Database.SaveChangesAsync().ConfigureAwait(false);
 
             return;
         }
@@ -377,6 +359,7 @@ namespace Skuld.Discord.Handlers
         #endregion
 
         #region Dispatching
+
         public static async Task DispatchCommandAsync(ShardedCommandContext context)
         {
             watch.Start();
@@ -400,9 +383,11 @@ namespace Skuld.Discord.Handlers
 
             watch = new Stopwatch();
         }
+
         #endregion
 
         #region HandleInsertion
+
         private static async Task InsertCommandAsync(CommandInfo command, User user)
             => await InsertUserCommandUsageAsync(command.Name ?? command.Module.Name, user).ConfigureAwait(false);
 
@@ -430,6 +415,7 @@ namespace Skuld.Discord.Handlers
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
         }
+
         #endregion
 
         public static async Task<bool> CheckPermissionToSendMessageAsync(ITextChannel channel)

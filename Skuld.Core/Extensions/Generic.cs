@@ -70,6 +70,7 @@ namespace Skuld.Core.Extensions
         }
 
         #region Conversion
+
         public static bool ToBool(this string data)
         {
             if (data.ToLowerInvariant() == "true")
@@ -113,9 +114,11 @@ namespace Skuld.Core.Extensions
 
         public static double Remap(this double value, double min1, double max1, double min2, double max2)
             => min2 + (max2 - min2) * ((value - min1) / (max1 - min1));
+
         #endregion
 
         #region Verification
+
         public static bool IsImageExtension(this string input)
         {
             foreach (var ext in ImageExtensions)
@@ -186,9 +189,11 @@ namespace Skuld.Core.Extensions
 
             return (same && iarr.Count() > startLimit);
         }
+
         #endregion
 
         #region Localisation
+
         public static string CheckEmptyWithLocale(this int? val, ResourceManager loc)
         {
             if (val.HasValue)
@@ -222,9 +227,11 @@ namespace Skuld.Core.Extensions
 
         public static string CheckEmptyWithLocale(this string val, ResourceManager loc)
             => val ?? loc.GetString("SKULD_GENERIC_EMPTY");
+
         #endregion
 
         #region Pagination
+
         public static IList<string> PaginateList(this string[] list, int maxrows = 10)
         {
             var pages = new List<string>();
@@ -263,9 +270,11 @@ namespace Skuld.Core.Extensions
 
             return pages;
         }
+
         #endregion
 
         #region StringUtils
+
         public static string CapitaliseFirstLetter(this string input)
             => input switch
             {
@@ -302,6 +311,7 @@ namespace Skuld.Core.Extensions
 
             return htmlDoc.DocumentNode.InnerText;
         }
+
         #endregion
     }
 }

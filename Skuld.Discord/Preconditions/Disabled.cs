@@ -8,10 +8,12 @@ namespace Skuld.Discord.Preconditions
 {
     public class DisabledAttribute : PreconditionAttribute
     {
-        bool DisabledForAdmins = false;
-        bool DisabledForTesters = false;
+        private bool DisabledForAdmins = false;
+        private bool DisabledForTesters = false;
 
-        public DisabledAttribute() { }
+        public DisabledAttribute()
+        {
+        }
 
         /// <summary>
         /// Constructor with BotAdmin & BotTester Flags

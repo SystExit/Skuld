@@ -6,7 +6,6 @@ using Skuld.APIS;
 using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
-using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
@@ -24,7 +23,6 @@ namespace Skuld.Bot.Commands
     public class Profiles : ModuleBase<ShardedCommandContext>
     {
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }
-        public BaseClient WebHandler { get; set; }
 
         [Command("money"), Summary("Gets a user's money")]
         [Alias("balance", "credits")]
@@ -34,7 +32,7 @@ namespace Skuld.Bot.Commands
 
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await EmbedExtensions.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("SkuldBank - Account Information", DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -44,7 +42,9 @@ namespace Skuld.Bot.Commands
             var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
             var dbusr = await Database.GetUserAsync(user).ConfigureAwait(false);
 
-            await $"{user.Mention} has {gld.MoneyIcon}{dbusr.Money.ToString("N0")}".QueueMessageAsync(Context).ConfigureAwait(false);
+            await
+                EmbedExtensions.FromMessage("SkuldBank - Account Information", $"{user.Mention} has {gld.MoneyIcon}{dbusr.Money.ToString("N0")} {gld.MoneyName}", Context)
+            .QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("profile"), Summary("Get a users profile")]
@@ -69,7 +69,7 @@ namespace Skuld.Bot.Commands
             if (!Directory.Exists(fontsFolder))
             {
                 Directory.CreateDirectory(fontsFolder);
-                await WebHandler.DownloadFileAsync(new Uri("https://static.skuldbot.uk/fonts/NotoSans-Regular.ttf"), fontFile).ConfigureAwait(false);
+                await HttpWebClient.DownloadFileAsync(new Uri("https://static.skuldbot.uk/fonts/NotoSans-Regular.ttf"), fontFile).ConfigureAwait(false);
             }
 
             using MagickImage image = new MagickImage(new MagickColor("#212121"), 600, 510)
@@ -87,7 +87,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                using MagickImage img2 = new MagickImage(await WebHandler.ReturnStreamAsync(new Uri(profileuser.Background)))
+                using MagickImage img2 = new MagickImage(await HttpWebClient.ReturnStreamAsync(new Uri(profileuser.Background)))
                 {
                     FilterType = FilterType.Quadratic
                 };
@@ -98,7 +98,7 @@ namespace Skuld.Bot.Commands
 
             var avatar = user.GetAvatarUrl(ImageFormat.Png) ?? user.GetDefaultAvatarUrl();
 
-            using (MagickImage profileBackground = new MagickImage(await WebHandler.ReturnStreamAsync(new Uri(avatar)), new MagickReadSettings
+            using (MagickImage profileBackground = new MagickImage(await HttpWebClient.ReturnStreamAsync(new Uri(avatar)), new MagickReadSettings
             {
                 Format = MagickFormat.Png,
                 BackgroundColor = MagickColors.None,
@@ -367,13 +367,18 @@ namespace Skuld.Bot.Commands
         [Command("give"), Summary("Give your money to people")]
         public async Task Give(IGuildUser user, ulong amount)
         {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            if (user != null && (user.IsBot || user.IsWebhook))
+            if(user == Context.User)
             {
-                await EmbedExtensions.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("SkuldBank - Transaction", "Can't give yourself money", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
+            if (user != null && (user.IsBot || user.IsWebhook))
+            {
+                await EmbedExtensions.FromError("SkuldBank - Transaction", DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
 
             var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
 
@@ -386,7 +391,10 @@ namespace Skuld.Bot.Commands
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                await $"{Context.User.Mention} just gave {user.Mention} {(await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{amount.ToString("N0")}"
+                var dbGuild = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                await
+                    EmbedExtensions.FromMessage("Skuld Bank - Transaction", $"{Context.User.Mention} just gave {user.Mention} {dbGuild.MoneyIcon}{amount.ToString("N0")}", Context)
                     .QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
@@ -428,7 +436,7 @@ namespace Skuld.Bot.Commands
             if (!Directory.Exists(SkuldAppContext.FontDirectory))
             {
                 Directory.CreateDirectory(SkuldAppContext.FontDirectory);
-                await WebHandler.DownloadFileAsync(new Uri("https://static.skuldbot.uk/fonts/NotoSans-Regular.ttf"), fontFile).ConfigureAwait(false);
+                await HttpWebClient.DownloadFileAsync(new Uri("https://static.skuldbot.uk/fonts/NotoSans-Regular.ttf"), fontFile).ConfigureAwait(false);
             }
 
             using var image = new MagickImage(new MagickColor("#212121"), 750, 300)
@@ -446,7 +454,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                using MagickImage img2 = new MagickImage(await WebHandler.ReturnStreamAsync(new Uri(usr.Background)))
+                using MagickImage img2 = new MagickImage(await HttpWebClient.ReturnStreamAsync(new Uri(usr.Background)))
                 {
                     FilterType = FilterType.Quadratic
                 };
@@ -460,7 +468,7 @@ namespace Skuld.Bot.Commands
 
             var avatar = user.GetAvatarUrl(ImageFormat.Png) ?? user.GetDefaultAvatarUrl();
 
-            using (MagickImage profileBackground = new MagickImage(await WebHandler.ReturnStreamAsync(new Uri(avatar)), new MagickReadSettings
+            using (MagickImage profileBackground = new MagickImage(await HttpWebClient.ReturnStreamAsync(new Uri(avatar)), new MagickReadSettings
             {
                 Format = MagickFormat.Png,
                 BackgroundColor = MagickColors.None,
@@ -669,7 +677,6 @@ namespace Skuld.Bot.Commands
     public class Account : ModuleBase<ShardedCommandContext>
     {
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }
-        public BaseClient WebHandler { get; set; }
 
         [Command("title"), Summary("Sets Title")]
         public async Task SetTitle([Remainder]string title = null)
@@ -835,7 +842,7 @@ namespace Skuld.Bot.Commands
             if (!Directory.Exists(fontsFolder))
             {
                 Directory.CreateDirectory(fontsFolder);
-                await WebHandler.DownloadFileAsync(new Uri("https://static.skuldbot.uk/fonts/NotoSans-Regular.ttf"), fontFile).ConfigureAwait(false);
+                await HttpWebClient.DownloadFileAsync(new Uri("https://static.skuldbot.uk/fonts/NotoSans-Regular.ttf"), fontFile).ConfigureAwait(false);
             }
 
             using MagickImage image = new MagickImage(new MagickColor("#212121"), 600, 510)
@@ -843,7 +850,7 @@ namespace Skuld.Bot.Commands
                 Format = MagickFormat.Png
             };
 
-            using MagickImage img2 = new MagickImage(await WebHandler.ReturnStreamAsync(link))
+            using MagickImage img2 = new MagickImage(await HttpWebClient.ReturnStreamAsync(link))
             {
                 FilterType = FilterType.Quadratic
             };
@@ -853,7 +860,7 @@ namespace Skuld.Bot.Commands
 
             var avatar = Context.User.GetAvatarUrl(ImageFormat.Png) ?? Context.User.GetDefaultAvatarUrl();
 
-            using (MagickImage profileBackground = new MagickImage(await WebHandler.ReturnStreamAsync(new Uri(avatar)).ConfigureAwait(false), new MagickReadSettings
+            using (MagickImage profileBackground = new MagickImage(await HttpWebClient.ReturnStreamAsync(new Uri(avatar)).ConfigureAwait(false), new MagickReadSettings
             {
                 Format = MagickFormat.Png,
                 BackgroundColor = MagickColors.None,
@@ -894,7 +901,7 @@ namespace Skuld.Bot.Commands
             {
                 TotalXP = 1234567890
             };
-            
+
             exp.Level = DiscordTools.GetLevelFromTotalXP(exp.TotalXP, DiscordTools.PHI);
 
             exp.XP = DiscordTools.GetXPLevelRequirement(exp.Level, DiscordTools.PHI) / 2;
@@ -1008,8 +1015,8 @@ namespace Skuld.Bot.Commands
 
             {
                 var col = MagickColors.Red;
-                col.A = ushort.MaxValue/2;
-                
+                col.A = ushort.MaxValue / 2;
+
                 using MagickImage watermark = new MagickImage($"label:PREVIEW", new MagickReadSettings
                 {
                     BackgroundColor = MagickColors.Transparent,

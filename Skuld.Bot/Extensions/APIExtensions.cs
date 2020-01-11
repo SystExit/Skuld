@@ -8,8 +8,8 @@ using Skuld.APIS.Extensions;
 using Skuld.APIS.UrbanDictionary.Models;
 using Skuld.APIS.Utilities;
 using Skuld.Core.Extensions;
-using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Utilities;
+using Skuld.Discord.Extensions;
 using SteamStoreQuery;
 using System;
 using System.Globalization;
@@ -109,7 +109,7 @@ namespace Skuld.Bot.Extensions
                         .WithText(releasetext)
                     );
 
-            if(int.TryParse(app.ReleaseDate.Date[0].ToString(), out int _))
+            if (int.TryParse(app.ReleaseDate.Date[0].ToString(), out int _))
             {
                 embed.WithTimestamp(DateTime.ParseExact(app.ReleaseDate.Date, "dd MMM, yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces));
             }
@@ -251,7 +251,7 @@ namespace Skuld.Bot.Extensions
 
         public static EmbedBuilder ToEmbed(this UrbanWord word)
         {
-            return 
+            return
                 new EmbedBuilder()
                 .WithAuthor(new EmbedAuthorBuilder()
                     .WithUrl(word.PermaLink)
