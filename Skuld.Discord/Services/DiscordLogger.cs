@@ -13,6 +13,8 @@ using Skuld.Discord.Utilities;
 using Skuld.Discord.Extensions;
 using Skuld.APIS;
 using System.Linq;
+using Discord.Commands;
+using Skuld.Core.Extensions.Discord;
 
 namespace Skuld.Discord.Services
 {
@@ -100,7 +102,7 @@ namespace Skuld.Discord.Services
         }
 
         #region Reactions
-        private static Task Bot_ReactionAdded(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3)
+        private static async Task Bot_ReactionAdded(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3)
         {
             DogStatsd.Increment("messages.reactions.added");
 
@@ -109,42 +111,52 @@ namespace Skuld.Discord.Services
                 var usr = arg3.User.GetValueOrDefault(null);
                 if (usr != null)
                 {
-                    if (usr.IsBot || usr.IsWebhook) return Task.CompletedTask;
+                    if (usr.IsBot || usr.IsWebhook) return;
                 }
             }
-            /*if (await DatabaseClient.CheckConnectionAsync())
+
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var guild = BotService.DiscordClient.Guilds.FirstOrDefault(x => x.TextChannels.FirstOrDefault(z => z.Id == arg2.Id) != null);
+            var feats = Database.Features.FirstOrDefault(x=>x.Id == guild.Id);
+
+            if(feats.Pinning)
             {
-                var gld = BotService.DiscordClient.Guilds.FirstOrDefault(x => x.TextChannels.FirstOrDefault(z => z.Id == arg2.Id) != null);
-                var guildResp = await DatabaseClient.GetGuildAsync(gld.Id);
-                if (guildResp.Successful && gld != null)
+                var pins = await arg2.GetPinnedMessagesAsync();
+
+                if(pins.Count < 50)
                 {
-                    if (guildResp.Data is Guild guild)
+                    var dldedmsg = await arg1.GetOrDownloadAsync();
+
+                    int pinboardThreshold = Configuration.PinboardThreshold;
+                    int pinboardReactions = dldedmsg.Reactions.FirstOrDefault(x => x.Key.Name == "📌").Value.ReactionCount;
+
+                    if (pinboardReactions >= pinboardThreshold)
                     {
-                        if (guild.Features.Pinning)
+                        var now = dldedmsg.CreatedAt;
+                        var dt = DateTime.UtcNow.AddDays(-Configuration.PinboardDateLimit);
+                        if ((now - dt).TotalDays > 0)
                         {
-                            var dldedmsg = await arg1.GetOrDownloadAsync();
-                            int pinboardThreshold = Configuration.Preferences.PinboardThreshold;
-                            int pinboardReactions = 0;
-                            if (arg3.Emote.Name == "📌")
-                            { pinboardReactions = dldedmsg.Reactions.FirstOrDefault(x => x.Key.Name == "📌").Value.ReactionCount; }
-                            if (pinboardReactions >= pinboardThreshold)
+                            if (!dldedmsg.IsPinned)
                             {
-                                var now = dldedmsg.CreatedAt;
-                                var dt = DateTime.UtcNow.AddDays(-Configuration.Preferences.PinboardDateLimit);
-                                if ((now - dt).TotalDays > 0)
-                                {
-                                    if (!dldedmsg.IsPinned)
-                                    {
-                                        await dldedmsg.PinAsync();
-                                        await GenericLogger.AddToLogsAsync(new LogMessage("PinBrd", $"Reached or Over Threshold, pinned a message in: {dldedmsg.Channel.Name} from: {gld.Name}", DiscordNet.LogSeverity.Info));
-                                    }
-                                }
+                                await dldedmsg.PinAsync();
+
+                                Log.Info("PinBoard", "Message reached threshold, pinned a message");
                             }
                         }
                     }
+
+                    await dldedmsg.Channel.SendMessageAsync(
+                        guild.Owner.Mention,
+                        false,
+                        new EmbedBuilder()
+                            .AddAuthor(BotService.DiscordClient)
+                            .WithDescription($"Can't pin a message in this channel, please clean out some pins.")
+                            .WithColor(Color.Red)
+                            .Build()
+                    ).ConfigureAwait(false);
                 }
-            }*/
-            return Task.CompletedTask;
+            }
         }
 
         private static Task Bot_ReactionsCleared(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2)
@@ -215,6 +227,8 @@ namespace Skuld.Discord.Services
                     await BotService.DiscordClient.SendChannelAsync(channel, message);
                 }
             }
+
+            Log.Verbose(Key, $"{arg} joined {arg.Guild}");
         }
 
         private static async Task Bot_UserLeft(SocketGuildUser arg)
@@ -234,6 +248,8 @@ namespace Skuld.Discord.Services
                     await BotService.DiscordClient.SendChannelAsync(channel, message);
                 }
             }
+
+            Log.Verbose(Key, $"{arg} left {arg.Guild}");
         }
 
         private static async Task Bot_UserUpdated(SocketUser arg1, SocketUser arg2)
@@ -262,6 +278,8 @@ namespace Skuld.Discord.Services
             await BotService.DiscordClient.SendDataAsync(Configuration.DiscordGGKey, Configuration.DBotsOrgKey, Configuration.B4DToken).ConfigureAwait(false);
 
             MessageQueue.CheckForEmptyGuilds = true;
+
+            Log.Verbose(Key, $"Just left {arg}");
         }
 
         private static async Task Bot_JoinedGuild(SocketGuild arg)
@@ -275,6 +293,8 @@ namespace Skuld.Discord.Services
             await database.InsertGuildAsync(arg, Configuration.Prefix, MessageHandler.cmdConfig.MoneyName, MessageHandler.cmdConfig.MoneyIcon);
 
             MessageQueue.CheckForEmptyGuilds = true;
+            Log.Verbose(Key, $"Just left {arg}");
+
         }
 
         private static async Task Bot_RoleDeleted(SocketRole arg)
@@ -320,6 +340,8 @@ namespace Skuld.Discord.Services
                 }
             }
             #endregion
+
+            Log.Verbose(Key, $"{arg} deleted in {arg.Guild}");
         }
         #endregion
     }

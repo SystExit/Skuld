@@ -2,6 +2,7 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
@@ -44,9 +45,10 @@ namespace Skuld.Discord.Handlers
                 CommandService.Log += CommandService_Log;
 
                 CommandService.AddTypeReader<Uri>(new UriTypeReader());
-                CommandService.AddTypeReader<GuildRoleConfig>(new RoleConfigTypeReader());
-                CommandService.AddTypeReader<IPAddress>(new IPAddressTypeReader());
                 CommandService.AddTypeReader<Emoji>(new EmojiTypeReader());
+                CommandService.AddTypeReader<IPAddress>(new IPAddressTypeReader());
+                CommandService.AddTypeReader<RoleConfig>(new RoleConfigTypeReader());
+                CommandService.AddTypeReader<GuildRoleConfig>(new GuildRoleConfigTypeReader());
                 await CommandService.AddModulesAsync(ModuleAssembly, ServiceProvider).ConfigureAwait(false);
 
                 return EventResult.FromSuccess();
@@ -120,21 +122,17 @@ namespace Skuld.Discord.Handlers
                 if (arg3.ErrorReason.Contains("few parameters"))
                 {
                     var cmdembed = DiscordUtilities.GetCommandHelp(CommandService, arg2, cmd.Name);
-                    await BotService.DiscordClient.SendChannelAsync(arg2.Channel, "You seem to be missing a parameter or 2, here's the help", cmdembed).ConfigureAwait(false);
+                    await BotService.DiscordClient.SendChannelAsync(arg2.Channel, "You seem to be missing a parameter or 2, here's the help", cmdembed.Build()).ConfigureAwait(false);
                     displayerror = false;
                 }
 
                 if (arg3.Error != CommandError.UnknownCommand && displayerror)
                 {
                     Log.Error(Key, "Error with command, Error is: " + arg3);
-                    await new EmbedBuilder
-                    {
-                        Author = new EmbedAuthorBuilder { Name = "Error with the command" },
-                        Description = Convert.ToString(arg3.ErrorReason),
-                        Color = new Color(255, 0, 0)
-                    }.Build()
-                    .QueueMessageAsync(arg2 as ShardedCommandContext)
-                    .ConfigureAwait(false);
+
+                    await EmbedExtensions.FromError(arg3.ErrorReason, arg2)
+                        .QueueMessageAsync(arg2)
+                        .ConfigureAwait(false);
                 }
                 DogStatsd.Increment("commands.errors");
 

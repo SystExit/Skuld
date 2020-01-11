@@ -46,9 +46,10 @@ namespace Skuld.APIS
                 {
                     using var response = new StreamReader(resp.GetResponseStream());
                     StatsdClient.DogStatsd.Increment("web.get");
+                    var stringifiedresponse = await response.ReadToEndAsync().ConfigureAwait(false);
                     resp.Dispose();
                     client.Abort();
-                    return await response.ReadToEndAsync().ConfigureAwait(false);
+                    return stringifiedresponse;
                 }
                 else
                 {
@@ -181,64 +182,56 @@ namespace Skuld.APIS
 
         public async Task<string> PostStringAsync(Uri url, HttpContent content)
         {
-            using (HttpClient client = new HttpClient())
+            using HttpClient client = new HttpClient();
+            client.DefaultRequestHeaders.Add("User-Agent", UAGENT);
+            client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
+
+            using HttpResponseMessage resp = await client.PostAsync(url, content);
+            if (resp.IsSuccessStatusCode)
             {
-                client.DefaultRequestHeaders.Add("User-Agent", UAGENT);
-                client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
-                using (HttpResponseMessage resp = await client.PostAsync(url, content))
-                {
-                    if (resp.IsSuccessStatusCode)
-                    {
-                        StatsdClient.DogStatsd.Increment("web.post");
-                        return await resp.Content.ReadAsStringAsync();
-                    }
-                    else
-                    {
-                        return null;
-                    }
-                }
+                StatsdClient.DogStatsd.Increment("web.post");
+                return await resp.Content.ReadAsStringAsync();
+            }
+            else
+            {
+                return null;
             }
         }
 
         public async Task<Stream> PostStreamAsync(Uri url, HttpContent content)
         {
-            using (HttpClient client = new HttpClient())
+            using HttpClient client = new HttpClient();
+            client.DefaultRequestHeaders.Add("User-Agent", UAGENT);
+            client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
+
+            using HttpResponseMessage resp = await client.PostAsync(url, content);
+            if (resp.IsSuccessStatusCode)
             {
-                client.DefaultRequestHeaders.Add("User-Agent", UAGENT);
-                client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
-                using (HttpResponseMessage resp = await client.PostAsync(url, content))
-                {
-                    if (resp.IsSuccessStatusCode)
-                    {
-                        StatsdClient.DogStatsd.Increment("web.post");
-                        return await resp.Content.ReadAsStreamAsync();
-                    }
-                    else
-                    {
-                        return null;
-                    }
-                }
+                StatsdClient.DogStatsd.Increment("web.post");
+                return await resp.Content.ReadAsStreamAsync();
+            }
+            else
+            {
+                return null;
             }
         }
 
         public async Task<byte[]> PostByteArrayAsync(Uri url, HttpContent content)
         {
-            using (HttpClient client = new HttpClient())
+            using HttpClient client = new HttpClient();
+
+            client.DefaultRequestHeaders.Add("User-Agent", UAGENT);
+            client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
+
+            using HttpResponseMessage resp = await client.PostAsync(url, content);
+            if (resp.IsSuccessStatusCode)
             {
-                client.DefaultRequestHeaders.Add("User-Agent", UAGENT);
-                client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
-                using (HttpResponseMessage resp = await client.PostAsync(url, content))
-                {
-                    if (resp.IsSuccessStatusCode)
-                    {
-                        StatsdClient.DogStatsd.Increment("web.post");
-                        return await resp.Content.ReadAsByteArrayAsync();
-                    }
-                    else
-                    {
-                        return null;
-                    }
-                }
+                StatsdClient.DogStatsd.Increment("web.post");
+                return await resp.Content.ReadAsByteArrayAsync();
+            }
+            else
+            {
+                return null;
             }
         }
     }

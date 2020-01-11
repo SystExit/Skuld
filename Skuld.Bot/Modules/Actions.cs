@@ -3,6 +3,7 @@ using Discord.Commands;
 using Miki.API.Images;
 using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
@@ -21,7 +22,7 @@ namespace Skuld.Bot.Commands
         public Random Random { get; set; }
         public ImghoardClient Imghoard { get; set; }
 
-        private Embed DoAction(Uri gif, string action, string target)
+        private EmbedBuilder DoAction(string gif, string action, string target)
         {
             List<ulong> prune = new List<ulong>();
 
@@ -45,7 +46,13 @@ namespace Skuld.Bot.Commands
                 target.PruneMention(id);
             }
 
-            return EmbedUtils.EmbedImage(gif, action.CapitaliseFirstLetter(), target);
+            return new EmbedBuilder()
+                .WithImageUrl(gif)
+                .WithTitle(action.CapitaliseFirstLetter())
+                .WithDescription(target)
+                .WithRandomColor()
+                .AddAuthor(Context.Client)
+                .AddFooter(Context);
         }
 
         private string GetMessage(string target, string isnull, string notnull)
@@ -56,7 +63,7 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(Utils.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue().Url.ToUri();
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -70,31 +77,12 @@ namespace Skuld.Bot.Commands
             await action.QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
-        [Command("kill"), Summary("Kills a user")]
-        public async Task Kill([Remainder]string target = null)
-        {
-            var image = target == null ? 
-                new Uri("http://i.giphy.com/l2JeiuwmhZlkrVOkU.gif") : 
-                (await Imghoard.GetImagesAsync(Utils.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false)).Images.RandomValue().Url.ToUri();
-
-            var action = DoAction(
-                image,
-                Utils.GetCaller(),
-                GetMessage(target,
-                    $"{Context.User.Mention} killed themself",
-                    $"{Context.User.Mention} kills {target}"
-                )
-            );
-
-            await action.QueueMessageAsync(Context).ConfigureAwait(false);
-        }
-
         [Command("stab"), Summary("Stabs a user")]
         public async Task Stab([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(Utils.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue().Url.ToUri();
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -113,7 +101,7 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(Utils.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue().Url.ToUri();
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -132,7 +120,7 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(Utils.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue().Url.ToUri();
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -151,9 +139,17 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(Utils.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue().Url.ToUri();
+            var image = images.Images.RandomValue().Url;
 
-            await EmbedUtils.EmbedImage(image, embeddesc: $"{Context.User.Mention} shrugs.").QueueMessageAsync(Context).ConfigureAwait(false);
+            await
+                new EmbedBuilder()
+                .WithImageUrl(image)
+                .WithTitle(Utils.GetCaller())
+                .WithDescription($"{Context.User.Mention} shrugs.")
+                .WithRandomColor()
+                .AddAuthor(Context.Client)
+                .AddFooter(Context)
+            .QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("adore"), Summary("Adore a user")]
@@ -161,7 +157,7 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(Utils.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue().Url.ToUri();
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -180,7 +176,7 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(Utils.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue().Url.ToUri();
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -199,7 +195,7 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(Utils.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue().Url.ToUri();
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -218,15 +214,15 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(Utils.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue().Url.ToUri();
+            var image = images.Images.RandomValue().Url;
 
-            var action = EmbedUtils.EmbedImage(
-                image,
-                Utils.GetCaller().CapitaliseFirstLetter(),
-                GetMessage(target,
-                    $"{Context.Client.CurrentUser.Mention} pats {Context.User.Mention}",
-                    $"{Context.User.Mention} pats {target}"
-                ));
+            var action = 
+                new EmbedBuilder()
+                .WithImageUrl(image)
+                .WithTitle(Utils.GetCaller().CapitaliseFirstLetter())
+                .WithRandomColor()
+                .AddAuthor(Context.Client)
+                .AddFooter(Context);
 
             if (Context.Message.MentionedUsers.Any())
             {
@@ -284,7 +280,7 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(Utils.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue().Url.ToUri();
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,

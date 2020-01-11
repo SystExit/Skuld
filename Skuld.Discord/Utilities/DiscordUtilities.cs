@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Utilities;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -25,7 +26,7 @@ namespace Skuld.Discord.Utilities
 
         public static string Empty = "<:empty:663083920992239638>";
 
-        public static Embed GetCommandHelp(CommandService commandService, ICommandContext context, string commandname)
+        public static EmbedBuilder GetCommandHelp(CommandService commandService, ICommandContext context, string commandname)
         {
             if (commandname.ToLower() != "pasta")
             {
@@ -38,21 +39,15 @@ namespace Skuld.Discord.Utilities
                     return null;
                 }
 
-                var embed = new EmbedBuilder
-                {
-                    Description = $"Here are some commands like **{commandname}**",
-                    Color = EmbedUtils.RandomColor()
-                };
+                var embed = EmbedExtensions.FromMessage("Help", $"Here are some commands like **{commandname}**", Color.Teal, context);
 
-                embed.AddField(string.Join(", ", serch[0].Command.Aliases), summ, false);
+                embed.AddField(string.Join(", ", serch[0].Command.Aliases), summ);
 
-                return embed.Build();
+                return embed;
             }
             else
             {
-                var embed = new EmbedBuilder
-                {
-                    Description = "Here's how to do stuff with **pasta**:\n\n" +
+                var pasta = "Here's how to do stuff with **pasta**:\n\n" +
                     "```cs\n" +
                     "   give   : Give a user your pasta\n" +
                     "   list   : List all pasta\n" +
@@ -64,10 +59,9 @@ namespace Skuld.Discord.Utilities
                     "    ?     : Same as above\n" +
                     "  upvote  : Upvotes a pasta\n" +
                     " downvote : Downvotes a pasta\n" +
-                    "  delete  : deletes a pasta```"
-                };
-                embed.Color = "#339966".FromHex();
-                return embed.Build();
+                    "  delete  : deletes a pasta```";
+
+                return EmbedExtensions.FromMessage("Pasta Recipe", pasta, Color.Teal, context);
             }
         }
 

@@ -2,6 +2,7 @@
 using Discord.Commands;
 using Octokit;
 using Skuld.Core;
+using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
@@ -87,7 +88,7 @@ namespace Skuld.Bot.Commands
             catch (Exception ex)
             {
                 Log.Error("Stats-Cmd", ex.Message, ex);
-                await Messages.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
     }

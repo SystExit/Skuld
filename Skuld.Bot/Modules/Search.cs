@@ -9,6 +9,7 @@ using Skuld.APIS.Pokemon.Models;
 using Skuld.Bot.Extensions;
 using Skuld.Bot.Services;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
@@ -52,7 +53,7 @@ namespace Skuld.Bot.Commands
             if (user != null)
                 await (await user.GetEmbedAsync(BotService.TwitchClient).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
             else
-                await Messages.FromError($"Couldn't find user `{twitchStreamer}`. Check your spelling and try again", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError($"Couldn't find user `{twitchStreamer}`. Check your spelling and try again", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("reddit"), Summary("Gets a subreddit")]
@@ -85,7 +86,7 @@ namespace Skuld.Bot.Commands
             if (platform == "google" || platform == "g")
             {
                 await $"🔍 Searching Google for: {query}".QueueMessageAsync(Context).ConfigureAwait(false);
-                var result = await SearchClient.SearchGoogleAsync(query);
+                var result = await SearchClient.SearchGoogleAsync(query, Context);
                 await result.QueueMessageAsync(Context).ConfigureAwait(false);
             }
             if (platform == "youtube" || platform == "yt")
@@ -127,7 +128,7 @@ namespace Skuld.Bot.Commands
                 await url.QueueMessageAsync(Context).ConfigureAwait(false);
             else
             {
-                await Messages.FromError($"Ensure your parameters are correct, example: `{Configuration.Prefix}lmgtfy g How to use lmgtfy`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError($"Ensure your parameters are correct, example: `{Configuration.Prefix}lmgtfy g How to use lmgtfy`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new[] { "generic" });
             }
         }
@@ -154,7 +155,7 @@ namespace Skuld.Bot.Commands
                     Name = page.Name,
                     Url = page.Url
                 },
-                Color = EmbedUtils.RandomColor()
+                Color = EmbedExtensions.RandomEmbedColor()
             };
             embed.AddField("Description", page.Description ?? "Not Available", true);
             await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
@@ -171,7 +172,7 @@ namespace Skuld.Bot.Commands
                 {
                     Name = definedword.Word
                 },
-                Color = EmbedUtils.RandomColor()
+                Color = EmbedExtensions.RandomEmbedColor()
             };
             embed.AddField("Definition", definedword.Definition ?? "None Available");
             embed.AddField("Example", definedword.Example ?? "Not Available");
@@ -201,7 +202,7 @@ namespace Skuld.Bot.Commands
                     int.TryParse(message.Content, out int selectedapp);
                     if (selectedapp <= 0)
                     {
-                        await Messages.FromError("Incorrect input", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        await EmbedExtensions.FromError("Incorrect input", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         return;
                     }
 
@@ -216,7 +217,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                await Messages.FromError("I found nothing from steam", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("I found nothing from steam", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 

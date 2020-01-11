@@ -1,6 +1,8 @@
 ﻿using Discord;
+using Discord.Commands;
 using Discord.WebSocket;
 using Skuld.Core;
+using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
@@ -15,12 +17,11 @@ namespace Skuld.Bot.Extensions
 {
     public static class CommandExtensions
     {
-        public static async Task<Embed> GetSummaryAsync(this IGuild guild, DiscordShardedClient client, Guild skuldguild = null)
+        public static async Task<Embed> GetSummaryAsync(this IGuild guild, DiscordShardedClient client, ICommandContext context, Guild skuldguild = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
             var config = Database.Configurations.FirstOrDefault(x => x.Id == SkuldAppContext.ConfigurationId);
 
-            var embed = new EmbedBuilder();
             var botusers = await guild.RobotMembersAsync().ConfigureAwait(false);
             var humanusers = await guild.HumanMembersAsync().ConfigureAwait(false);
             var ratio = await guild.GetBotUserRatioAsync().ConfigureAwait(false);
@@ -30,27 +31,27 @@ namespace Skuld.Bot.Extensions
             var channels = await guild.GetChannelsAsync().ConfigureAwait(false);
             var afktimeout = guild.AFKTimeout % 3600 / 60;
 
-            embed.WithTitle(guild.Name);
+            var embed = new EmbedBuilder()
+                .AddFooter(context)
+                .WithTitle(guild.Name)
+                .AddAuthor(context.Client)
+                .WithColor(EmbedExtensions.RandomEmbedColor())
+                .AddInlineField("Users", $"Users: {humanusers.ToString("N0", null)}\nBots: {botusers.ToString("N0", null)}\nRatio: {ratio}%")
+                .AddInlineField("Shard", client?.GetShardIdFor(guild))
+                .AddInlineField("Verification Level", guild.VerificationLevel)
+                .AddInlineField("Voice Region", guild.VoiceRegionId)
+                .AddInlineField("Owner", $"{owner.Username}#{owner.DiscriminatorValue}")
+                .AddInlineField("Text Channels", channels.Count(x => x.GetType() == typeof(SocketTextChannel)))
+                .AddInlineField("Voice Channels", channels.Count(x => x.GetType() == typeof(SocketVoiceChannel)))
+                .AddInlineField("AFK Timeout", afktimeout + " minutes")
+                .AddInlineField("Default Notifications", guild.DefaultMessageNotifications)
+                .AddInlineField("Created", guild.CreatedAt.ToString("dd'/'MM'/'yyyy HH:mm:ss", null) + "\t(DD/MM/YYYY)")
+                .AddInlineField($"Emotes [{guild.Emotes.Count}]", $" Use `{skuldguild?.Prefix ?? config.Prefix}server-emojis` to view them")
+                .AddInlineField($"Roles [{guild.Roles.Count}]", $" Use `{skuldguild?.Prefix ?? config.Prefix}server-roles` to view them");
 
-            embed.WithThumbnailUrl(guild.IconUrl ?? "");
+            if (!string.IsNullOrEmpty(afkchan?.Name)) embed.AddInlineField("AFK Channel", $"[#{afkchan.Name}]({afkchan.JumpLink()})");
 
-            embed.WithColor(EmbedUtils.RandomColor());
-
-            string afkname = afkchan?.Name ?? "";
-
-            embed.AddInlineField("Users", $"Users: {humanusers.ToString("N0", null)}\nBots: {botusers.ToString("N0", null)}\nRatio: {ratio}%");
-            embed.AddInlineField("Shard", client?.GetShardIdFor(guild));
-            embed.AddInlineField("Verification Level", guild.VerificationLevel);
-            embed.AddInlineField("Voice Region", guild.VoiceRegionId);
-            embed.AddInlineField("Owner", $"{owner.Username}#{owner.DiscriminatorValue}");
-            embed.AddInlineField("Text Channels", channels.Count(x => x.GetType() == typeof(SocketTextChannel)));
-            embed.AddInlineField("Voice Channels", channels.Count(x => x.GetType() == typeof(SocketVoiceChannel)));
-            if(afkchan != null) embed.AddInlineField("AFK Channel", $"[#{afkchan.Name}]({afkchan.JumpLink()})");
-            embed.AddInlineField("AFK Timeout", afktimeout + " minutes");
-            embed.AddInlineField("Default Notifications", guild.DefaultMessageNotifications);
-            embed.AddInlineField("Created", guild.CreatedAt.ToString("dd'/'MM'/'yyyy HH:mm:ss", null) + "\t(DD/MM/YYYY)");
-            embed.AddInlineField($"Emotes [{guild.Emotes.Count}]", $" Use `{skuldguild?.Prefix ?? config.Prefix}server-emojis` to view them");
-            embed.AddInlineField($"Roles [{guild.Roles.Count}]", $" Use `{skuldguild?.Prefix ?? config.Prefix}server-roles` to view them");
+            if(!string.IsNullOrEmpty(guild.IconUrl)) embed.WithThumbnailUrl(guild.IconUrl);
 
             return embed.Build();
         }

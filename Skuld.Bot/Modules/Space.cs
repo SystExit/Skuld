@@ -3,6 +3,7 @@ using Discord.Commands;
 using Skuld.APIS;
 using Skuld.APIS.NASA.Models;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Attributes;
@@ -30,7 +31,7 @@ namespace Skuld.Bot.Modules
             if (aPOD.HDUrl != null && (!aPOD.HDUrl.IsVideoFile() || (!aPOD.Url.Contains("youtube") || !aPOD.Url.Contains("youtu.be"))))
             {
                 await new EmbedBuilder()
-                    .WithColor(EmbedUtils.RandomColor())
+                    .WithColor(EmbedExtensions.RandomEmbedColor())
                     .WithTitle(aPOD.Title)
                     .WithUrl("https://apod.nasa.gov/")
                     .WithImageUrl(aPOD.HDUrl)
@@ -62,7 +63,7 @@ namespace Skuld.Bot.Modules
             {
                 if (!(image.Data is RoverPhotoWrapper imgdata) || imgdata.Photos.Count() == 0)
                 {
-                    await Messages.FromError($"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError($"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
 
@@ -72,14 +73,14 @@ namespace Skuld.Bot.Modules
 
                 await new EmbedBuilder()
                     .WithImageUrl(photo.ImageUrl)
-                    .WithColor(EmbedUtils.RandomColor())
+                    .WithColor(EmbedExtensions.RandomEmbedColor())
                     .WithTitle($"Camera: {photo.Camera.FullName}")
                     .WithTimestamp(date)
                     .WithFooter("Rover: Curiosity")
                     .QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
-                await Messages.FromError(image.Error, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(image.Error, Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("opportunity"), Summary("Gets stuff from NASA's Opportunity Rover"), Ratelimit(20, 1, Measure.Minutes)]
@@ -100,7 +101,7 @@ namespace Skuld.Bot.Modules
             {
                 if (!(image.Data is RoverPhotoWrapper imgdata) || imgdata.Photos.Count() == 0)
                 {
-                    await Messages.FromError($"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError($"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
 
@@ -110,14 +111,14 @@ namespace Skuld.Bot.Modules
 
                 await new EmbedBuilder()
                     .WithImageUrl(photo.ImageUrl)
-                    .WithColor(EmbedUtils.RandomColor())
+                    .WithColor(EmbedExtensions.RandomEmbedColor())
                     .WithTitle($"Camera: {photo.Camera.FullName}")
                     .WithTimestamp(date)
                     .WithFooter("Rover: Opportunity")
                     .QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
-                await Messages.FromError(image.Error, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(image.Error, Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("spirit"), Summary("Gets stuff from NASA's Spirit Rover"), Ratelimit(20, 1, Measure.Minutes)]
@@ -138,7 +139,7 @@ namespace Skuld.Bot.Modules
             {
                 if (!(image.Data is RoverPhotoWrapper imgdata) || !imgdata.Photos.Any())
                 {
-                    await Messages.FromError($"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError($"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
 
@@ -148,14 +149,14 @@ namespace Skuld.Bot.Modules
 
                 await new EmbedBuilder()
                     .WithImageUrl(photo.ImageUrl)
-                    .WithColor(EmbedUtils.RandomColor())
+                    .WithRandomColor()
                     .WithTitle($"Camera: {photo.Camera.FullName}")
                     .WithTimestamp(date)
                     .WithFooter("Rover: Spirit")
                     .QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
-                await Messages.FromError(image.Error, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(image.Error, Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("astronauts"), Summary("Gets a list of astronauts currently in space"), Ratelimit(20, 1, Measure.Minutes)]

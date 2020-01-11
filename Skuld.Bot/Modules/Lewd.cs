@@ -6,6 +6,7 @@ using Skuld.APIS;
 using Skuld.APIS.Extensions;
 using Skuld.APIS.NekoLife.Models;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Discord;
 using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
@@ -34,7 +35,7 @@ namespace Skuld.Bot.Commands
             if (neko != null)
                 await new EmbedBuilder { ImageUrl = neko }.Build().QueueMessageAsync(Context).ConfigureAwait(false);
             else
-                await Messages.FromError("Hmmm <:Thunk:350673785923567616> I got an empty response. Try again.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Hmmm <:Thunk:350673785923567616> I got an empty response. Try again.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("lewdkitsune"), Summary("Lewd Kitsunemimi Grill"), Ratelimit(20, 1, Measure.Minutes)]
@@ -42,7 +43,7 @@ namespace Skuld.Bot.Commands
         {
             var kitsu = await SysExClient.GetLewdKitsuneAsync().ConfigureAwait(false);
             StatsdClient.DogStatsd.Increment("web.get");
-            await Messages.FromMessage(Context).WithImageUrl(kitsu).QueueMessageAsync(Context).ConfigureAwait(false);
+            await EmbedExtensions.FromMessage(Context).WithImageUrl(kitsu).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         #region ImageBoards
@@ -52,7 +53,7 @@ namespace Skuld.Bot.Commands
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await Messages.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
@@ -62,7 +63,7 @@ namespace Skuld.Bot.Commands
 
             if (posts == null)
             {
-                await Messages.FromError("Couldn't find an image.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Couldn't find an image.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -77,7 +78,7 @@ namespace Skuld.Bot.Commands
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await Messages.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
@@ -87,7 +88,7 @@ namespace Skuld.Bot.Commands
 
             if (posts == null)
             {
-                await Messages.FromError("Couldn't find an image.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Couldn't find an image.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -102,7 +103,7 @@ namespace Skuld.Bot.Commands
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await Messages.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
@@ -112,7 +113,7 @@ namespace Skuld.Bot.Commands
 
             if (posts == null)
             {
-                await Messages.FromError("Couldn't find an image.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Couldn't find an image.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -126,7 +127,7 @@ namespace Skuld.Bot.Commands
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await Messages.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
@@ -136,7 +137,7 @@ namespace Skuld.Bot.Commands
 
             if (posts == null)
             {
-                await Messages.FromError("Couldn't find an image.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Couldn't find an image.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -151,7 +152,7 @@ namespace Skuld.Bot.Commands
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await Messages.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
@@ -161,7 +162,7 @@ namespace Skuld.Bot.Commands
 
             if (posts == null)
             {
-                await Messages.FromError("Couldn't find an image.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Couldn't find an image.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -175,7 +176,7 @@ namespace Skuld.Bot.Commands
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await Messages.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
@@ -185,7 +186,7 @@ namespace Skuld.Bot.Commands
 
             if (posts == null)
             {
-                await Messages.FromError("Couldn't find an image.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Couldn't find an image.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -199,7 +200,7 @@ namespace Skuld.Bot.Commands
         {
             if (tags.ContainsBlacklistedTags())
             {
-                await Messages.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
@@ -209,7 +210,7 @@ namespace Skuld.Bot.Commands
 
             if (posts == null)
             {
-                await Messages.FromError("Couldn't find an image.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Couldn't find an image.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -228,7 +229,7 @@ namespace Skuld.Bot.Commands
                 localTags = splittags.ToList();
                 if (splittags.ContainsBlacklistedTags())
                 {
-                    await Messages.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
             }

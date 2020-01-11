@@ -8,10 +8,11 @@ using Skuld.APIS.Extensions;
 using Skuld.APIS.UrbanDictionary.Models;
 using Skuld.APIS.Utilities;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Utilities;
-using Skuld.Discord.Extensions;
 using SteamStoreQuery;
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Resources;
 using System.Threading.Tasks;
@@ -21,7 +22,7 @@ namespace Skuld.Bot.Extensions
 {
     public static class APIExtensions
     {
-        public static Embed ToEmbed(this AnimeDataModel model, ResourceManager loc)
+        public static EmbedBuilder ToEmbed(this AnimeDataModel model, ResourceManager loc)
         {
             var attr = model.Attributes;
 
@@ -50,10 +51,10 @@ namespace Skuld.Bot.Extensions
 
             embed.WithColor(Color.Purple);
 
-            return embed.Build();
+            return embed;
         }
 
-        public static Embed ToEmbed(this MangaDataModel model, ResourceManager loc)
+        public static EmbedBuilder ToEmbed(this MangaDataModel model, ResourceManager loc)
         {
             var attr = model.Attributes;
 
@@ -82,42 +83,42 @@ namespace Skuld.Bot.Extensions
 
             embed.WithColor(Color.Purple);
 
-            return embed.Build();
+            return embed;
         }
 
-        public static async Task<Embed> GetEmbedAsync(this Listing game)
+        public static async Task<EmbedBuilder> GetEmbedAsync(this Listing game)
         {
             var SteamStore = new SteamWebAPI2.Interfaces.SteamStore();
             var app = await SteamStore.GetStoreAppDetailsAsync(Convert.ToUInt32(game.AppId));
 
-            string releasetext;
-            if (app.ReleaseDate.ComingSoon)
+            string releasetext = app.ReleaseDate.ComingSoon ? "Coming soon! (Date Number may not be accurate)" : "Released on:";
+
+            var embed =
+                new EmbedBuilder()
+                    .WithAuthor(
+                        new EmbedAuthorBuilder()
+                        .WithName(string.Join(", ", app.Developers))
+                    )
+                    .WithDescription(SteamUtilities.GetSteamGameDescription(game, app))
+                    .WithImageUrl(app.Screenshots.Random().PathFull)
+                    .WithRandomColor()
+                    .WithUrl($"https://store.steampowered.com/app/{game.AppId}/")
+                    .WithTitle(game.Name)
+                    .WithFooter(
+                        new EmbedFooterBuilder()
+                        .WithText(releasetext)
+                    );
+
+            if(int.TryParse(app.ReleaseDate.Date[0].ToString(), out int _))
             {
-                releasetext = $"Coming soon! ({app.ReleaseDate.Date})";
+                embed.WithTimestamp(DateTime.ParseExact(app.ReleaseDate.Date, "dd MMM, yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces));
             }
             else
             {
-                releasetext = $"Released on: {app.ReleaseDate.Date}";
+                embed.WithTimestamp(DateTime.ParseExact(app.ReleaseDate.Date, "MMM yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces));
             }
 
-            var embed = new EmbedBuilder
-            {
-                Author = new EmbedAuthorBuilder
-                {
-                    Name = String.Join(", ", app.Developers)
-                },
-                Footer = new EmbedFooterBuilder
-                {
-                    Text = releasetext
-                },
-                Description = SteamUtilities.GetSteamGameDescription(game, app),
-                Title = game.Name,
-                ImageUrl = app.Screenshots.Random().PathFull,
-                Url = $"https://store.steampowered.com/app/{game.AppId}/",
-                Color = EmbedUtils.RandomColor()
-            };
-
-            return embed.Build();
+            return embed;
         }
 
         public async static Task<Stream> GetStreamAsync(this User channel, TwitchHelixClient client)
@@ -130,7 +131,7 @@ namespace Skuld.Bot.Extensions
             return stream.Data.FirstOrDefault();
         }
 
-        public async static Task<Embed> GetEmbedAsync(this User channel, TwitchHelixClient client)
+        public async static Task<EmbedBuilder> GetEmbedAsync(this User channel, TwitchHelixClient client)
         {
             var name = channel.DisplayName.IsSpecified ? channel.DisplayName.Value : (channel.Name.IsSpecified ? channel.Name.Value : new Utf8String($"{channel.Id}"));
             var iconurl = channel.ProfileImageUrl.IsSpecified ? channel.ProfileImageUrl.Value : new Utf8String("");
@@ -173,7 +174,7 @@ namespace Skuld.Bot.Extensions
                     Url = "https://twitch.tv/" + channel.Name
                 },
                 ThumbnailUrl = (string)iconurl,
-                Color = EmbedUtils.RandomColor()
+                Color = EmbedExtensions.RandomEmbedColor()
             };
 
             string channelBadges = null;
@@ -245,26 +246,23 @@ namespace Skuld.Bot.Extensions
                 embed.AddInlineField("Total Views", channel.TotalViews.Value.ToString("N0"));
             }
 
-            return embed.Build();
+            return embed;
         }
 
-        public static Embed ToEmbed(this UrbanWord word)
+        public static EmbedBuilder ToEmbed(this UrbanWord word)
         {
-            var embed = new EmbedBuilder
-            {
-                Author = new EmbedAuthorBuilder
-                {
-                    Name = word.Word,
-                    Url = word.PermaLink
-                },
-                Description = word.Definition,
-                Color = EmbedUtils.RandomColor()
-            };
-            embed.AddField("Author", word.Author);
-            embed.AddField("Example", word.Example);
-            embed.AddField("Upvotes", word.UpVotes);
-            embed.AddInlineField("Downvotes", word.DownVotes);
-            return embed.Build();
+            return 
+                new EmbedBuilder()
+                .WithAuthor(new EmbedAuthorBuilder()
+                    .WithUrl(word.PermaLink)
+                    .WithName(word.Word)
+                )
+                .WithDescription(word.Definition)
+                .WithRandomColor()
+                .AddField("Author", word.Author)
+                .AddField("Example", word.Example)
+                .AddField("Upvotes", word.UpVotes)
+                .AddInlineField("Downvotes", word.DownVotes);
         }
     }
 }

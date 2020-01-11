@@ -9,5 +9,8 @@ namespace Skuld.Core.Extensions
             var col = System.Drawing.ColorTranslator.FromHtml(hex);
             return new Color(col.R, col.G, col.B);
         }
+
+        public static string ToHex(this Color color)
+            => System.Drawing.ColorTranslator.ToHtml(System.Drawing.Color.FromArgb(255, color.R, color.G, color.B));
     }
 }

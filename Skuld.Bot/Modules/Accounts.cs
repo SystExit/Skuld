@@ -6,6 +6,7 @@ using Skuld.APIS;
 using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
@@ -33,7 +34,7 @@ namespace Skuld.Bot.Commands
 
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await Messages.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -53,7 +54,7 @@ namespace Skuld.Bot.Commands
 
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await Messages.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -156,7 +157,7 @@ namespace Skuld.Bot.Commands
 
                     img3.Resize(48, 48);
 
-                    profileBackground.Composite(img3, -4, 90, CompositeOperator.Over);
+                    profileBackground.Composite(img3, -4, 0, CompositeOperator.Over);
                 }
 
                 image.Composite(profileBackground, 236, 32, CompositeOperator.Over);
@@ -253,7 +254,7 @@ namespace Skuld.Bot.Commands
             {
                 (ulong, ulong) rank = ((ulong)rankraw.IndexOf(rankraw.FirstOrDefault(x => x.UserId == profileuser.Id)) + 1, (ulong)rankraw.Count());
 
-                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: {rank.Item1}/{rank.Item2}"));
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: {rank.Item1.ToString("N0")}/{rank.Item2.ToString("N0")}"));
             }
             else
             {
@@ -268,7 +269,7 @@ namespace Skuld.Bot.Commands
             image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel2, $"Fav. Cmd: {(favcommand == null ? "N/A" : favcommand.Command)} ({(favcommand == null ? "0" : favcommand.Usage.ToString("N0"))})"));
 
             //YLevel 3
-            image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level} ({exp.TotalXP.ToString("N0")})"));
+            image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToString("N0")} ({exp.TotalXP.ToString("N0")})"));
             image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: {profileuser.Pats.ToString("N0")}/Patted: {profileuser.Patted.ToString("N0")}"));
 
             ulong xpToNextLevel = DiscordTools.GetXPLevelRequirement(exp.Level + 1, DiscordTools.PHI);
@@ -306,7 +307,7 @@ namespace Skuld.Bot.Commands
 
             outputStream.Position = 0;
 
-            await "".QueueMessageAsync(Context, Discord.Models.MessageType.File, outputStream).ConfigureAwait(false);
+            await "".QueueMessageAsync(Context, outputStream, type: Discord.Models.MessageType.File).ConfigureAwait(false);
         }
 
         [Command("daily"), Summary("Daily Money")]
@@ -314,7 +315,7 @@ namespace Skuld.Bot.Commands
         {
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await Messages.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -370,7 +371,7 @@ namespace Skuld.Bot.Commands
 
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await Messages.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -390,7 +391,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                await Messages.FromError($"{Context.User.Mention} you can't give more than you have", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError($"{Context.User.Mention} you can't give more than you have", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -407,13 +408,13 @@ namespace Skuld.Bot.Commands
 
             if (!Database.Features.FirstOrDefault(x => x.Id == Context.Guild.Id).Experience)
             {
-                await Messages.FromError("Module `Experience` is disabled for this guild, ask an administrator to enable it using: `sk!guild-feature experience 1`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Module `Experience` is disabled for this guild, ask an administrator to enable it using: `sk!guild-feature experience 1`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await Messages.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -459,10 +460,14 @@ namespace Skuld.Bot.Commands
 
             var avatar = user.GetAvatarUrl(ImageFormat.Png) ?? user.GetDefaultAvatarUrl();
 
-            using (MagickImage profileBackground = new MagickImage(await WebHandler.ReturnByteArrayAsync(new Uri(avatar)), 128, 128))
+            using (MagickImage profileBackground = new MagickImage(await WebHandler.ReturnStreamAsync(new Uri(avatar)), new MagickReadSettings
             {
-                profileBackground.BackgroundColor = MagickColors.None;
-
+                Format = MagickFormat.Png,
+                BackgroundColor = MagickColors.None,
+                Width = 128,
+                Height = 128
+            }))
+            {
                 using (var mask = new MagickImage("xc:none", 128, 128))
                 {
                     mask.Draw(new DrawableFillColor(MagickColors.White), new DrawableCircle(64, 64, 62, 126));
@@ -484,7 +489,7 @@ namespace Skuld.Bot.Commands
                     profileBackground.Composite(statusBackground, 96, 96, CompositeOperator.Over);
                 }
 
-                image.Composite(profileBackground, 64, 84, CompositeOperator.Over);
+                image.Composite(profileBackground, 48, 84, CompositeOperator.Over);
             }
 
             var font = new DrawableFont(fontFile);
@@ -555,11 +560,13 @@ namespace Skuld.Bot.Commands
                 image.Composite(label5, 0, 250, CompositeOperator.Over);
             }
 
-            using MemoryStream imageStream = new MemoryStream();
+            MemoryStream outputStream = new MemoryStream();
 
-            image.Write(imageStream);
+            image.Write(outputStream);
 
-            await "".QueueMessageAsync(Context, Discord.Models.MessageType.File, imageStream).ConfigureAwait(false);
+            outputStream.Position = 0;
+
+            await "".QueueMessageAsync(Context, outputStream, type: Discord.Models.MessageType.File).ConfigureAwait(false);
         }
 
         [Command("heal"), Summary("Shows you how much you can heal by")]
@@ -577,7 +584,7 @@ namespace Skuld.Bot.Commands
         {
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await Messages.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -629,7 +636,7 @@ namespace Skuld.Bot.Commands
         {
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await Messages.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -662,6 +669,7 @@ namespace Skuld.Bot.Commands
     public class Account : ModuleBase<ShardedCommandContext>
     {
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }
+        public BaseClient WebHandler { get; set; }
 
         [Command("title"), Summary("Sets Title")]
         public async Task SetTitle([Remainder]string title = null)
@@ -676,7 +684,7 @@ namespace Skuld.Bot.Commands
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                await Messages.FromSuccess("Successfully cleared your title.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromSuccess("Successfully cleared your title.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
@@ -684,7 +692,7 @@ namespace Skuld.Bot.Commands
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                await Messages.FromSuccess($"Successfully set your title to **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromSuccess($"Successfully set your title to **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -699,7 +707,7 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            await Messages.FromSuccess($"Set RecurringBlock to: {action}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            await EmbedExtensions.FromSuccess($"Set RecurringBlock to: {action}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("set-hexbg"), Summary("Sets your background to a Hex Color"), RequireDatabase]
@@ -721,17 +729,17 @@ namespace Skuld.Bot.Commands
 
                         await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                        await Messages.FromSuccess("Set your Background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        await EmbedExtensions.FromSuccess("Set your Background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                     else
                     {
-                        await Messages.FromError($"Malformed Entry", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        await EmbedExtensions.FromError($"Malformed Entry", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         return;
                     }
                 }
                 else
                 {
-                    await Messages.FromError($"You need at least {gld.MoneyIcon}300 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}300 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
             else
@@ -740,7 +748,7 @@ namespace Skuld.Bot.Commands
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                await Messages.FromSuccess($"Reset your background to: {usr.Background}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromSuccess($"Reset your background to: {usr.Background}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -761,16 +769,16 @@ namespace Skuld.Bot.Commands
 
                     await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                    await Messages.FromSuccess($"You've successfully unlocked custom backgrounds, use: {gld.Prefix ?? Configuration.Prefix}set-custombg [URL] to set your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromSuccess($"You've successfully unlocked custom backgrounds, use: {gld.Prefix ?? Configuration.Prefix}set-custombg [URL] to set your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
                 else
                 {
-                    await Messages.FromError($"You need at least {gld.MoneyIcon}40,000 to unlock custom backgrounds", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}40,000 to unlock custom backgrounds", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
             else
             {
-                await Messages.FromInfo($"You already unlocked custom backgrounds, use: {gld.Prefix ?? Configuration.Prefix}set-custombg [URL] to set your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromInfo($"You already unlocked custom backgrounds, use: {gld.Prefix ?? Configuration.Prefix}set-custombg [URL] to set your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -797,11 +805,11 @@ namespace Skuld.Bot.Commands
 
                     await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                    await Messages.FromSuccess("Set your Background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromSuccess("Set your Background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
                 else
                 {
-                    await Messages.FromError($"You need at least {gld.MoneyIcon}300 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}300 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
                 return;
             }
@@ -811,11 +819,221 @@ namespace Skuld.Bot.Commands
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                await Messages.FromSuccess($"Reset your background to: {usr.Background}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromSuccess($"Reset your background to: {usr.Background}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
-            await Messages.FromInfo($"It costs at least {gld.MoneyIcon}300 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            await EmbedExtensions.FromInfo($"It costs at least {gld.MoneyIcon}300 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+        }
+
+        [Command("custom-bg preview"), Summary("Previews a custom bg")]
+        public async Task PreviewCustomBG(Uri link)
+        {
+            var fontsFolder = SkuldAppContext.FontDirectory;
+            var fontFile = Path.Combine(fontsFolder, "NotoSans-Regular.ttf");
+
+            if (!Directory.Exists(fontsFolder))
+            {
+                Directory.CreateDirectory(fontsFolder);
+                await WebHandler.DownloadFileAsync(new Uri("https://static.skuldbot.uk/fonts/NotoSans-Regular.ttf"), fontFile).ConfigureAwait(false);
+            }
+
+            using MagickImage image = new MagickImage(new MagickColor("#212121"), 600, 510)
+            {
+                Format = MagickFormat.Png
+            };
+
+            using MagickImage img2 = new MagickImage(await WebHandler.ReturnStreamAsync(link))
+            {
+                FilterType = FilterType.Quadratic
+            };
+            img2.Resize(600, 0);
+            img2.Crop(600, 228, Gravity.Center);
+            image.Composite(img2);
+
+            var avatar = Context.User.GetAvatarUrl(ImageFormat.Png) ?? Context.User.GetDefaultAvatarUrl();
+
+            using (MagickImage profileBackground = new MagickImage(await WebHandler.ReturnStreamAsync(new Uri(avatar)).ConfigureAwait(false), new MagickReadSettings
+            {
+                Format = MagickFormat.Png,
+                BackgroundColor = MagickColors.None,
+                Width = 128,
+                Height = 128
+            }))
+            {
+                using (var mask = new MagickImage("xc:none", 128, 128))
+                {
+                    mask.Draw(new DrawableFillColor(MagickColors.White), new DrawableCircle(64, 64, 62, 126));
+
+                    profileBackground.Composite(mask, CompositeOperator.CopyAlpha);
+                }
+
+                using (MagickImage statusBackground = new MagickImage($"xc:{Context.User.Status.HexFromStatus()}", 32, 32))
+                {
+                    statusBackground.BackgroundColor = MagickColors.None;
+
+                    using (var mask = new MagickImage("xc:none", 32, 32))
+                    {
+                        mask.Draw(new DrawableFillColor(MagickColors.White), new DrawableCircle(16, 16, 14, 30));
+
+                        statusBackground.Composite(mask, CompositeOperator.CopyAlpha);
+                    }
+
+                    profileBackground.Composite(statusBackground, 96, 96, CompositeOperator.Over);
+                }
+
+                image.Composite(profileBackground, 236, 32, CompositeOperator.Over);
+            }
+
+            var font = new DrawableFont(fontFile);
+            var encoding = new DrawableTextEncoding(System.Text.Encoding.Unicode);
+            var fontsize = new DrawableFontPointSize(20);
+            var white = new DrawableFillColor(new MagickColor(65535, 65535, 65535));
+
+            var exp = new UserExperience
+            {
+                TotalXP = 1234567890
+            };
+            
+            exp.Level = DiscordTools.GetLevelFromTotalXP(exp.TotalXP, DiscordTools.PHI);
+
+            exp.XP = DiscordTools.GetXPLevelRequirement(exp.Level, DiscordTools.PHI) / 2;
+
+            int ylevel1 = 365, ylevel2 = 405, ylevel3 = 445;
+
+            //Bar
+            image.Draw(new DrawableFillColor(new MagickColor(0, 0, 0, 52428)), new DrawableRectangle(0, 188, 600, 228));
+
+            //Rep
+            using (MagickImage label = new MagickImage($"label:1,234 Rep", new MagickReadSettings
+            {
+                BackgroundColor = MagickColors.Transparent,
+                FillColor = MagickColors.White,
+                Width = 580,
+                Height = 30,
+                TextGravity = Gravity.West,
+                FontPointsize = 30,
+                Font = fontFile
+            }))
+            {
+                image.Composite(label, 20, 193, CompositeOperator.Over);
+            }
+
+            //Money
+            using (MagickImage label2 = new MagickImage($"label:₩123,456,789", new MagickReadSettings
+            {
+                BackgroundColor = MagickColors.Transparent,
+                FillColor = MagickColors.White,
+                Width = 580,
+                Height = 30,
+                TextGravity = Gravity.East,
+                FontPointsize = 30,
+                Font = fontFile
+            }))
+            {
+                image.Composite(label2, 0, 193, CompositeOperator.Over);
+            }
+
+            //Username
+            using (MagickImage label3 = new MagickImage($"label:{Context.User.FullName()}", new MagickReadSettings
+            {
+                BackgroundColor = MagickColors.Transparent,
+                FillColor = MagickColors.White,
+                Width = 600,
+                Height = 40,
+                TextGravity = Gravity.Center,
+                Font = fontFile
+            }))
+            {
+                image.Composite(label3, 0, 230, CompositeOperator.Over);
+            }
+
+            //Title
+            using MagickImage label4 = new MagickImage($"label:Preview Card", new MagickReadSettings
+            {
+                BackgroundColor = MagickColors.Transparent,
+                FillColor = MagickColors.White,
+                Width = 600,
+                Height = 40,
+                TextGravity = Gravity.Center,
+                Font = fontFile
+            });
+            image.Composite(label4, 0, 270, CompositeOperator.Over);
+
+            //YLevel 1
+            var dailyText = $"Daily: {((ulong)0).FromEpoch().ToString("yyyy/MM/dd HH:mm:ss")}";
+            var dmetr = image.FontTypeMetrics(dailyText, true);
+            var rightPos = 600 - (dmetr.TextWidth * 2);
+
+            image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: 420/-420"));
+
+            image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel1, dailyText));
+
+            //YLevel 2
+            image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel2, $"Pasta Karma: 123,456,789"));
+            image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel2, $"Fav. Cmd: profile (123,456,789)"));
+
+            //YLevel 3
+            image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToString("N0")} ({exp.TotalXP.ToString("N0")})"));
+            image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: 7,777/Patted: 7,777"));
+
+            ulong xpToNextLevel = DiscordTools.GetXPLevelRequirement(exp.Level + 1, DiscordTools.PHI);
+
+            //Progressbar
+            image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, 471, 580, 500));
+            image.Draw(new DrawableFillColor(new MagickColor("#dfdfdf")), new DrawableRectangle(22, 473, 578, 498));
+
+            var percentage = (double)exp.XP / xpToNextLevel * 100;
+            var mapped = percentage.Remap(0, 100, 22, 578);
+
+            image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, 473, mapped, 498));
+
+            //Current XP
+            image.Draw(font, fontsize, encoding, new DrawableText(25, 493, (exp.XP).ToString("N0") + "XP"));
+
+            //XP To Next
+            using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToString("N0")}XP", new MagickReadSettings
+            {
+                BackgroundColor = MagickColors.Transparent,
+                FillColor = MagickColors.Black,
+                Width = 575,
+                Height = 20,
+                TextGravity = Gravity.East,
+                FontPointsize = 20,
+                Font = fontFile
+            }))
+            {
+                image.Composite(label5, 0, 475, CompositeOperator.Over);
+            }
+
+            {
+                var col = MagickColors.Red;
+                col.A = ushort.MaxValue/2;
+                
+                using MagickImage watermark = new MagickImage($"label:PREVIEW", new MagickReadSettings
+                {
+                    BackgroundColor = MagickColors.Transparent,
+                    FillColor = col,
+                    Width = 600,
+                    Height = 300,
+                    TextGravity = Gravity.Center,
+                    FontPointsize = 100,
+                    FontWeight = FontWeight.ExtraBold,
+                    Font = fontFile
+                });
+
+                watermark.Rotate(-45);
+
+                image.Composite(watermark, Gravity.Center, 0, 0, CompositeOperator.Over);
+            }
+
+            MemoryStream outputStream = new MemoryStream();
+
+            image.Write(outputStream);
+
+            outputStream.Position = 0;
+
+            await "".QueueMessageAsync(Context, outputStream, type: Discord.Models.MessageType.File).ConfigureAwait(false);
         }
     }
 }

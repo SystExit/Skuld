@@ -26,14 +26,16 @@ namespace Skuld.Core.Utilities
 
         private static string Message(string source, string message, LogSeverity severity)
         {
-            var lines = new List<string[]>();
-            lines.Add(new[]
+            var lines = new List<string[]>
+            {
+                new[]
                 {
                     string.Format("{0:dd/MM/yyyy HH:mm:ss}", DateTime.UtcNow),
                     "[" + source + "]",
                     "[" + severity.ToString()[0] + "]",
                     message??""
-                });
+                }
+            };
 
             var prettied = ConsoleUtils.PrettyLines(lines, 2);
 
@@ -65,6 +67,8 @@ namespace Skuld.Core.Utilities
 
 
             Console.ForegroundColor = ConsoleColor.White;
+
+            LogFile.Flush();
         }
 
         public static void Debug(string source, string message, Exception exception = null)
@@ -89,6 +93,8 @@ namespace Skuld.Core.Utilities
             }
 
             Console.ForegroundColor = ConsoleColor.White;
+
+            LogFile.Flush();
         }
 
         public static void Error(string source, string message, Exception exception = null)
@@ -110,6 +116,8 @@ namespace Skuld.Core.Utilities
                 Console.Out.WriteLine(msg);
 
             Console.ForegroundColor = ConsoleColor.White;
+
+            LogFile.Flush();
         }
 
         public static void Verbose(string source, string message, Exception exception = null)
@@ -131,6 +139,8 @@ namespace Skuld.Core.Utilities
                 Console.Out.WriteLine(msg);
 
             Console.ForegroundColor = ConsoleColor.White;
+
+            LogFile.Flush();
         }
 
         public static void Warning(string source, string message, Exception exception = null)
@@ -152,6 +162,8 @@ namespace Skuld.Core.Utilities
                 Console.Out.WriteLine(msg);
 
             Console.ForegroundColor = ConsoleColor.White;
+
+            LogFile.Flush();
         }
 
         public static void Info(string source, string message)
@@ -164,6 +176,8 @@ namespace Skuld.Core.Utilities
                 Console.Out.WriteLine(msg);
 
             Console.ForegroundColor = ConsoleColor.White;
+
+            LogFile.Flush();
         }
 
         public static void FlushNewLine()

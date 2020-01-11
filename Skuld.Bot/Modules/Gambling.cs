@@ -5,6 +5,7 @@ using Skuld.Bot.Extensions;
 using Skuld.Bot.Globalization;
 using Skuld.Bot.Models;
 using Skuld.Bot.Models.Commands.GamblingModule;
+using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
@@ -15,7 +16,6 @@ using Skuld.Discord.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
@@ -167,13 +167,13 @@ namespace Skuld.Bot.Commands
                             else
                                 suffix = "You Lost! <:blobcrying:662304318531305492>";
 
-                            await Messages.FromImage(res.Item2, didWin ? Color.Green : Color.Red, Context)
+                            await EmbedExtensions.FromImage(res.Item2, didWin ? Color.Green : Color.Red, Context)
                                 .WithDescription($"Result are: {locale.GetLocale(user.Language).GetString(res.Item1)} {suffix}")
                                 .QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
                     default:
-                        await Messages.FromError($"Incorrect guess value. Try; `{guild.Prefix}flip heads`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        await EmbedExtensions.FromError($"Incorrect guess value. Try; `{guild.Prefix}flip heads`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         return;
                 }
 
@@ -220,13 +220,13 @@ namespace Skuld.Bot.Commands
                             else
                                 suffix = $"You Lost! <:blobcrying:662304318531305492> Your money is now `{guild.MoneyIcon}{user.Money}`";
 
-                            await Messages.FromImage(res.Item2, didWin ? Color.Green : Color.Red, Context)
+                            await EmbedExtensions.FromImage(res.Item2, didWin ? Color.Green : Color.Red, Context)
                                 .WithDescription($"Result are: {locale.GetLocale(user.Language).GetString(res.Item1)} {suffix}")
                                 .QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
                     default:
-                        await Messages.FromError($"Incorrect guess value. Try; `{guild.Prefix}flip heads`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        await EmbedExtensions.FromError($"Incorrect guess value. Try; `{guild.Prefix}flip heads`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         return;
                 }
                 return;
@@ -264,7 +264,7 @@ namespace Skuld.Bot.Commands
 
                 if (user.Money < bet.Value)
                 {
-                    await Messages.FromError("Rock Paper Scissors", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToString("N0")} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError("Rock Paper Scissors", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToString("N0")} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
 
@@ -279,7 +279,7 @@ namespace Skuld.Bot.Commands
 
                             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                            await Messages.FromError("Rock Paper Scissors", $"I draw {throwName} and... You lost, you now have `{MoneyPrefix}{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            await EmbedExtensions.FromError("Rock Paper Scissors", $"I draw {throwName} and... You lost, you now have `{MoneyPrefix}{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
                     case WinResult.PlayerWin:
@@ -291,12 +291,12 @@ namespace Skuld.Bot.Commands
 
                             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                            await Messages.FromInfo("Rock Paper Scissors", $"I draw {throwName} and... You won, you now have `{MoneyPrefix}{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            await EmbedExtensions.FromSuccess("Rock Paper Scissors", $"I draw {throwName} and... You won, you now have `{MoneyPrefix}{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
                     case WinResult.Draw:
                         {
-                            await Messages.FromMessage("Rock Paper Scissors", $"I draw {throwName} and... It's a draw, your money has not been affected", DiscordTools.Warning_Color, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            await EmbedExtensions.FromInfo("Rock Paper Scissors", $"I draw {throwName} and... It's a draw, your money has not been affected", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
                 }
@@ -307,17 +307,17 @@ namespace Skuld.Bot.Commands
                 {
                     case WinResult.BotWin:
                         {
-                            await Messages.FromError("Rock Paper Scissors", $"I draw {throwName} and... You lost", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            await EmbedExtensions.FromError("Rock Paper Scissors", $"I draw {throwName} and... You lost", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
                     case WinResult.PlayerWin:
                         {
-                            await Messages.FromInfo("Rock Paper Scissors", $"I draw {throwName} and... You won", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            await EmbedExtensions.FromInfo("Rock Paper Scissors", $"I draw {throwName} and... You won", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
                     case WinResult.Draw:
                         {
-                            await Messages.FromMessage("Rock Paper Scissors", $"I draw {throwName} and... It's a draw", DiscordTools.Warning_Color, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            await EmbedExtensions.FromMessage("Rock Paper Scissors", $"I draw {throwName} and... It's a draw", DiscordTools.Warning_Color, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
                 }
@@ -413,7 +413,7 @@ namespace Skuld.Bot.Commands
             {
                 if (user.Money < bet.Value)
                 {
-                    await Messages.FromError("Slots", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToString("N0")} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError("Slots", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToString("N0")} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
 
@@ -427,7 +427,7 @@ namespace Skuld.Bot.Commands
 
             var stringRow = GetStringRows(rows);
 
-            var message = await Messages.FromInfo("Slots", "Please Wait, Calculating Wheels", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            var message = await EmbedExtensions.FromInfo("Slots", "Please Wait, Calculating Wheels", Context).QueueMessageAsync(Context).ConfigureAwait(false);
 
             await Task.Delay(500).ConfigureAwait(false);
 
@@ -449,7 +449,7 @@ namespace Skuld.Bot.Commands
 
                 if (percentageMod == 0.0d)
                 {
-                    await message.ModifyAsync(x => x.Embed = Messages.FromMessage("Slots", $"{stringRow}\n\nYou lost {bet.Value.ToString("N0")}! You now have `{MoneyPrefix}{user.Money}`", Color.Red, Context).Build()).ConfigureAwait(false);
+                    await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou lost {bet.Value.ToString("N0")}! You now have `{MoneyPrefix}{user.Money}`", Color.Red, Context).Build()).ConfigureAwait(false);
                 }
                 else
                 {
@@ -457,18 +457,18 @@ namespace Skuld.Bot.Commands
 
                     await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                    await message.ModifyAsync(x => x.Embed = Messages.FromMessage("Slots", $"{stringRow}\n\nYou won {amount.ToString("N0")}! You now have `{MoneyPrefix}{user.Money}`", Color.Green, Context).Build()).ConfigureAwait(false);
+                    await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou won {amount.ToString("N0")}! You now have `{MoneyPrefix}{user.Money}`", Color.Green, Context).Build()).ConfigureAwait(false);
                 }
             }
             else
             {
                 if (percentageMod == 0.0d)
                 {
-                    await message.ModifyAsync(x => x.Embed = Messages.FromMessage("Slots", $"{stringRow}\n\nYou lost!", Color.Red, Context).Build()).ConfigureAwait(false);
+                    await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou lost!", Color.Red, Context).Build()).ConfigureAwait(false);
                 }
                 else
                 {
-                    await message.ModifyAsync(x => x.Embed = Messages.FromMessage("Slots", $"{stringRow}\n\nYou won!", Color.Green, Context).Build()).ConfigureAwait(false);
+                    await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou won!", Color.Green, Context).Build()).ConfigureAwait(false);
                 }
             }
         }
@@ -601,14 +601,14 @@ namespace Skuld.Bot.Commands
 
                             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                            await Messages.FromSuccess("Mia", $"You Win! You now have {MoneyPrefix}{user.Money.ToString("N0")}", Context)
+                            await EmbedExtensions.FromSuccess("Mia", $"You Win! You now have {MoneyPrefix}{user.Money.ToString("N0")}", Context)
                                 .AddInlineField(Context.Client.CurrentUser.Username, botRoll)
                                 .AddInlineField(Context.User.Username, plaRoll)
                                 .QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         else
                         {
-                            await Messages.FromSuccess("Mia", "You Win!", Context)
+                            await EmbedExtensions.FromSuccess("Mia", "You Win!", Context)
                                 .AddInlineField(Context.Client.CurrentUser.Username, botRoll)
                                 .AddInlineField(Context.User.Username, plaRoll)
                                 .QueueMessageAsync(Context).ConfigureAwait(false);
@@ -619,14 +619,14 @@ namespace Skuld.Bot.Commands
                     {
                         if (bet.HasValue)
                         {
-                            await Messages.FromError("Mia", $"You Lost! You now have {MoneyPrefix}{user.Money.ToString("N0")}", Context)
+                            await EmbedExtensions.FromError("Mia", $"You Lost! You now have {MoneyPrefix}{user.Money.ToString("N0")}", Context)
                                 .AddInlineField(Context.Client.CurrentUser.Username, botRoll)
                                 .AddInlineField(Context.User.Username, plaRoll)
                                 .QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         else
                         {
-                            await Messages.FromError("Mia", "You Lost!", Context)
+                            await EmbedExtensions.FromError("Mia", "You Lost!", Context)
                                 .AddInlineField(Context.Client.CurrentUser.Username, botRoll)
                                 .AddInlineField(Context.User.Username, plaRoll)
                                 .QueueMessageAsync(Context).ConfigureAwait(false);
@@ -635,7 +635,7 @@ namespace Skuld.Bot.Commands
                     break;
                 case WinResult.Draw:
                     {
-                        await Messages.FromInfo("Mia", $"It's a draw!", Context)
+                        await EmbedExtensions.FromInfo("Mia", $"It's a draw!", Context)
                                 .AddInlineField(Context.Client.CurrentUser.Username, botRoll)
                                 .AddInlineField(Context.User.Username, plaRoll)
                                 .QueueMessageAsync(Context).ConfigureAwait(false);

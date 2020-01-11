@@ -11,7 +11,7 @@ namespace Skuld.Core.Extensions.Discord
         public static async Task<IReadOnlyList<IGuildUser>> GetAdministratorsAsync(this IGuild guild)
         {
             var users = new List<IGuildUser>();
-            await guild.DownloadUsersAsync();
+            await guild.DownloadUsersAsync().ConfigureAwait(false);
 
             var usrs = await guild.GetUsersAsync();
 
@@ -27,9 +27,9 @@ namespace Skuld.Core.Extensions.Discord
         public static async Task<IReadOnlyList<IGuildUser>> GetModeratorsAsync(this IGuild guild)
         {
             var users = new List<IGuildUser>();
-            await guild.DownloadUsersAsync();
+            await guild.DownloadUsersAsync().ConfigureAwait(false);
 
-            var usrs = await guild.GetUsersAsync();
+            var usrs = await guild.GetUsersAsync().ConfigureAwait(false);
 
             foreach (SocketGuildUser user in usrs)
             {

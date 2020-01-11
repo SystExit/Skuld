@@ -8,6 +8,7 @@ using Skuld.APIS;
 using Skuld.Bot.Models.Commands;
 using Skuld.Bot.Services;
 using Skuld.Core;
+using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
@@ -106,7 +107,7 @@ namespace Skuld.Bot.Commands
                     Text = "Generated at"
                 },
                 Timestamp = DateTime.Now,
-                Color = EmbedUtils.RandomColor()
+                Color = EmbedExtensions.RandomEmbedColor()
             };
             embed.AddInlineField("Guilds", shard.Guilds.Count.ToString());
             embed.AddInlineField("Status", shard.ConnectionState);
@@ -519,11 +520,11 @@ namespace Skuld.Bot.Commands
             {
                 if (Context.Client.GetGuild(id) == null)
                 {
-                    await Messages.FromSuccess($"Left guild **{guild.Name}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromSuccess($"Left guild **{guild.Name}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
                 else
                 {
-                    await Messages.FromError($"Hmm, I haven't left **{guild.Name}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError($"Hmm, I haven't left **{guild.Name}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }).ConfigureAwait(false);
         }
@@ -551,7 +552,7 @@ namespace Skuld.Bot.Commands
             {
                 if (code.ToLowerInvariant().Contains("token") || code.ToLowerInvariant().Contains("key"))
                 {
-                    await Messages.FromError("Nope.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError("Nope.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
                 if (code.StartsWith("```cs", StringComparison.Ordinal))
@@ -586,7 +587,7 @@ namespace Skuld.Bot.Commands
                 {
                     Name = result.GetType().ToString()
                 };
-                embed.Color = EmbedUtils.RandomColor();
+                embed.Color = EmbedExtensions.RandomEmbedColor();
                 embed.Description = $"{result}";
                 if (result != null)
                 {
@@ -602,19 +603,9 @@ namespace Skuld.Bot.Commands
 #pragma warning restore CS0168 // Variable is declared but never used
             catch (Exception ex)
             {
-                var embed = new EmbedBuilder
-                {
-                    Author = new EmbedAuthorBuilder
-                    {
-                        Name = "ERROR WITH EVAL"
-                    },
-                    Color = Color.Red,
-                    Description = $"{ex.Message}"
-                };
-
                 Log.Error("EvalCMD", "Error with eval command " + ex.Message, ex);
 
-                await Messages.FromError($"Error with eval command\n\n{ex.Message}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError($"Error with eval command\n\n{ex.Message}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 

@@ -70,7 +70,6 @@ namespace Skuld.Core.Extensions
         }
 
         #region Conversion
-
         public static bool ToBool(this string data)
         {
             if (data.ToLowerInvariant() == "true")
@@ -112,10 +111,11 @@ namespace Skuld.Core.Extensions
         public static ulong ToEpoch(this DateTime dateTime)
             => (ulong)(dateTime.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
 
-        #endregion Conversion
+        public static double Remap(this double value, double min1, double max1, double min2, double max2)
+            => min2 + (max2 - min2) * ((value - min1) / (max1 - min1));
+        #endregion
 
         #region Verification
-
         public static bool IsImageExtension(this string input)
         {
             foreach (var ext in ImageExtensions)
@@ -186,11 +186,9 @@ namespace Skuld.Core.Extensions
 
             return (same && iarr.Count() > startLimit);
         }
-
-        #endregion Verification
+        #endregion
 
         #region Localisation
-
         public static string CheckEmptyWithLocale(this int? val, ResourceManager loc)
         {
             if (val.HasValue)
@@ -224,8 +222,7 @@ namespace Skuld.Core.Extensions
 
         public static string CheckEmptyWithLocale(this string val, ResourceManager loc)
             => val ?? loc.GetString("SKULD_GENERIC_EMPTY");
-
-        #endregion Localisation
+        #endregion
 
         #region Pagination
         public static IList<string> PaginateList(this string[] list, int maxrows = 10)
@@ -268,6 +265,7 @@ namespace Skuld.Core.Extensions
         }
         #endregion
 
+        #region StringUtils
         public static string CapitaliseFirstLetter(this string input)
             => input switch
             {
@@ -293,32 +291,6 @@ namespace Skuld.Core.Extensions
             return rtnstrng + "ago";
         }
 
-        public static double Remap(this double value, double a0, double a1, double b0, double b1)
-            => b0 + (b1 - b0) * ((value - a0) / (a1 - a0));
-
-        /// <summary>
-        /// Get's the experience multiplier from Users Minutes in Voice
-        /// </summary>
-        /// <param name="expIndeterminate">Indeterminate Value for parabola</param>
-        /// <param name="minMinutes">Minimum Minutes In voice</param>
-        /// <param name="timeInVoice">Users time in voice by minutes</param>
-        /// <returns></returns>
-        public static int GetExpMultiFromMinutesInVoice(float expIndeterminate, int minMinutes, int timeInVoice)
-        {
-            if (timeInVoice < minMinutes)
-                return 0; //if less than minimum minutes return 0 multiplier
-
-            var result = Math.Pow((expIndeterminate * (timeInVoice - minMinutes)), 2); //do math
-
-            if (result > 100)
-                result = 100; //clamp to 100 as limit
-
-            if (result < 0)
-                result = 0; //if negative clamp to zero
-
-            return (int)Math.Round(result); //return rounded integral version of result
-        }
-
         //https://gist.github.com/starquake/8d72f1e55c0176d8240ed336f92116e3
         public static string StripHtml(this string value)
         {
@@ -330,5 +302,6 @@ namespace Skuld.Core.Extensions
 
             return htmlDoc.DocumentNode.InnerText;
         }
+        #endregion
     }
 }

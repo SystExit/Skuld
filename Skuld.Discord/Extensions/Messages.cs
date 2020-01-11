@@ -1,10 +1,8 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using Skuld.Core;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Handlers;
-using Skuld.Discord.Services;
 using System;
 using System.IO;
 using System.Text;
@@ -15,10 +13,10 @@ namespace Skuld.Discord.Extensions
     public static class Messages
     {
         public static async Task<IUserMessage> QueueMessageAsync(this string content,
-                                             ShardedCommandContext context,
-                                             Models.MessageType type = Models.MessageType.Standard,
+                                             ICommandContext context,
                                              Stream imageStream = null,
                                              string fileName = "image.png",
+                                             Models.MessageType type = Models.MessageType.Standard,
                                              Exception exception = null,
                                              double timeout = 0.0)
         {
@@ -65,20 +63,20 @@ namespace Skuld.Discord.Extensions
         }
 
         public static async Task<IUserMessage> QueueMessageAsync(this StringBuilder content,
-                                             ShardedCommandContext context,
-                                             Models.MessageType type = Models.MessageType.Standard,
+                                             ICommandContext context,
                                              Stream imageStream = null,
                                              string fileName = "image.png",
+                                             Models.MessageType type = Models.MessageType.Standard,
                                              Exception exception = null,
                                              double timeout = 0.0)
-            => await content.ToString().QueueMessageAsync(context, type, imageStream, fileName, exception, timeout);
+            => await content.ToString().QueueMessageAsync(context, imageStream, fileName, type, exception, timeout);
 
         public static async Task<IUserMessage> QueueMessageAsync(this Embed embed,
-                                             ShardedCommandContext context,
-                                             Models.MessageType type = Models.MessageType.Standard,
+                                             ICommandContext context,
                                              string content = "",
                                              Stream imageStream = null,
                                              string fileName = "image.png",
+                                             Models.MessageType type = Models.MessageType.Standard,
                                              Exception exception = null,
                                              double timeout = 0.0)
         {
@@ -125,14 +123,14 @@ namespace Skuld.Discord.Extensions
         }
 
         public static async Task<IUserMessage> QueueMessageAsync(this EmbedBuilder embed,
-                                             ShardedCommandContext context,
-                                             Models.MessageType type = Models.MessageType.Standard,
+                                             ICommandContext context,
                                              string content = "",
                                              Stream imageStream = null,
                                              string fileName = "image.png",
+                                             Models.MessageType type = Models.MessageType.Standard,
                                              Exception exception = null,
                                              double timeout = 0.0)
-            => await embed.Build().QueueMessageAsync(context, type, content, imageStream, fileName, exception, timeout);
+            => await embed.Build().QueueMessageAsync(context, content, imageStream, fileName, type, exception, timeout);
 
         public static string TrimEmbedHiders(this string message)
         {
@@ -196,9 +194,6 @@ namespace Skuld.Discord.Extensions
             Log.Debug("MsgDisp", "Deleted a timed message");
         }
 
-        public static EmbedBuilder AddInlineField(this EmbedBuilder embed, string name, object value)
-            => embed.AddField(name, value, true);
-
         public static async Task<bool> CanEmbedAsync(this IMessageChannel channel, IGuild guild = null)
         {
             if (guild == null) return true;
@@ -210,71 +205,5 @@ namespace Skuld.Discord.Extensions
                 return perms.EmbedLinks;
             }
         }
-
-        public static EmbedBuilder FromMessage(ICommandContext context)
-            => FromMessage("", "", context);
-
-        public static EmbedBuilder FromMessage(string title, string message, ICommandContext context)
-            => FromMessage(title, message, Color.Teal, context);
-
-        public static EmbedBuilder FromMessage(string title, string message, Color color, ICommandContext context)
-            => new EmbedBuilder
-            {
-                Author = new EmbedAuthorBuilder
-                {
-                    Name = BotService.DiscordClient.CurrentUser.Username,
-                    IconUrl = BotService.DiscordClient.CurrentUser.GetAvatarUrl() ?? BotService.DiscordClient.CurrentUser.GetDefaultAvatarUrl(),
-                    Url = SkuldAppContext.Website
-                },
-                Title = title,
-                Description = message,
-                Color = color,
-                Timestamp = DateTime.UtcNow,
-                Footer = new EmbedFooterBuilder
-                {
-                    IconUrl = context.User.GetAvatarUrl() ?? context.User.GetDefaultAvatarUrl(),
-                    Text = $"Command executed for: {context.User.Username}#{context.User.Discriminator}"
-                }
-            };
-
-        public static EmbedBuilder FromError(string title, string message, ICommandContext context)
-            => FromMessage(title, message, Color.Red, context);
-
-        public static EmbedBuilder FromError(string message, ICommandContext context)
-            => FromMessage("⛔Command Error!⛔", message, Color.Red, context);
-
-        public static EmbedBuilder FromInfo(string title, string message, ICommandContext context)
-            => FromMessage(title, message, DiscordTools.Warning_Color, context);
-
-        public static EmbedBuilder FromInfo(string message, ICommandContext context)
-            => FromMessage("⚠Info⚠", message, DiscordTools.Warning_Color, context);
-
-        public static EmbedBuilder FromSuccess(ICommandContext context)
-            => FromMessage("✔Success✔", "", Color.Green, context);
-
-        public static EmbedBuilder FromSuccess(string message, ICommandContext context)
-            => FromMessage("✔Success✔", message, Color.Green, context);
-
-        public static EmbedBuilder FromSuccess(string title, string message, ICommandContext context)
-            => FromMessage(title, message, Color.Green, context);
-
-        public static EmbedBuilder FromImage(string imageUrl, Color color, ICommandContext context)
-            => new EmbedBuilder
-            {
-                Author = new EmbedAuthorBuilder
-                {
-                    Name = BotService.DiscordClient.CurrentUser.Username,
-                    IconUrl = BotService.DiscordClient.CurrentUser.GetAvatarUrl() ?? BotService.DiscordClient.CurrentUser.GetDefaultAvatarUrl(),
-                    Url = SkuldAppContext.Website
-                },
-                Color = color,
-                Timestamp = DateTime.UtcNow,
-                ImageUrl = imageUrl,
-                Footer = new EmbedFooterBuilder
-                {
-                    IconUrl = context.User.GetAvatarUrl() ?? context.User.GetDefaultAvatarUrl(),
-                    Text = $"Command executed for: {context.User.Username}#{context.User.Discriminator}"
-                }
-            };
     }
 }

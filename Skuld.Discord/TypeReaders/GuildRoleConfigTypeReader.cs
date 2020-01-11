@@ -5,11 +5,11 @@ using System.Threading.Tasks;
 
 namespace Skuld.Discord.TypeReaders
 {
-    public class RoleConfigTypeReader : TypeReader
+    public class GuildRoleConfigTypeReader : TypeReader
     {
         public override Task<TypeReaderResult> ReadAsync(ICommandContext context, string input, IServiceProvider services)
         {
-            if (RoleConfig.FromString(input, context, out RoleConfig config))
+            if (GuildRoleConfig.FromString(input, context, out GuildRoleConfig config))
             {
                 return Task.FromResult(TypeReaderResult.FromSuccess(config));
             }

@@ -1,10 +1,12 @@
 ﻿using Discord;
+using Discord.Commands;
 using Google.Apis.Customsearch.v1;
 using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Imgur.API.Models;
 using Imgur.API.Models.Impl;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Utilities;
 using System;
@@ -119,7 +121,7 @@ namespace Skuld.APIS
             }
         }
 
-        public static async Task<Embed> SearchGoogleAsync(string query)
+        public static async Task<EmbedBuilder> SearchGoogleAsync(string query, ICommandContext context)
         {
             try
             {
@@ -133,60 +135,41 @@ namespace Skuld.APIS
                     var item = items.FirstOrDefault();
                     var item2 = items.ElementAtOrDefault(1);
                     var item3 = items.ElementAtOrDefault(2);
-                    EmbedBuilder embed = null;
-                    try
-                    {
-                        embed = new EmbedBuilder
-                        {
-                            Author = new EmbedAuthorBuilder
-                            {
-                                Name = $"Google search for: {query}",
-                                IconUrl = "https://upload.wikimedia.org/wikipedia/commons/0/09/IOS_Google_icon.png",
-                                Url = $"https://google.com/search?q={query.Replace(" ", "%20")}"
-                            },
-                            Description = "I found this:\n" +
-                                $"**{item.Title}**\n" +
-                                $"<{item.Link}>\n\n" +
-                                "__**Also Relevant**__\n" +
-                                $"**{item2.Title}**\n<{item2.Link}>\n\n" +
-                                $"**{item3.Title}**\n<{item3.Link}>\n\n" +
-                                "If I didn't find what you're looking for, use this link:\n" +
-                                $"https://google.com/search?q={query.Replace(" ", "%20")}",
-                            Color = EmbedUtils.RandomColor()
-                        };
-                        return embed.Build();
-                    }
-                    //Can be ignored
-                    catch
-                    {
-                    }
+
+                    string desc = "I found this:\n" +
+                            $"**{item.Title}**\n" +
+                            $"<{item.Link}>\n\n" +
+                            "__**Also Relevant**__\n" +
+                            $"**{item2.Title}**\n<{item2.Link}>\n\n" +
+                            $"**{item3.Title}**\n<{item3.Link}>\n\n" +
+                            "If I didn't find what you're looking for, use this link:\n" +
+                            $"https://google.com/search?q={query.Replace(" ", "%20")}";
+
+                    var embed = new EmbedBuilder()
+                        .WithAuthor(new EmbedAuthorBuilder()
+                            .WithName($"Google search for: {query}")
+                            .WithIconUrl("https://upload.wikimedia.org/wikipedia/commons/0/09/IOS_Google_icon.png")
+                            .WithUrl($"https://google.com/search?q={query.Replace(" ", "%20")}")
+                        )
+                        .WithDescription(desc)
+                        .WithRandomColor();
+
+                    return embed;
                 }
                 else
                 {
                     StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-                    return new EmbedBuilder
-                    {
-                        Title = "Error with the command",
-                        Description = $"I couldn't find anything matching: `{query}`, please try again.",
-                        Color = Color.Red
-                    }.Build();
+
+                    return EmbedExtensions.FromError($"I couldn't find anything matching: `{query}`, please try again.", context);
                 }
             }
             catch (Exception ex)
             {
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "exception" });
                 Log.Error("GogSrch", "Error with google search", ex);
-                return new EmbedBuilder
-                {
-                    Title = "Error with the command",
-                    Color = Color.Red
-                }.Build();
+
+                return EmbedExtensions.FromError("Something happened, please try again", context);
             }
-            return new EmbedBuilder
-            {
-                Title = "Error with the command",
-                Color = Color.Red
-            }.Build();
         }
     }
 }

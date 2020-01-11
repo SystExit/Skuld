@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using Skuld.Bot.Services;
+using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
@@ -50,7 +51,7 @@ namespace Skuld.Bot.Commands
                             Name = title,
                             IconUrl = Context.Client.CurrentUser.GetAvatarUrl() ?? Context.Client.CurrentUser.GetDefaultAvatarUrl()
                         },
-                        Color = EmbedUtils.RandomColor(),
+                        Color = EmbedExtensions.RandomEmbedColor(),
                         Description = $"The prefix of **{(Context.Guild == null ? Context.User.FullName() : Context.Guild.Name)}** is: `{prefix}`"
                     };
                     foreach (var module in CommandService.Modules)
@@ -95,7 +96,7 @@ namespace Skuld.Bot.Commands
 
                     var dmchan = await Context.User.GetOrCreateDMChannelAsync();
 
-                    await embed.Build().QueueMessageAsync(Context, Discord.Models.MessageType.DMS).ConfigureAwait(false);
+                    await embed.QueueMessageAsync(Context, type: Discord.Models.MessageType.DMS).ConfigureAwait(false);
                 }
                 else
                 {
@@ -112,7 +113,7 @@ namespace Skuld.Bot.Commands
             }
             catch (Exception ex)
             {
-                await Messages.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 Log.Error("CMD-HELP", ex.Message, ex);
             }
         }

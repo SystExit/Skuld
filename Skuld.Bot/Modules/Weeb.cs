@@ -7,6 +7,7 @@ using Skuld.APIS.Extensions;
 using Skuld.Bot.Extensions;
 using Skuld.Bot.Globalization;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Discord;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
@@ -112,11 +113,12 @@ namespace Skuld.Bot.Commands
         {
             var gif = await SysExClient.GetWeebReactionGifAsync().ConfigureAwait(false);
 
-            await new EmbedBuilder
-            {
-                ImageUrl = gif,
-                Color = EmbedUtils.RandomColor()
-            }.Build().QueueMessageAsync(Context).ConfigureAwait(false);
+            await
+                EmbedExtensions.FromImage(gif,
+                                          EmbedExtensions.RandomEmbedColor(),
+                                          Context)
+                .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
         }
 
         [Command("whatanime"), Summary("Searches Trace.Moe")]
