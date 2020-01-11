@@ -36,6 +36,8 @@ namespace Skuld.Bot.Services
         public static WebSocketService WebSocket;
         public static IServiceProvider Services;
 
+        static VoiceExpService voiceService;
+
         public static async Task CreateAsync(string[] args = null)
         {
             try
@@ -65,9 +67,6 @@ namespace Skuld.Bot.Services
                 BotService.ConfigureBot(new DiscordSocketConfig
                 {
                     LogLevel = LogSeverity.Debug,
-                    GuildSubscriptions = false,
-                    RateLimitPrecision = RateLimitPrecision.Millisecond,
-                    UseSystemClock = true,
                     TotalShards = Configuration.Shards,
                     LargeThreshold = 250,
                     AlwaysDownloadUsers = false,
@@ -196,6 +195,8 @@ namespace Skuld.Bot.Services
 
         private static void InitializeServices()
         {
+            voiceService = new VoiceExpService(BotService.DiscordClient);
+
             ConfigureStatsCollector();
         }
 

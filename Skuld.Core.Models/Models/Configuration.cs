@@ -1,5 +1,4 @@
-﻿using Discord;
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -36,7 +35,8 @@ namespace Skuld.Core.Generic.Models
         public int PinboardDateLimit { get; set; } = 7;
         public ulong DailyAmount { get; set; } = 50;
         public float VoiceExpIndeterminate { get; set; } = .002f;
-        public int VoiceExpMinMinutes { get; set; } = 5;
+        public ulong VoiceExpMinMinutes { get; set; } = 5;
+        public ulong VoiceExpMaxGrant { get; set; } = 100000;
         #endregion
 
         #region APIConfig
