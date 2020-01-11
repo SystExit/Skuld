@@ -8,13 +8,13 @@ using System.Threading.Tasks;
 
 namespace Skuld.APIS.WebComics.XKCD
 {
-    public class XKCDClient : BaseClient
+    public class XKCDClient
     {
         private readonly Random random;
         private readonly RateLimiter rateLimiter;
         private int? XKCDLastPage;
 
-        public XKCDClient(Random ran) : base()
+        public XKCDClient(Random ran)
         {
             random = ran;
             rateLimiter = new RateLimiter();
@@ -23,7 +23,7 @@ namespace Skuld.APIS.WebComics.XKCD
 
         private async Task<int?> GetLastPageAsync()
         {
-            var rawresp = await ReturnStringAsync(new Uri("https://xkcd.com/info.0.json"));
+            var rawresp = await HttpWebClient.ReturnStringAsync(new Uri("https://xkcd.com/info.0.json")).ConfigureAwait(false);
 
             if (string.IsNullOrEmpty(rawresp) || string.IsNullOrWhiteSpace(rawresp)) return null;
 
@@ -46,11 +46,11 @@ namespace Skuld.APIS.WebComics.XKCD
             {
                 XKCDLastPage = await GetLastPageAsync();
 
-                return await GetComicAsync(random.Next(0, XKCDLastPage.Value));
+                return await GetComicAsync(random.Next(0, XKCDLastPage.Value)).ConfigureAwait(false);
             }
             else
             {
-                return await GetComicAsync(random.Next(0, XKCDLastPage.Value));
+                return await GetComicAsync(random.Next(0, XKCDLastPage.Value)).ConfigureAwait(false);
             }
         }
 
@@ -63,9 +63,9 @@ namespace Skuld.APIS.WebComics.XKCD
             if (!rateLimiter.IsRatelimited())
             {
                 if (comicid < XKCDLastPage.Value && comicid > 0)
-                    return JsonConvert.DeserializeObject<XKCDComic>((await ReturnStringAsync(new Uri($"https://xkcd.com/{comicid}/info.0.json"))));
+                    return JsonConvert.DeserializeObject<XKCDComic>(await HttpWebClient.ReturnStringAsync(new Uri($"https://xkcd.com/{comicid}/info.0.json")).ConfigureAwait(false));
                 else
-                    return JsonConvert.DeserializeObject<XKCDComic>((await ReturnStringAsync(new Uri($"https://xkcd.com/{XKCDLastPage.Value}/info.0.json"))));
+                    return JsonConvert.DeserializeObject<XKCDComic>(await HttpWebClient.ReturnStringAsync(new Uri($"https://xkcd.com/{XKCDLastPage.Value}/info.0.json")).ConfigureAwait(false));
             }
             else
             {

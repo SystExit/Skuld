@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Skuld.APIS
 {
-    public class NASAClient : BaseClient
+    public class NASAClient
     {
         private readonly RateLimiter rateLimiter;
         private readonly string token;
@@ -21,7 +21,7 @@ namespace Skuld.APIS
         private int OpportunityMaxSOL = 0;
         private int SpiritMaxSOL = 0;
 
-        public NASAClient(string tok) : base()
+        public NASAClient(string tok)
         {
             rateLimiter = new RateLimiter();
             token = tok;
@@ -34,7 +34,7 @@ namespace Skuld.APIS
 
             //Curiosity
             var client = (HttpWebRequest)WebRequest.Create(CuriosityEndpoint + $"?api_key={token}");
-            client.Headers.Add(HttpRequestHeader.UserAgent, UAGENT);
+            client.Headers.Add(HttpRequestHeader.UserAgent, HttpWebClient.UAGENT);
 
             var response = (HttpWebResponse)await client.GetResponseAsync().ConfigureAwait(false);
 
@@ -50,7 +50,7 @@ namespace Skuld.APIS
 
             //Opportunity
             client = (HttpWebRequest)WebRequest.Create(OpportunityEndpoint + $"?api_key={token}");
-            client.Headers.Add(HttpRequestHeader.UserAgent, UAGENT);
+            client.Headers.Add(HttpRequestHeader.UserAgent, HttpWebClient.UAGENT);
 
             response = (HttpWebResponse)await client.GetResponseAsync().ConfigureAwait(false);
 
@@ -66,7 +66,7 @@ namespace Skuld.APIS
 
             //Spirit
             client = (HttpWebRequest)WebRequest.Create(SpiritEndpoint + $"?api_key={token}");
-            client.Headers.Add(HttpRequestHeader.UserAgent, UAGENT);
+            client.Headers.Add(HttpRequestHeader.UserAgent, HttpWebClient.UAGENT);
 
             response = (HttpWebResponse)await client.GetResponseAsync().ConfigureAwait(false);
 
@@ -86,7 +86,7 @@ namespace Skuld.APIS
             if (rateLimiter.IsRatelimited()) return null;
 
             var client = (HttpWebRequest)WebRequest.Create("https://api.nasa.gov/planetary/apod?api_key=" + token);
-            client.Headers.Add(HttpRequestHeader.UserAgent, UAGENT);
+            client.Headers.Add(HttpRequestHeader.UserAgent, HttpWebClient.UAGENT);
 
             var response = (HttpWebResponse)await client.GetResponseAsync().ConfigureAwait(false);
             int remainingcalls = 0;
@@ -140,7 +140,7 @@ namespace Skuld.APIS
             string request = requestbase += $"/photos?sol={SOL}&camera={camera.ToString().ToLowerInvariant()}&api_key={token}";
 
             var client = (HttpWebRequest)WebRequest.Create(request);
-            client.Headers.Add(HttpRequestHeader.UserAgent, UAGENT);
+            client.Headers.Add(HttpRequestHeader.UserAgent, HttpWebClient.UAGENT);
 
             var response = (HttpWebResponse)await client.GetResponseAsync().ConfigureAwait(false);
             int remainingcalls = 0;

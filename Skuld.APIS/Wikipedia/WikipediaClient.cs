@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace Skuld.APIS
 {
-    public class WikipediaClient : BaseClient
+    public class WikipediaClient
     {
         private readonly RateLimiter rateLimiter;
 
-        public WikipediaClient() : base()
+        public WikipediaClient()
         {
             rateLimiter = new RateLimiter();
         }
@@ -19,7 +19,7 @@ namespace Skuld.APIS
         {
             if (rateLimiter.IsRatelimited()) return null;
 
-            var jsonresp = JObject.Parse((await ReturnStringAsync(new Uri($"https://{language}.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles={name}"))));
+            var jsonresp = JObject.Parse(await HttpWebClient.ReturnStringAsync(new Uri($"https://{language}.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles={name}")).ConfigureAwait(false));
             dynamic item = jsonresp["query"]["pages"].First.First;
             string desc = Convert.ToString(item["extract"]);
             var article = new WikipediaArticle

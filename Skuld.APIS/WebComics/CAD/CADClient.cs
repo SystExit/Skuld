@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace Skuld.APIS.WebComics.CAD
 {
-    public class CADClient : BaseClient
+    public class CADClient
     {
         private readonly RateLimiter rateLimiter;
 
-        public CADClient() : base()
+        public CADClient()
         {
             rateLimiter = new RateLimiter();
         }
@@ -18,7 +18,7 @@ namespace Skuld.APIS.WebComics.CAD
         public async Task<CADComic> GetComicAsync()
         {
             if (rateLimiter.IsRatelimited()) return null;
-            (var doc, var redirect) = await ScrapeUrlAsync(new Uri("https://cad-comic.com/random")).ConfigureAwait(false);
+            (var doc, var redirect) = await HttpWebClient.ScrapeUrlAsync(new Uri("https://cad-comic.com/random")).ConfigureAwait(false);
 
             var html = doc.DocumentNode.ChildNodes.FirstOrDefault(x => x.Name == "html");
             var body = html.ChildNodes.FirstOrDefault(x => x.Name == "body");

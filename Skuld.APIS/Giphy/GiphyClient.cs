@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace Skuld.APIS
 {
-    public class GiphyClient : BaseClient
+    public class GiphyClient
     {
         private readonly RateLimiter rateLimiter;
         private readonly Random random;
 
-        public GiphyClient() : base()
+        public GiphyClient()
         {
             rateLimiter = new RateLimiter();
             random = new Random();
@@ -22,7 +22,7 @@ namespace Skuld.APIS
             if (rateLimiter.IsRatelimited()) return null;
 
             query = query.Replace(" ", "%20");
-            var rawresp = await ReturnStringAsync(new Uri($"https://api.giphy.com/v1/gifs/search?q={query}&api_key=dc6zaTOxFJmzC"));
+            var rawresp = await HttpWebClient.ReturnStringAsync(new Uri($"https://api.giphy.com/v1/gifs/search?q={query}&api_key=dc6zaTOxFJmzC")).ConfigureAwait(false);
             var jsonresp = JObject.Parse(rawresp);
             var photo = (JArray)jsonresp["data"];
             dynamic item = photo[random.Next(0, photo.Count)];

@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace Skuld.APIS.WebComics.Explosm
 {
-    public class ExplosmClient : BaseClient
+    public class ExplosmClient
     {
         private readonly RateLimiter rateLimiter;
 
-        public ExplosmClient() : base()
+        public ExplosmClient()
         {
             rateLimiter = new RateLimiter();
         }
@@ -20,7 +20,7 @@ namespace Skuld.APIS.WebComics.Explosm
         {
             if (rateLimiter.IsRatelimited()) return null;
 
-            (var doc, var redirect) = await ScrapeUrlAsync(new Uri("http://explosm.net/comics/random")).ConfigureAwait(false);
+            (var doc, var redirect) = await HttpWebClient.ScrapeUrlAsync(new Uri("http://explosm.net/comics/random")).ConfigureAwait(false);
 
             var html = doc.DocumentNode.ChildNodes.FirstOrDefault(x => x.Name == "html");
             var body = html.ChildNodes.FirstOrDefault(x => x.Name == "body");

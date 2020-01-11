@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace Skuld.APIS.Social.Reddit
 {
-    public class RedditClient : BaseClient
+    public class RedditClient
     {
         private readonly RateLimiter rateLimiter;
 
-        public RedditClient() : base()
+        public RedditClient()
         {
             rateLimiter = new RateLimiter();
         }
@@ -27,7 +27,7 @@ namespace Skuld.APIS.Social.Reddit
 
                 Log.Verbose("RedditGet", $"Attempting to access {subRedditName} for {amountOfPosts} posts");
                 var uri = new Uri("https://www.reddit.com/" + subRedditName + "/.json?limit=" + amountOfPosts);
-                var response = await ReturnStringAsync(uri);
+                var response = await HttpWebClient.ReturnStringAsync(uri);
                 if (!string.IsNullOrEmpty(response) || !string.IsNullOrWhiteSpace(response))
                 {
                     Log.Verbose("RedditGet", "I got a response from " + subRedditName);

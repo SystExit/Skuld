@@ -12,7 +12,7 @@ using System.Collections.Generic;
 
 namespace Skuld.APIS.Extensions
 {
-    public static class APIS
+    public static class APIExtensions
     {
         private static readonly Random rnd = new Random((int)ConversionTools.GetEpochMs());
 

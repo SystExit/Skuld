@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Skuld.APIS
 {
-    public class AnimalClient : BaseClient
+    public class AnimalClient
     {
         private readonly Uri BIRDAPI = new Uri("https://random.birb.pw/tweet.json/");
         private readonly Uri KITTYAPI = new Uri("https://aws.random.cat/meow");
@@ -19,7 +19,7 @@ namespace Skuld.APIS
         private readonly RateLimiter birdrateLimiter;
         private readonly RateLimiter dograteLimiter;
 
-        public AnimalClient() : base()
+        public AnimalClient()
         {
             cat1rateLimiter = new RateLimiter();
             cat2rateLimiter = new RateLimiter();
@@ -48,7 +48,7 @@ namespace Skuld.APIS
         {
             if (birdrateLimiter.IsRatelimited()) return null;
 
-            var rawresp = await ReturnStringAsync(BIRDAPI).ConfigureAwait(false);
+            var rawresp = await HttpWebClient.ReturnStringAsync(BIRDAPI).ConfigureAwait(false);
             dynamic data = JsonConvert.DeserializeObject(rawresp);
             var birb = data["file"];
             if (birb == null) return null;
@@ -61,7 +61,7 @@ namespace Skuld.APIS
             {
                 if (cat1rateLimiter.IsRatelimited()) return null;
 
-                var rawresp = await ReturnStringAsync(KITTYAPI).ConfigureAwait(false);
+                var rawresp = await HttpWebClient.ReturnStringAsync(KITTYAPI).ConfigureAwait(false);
                 dynamic item = JsonConvert.DeserializeObject(rawresp);
                 var img = item["file"];
                 if (img == null) return "https://i.ytimg.com/vi/29AcbY5ahGo/hqdefault.jpg";
@@ -75,7 +75,7 @@ namespace Skuld.APIS
                     if (cat2rateLimiter.IsRatelimited()) return null;
 
                     var webcli = (HttpWebRequest)WebRequest.Create(KITTYAPI2);
-                    webcli.Headers.Add(HttpRequestHeader.UserAgent, UAGENT);
+                    webcli.Headers.Add(HttpRequestHeader.UserAgent, HttpWebClient.UAGENT);
                     webcli.AllowAutoRedirect = true;
                     WebResponse resp = await webcli.GetResponseAsync().ConfigureAwait(false);
                     if (resp != null)
@@ -99,7 +99,7 @@ namespace Skuld.APIS
             {
                 if (dograteLimiter.IsRatelimited()) return null;
 
-                var resp = await ReturnStringAsync(DOGGOAPI).ConfigureAwait(false);
+                var resp = await HttpWebClient.ReturnStringAsync(DOGGOAPI).ConfigureAwait(false);
                 if (resp == null) return "https://i.imgur.com/ZSMi3Zt.jpg";
                 return "https://random.dog/" + resp;
             }

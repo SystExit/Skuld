@@ -36,7 +36,7 @@ namespace Skuld.Bot.Services
         public static WebSocketService WebSocket;
         public static IServiceProvider Services;
 
-        static VoiceExpService voiceService;
+        private static VoiceExpService voiceService;
 
         public static async Task CreateAsync(string[] args = null)
         {
@@ -55,7 +55,7 @@ namespace Skuld.Bot.Services
 
                     var configId = SkuldAppContext.GetEnvVar(Utils.ConfigEnvVar);
 
-                    var c = database.Configurations.FirstOrDefault(x=>x.Id == configId);
+                    var c = database.Configurations.FirstOrDefault(x => x.Id == configId);
 
                     Configuration = c ?? database.Configurations.FirstOrDefault();
 
@@ -90,7 +90,7 @@ namespace Skuld.Bot.Services
                         CaseSensitiveCommands = false,
                         DefaultRunMode = DiscordNetCommands.RunMode.Async,
                         LogLevel = LogSeverity.Verbose
-                    }, 
+                    },
                     new MessageServiceConfig
                     {
                         Prefix = Configuration.Prefix,
@@ -148,7 +148,7 @@ namespace Skuld.Bot.Services
                 ClientId = new Utf8String(Configuration.TwitchClientID)
             };
 
-            APIS.SearchClient.Configure(Configuration);
+            APIS.SearchClient.Configure(Configuration.GoogleAPI, Configuration.GoogleCx, Configuration.ImgurClientID, Configuration.ImgurClientSecret);
         }
 
         private static async Task InstallServicesAsync()
@@ -165,7 +165,6 @@ namespace Skuld.Bot.Services
                     .AddSingleton<ISSClient>()
                     .AddSingleton<SocialAPIS>()
                     .AddSingleton<SteamStore>()
-                    .AddSingleton<BaseClient>()
                     .AddSingleton<IqdbClient>()
                     .AddSingleton<BooruClient>()
                     .AddSingleton<GiphyClient>()

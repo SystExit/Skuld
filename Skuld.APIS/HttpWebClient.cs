@@ -11,15 +11,11 @@ using System.Threading.Tasks;
 
 namespace Skuld.APIS
 {
-    public class BaseClient
+    public static class HttpWebClient
     {
-        public BaseClient()
-        {
-        }
-
         public static string UAGENT = "Mozilla/5.0 (compatible; SkuldBot/" + SkuldAppContext.Skuld.Key.Version.ToString().Substring(0, 3) + "; +https://github.com/Skuldbot/Skuld/)";
 
-        public HttpWebRequest CreateWebRequest(Uri uri, byte[] auth = null)
+        public static HttpWebRequest CreateWebRequest(Uri uri, byte[] auth = null)
         {
             var returncli = (HttpWebRequest)WebRequest.Create(uri);
             if (auth != null)
@@ -35,7 +31,9 @@ namespace Skuld.APIS
             return returncli;
         }
 
-        public async Task<string> ReturnStringAsync(Uri url, byte[] headers = null)
+        #region Get
+
+        public static async Task<string> ReturnStringAsync(Uri url, byte[] headers = null)
         {
             try
             {
@@ -65,7 +63,7 @@ namespace Skuld.APIS
             }
         }
 
-        public async Task<byte[]> ReturnByteArrayAsync(Uri url, byte[] headers = null)
+        public static async Task<byte[]> ReturnByteArrayAsync(Uri url, byte[] headers = null)
         {
             try
             {
@@ -96,7 +94,7 @@ namespace Skuld.APIS
             }
         }
 
-        public async Task<Stream> ReturnStreamAsync(Uri url, byte[] headers = null)
+        public static async Task<Stream> ReturnStreamAsync(Uri url, byte[] headers = null)
         {
             try
             {
@@ -127,7 +125,7 @@ namespace Skuld.APIS
             }
         }
 
-        public async Task<(HtmlDocument, Uri)> ScrapeUrlAsync(Uri url)
+        public static async Task<(HtmlDocument, Uri)> ScrapeUrlAsync(Uri url)
         {
             try
             {
@@ -137,7 +135,7 @@ namespace Skuld.APIS
 
                 try
                 {
-                    var response = (HttpWebResponse)await request.GetResponseAsync();
+                    var response = (HttpWebResponse)await request.GetResponseAsync().ConfigureAwait(false);
                     var doc = new HtmlDocument();
                     if (response.StatusCode == HttpStatusCode.OK)
                     {
@@ -170,7 +168,7 @@ namespace Skuld.APIS
             }
         }
 
-        public async Task<string> DownloadFileAsync(Uri url, string filepath)
+        public static async Task<string> DownloadFileAsync(Uri url, string filepath)
         {
             var client = new WebClient();
             client.Headers.Add("User-Agent", UAGENT);
@@ -180,17 +178,21 @@ namespace Skuld.APIS
             return filepath;
         }
 
-        public async Task<string> PostStringAsync(Uri url, HttpContent content)
+        #endregion Get
+
+        #region Post
+
+        public static async Task<string> PostStringAsync(Uri url, HttpContent content)
         {
             using HttpClient client = new HttpClient();
             client.DefaultRequestHeaders.Add("User-Agent", UAGENT);
             client.DefaultRequestHeaders.CacheControl = CacheControlHeaderValue.Parse("no-cache");
 
-            using HttpResponseMessage resp = await client.PostAsync(url, content);
+            using HttpResponseMessage resp = await client.PostAsync(url, content).ConfigureAwait(false);
             if (resp.IsSuccessStatusCode)
             {
                 StatsdClient.DogStatsd.Increment("web.post");
-                return await resp.Content.ReadAsStringAsync();
+                return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
             }
             else
             {
@@ -198,7 +200,7 @@ namespace Skuld.APIS
             }
         }
 
-        public async Task<Stream> PostStreamAsync(Uri url, HttpContent content)
+        public static async Task<Stream> PostStreamAsync(Uri url, HttpContent content)
         {
             using HttpClient client = new HttpClient();
             client.DefaultRequestHeaders.Add("User-Agent", UAGENT);
@@ -216,7 +218,7 @@ namespace Skuld.APIS
             }
         }
 
-        public async Task<byte[]> PostByteArrayAsync(Uri url, HttpContent content)
+        public static async Task<byte[]> PostByteArrayAsync(Uri url, HttpContent content)
         {
             using HttpClient client = new HttpClient();
 
@@ -234,5 +236,7 @@ namespace Skuld.APIS
                 return null;
             }
         }
+
+        #endregion Post
     }
 }

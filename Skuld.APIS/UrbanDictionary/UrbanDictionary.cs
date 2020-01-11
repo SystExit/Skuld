@@ -7,14 +7,14 @@ using System.Threading.Tasks;
 
 namespace Skuld.APIS
 {
-    public class UrbanDictionaryClient : BaseClient
+    public class UrbanDictionaryClient
     {
         private static readonly Uri RandomEndpoint = new Uri("http://api.urbandictionary.com/v0/random");
         private static readonly Uri QueryEndPoint = new Uri("http://api.urbandictionary.com/v0/define?term=");
 
         private readonly RateLimiter rateLimiter;
 
-        public UrbanDictionaryClient() : base()
+        public UrbanDictionaryClient()
         {
             rateLimiter = new RateLimiter();
         }
@@ -23,7 +23,7 @@ namespace Skuld.APIS
         {
             if (rateLimiter.IsRatelimited()) return null;
 
-            var raw = await ReturnStringAsync(RandomEndpoint).ConfigureAwait(false);
+            var raw = await HttpWebClient.ReturnStringAsync(RandomEndpoint).ConfigureAwait(false);
             return JsonConvert.DeserializeObject<UrbanWord>(raw);
         }
 
@@ -31,8 +31,7 @@ namespace Skuld.APIS
         {
             if (rateLimiter.IsRatelimited()) return null;
 
-            var raw = await ReturnStringAsync(new Uri(QueryEndPoint + phrase)).ConfigureAwait(false);
-
+            var raw = await HttpWebClient.ReturnStringAsync(new Uri(QueryEndPoint + phrase)).ConfigureAwait(false);
             return JsonConvert.DeserializeObject<UrbanWordContainer>(raw).List.RandomValue();
         }
     }

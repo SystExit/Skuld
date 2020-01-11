@@ -1,15 +1,13 @@
-﻿using Discord;
-using Discord.Commands;
-using Google.Apis.Customsearch.v1;
+﻿using Google.Apis.Customsearch.v1;
+using Google.Apis.Customsearch.v1.Data;
 using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Imgur.API.Models;
 using Imgur.API.Models.Impl;
 using Skuld.Core.Extensions;
-using Skuld.Core.Extensions.Discord;
-using Skuld.Core.Generic.Models;
 using Skuld.Core.Utilities;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using YoutubeExplode;
@@ -21,15 +19,15 @@ namespace Skuld.APIS
         public static CustomsearchService GoogleSearchService;
         public static YoutubeClient Youtube;
         public static ImgurClient ImgurClient;
-        public static SkuldConfig Configuration;
+        private static string GoogleCxKey;
 
-        public static void Configure(SkuldConfig conf)
+        public static void Configure(string GoogleAPIKey, string GoogleCx, string imgurClientID, string imgurClientSecret)
         {
-            Configuration = conf;
+            GoogleCxKey = GoogleCx;
             GoogleSearchService = new CustomsearchService();
-            ImgurClient = new ImgurClient(conf.ImgurClientID, conf.ImgurClientSecret);
+            ImgurClient = new ImgurClient(imgurClientID, imgurClientSecret);
             Youtube = new YoutubeClient();
-            GoogleSearchService = new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer { ApiKey = Configuration.GoogleAPI, ApplicationName = "Skuld" });
+            GoogleSearchService = new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer { ApiKey = GoogleAPIKey, ApplicationName = "Skuld" });
         }
 
         public static async Task<string> SearchImgurAsync(string query)
@@ -37,7 +35,7 @@ namespace Skuld.APIS
             try
             {
                 var endpoint = new GalleryEndpoint(ImgurClient);
-                var images = await endpoint.SearchGalleryAsync(query);
+                var images = await endpoint.SearchGalleryAsync(query).ConfigureAwait(false);
                 var albm = images.RandomValue();
                 dynamic album = null;
                 if (albm is GalleryImage)
@@ -121,12 +119,12 @@ namespace Skuld.APIS
             }
         }
 
-        public static async Task<EmbedBuilder> SearchGoogleAsync(string query, ICommandContext context)
+        public static async Task<IReadOnlyCollection<Result>> SearchGoogleAsync(string query)
         {
             try
             {
                 var listRequest = GoogleSearchService.Cse.List(query);
-                listRequest.Cx = Configuration.GoogleCx;
+                listRequest.Cx = GoogleCxKey;
                 listRequest.Safe = CseResource.ListRequest.SafeEnum.High;
                 var search = await listRequest.ExecuteAsync();
                 var items = search.Items;
@@ -136,39 +134,27 @@ namespace Skuld.APIS
                     var item2 = items.ElementAtOrDefault(1);
                     var item3 = items.ElementAtOrDefault(2);
 
-                    string desc = "I found this:\n" +
-                            $"**{item.Title}**\n" +
-                            $"<{item.Link}>\n\n" +
-                            "__**Also Relevant**__\n" +
-                            $"**{item2.Title}**\n<{item2.Link}>\n\n" +
-                            $"**{item3.Title}**\n<{item3.Link}>\n\n" +
-                            "If I didn't find what you're looking for, use this link:\n" +
-                            $"https://google.com/search?q={query.Replace(" ", "%20")}";
-
-                    var embed = new EmbedBuilder()
-                        .WithAuthor(new EmbedAuthorBuilder()
-                            .WithName($"Google search for: {query}")
-                            .WithIconUrl("https://upload.wikimedia.org/wikipedia/commons/0/09/IOS_Google_icon.png")
-                            .WithUrl($"https://google.com/search?q={query.Replace(" ", "%20")}")
-                        )
-                        .WithDescription(desc)
-                        .WithRandomColor();
-
-                    return embed;
+                    return new List<Result>
+                    {
+                        item,
+                        item2,
+                        item3
+                    }.AsReadOnly();
                 }
                 else
                 {
                     StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
 
-                    return EmbedExtensions.FromError($"I couldn't find anything matching: `{query}`, please try again.", context);
+                    return null;
                 }
             }
             catch (Exception ex)
             {
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "exception" });
+
                 Log.Error("GogSrch", "Error with google search", ex);
 
-                return EmbedExtensions.FromError("Something happened, please try again", context);
+                return null;
             }
         }
     }
