@@ -274,7 +274,7 @@ namespace Skuld.Bot.Commands
             await EmbedExtensions.FromSuccess($"Set the icon to: `{guild.MoneyIcon}` & the name to: `{guild.MoneyName}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
-        #endregion GeneralManagement
+        #endregion
 
         #region Mute/Prune
 
@@ -295,7 +295,7 @@ namespace Skuld.Bot.Commands
             {
                 if (gld.MutedRole == 0)
                 {
-                    var role = await guild.CreateRoleAsync("Muted", GuildPermissions.None).ConfigureAwait(false);
+                    var role = await guild.CreateRoleAsync("Muted", GuildPermissions.None, color: null, false, false).ConfigureAwait(false);
                     foreach (var chan in channels)
                     {
                         await chan.AddPermissionOverwriteAsync(role, OverwritePermissions.DenyAll(chan)).ConfigureAwait(false);
@@ -569,7 +569,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        #endregion Ban/Kick
+        #endregion
 
         #region RoleManagement
 
