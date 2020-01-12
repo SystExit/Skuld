@@ -54,7 +54,8 @@ namespace Skuld.Bot.Extensions
             return embed.Build();
         }
 
-        public static IList<string> PaginateList(this IReadOnlyList<MemeEndpoints> list)
+        #region Pagination
+        public static IList<string> PaginateList(this IReadOnlyList<MemeEndpoints> list, int pagehoist = 10)
         {
             var pages = new List<string>();
             string pagetext = "";
@@ -65,7 +66,7 @@ namespace Skuld.Bot.Extensions
 
                 pagetext += $"Template: {obj.Name} | Required Sources: {obj.RequiredSources}\n";
 
-                if ((x + 1) % 10 == 0 || (x + 1) == list.Count)
+                if ((x + 1) % pagehoist == 0 || (x + 1) == list.Count)
                 {
                     pages.Add(pagetext);
                     pagetext = "";
@@ -75,7 +76,7 @@ namespace Skuld.Bot.Extensions
             return pages;
         }
 
-        public static IList<string> Paginate(this IReadOnlyList<IAmRole> roles, Guild sguild, IGuild guild, IGuildUser user)
+        public static IList<string> Paginate(this IReadOnlyList<IAmRole> roles, Guild sguild, IGuild guild, IGuildUser user, int pagehoist = 10)
         {
             if (sguild == null || guild == null) return null;
 
@@ -112,7 +113,7 @@ namespace Skuld.Bot.Extensions
                     s.Append(sl.ToString().Substring(0, sl.Length - 3));
                 }
 
-                if ((x + 1) % 10 == 0 || (x + 1) == roles.Count)
+                if ((x + 1) % pagehoist == 0 || (x + 1) == roles.Count)
                 {
                     pages.Add(s.ToString());
                     s.Clear();
@@ -125,5 +126,6 @@ namespace Skuld.Bot.Extensions
 
             return pages;
         }
+        #endregion
     }
 }
