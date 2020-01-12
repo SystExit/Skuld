@@ -311,13 +311,13 @@ namespace Skuld.Discord.Services
 
                 if (database.LevelRewards.Any(x => x.RoleId == arg.Id))
                 {
-                    database.LevelRewards.RemoveRange(database.LevelRewards.Where(x => x.RoleId == arg.Id));
+                    database.LevelRewards.RemoveRange(database.LevelRewards.AsQueryable().Where(x => x.RoleId == arg.Id));
 
                     await database.SaveChangesAsync().ConfigureAwait(false);
                 }
             }
 
-            #endregion LevelRewards
+            #endregion
 
             #region IAmRoles
 
@@ -326,7 +326,7 @@ namespace Skuld.Discord.Services
 
                 if (database.IAmRoles.Any(x => x.RoleId == arg.Id))
                 {
-                    database.IAmRoles.RemoveRange(database.IAmRoles.Where(x => x.RoleId == arg.Id));
+                    database.IAmRoles.RemoveRange(database.IAmRoles.AsQueryable().Where(x => x.RoleId == arg.Id));
 
                     await database.SaveChangesAsync().ConfigureAwait(false);
                 }
@@ -337,7 +337,7 @@ namespace Skuld.Discord.Services
 
                 if (database.IAmRoles.Any(x => x.RequiredRoleId == arg.Id))
                 {
-                    foreach (var role in database.IAmRoles.Where(x => x.RequiredRoleId == arg.Id))
+                    foreach (var role in database.IAmRoles.AsQueryable().Where(x => x.RequiredRoleId == arg.Id))
                     {
                         role.RequiredRoleId = 0;
                     }
@@ -346,7 +346,7 @@ namespace Skuld.Discord.Services
                 }
             }
 
-            #endregion IAmRoles
+            #endregion
 
             Log.Verbose(Key, $"{arg} deleted in {arg.Guild}");
         }

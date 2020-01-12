@@ -40,24 +40,24 @@ namespace Skuld.Core.Models
 
         public async Task DropGuildAsync(ulong guildId)
         {
-            Guilds.Remove(await Guilds.FirstAsync(x => x.Id == guildId).ConfigureAwait(false));
+            Guilds.Remove(await Guilds.AsQueryable().FirstAsync(x => x.Id == guildId).ConfigureAwait(false));
 
-            Modules.Remove(await Modules.FirstAsync(x => x.Id == guildId).ConfigureAwait(false));
-            IAmRoles.RemoveRange(IAmRoles.Where(x => x.GuildId == guildId));
-            Features.Remove(await Features.FirstAsync(x => x.Id == guildId).ConfigureAwait(false));
-            CustomCommands.RemoveRange(CustomCommands.Where(x => x.GuildId == guildId));
-            UserXp.RemoveRange(UserXp.Where(x => x.GuildId == guildId));
+            Modules.Remove(await Modules.AsQueryable().FirstAsync(x => x.Id == guildId).ConfigureAwait(false));
+            IAmRoles.RemoveRange(IAmRoles.AsQueryable().Where(x => x.GuildId == guildId));
+            Features.Remove(await Features.AsQueryable().FirstAsync(x => x.Id == guildId).ConfigureAwait(false));
+            CustomCommands.RemoveRange(CustomCommands.AsQueryable().Where(x => x.GuildId == guildId));
+            UserXp.RemoveRange(UserXp.AsQueryable().Where(x => x.GuildId == guildId));
 
             await SaveChangesAsync().ConfigureAwait(false);
         }
 
         public async Task DropUserAsync(ulong userId)
         {
-            Users.Remove(await Users.FirstAsync(x => x.Id == userId).ConfigureAwait(false));
-            Pastas.RemoveRange(Pastas.Where(x => x.OwnerId == userId));
-            UserCommandUsage.RemoveRange(UserCommandUsage.Where(x => x.UserId == userId));
-            Reputations.RemoveRange(Reputations.Where(x => x.Repee == userId || x.Reper == userId));
-            UserXp.RemoveRange(UserXp.Where(x => x.UserId == userId));
+            Users.Remove(await Users.AsQueryable().FirstAsync(x => x.Id == userId).ConfigureAwait(false));
+            Pastas.RemoveRange(Pastas.AsQueryable().Where(x => x.OwnerId == userId));
+            UserCommandUsage.RemoveRange(UserCommandUsage.AsQueryable().Where(x => x.UserId == userId));
+            Reputations.RemoveRange(Reputations.AsQueryable().Where(x => x.Repee == userId || x.Reper == userId));
+            UserXp.RemoveRange(UserXp.AsQueryable().Where(x => x.UserId == userId));
 
             await SaveChangesAsync().ConfigureAwait(false);
         }
@@ -111,7 +111,7 @@ namespace Skuld.Core.Models
 
             if (Pastas != null && Pastas.Count() > 0)
             {
-                var ownedpastas = Pastas.Where(x => x.OwnerId == UserId);
+                var ownedpastas = Pastas.AsQueryable().Where(x => x.OwnerId == UserId);
                 var pastaVotes = new List<PastaVotes>();
 
                 foreach (var pasta in ownedpastas)
@@ -287,9 +287,9 @@ namespace Skuld.Core.Models
         public async Task<SkuldConfig> GetConfigAsync(string configId = null)
         {
             if (configId == null)
-                return await Configurations.FirstOrDefaultAsync().ConfigureAwait(false);
+                return await Configurations.AsQueryable().FirstOrDefaultAsync().ConfigureAwait(false);
             else
-                return await Configurations.FirstOrDefaultAsync(x => x.Id == configId).ConfigureAwait(false);
+                return await Configurations.AsQueryable().FirstOrDefaultAsync(x => x.Id == configId).ConfigureAwait(false);
         }
     }
 }

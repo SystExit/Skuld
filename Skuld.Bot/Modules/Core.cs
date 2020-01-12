@@ -80,7 +80,7 @@ namespace Skuld.Bot.Commands
 
                     if (await Database.GetGuildAsync(Context.Guild) != null)
                     {
-                        var commands = Database.CustomCommands.Where(x => x.GuildId == Context.Guild.Id);
+                        var commands = Database.CustomCommands.AsQueryable().Where(x => x.GuildId == Context.Guild.Id);
                         if (commands.Count() > 0)
                         {
                             string commandsText = "";

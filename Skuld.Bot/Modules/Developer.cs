@@ -408,8 +408,8 @@ namespace Skuld.Bot.Commands
                 {
                     using var db = new SkuldDbContextFactory().CreateDbContext();
 
-                    var repee = db.Reputations.Where(x => x.Repee == oldId);
-                    var reper = db.Reputations.Where(x => x.Reper == oldId);
+                    var repee = db.Reputations.AsQueryable().Where(x => x.Repee == oldId);
+                    var reper = db.Reputations.AsQueryable().Where(x => x.Reper == oldId);
 
                     if (repee.Any())
                     {
@@ -443,7 +443,7 @@ namespace Skuld.Bot.Commands
                 {
                     using var db = new SkuldDbContextFactory().CreateDbContext();
 
-                    var pastas = db.Pastas.Where(x => x.OwnerId == oldId);
+                    var pastas = db.Pastas.AsQueryable().Where(x => x.OwnerId == oldId);
 
                     if (pastas.Any())
                     {
@@ -466,7 +466,7 @@ namespace Skuld.Bot.Commands
                 {
                     using var db = new SkuldDbContextFactory().CreateDbContext();
 
-                    var commands = db.UserCommandUsage.Where(x => x.UserId == oldId);
+                    var commands = db.UserCommandUsage.AsQueryable().Where(x => x.UserId == oldId);
 
                     if (commands.Any())
                     {
@@ -483,7 +483,7 @@ namespace Skuld.Bot.Commands
                 {
                     using var db = new SkuldDbContextFactory().CreateDbContext();
 
-                    var experiences = db.UserXp.Where(x => x.UserId == oldId);
+                    var experiences = db.UserXp.AsQueryable().Where(x => x.UserId == oldId);
 
                     if (experiences.Any())
                     {

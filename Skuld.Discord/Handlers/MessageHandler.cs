@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using NodaTime;
 using Skuld.Core.Extensions;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
@@ -48,6 +49,7 @@ namespace Skuld.Discord.Handlers
                 CommandService.AddTypeReader<Emoji>(new EmojiTypeReader());
                 CommandService.AddTypeReader<IPAddress>(new IPAddressTypeReader());
                 CommandService.AddTypeReader<RoleConfig>(new RoleConfigTypeReader());
+                CommandService.AddTypeReader<DateTimeZone>(new DateTimeZoneTypeReader());
                 CommandService.AddTypeReader<GuildRoleConfig>(new GuildRoleConfigTypeReader());
                 await CommandService.AddModulesAsync(ModuleAssembly, ServiceProvider).ConfigureAwait(false);
 
@@ -273,7 +275,7 @@ namespace Skuld.Discord.Handlers
                         using var Database = new SkuldDbContextFactory().CreateDbContext();
 
                         luxp = Database.UserXp.FirstOrDefault(x => x.UserId == user.Id && x.GuildId == guild.Id);
-                        rewardsForGuild = Database.LevelRewards.Where(x => x.GuildId == guild.Id).ToList();
+                        rewardsForGuild = await Database.LevelRewards.AsAsyncEnumerable().Where(x => x.GuildId == guild.Id).ToListAsync();
                     }
 
                     string msg = sguild.LevelUpMessage;

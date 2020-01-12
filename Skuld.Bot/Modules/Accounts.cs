@@ -2,6 +2,7 @@
 using Discord.Commands;
 using ImageMagick;
 using Microsoft.EntityFrameworkCore.Internal;
+using NodaTime;
 using Skuld.APIS;
 using Skuld.Bot.Services;
 using Skuld.Core;
@@ -12,6 +13,7 @@ using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
 using Skuld.Discord.Utilities;
+using StatsdClient;
 using System;
 using System.IO;
 using System.Linq;
@@ -168,7 +170,7 @@ namespace Skuld.Bot.Commands
             var fontsize = new DrawableFontPointSize(20);
             var white = new DrawableFillColor(new MagickColor(65535, 65535, 65535));
 
-            var experiences = Database.UserXp.Where(x => x.UserId == profileuser.Id);
+            var experiences = await Database.UserXp.ToAsyncEnumerable().Where(x => x.UserId == profileuser.Id).ToListAsync();
 
             var exp = new UserExperience();
 
@@ -265,7 +267,7 @@ namespace Skuld.Bot.Commands
 
             //YLevel 2
             image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel2, $"Pasta Karma: {Database.GetPastaKarma(profileuser.Id).ToString("N0")}"));
-            var favcommand = Database.UserCommandUsage.Where(x => x.UserId == profileuser.Id).OrderByDescending(x => x.Usage).FirstOrDefault();
+            var favcommand = (await Database.UserCommandUsage.AsAsyncEnumerable().Where(x => x.UserId == profileuser.Id).OrderByDescending(x => x.Usage).ToListAsync()).FirstOrDefault();
             image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel2, $"Fav. Cmd: {(favcommand == null ? "N/A" : favcommand.Command)} ({(favcommand == null ? "0" : favcommand.Usage.ToString("N0"))})"));
 
             //YLevel 3
@@ -382,7 +384,7 @@ namespace Skuld.Bot.Commands
 
             var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
 
-            if (usr.Money - amount >= 0)
+            if (usr.Money >= amount)
             {
                 var usr2 = await Database.GetUserAsync(user).ConfigureAwait(false);
 
@@ -396,6 +398,9 @@ namespace Skuld.Bot.Commands
                 await
                     EmbedExtensions.FromMessage("Skuld Bank - Transaction", $"{Context.User.Mention} just gave {user.Mention} {dbGuild.MoneyIcon}{amount.ToString("N0")}", Context)
                     .QueueMessageAsync(Context).ConfigureAwait(false);
+
+                DogStatsd.Increment("skuld.bank.transactions");
+                DogStatsd.Increment("skuld.bank.money.transferred", (int)amount);
             }
             else
             {
@@ -506,7 +511,7 @@ namespace Skuld.Bot.Commands
             var fontmedd = new DrawableFontPointSize(26);
             var white = new DrawableFillColor(new MagickColor(65535, 65535, 65535));
 
-            var experiences = Database.UserXp.Where(x => x.GuildId == Context.Guild.Id);
+            var experiences = await Database.UserXp.ToAsyncEnumerable().Where(x => x.GuildId == Context.Guild.Id).ToListAsync();
 
             ulong index = 0;
 
@@ -604,7 +609,7 @@ namespace Skuld.Bot.Commands
 
                 if (count > 0)
                 {
-                    var ordered = Database.Reputations.OrderByDescending(x => x.Timestamp);
+                    var ordered = (await Database.Reputations.ToListAsync()).OrderByDescending(x => x.Timestamp);
                     var mostRecent = ordered.FirstOrDefault(x => x.Repee == Context.User.Id);
 
                     await $"Your repuation is at: {count}rep\nYour most recent rep was by {Context.Client.GetUser(mostRecent.Reper).FullName()} at {mostRecent.Timestamp.FromEpoch()}"
@@ -1041,6 +1046,25 @@ namespace Skuld.Bot.Commands
             outputStream.Position = 0;
 
             await "".QueueMessageAsync(Context, outputStream, type: Discord.Models.MessageType.File).ConfigureAwait(false);
+        }
+        
+        [Command("settimezone"), Summary("Sets your timezone")]
+        public async Task SetTimeZone([Remainder]DateTimeZone timezone)
+        {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var user = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+
+            user.TimeZone = timezone.Id;
+
+            await Database.SaveChangesAsync().ConfigureAwait(false);
+
+            await
+                new EmbedBuilder()
+                .AddFooter(Context)
+                .AddAuthor(Context.Client)
+                .WithDescription($"Set your timezone to: {timezone.Id}")
+            .QueueMessageAsync(Context).ConfigureAwait(false);
         }
     }
 }
