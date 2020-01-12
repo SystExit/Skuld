@@ -220,9 +220,9 @@ namespace Skuld.Bot.Commands
                             string suffix;
 
                             if (didWin)
-                                suffix = $"You Won! <:blobsquish:350681075296501760> Your money is now `{guild.MoneyIcon}{user.Money}`";
+                                suffix = $"You Won! <:blobsquish:350681075296501760> Your money is now {guild.MoneyIcon}`{user.Money}`";
                             else
-                                suffix = $"You Lost! <:blobcrying:662304318531305492> Your money is now `{guild.MoneyIcon}{user.Money}`";
+                                suffix = $"You Lost! <:blobcrying:662304318531305492> Your money is now {guild.MoneyIcon}`{user.Money}`";
 
                             await EmbedExtensions.FromImage(res.Item2, didWin ? Color.Green : Color.Red, Context)
                                 .WithDescription($"Result are: {Locale.GetLocale(user.Language).GetString(res.Item1)} {suffix}")
@@ -285,7 +285,7 @@ namespace Skuld.Bot.Commands
 
                             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                            await EmbedExtensions.FromError("Rock Paper Scissors", $"I draw {throwName} and... You lost, you now have `{MoneyPrefix}{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            await EmbedExtensions.FromError("Rock Paper Scissors", $"I draw {throwName} and... You lost, you now have {MoneyPrefix}`{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
 
@@ -298,7 +298,7 @@ namespace Skuld.Bot.Commands
 
                             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                            await EmbedExtensions.FromSuccess("Rock Paper Scissors", $"I draw {throwName} and... You won, you now have `{MoneyPrefix}{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            await EmbedExtensions.FromSuccess("Rock Paper Scissors", $"I draw {throwName} and... You won, you now have {MoneyPrefix}`{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
 
@@ -401,7 +401,7 @@ namespace Skuld.Bot.Commands
             return WinResult.Draw;
         }
 
-        #endregion Rock Paper Scissors
+        #endregion
 
         #region Slots
 
@@ -463,7 +463,7 @@ namespace Skuld.Bot.Commands
 
                 if (percentageMod == 0.0d)
                 {
-                    await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou lost {bet.Value.ToString("N0")}! You now have `{MoneyPrefix}{user.Money}`", Color.Red, Context).Build()).ConfigureAwait(false);
+                    await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou lost {bet.Value.ToString("N0")}! You now have {MoneyPrefix}`{user.Money}`", Color.Red, Context).Build()).ConfigureAwait(false);
                 }
                 else
                 {
@@ -471,7 +471,7 @@ namespace Skuld.Bot.Commands
 
                     await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                    await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou won {amount.ToString("N0")}! You now have `{MoneyPrefix}{user.Money}`", Color.Green, Context).Build()).ConfigureAwait(false);
+                    await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou won {amount.ToString("N0")}! You now have {MoneyPrefix}`{user.Money}`", Color.Green, Context).Build()).ConfigureAwait(false);
                 }
             }
             else
@@ -553,7 +553,7 @@ namespace Skuld.Bot.Commands
             return $"{GetStringRow(slots[0], false)}\n{GetStringRow(slots[1], true)}\n{GetStringRow(slots[2], false)}";
         }
 
-        #endregion Slots
+        #endregion
 
         #region Mia
 
@@ -678,6 +678,6 @@ namespace Skuld.Bot.Commands
                 return WinResult.Draw;
         }
 
-        #endregion Mia
+        #endregion
     }
 }

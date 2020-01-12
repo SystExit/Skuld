@@ -300,6 +300,12 @@ namespace Skuld.Core.Extensions
             return rtnstrng + "ago";
         }
 
+        public static string ToDMYString(this DateTime dateTime)
+            => dateTime.ToString("dd'/'MM'/'yyyy HH:mm:ss");
+
+        public static string ToDMYString(this DateTimeOffset dateTime)
+            => dateTime.ToString("dd'/'MM'/'yyyy HH:mm:ss");
+
         //https://gist.github.com/starquake/8d72f1e55c0176d8240ed336f92116e3
         public static string StripHtml(this string value)
         {

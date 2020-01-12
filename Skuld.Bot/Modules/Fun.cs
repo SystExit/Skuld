@@ -480,7 +480,7 @@ namespace Skuld.Bot.Commands
         public async Task Pasta(string title)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
-            var pastas = await Database.Pastas.ToListAsync();
+            var pastas = await Database.Pastas.AsQueryable().ToListAsync();
 
             switch (title.ToLowerInvariant())
             {
@@ -769,26 +769,6 @@ namespace Skuld.Bot.Commands
 
         #endregion Magik
 
-        #region Time
-
-        [Command("time"), Summary("Gets current time")]
-        public async Task Time()
-            => await new DateTimeOffset(DateTime.UtcNow).ToString().QueueMessageAsync(Context).ConfigureAwait(false);
-
-        [Command("time"), Summary("Gets time from utc with offset")]
-        public async Task Time(int offset)
-        {
-            var ofs = Convert.ToDouble(offset);
-            var ts = new TimeSpan();
-            var nts = ts.Add(TimeSpan.FromHours(ofs));
-            var dtOffset = new DateTimeOffset(DateTime.UtcNow);
-            var ndtof = dtOffset.ToOffset(nts);
-
-            await ndtof.ToString().QueueMessageAsync(Context).ConfigureAwait(false);
-        }
-
-        #endregion Time
-
         #region Jokes
 
         [Command("roast"), Summary("\"Roasts\" a user, these are all taken as jokes, and aren't actually meant to cause harm.")]
@@ -896,13 +876,14 @@ namespace Skuld.Bot.Commands
             {
                 var endpoints = JsonConvert.DeserializeObject<MemeResponse>(await HttpWebClient.ReturnStringAsync(new Uri("https://api.skuldbot.uk/fun/meme/?endpoints")).ConfigureAwait(false)).Endpoints;
 
-                var pages = endpoints.PaginateList();
+                var pages = endpoints.PaginateList(35);
 
                 int index = 0;
                 foreach (var page in pages)
                 {
-                    await EmbedExtensions.FromMessage("__Current Templates ({index+1}/{pages.Count})__", page, Context)
+                    await EmbedExtensions.FromMessage($"__Current Templates ({index+1}/{pages.Count})__", page, Context)
                         .QueueMessageAsync(Context).ConfigureAwait(false);
+                    index++;
                 }
 
                 return;
@@ -919,12 +900,12 @@ namespace Skuld.Bot.Commands
 
                 if (DiscordUtilities.UserMentionRegex.IsMatch(str))
                 {
-                    var userid = str.Replace("<@", "").Replace("<@!", "").Replace(">", "");
+                    var userid = str.Replace("<@!", "").Replace("<@", "").Replace(">", "");
                     ulong.TryParse(userid, out ulong useridl);
 
                     var user = Context.Guild.GetUser(useridl);
 
-                    imageLinks.Add(user.GetAvatarUrl() ?? user.GetDefaultAvatarUrl());
+                    imageLinks.Add(user.GetAvatarUrl(ImageFormat.Png, 1024) ?? user.GetDefaultAvatarUrl());
                 }
             }
 

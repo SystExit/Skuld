@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using NodaTime;
 using Skuld.Core.Extensions;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
@@ -87,8 +88,11 @@ namespace Skuld.Discord.Extensions
             return didLevelUp;
         }
 
-        public static EmbedBuilder GetWhois(this IUser user, IGuildUser guildUser, IReadOnlyCollection<ulong> roles, IDiscordClient Client, SkuldConfig Configuration)
+        public static async Task<EmbedBuilder> GetWhoisAsync(this IUser user, IGuildUser guildUser, IReadOnlyCollection<ulong> roles, IDiscordClient Client, SkuldConfig Configuration)
         {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+            var sUser = await Database.GetUserAsync(user).ConfigureAwait(false);
+
             string status;
             if (user.Activity != null)
             {
@@ -131,13 +135,20 @@ namespace Skuld.Discord.Extensions
                 embed.AddField(":shield: Roles", $"[{roles.Count}] Do `{Configuration.Prefix}roles` to see your roles");
             }
 
+            if (sUser.TimeZone != null)
+            {
+                var time = Instant.FromDateTimeUtc(DateTime.UtcNow).InZone(DateTimeZoneProviders.Tzdb.GetZoneOrNull(sUser.TimeZone)).ToDateTimeUnspecified().ToDMYString();
+
+                embed.AddField("Current Time", $"{time}\t`DD/MM/YYYY HH:mm:ss`");
+            }
+
             var createdatstring = user.CreatedAt.GetStringfromOffset(DateTime.UtcNow);
-            embed.AddField(":globe_with_meridians: Discord Join", user.CreatedAt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + $" ({createdatstring})\t`DD/MM/YYYY`");
+            embed.AddField(":globe_with_meridians: Discord Join", user.CreatedAt.ToDMYString() + $" ({createdatstring})\t`DD/MM/YYYY`");
 
             if (guildUser != null)
             {
                 var joinedatstring = guildUser.JoinedAt.Value.GetStringfromOffset(DateTime.UtcNow);
-                embed.AddField(":inbox_tray: Server Join", guildUser.JoinedAt.Value.ToString("dd'/'MM'/'yyyy hh:mm:ss tt") + $" ({joinedatstring})\t`DD/MM/YYYY`");
+                embed.AddField(":inbox_tray: Server Join", guildUser.JoinedAt.Value.ToDMYString() + $" ({joinedatstring})\t`DD/MM/YYYY`");
             }
 
             if (guildUser.PremiumSince.HasValue)
@@ -146,7 +157,7 @@ namespace Skuld.Discord.Extensions
 
                 var offsetString = guildUser.PremiumSince.Value.GetStringfromOffset(DateTime.UtcNow);
 
-                embed.AddField(DiscordTools.NitroBoostEmote + " Boosting Since", $"{(icon == null ? "" : icon + " ")}{guildUser.PremiumSince.Value.UtcDateTime.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")} ({offsetString})\t`DD/MM/YYYY`");
+                embed.AddField(DiscordTools.NitroBoostEmote + " Boosting Since", $"{(icon == null ? "" : icon + " ")}{guildUser.PremiumSince.Value.UtcDateTime.ToDMYString()} ({offsetString})\t`DD/MM/YYYY`");
             }
 
             return embed;

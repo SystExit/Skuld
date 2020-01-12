@@ -148,7 +148,7 @@ namespace Skuld.Bot.Commands
         [Command("screenshare"), Summary("Get's the screenshare channel link"), RequireContext(ContextType.Guild), RequireGuildVoiceChannel]
         [Alias("sc")]
         public async Task Screenshare()
-            => await $"https://discordapp.com/channels/{Context.Guild.Id}/{(Context.User as IGuildUser)?.VoiceChannel.Id}".QueueMessageAsync(Context).ConfigureAwait(false);
+            => await $"<https://discordapp.com/channels/{Context.Guild.Id}/{(Context.User as IGuildUser)?.VoiceChannel.Id}>".QueueMessageAsync(Context).ConfigureAwait(false);
 
         [Command("support"), Summary("Gives discord invite")]
         public async Task DevDisc()
@@ -297,7 +297,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                await Context.User.GetWhois(null, null, Context.Client, Configuration).QueueMessageAsync(Context).ConfigureAwait(false);
+                await (await Context.User.GetWhoisAsync(null, null, Context.Client, Configuration).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
         }
@@ -309,9 +309,13 @@ namespace Skuld.Bot.Commands
             {
                 if (whois == null)
                     whois = (IGuildUser)Context.User;
-            }
 
-            await whois.GetWhois(whois, whois.RoleIds, Context.Client, Configuration).QueueMessageAsync(Context).ConfigureAwait(false);
+                await (await whois.GetWhoisAsync(whois, whois.RoleIds, Context.Client, Configuration).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+            else
+            {
+                await (await Context.User.GetWhoisAsync(null, null, Context.Client, Configuration).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
+            }
         }
 
         [Command("roles"), Summary("Gets a users current roles")]
@@ -385,7 +389,7 @@ namespace Skuld.Bot.Commands
                 {
                     var first = Database.CustomCommands.FirstOrDefault(x => x.Name == command);
                     var usage = Database.UserCommandUsage.FirstOrDefault(x => x.UserId == Context.User.Id && x.Command == command);
-                    var ranking = Database.UserCommandUsage.Where(x => x.Command == command).OrderByDescending(x => x.Usage).ToList();
+                    var ranking = await Database.UserCommandUsage.AsAsyncEnumerable().Where(x => x.Command == command).OrderByDescending(x => x.Usage).ToListAsync();
 
                     if(first != null && usage != null && ranking.Any())
                     {
@@ -412,7 +416,7 @@ namespace Skuld.Bot.Commands
                 {
                     using var Database = new SkuldDbContextFactory().CreateDbContext();
                     var usage = Database.UserCommandUsage.FirstOrDefault(x => x.UserId == Context.User.Id && x.Command == command);
-                    var ranking = Database.UserCommandUsage.Where(x => x.Command == command).OrderByDescending(x => x.Usage).ToList();
+                    var ranking = await Database.UserCommandUsage.AsAsyncEnumerable().Where(x => x.Command == command).OrderByDescending(x => x.Usage).ToListAsync();
 
                     if (usage != null && ranking.Any())
                     {
@@ -464,43 +468,65 @@ namespace Skuld.Bot.Commands
             public ulong Total;
         }
 
+        #region Time
+        [Command("time"), Summary("Gets current time")]
+        public async Task Time()
+        {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var sUser = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var time = Instant.FromDateTimeUtc(DateTime.UtcNow).InZone(DateTimeZoneProviders.Tzdb.GetZoneOrNull(sUser.TimeZone)).ToDateTimeUnspecified().ToDMYString();
+
+            if (sUser.TimeZone != null)
+            {
+                await $"Your time is currently; {time}".QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+            else
+            {
+                await $"UTC Time is currently: {DateTime.UtcNow.ToDMYString()}".QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+        }
+
         [Command("time"), Summary("Converts a time to a set of times")]
-        [Disabled]
         public async Task ConvertTime(params IGuildUser[] users)
         {
-            /*try
-            {
-                var usertimes = timezones.Split(' ');
-                string response = $"The requested time of: {primarytimezone} - {time} is:```";
-                DateTime primaryDateTime = Convert.ToDateTime(time);
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-                foreach (var usertime in usertimes)
+            var message = new StringBuilder("```cs\n");
+
+            foreach(var user in users)
+            {
+                try
                 {
-                    var convertedTime = ConvertDateTimeToDifferentTimeZone(primaryDateTime, primarytimezone, usertime);
-                    response += $"\n{usertime} - {convertedTime}";
+                    var sUser = await Database.GetUserAsync(user).ConfigureAwait(false);
+
+                    if (sUser.TimeZone != null)
+                    {
+                        message.Append("\"The time for ");
+                        message.Append(user.Username);
+                        message.Append(" is: ");
+                        message.Append($"{Instant.FromDateTimeUtc(DateTime.UtcNow).InZone(DateTimeZoneProviders.Tzdb.GetZoneOrNull(sUser.TimeZone)).ToDateTimeUnspecified().ToDMYString()}\"\n");
+                    }
+                    else
+                    {
+                        message.Append("\"");
+                        message.Append(sUser.Username);
+                        message.Append(" has not given me their timezone\"\n");
+                    }
                 }
+                catch
+                {
 
-                await (response + "```").QueueMessageAsync(Context).ConfigureAwait(false);
+                }
             }
-            catch (Exception ex)
-            {
-                await ex.Message.QueueMessageAsync(Context, Discord.Models.MessageType.Failed, exception: ex).ConfigureAwait(false);
-            }*/
+
+            message.Append("```");
+
+            await message.QueueMessageAsync(Context).ConfigureAwait(false);
         }
+        #endregion
 
-        //https://stackoverflow.com/questions/39208477/is-this-the-proper-way-to-convert-between-time-zones-in-nodatime
-        public static DateTime ConvertDateTimeToDifferentTimeZone(DateTime fromDateTime, string fromZoneId, string toZoneId)
-        {
-            var fromLocal = LocalDateTime.FromDateTime(fromDateTime);
-            var fromZone = DateTimeZoneProviders.Tzdb[fromZoneId];
-            var fromZoned = fromLocal.InZoneLeniently(fromZone);
-
-            var toZone = DateTimeZoneProviders.Tzdb[toZoneId];
-            var toZoned = fromZoned.WithZone(toZone);
-            var toLocal = toZoned.LocalDateTime;
-            return toLocal.ToDateTimeUnspecified();
-        }
-
+        #region IAmRole
         [Command("addrole"), Summary("Adds yourself to a role")]
         [Alias("iam"), RequireDatabase]
         public async Task IamRole(int page = 0, [Remainder]IRole role = null)
@@ -515,7 +541,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var iamlist = Database.IAmRoles.Where(x => x.GuildId == Context.Guild.Id).ToList();
+            var iamlist = await Database.IAmRoles.ToAsyncEnumerable().Where(x => x.GuildId == Context.Guild.Id).ToListAsync();
 
             if (iamlist.Any())
             {
@@ -550,7 +576,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var iamlist = Database.IAmRoles.Where(x => x.GuildId == Context.Guild.Id).ToList();
+            var iamlist = await Database.IAmRoles.ToAsyncEnumerable().Where(x => x.GuildId == Context.Guild.Id).ToListAsync();
 
             if (iamlist.Any())
             {
@@ -610,7 +636,8 @@ namespace Skuld.Bot.Commands
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
             var g = Context.User as IGuildUser;
-            var iamlist = Database.IAmRoles.Where(x => x.GuildId == Context.Guild.Id);
+
+            var iamlist = await Database.IAmRoles.ToAsyncEnumerable().Where(x => x.GuildId == Context.Guild.Id).ToListAsync();
 
             if (iamlist.Any(x => x.RoleId == role.Id))
             {
@@ -681,5 +708,6 @@ namespace Skuld.Bot.Commands
 
             return IAmFail.Success;
         }
+        #endregion
     }
 }
