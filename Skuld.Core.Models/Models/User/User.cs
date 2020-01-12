@@ -29,7 +29,7 @@ namespace Skuld.Core.Models
         public bool UnlockedCustBG { get; set; } = false;
         public string Background { get; set; } = "#3F51B5";
         public ulong Flags { get; set; } = 0;
-        public TimeZoneInfo TimeZone = null;
+        public string TimeZone { get; set; } = TimeZoneInfo.Utc.Id;
 
         public bool IsUpToDate(SocketUser user)
         {
