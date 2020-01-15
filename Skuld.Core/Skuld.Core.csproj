@@ -1,9 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
-    <AssemblyVersion>2020.1.18.0</AssemblyVersion>
-    <FileVersion>2020.1.18.0</FileVersion>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <AssemblyVersion>2020.1.30.0</AssemblyVersion>
+    <FileVersion>2020.1.30.0</FileVersion>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -37,6 +38,9 @@
   </ItemGroup>
   
   <ItemGroup>
+    <Reference Include="Miki.API.Images">
+      <HintPath>..\References\Miki.API.Images.dll</HintPath>
+    </Reference>
     <Reference Include="SteamStoreQuery">
       <HintPath>..\References\SteamStoreQuery.dll</HintPath>
     </Reference>

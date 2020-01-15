@@ -1,10 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <AssemblyVersion>2020.1.23.0</AssemblyVersion>
-    <FileVersion>2020.1.23.0</FileVersion>
+    <AssemblyVersion>2020.1.37.0</AssemblyVersion>
+    <FileVersion>2020.1.37.0</FileVersion>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
