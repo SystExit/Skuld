@@ -202,7 +202,7 @@ namespace Skuld.Discord.Handlers
 
                 if (!Database.Users.Any(x => x.Id == arg.Author.Id))
                 {
-                    suser = await Database.InsertUserAsync(arg.Author);
+                    suser = await Database.InsertOrGetUserAsync(arg.Author);
                 }
                 else
                 {

@@ -21,6 +21,7 @@ using StatsdClient;
 using SteamWebAPI2.Interfaces;
 using SysEx.Net;
 using System;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -40,6 +41,18 @@ namespace Skuld.Bot.Services
 
         public static async Task CreateAsync(string[] args = null)
         {
+            if (!Directory.Exists(SkuldAppContext.LogDirectory))
+            {
+                Directory.CreateDirectory(SkuldAppContext.LogDirectory);
+            }
+            if (!Directory.Exists(SkuldAppContext.StorageDirectory))
+            {
+                Directory.CreateDirectory(SkuldAppContext.StorageDirectory);
+            }
+            if (!Directory.Exists(SkuldAppContext.FontDirectory))
+            {
+                Directory.CreateDirectory(SkuldAppContext.FontDirectory);
+            }
             try
             {
                 {
@@ -159,8 +172,12 @@ namespace Skuld.Bot.Services
                 var locale = new Locale();
                 await locale.InitialiseLocalesAsync().ConfigureAwait(false);
 
+                var github = new GitHubClient(new ProductHeaderValue("Skuld", SkuldAppContext.Skuld.Key.Version.ToString()));
+                github.Connection.Credentials = new Credentials(Configuration.GithubClientUsername, Configuration.GithubClientPassword);
+
                 Services = new ServiceCollection()
                     .AddSingleton(locale)
+                    .AddSingleton(github)
                     .AddSingleton<Random>()
                     .AddSingleton<ISSClient>()
                     .AddSingleton<SocialAPIS>()
@@ -178,7 +195,6 @@ namespace Skuld.Bot.Services
                     .AddSingleton<WebComicClients>()
                     .AddSingleton<UrbanDictionaryClient>()
                     .AddSingleton(new NASAClient(Configuration.NASAApiKey))
-                    .AddSingleton(new GitHubClient(new ProductHeaderValue("Skuld")))
                     .AddSingleton(new Stands4Client(Configuration.STANDSUid, Configuration.STANDSToken))
                     .AddSingleton(new InteractiveService(BotService.DiscordClient, TimeSpan.FromSeconds(60)))
                     .AddSingleton(new ImgurClient(Configuration.ImgurClientID, Configuration.ImgurClientSecret))

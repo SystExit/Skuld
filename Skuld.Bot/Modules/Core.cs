@@ -1,6 +1,8 @@
 ﻿using Discord;
 using Discord.Commands;
 using Skuld.Bot.Services;
+using Skuld.Core;
+using Skuld.Core.Extensions;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
@@ -10,6 +12,7 @@ using Skuld.Discord.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -20,6 +23,7 @@ namespace Skuld.Bot.Commands
     {
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }
         private CommandService CommandService { get => MessageHandler.CommandService; }
+        public Octokit.GitHubClient GitClient { get; set; }
 
         [Command("help"), Summary("Gets all commands or a specific command's information")]
         public async Task Help([Remainder]string command = null)
@@ -114,6 +118,131 @@ namespace Skuld.Bot.Commands
             {
                 await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 Log.Error("CMD-HELP", ex.Message, ex);
+            }
+        }
+
+
+        [Command("issue"), Summary("Create or get an issue on Github")]
+        public async Task Issue(string title, [Remainder]string content = null)
+        {
+            if (!string.IsNullOrEmpty(content))
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                var message = new StringBuilder();
+                message.AppendLine(content);
+                message.AppendLine();
+                message.AppendLine("===METADATA===");
+                message.AppendLine($"Submitter: {Context.User.Username}");
+                message.AppendLine($"Version: Skuld/{SkuldAppContext.Skuld.Key.Version.ToString()}");
+
+                var newMessage =
+                    await 
+                        Context.Client.SendChannelAsync(
+                            Context.Client.GetChannel(Configuration.IssueChannel),
+                            "",
+                            EmbedExtensions.FromMessage("New Issue", $"Issue requires approval, react to approve or deny before posting to github", Context)
+                                        .AddField("Content", message.ToString())
+                                        .AddField("Submitter", $"{Context.User.FullName()} ({Context.User.Id})")
+                                    .Build()
+                        ).ConfigureAwait(false);
+
+                await newMessage.AddReactionAsync(new Emoji("✔")).ConfigureAwait(false);
+
+                await newMessage.AddReactionAsync(new Emoji("❌")).ConfigureAwait(false);
+
+                Database.Issues.Add(new Issue
+                {
+                    IssueChannelMessageId = newMessage.Id,
+                    Body = message.ToString(),
+                    Title = title,
+                    SubmitterId = Context.User.Id
+                });
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await
+                    EmbedExtensions.FromMessage(
+                        "Issue Tracker", 
+                        $"Your issue has been submitted for approval, if it ends up on the [issue tracker]({SkuldAppContext.Skuld.Value.ToString()}/issues) it has been approved",
+                        Context)
+                    .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                if (int.TryParse(title, System.Globalization.NumberStyles.Integer, null, out int number))
+                {
+                    var issue = await GitClient.Issue.Get(Configuration.GithubRepository, number).ConfigureAwait(false);
+
+                    if (issue != null)
+                    {
+                        var Labels = new StringBuilder();
+
+                        foreach (var label in issue.Labels)
+                        {
+                            Labels.Append(label.Name);
+
+                            if (label != issue.Labels.LastOrDefault())
+                            {
+                                Labels.Append(", ");
+                            }
+                        }
+
+                        await
+                            EmbedExtensions.FromMessage(Context)
+                            .WithUrl(issue.HtmlUrl)
+                            .WithTitle(issue.Title)
+                            .WithDescription(issue.Body)
+                            .AddInlineField("Labels", Labels.ToString())
+                            .AddInlineField("Status", issue.State.StringValue.CapitaliseFirstLetter())
+                            .WithColor(issue.State.StringValue[0] == 'o' ? Color.Green : Color.Red)
+                        .QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await
+                            EmbedExtensions.FromError($"Couldn't find an issue with the number: `{title}`", Context)
+                        .QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                }
+                else
+                {
+                    var issues = await GitClient.Issue.GetAllForRepository(Configuration.GithubRepository).ConfigureAwait(false);
+
+                    var issue = issues.FirstOrDefault(x => x.Title.ToUpperInvariant() == title.ToUpperInvariant());
+
+                    if (issue != null)
+                    {
+                        var Labels = new StringBuilder();
+
+                        foreach (var label in issue.Labels)
+                        {
+                            Labels.Append(label.Name);
+
+                            if (label != issue.Labels.LastOrDefault())
+                            {
+                                Labels.Append(", ");
+                            }
+                        }
+
+                        await
+                            EmbedExtensions.FromMessage(Context)
+                            .WithUrl(issue.HtmlUrl)
+                            .WithTitle(issue.Title)
+                            .WithDescription(issue.Body)
+                            .AddInlineField("Labels", Labels.ToString())
+                            .AddInlineField("Status", issue.State.StringValue.CapitaliseFirstLetter())
+                            .WithColor(issue.State.StringValue[0] == 'o' ? Color.Green : Color.Red)
+                        .QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await
+                            EmbedExtensions.FromError($"Couldn't find an issue with the name: `{title}`", Context)
+                        .QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                }
             }
         }
     }

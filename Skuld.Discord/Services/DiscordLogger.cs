@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
 using Skuld.APIS;
 using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
@@ -116,6 +117,13 @@ namespace Skuld.Discord.Services
 
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
+            User user = null;
+
+            if (arg3.User.IsSpecified)
+            {
+                user = await Database.GetUserAsync(arg3.User.Value).ConfigureAwait(false);
+            }
+
             var guild = BotService.DiscordClient.Guilds.FirstOrDefault(x => x.TextChannels.FirstOrDefault(z => z.Id == arg2.Id) != null);
             var feats = Database.Features.FirstOrDefault(x => x.Id == guild.Id);
 
@@ -154,6 +162,87 @@ namespace Skuld.Discord.Services
                             .WithColor(Color.Red)
                             .Build()
                     ).ConfigureAwait(false);
+                }
+            }
+
+            if (arg2.Id == Configuration.IssueChannel && user.Flags.IsBitSet(Utils.BotCreator))
+            {
+                var msg = await arg1.GetOrDownloadAsync().ConfigureAwait(false);
+
+                var message = Database.Issues.FirstOrDefault(x => x.IssueChannelMessageId == arg1.Id);
+                if (message != null)
+                {
+                    switch(arg3.Emote.Name)
+                    {
+                        case "✔":
+                            {
+                                if (!message.HasSent)
+                                {
+                                    try
+                                    {
+                                        var newissue = new Octokit.NewIssue(message.Title)
+                                        {
+                                            Body = message.Body
+                                        };
+
+                                        newissue.Assignees.Add("exsersewo");
+                                        newissue.Labels.Add("From Command");
+
+                                        var issue = await BotService.Services.GetRequiredService<Octokit.GitHubClient>().Issue.Create(Configuration.GithubRepository, newissue).ConfigureAwait(false);
+
+                                        try
+                                        {
+                                            await BotService.DiscordClient.GetUser(message.SubmitterId).SendMessageAsync("", false,
+                                                new EmbedBuilder()
+                                                    .WithTitle("Good News!")
+                                                    .WithDescription($"Your issue:\n\"[{newissue.Title}]({issue.HtmlUrl})\"\n\nhas been accepted")
+                                                    .WithColor(EmbedExtensions.RandomEmbedColor())
+                                                .Build()
+                                            );
+                                        }
+                                        catch { }
+
+                                        await msg.ModifyAsync(x =>
+                                        {
+                                            x.Embed = msg.Embeds.ElementAt(0)
+                                            .ToEmbedBuilder()
+                                            .AddField("Sent", "✔")
+                                            .Build();
+                                        }).ConfigureAwait(false);
+
+                                        message.HasSent = true;
+
+                                        await Database.SaveChangesAsync().ConfigureAwait(false);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Log.Error("Git-" + Utils.GetCaller(), ex.Message, ex);
+                                    }
+                                }
+                            }
+                            break;
+                        case "❌":
+                            {
+                                Database.Issues.Remove(message);
+
+                                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                                await msg.DeleteAsync().ConfigureAwait(false);
+
+                                try
+                                {
+                                    await BotService.DiscordClient.GetUser(message.SubmitterId).SendMessageAsync("", false,
+                                        new EmbedBuilder()
+                                            .WithTitle("Bad News")
+                                            .WithDescription($"Your issue:\n\"{message.Title}\"\n\nhas been declined. If you would like to know why, send: {arg3.User.Value.FullName()} as message")
+                                            .WithColor(EmbedExtensions.RandomEmbedColor())
+                                        .Build()
+                                    );
+                                }
+                                catch { }
+                            }
+                            break;
+                    }
                 }
             }
         }
@@ -208,7 +297,7 @@ namespace Skuld.Discord.Services
 
             using (var ddb = new SkuldDbContextFactory().CreateDbContext())
             {
-                await ddb.InsertUserAsync(arg as IUser).ConfigureAwait(false);
+                await ddb.InsertOrGetUserAsync(arg as IUser).ConfigureAwait(false);
             }
 
             using var db = new SkuldDbContextFactory().CreateDbContext();
