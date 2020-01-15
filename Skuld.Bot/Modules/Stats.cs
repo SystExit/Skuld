@@ -56,15 +56,16 @@ namespace Skuld.Bot.Commands
                     .WithColor(color);
 
                 string apiversions =
-                    $"[Booru: {SkuldAppContext.Booru.Key.Version.ToString()}](https://github.com/{SkuldAppContext.Booru.Value.Owner}/{SkuldAppContext.Booru.Value.Repo})\n" +
-                    $"[SysEx: {SkuldAppContext.SysEx.Key.Version.ToString()}](https://github.com/{SkuldAppContext.SysEx.Value.Owner}/{SkuldAppContext.SysEx.Value.Repo})\n" +
-                    $"[Twitch: {SkuldAppContext.Twitch.Key.Version.ToString()}](https://github.com/{SkuldAppContext.Twitch.Value.Owner}/{SkuldAppContext.Twitch.Value.Repo})\n" +
-                    $"[Weebsh: {SkuldAppContext.Weebsh.Key.Version.ToString()}](https://github.com/{SkuldAppContext.Weebsh.Value.Owner}/{SkuldAppContext.Weebsh.Value.Repo})";
+                    $"[Booru.net: {SkuldAppContext.Booru.Key.Version.ToString()}]({SkuldAppContext.Booru.Value.ToString()})\n" +
+                    $"[Imghoard: {SkuldAppContext.Imghoard.Key.Version.ToString()}]({SkuldAppContext.Imghoard.Value.ToString()})\n" +
+                    $"[SysEx.net: {SkuldAppContext.SysEx.Key.Version.ToString()}]({SkuldAppContext.SysEx.Value.ToString()})\n" +
+                    $"[Twitch: {SkuldAppContext.Twitch.Key.Version.ToString()}]({SkuldAppContext.Twitch.Value.ToString()})\n" +
+                    $"[Weebsh: {SkuldAppContext.Weebsh.Key.Version.ToString()}]({SkuldAppContext.Weebsh.Value.ToString()})";
 
-                var commits = await GitClient.Repository.Commit.GetAll(SkuldAppContext.Skuld.Value.Owner, SkuldAppContext.Skuld.Value.Repo);
+                var commits = await GitClient.Repository.Commit.GetAll(SkuldAppContext.Skuld.Value.Owner, SkuldAppContext.Skuld.Value.Repo).ConfigureAwait(false);
 
                 string botstats = "";
-                botstats += $"[Skuld: {SkuldAppContext.Skuld.Key.Version.ToString()}](https://github.com/{SkuldAppContext.Skuld.Value.Owner}/{SkuldAppContext.Skuld.Value.Repo})\n";
+                botstats += $"[Skuld: {SkuldAppContext.Skuld.Key.Version.ToString()}]({SkuldAppContext.Skuld.Value.ToString()})\n";
                 botstats += $"Uptime: {string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}\n";
                 botstats += $"Ping: {Context.Client.GetShardFor(Context.Guild).Latency}ms\n";
                 botstats += $"Guilds: {Context.Client.Guilds.Count}\n";

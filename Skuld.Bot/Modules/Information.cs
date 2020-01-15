@@ -330,6 +330,7 @@ namespace Skuld.Bot.Commands
             await $"Roles of __**{user.Username}#{user.Discriminator} ({user.Nickname})**__ ({userroles.Count})\n\n`{(roles ?? "No roles")}`".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
+        #region Leaderboards
         [Command("leaderboard"), Summary("Get the leaderboard for either \"money\" or \"levels\" globally or locally")]
         [Alias("lb")]
         public async Task GetLeaderboard(string type, bool global = false)
@@ -467,6 +468,7 @@ namespace Skuld.Bot.Commands
             public ulong Rank;
             public ulong Total;
         }
+        #endregion
 
         #region Time
         [Command("time"), Summary("Gets current time")]

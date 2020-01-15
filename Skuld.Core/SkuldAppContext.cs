@@ -1,6 +1,7 @@
 ﻿using Akitaux.Twitch.Helix;
 using Booru.Net;
 using Discord;
+using Miki.API.Images;
 using Skuld.Core.Utilities;
 using SysEx.Net;
 using System;
@@ -39,31 +40,34 @@ namespace Skuld.Core
 
         public static string LogDirectory = Path.Combine(BaseDirectory, "logs");
 
-        public static string TempDirectory = Path.Combine(StorageDirectory, "temp");
-
         public static string FontDirectory = Path.Combine(StorageDirectory, "fonts");
-
-        public static string ProfileDirectory = Path.Combine(TempDirectory, "profile");
-
-        public static string IMagickCache = Path.Combine(TempDirectory, "imagickCache");
 
         public static readonly OperatingSystem WindowsVersion = Environment.OSVersion;
         public static readonly MemoryStats Memory = new MemoryStats();
 
-        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Skuld = new KeyValuePair<AssemblyName, GitRepoStruct>(Assembly.GetEntryAssembly().GetName(),
-                                                                                                                               new GitRepoStruct("Skuldbot", "Skuld"));
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Skuld = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetEntryAssembly().GetName(), 
+            new GitRepoStruct("Skuldbot", "Skuld"));
 
-        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> SysEx = new KeyValuePair<AssemblyName, GitRepoStruct>(Assembly.GetAssembly(typeof(SysExClient)).GetName(),
-                                                                                                                               new GitRepoStruct("exsersewo", "SysEx.Net"));
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> SysEx = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetAssembly(typeof(SysExClient)).GetName(), 
+            new GitRepoStruct("exsersewo", "SysEx.Net"));
 
-        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Booru = new KeyValuePair<AssemblyName, GitRepoStruct>(Assembly.GetAssembly(typeof(BooruClient)).GetName(),
-                                                                                                                               new GitRepoStruct("exsersewo", "Booru.Net"));
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Booru = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetAssembly(typeof(BooruClient)).GetName(), 
+            new GitRepoStruct("exsersewo", "Booru.Net"));
 
-        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Weebsh = new KeyValuePair<AssemblyName, GitRepoStruct>(Assembly.GetAssembly(typeof(WeebClient)).GetName(),
-                                                                                                                               new GitRepoStruct("Daniele122898", "Weeb.net"));
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Weebsh = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetAssembly(typeof(WeebClient)).GetName(), 
+            new GitRepoStruct("Daniele122898", "Weeb.net"));
 
-        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Twitch = new KeyValuePair<AssemblyName, GitRepoStruct>(Assembly.GetAssembly(typeof(TwitchHelixClient)).GetName(),
-                                                                                                                               new GitRepoStruct("Akitaux", "Twitch"));
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Twitch = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetAssembly(typeof(TwitchHelixClient)).GetName(), 
+            new GitRepoStruct("Akitaux", "Twitch"));
+
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Imghoard = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetAssembly(typeof(ImghoardClient)).GetName(),
+            new GitRepoStruct("Mikibot", "dotnet-miki-api"));
     }
 
     public class MemoryStats
@@ -87,6 +91,11 @@ namespace Skuld.Core
         {
             Owner = o;
             Repo = r;
+        }
+
+        public override string ToString()
+        {
+            return $"https://github.com/{Owner}/{Repo}";
         }
     }
 }
