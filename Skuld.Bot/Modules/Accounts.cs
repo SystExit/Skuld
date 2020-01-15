@@ -399,8 +399,8 @@ namespace Skuld.Bot.Commands
                     EmbedExtensions.FromMessage("Skuld Bank - Transaction", $"{Context.User.Mention} just gave {user.Mention} {dbGuild.MoneyIcon}{amount.ToString("N0")}", Context)
                     .QueueMessageAsync(Context).ConfigureAwait(false);
 
-                DogStatsd.Increment("skuld.bank.transactions");
-                DogStatsd.Increment("skuld.bank.money.transferred", (int)amount);
+                DogStatsd.Increment("bank.transactions");
+                DogStatsd.Increment("bank.money.transferred", (int)amount);
             }
             else
             {
