@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Skuld.Core.Models;
 
 namespace Skuld.Core.Models.Migrations
 {
     [DbContext(typeof(SkuldDatabaseContext))]
-    partial class SkuldDatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20200113225835_AddGithubRepository")]
+    partial class AddGithubRepository
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -46,10 +48,7 @@ namespace Skuld.Core.Models.Migrations
                     b.Property<string>("DiscordToken")
                         .HasColumnType("longtext CHARACTER SET utf8mb4");
 
-                    b.Property<string>("GithubClientPassword")
-                        .HasColumnType("longtext CHARACTER SET utf8mb4");
-
-                    b.Property<string>("GithubClientUsername")
+                    b.Property<string>("GithubClientToken")
                         .HasColumnType("longtext CHARACTER SET utf8mb4");
 
                     b.Property<long>("GithubRepository")
@@ -69,9 +68,6 @@ namespace Skuld.Core.Models.Migrations
 
                     b.Property<bool>("IsDevelopmentBuild")
                         .HasColumnType("tinyint(1)");
-
-                    b.Property<ulong>("IssueChannel")
-                        .HasColumnType("bigint unsigned");
 
                     b.Property<string>("NASAApiKey")
                         .HasColumnType("longtext CHARACTER SET utf8mb4");
@@ -295,32 +291,6 @@ namespace Skuld.Core.Models.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("IAmRoles");
-                });
-
-            modelBuilder.Entity("Skuld.Core.Models.Issue", b =>
-                {
-                    b.Property<ulong>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint unsigned");
-
-                    b.Property<string>("Body")
-                        .HasColumnType("longtext CHARACTER SET utf8mb4");
-
-                    b.Property<bool>("HasSent")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<ulong>("IssueChannelMessageId")
-                        .HasColumnType("bigint unsigned");
-
-                    b.Property<ulong>("SubmitterId")
-                        .HasColumnType("bigint unsigned");
-
-                    b.Property<string>("Title")
-                        .HasColumnType("longtext CHARACTER SET utf8mb4");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Issues");
                 });
 
             modelBuilder.Entity("Skuld.Core.Models.LevelRewards", b =>

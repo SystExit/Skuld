@@ -1,13 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <GenerateRuntimeConfigurationFiles>True</GenerateRuntimeConfigurationFiles>
     <ApplicationIcon />
     <OutputType>Library</OutputType>
     <StartupObject />
-    <AssemblyVersion>2020.1.19.0</AssemblyVersion>
-    <FileVersion>2020.1.19.0</FileVersion>
+    <AssemblyVersion>2020.1.39.0</AssemblyVersion>
+    <FileVersion>2020.1.39.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

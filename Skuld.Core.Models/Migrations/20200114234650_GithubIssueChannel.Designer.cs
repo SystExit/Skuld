@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Skuld.Core.Models;
 
 namespace Skuld.Core.Models.Migrations
 {
     [DbContext(typeof(SkuldDatabaseContext))]
-    partial class SkuldDatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20200114234650_GithubIssueChannel")]
+    partial class GithubIssueChannel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -310,9 +312,6 @@ namespace Skuld.Core.Models.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<ulong>("IssueChannelMessageId")
-                        .HasColumnType("bigint unsigned");
-
-                    b.Property<ulong>("SubmitterId")
                         .HasColumnType("bigint unsigned");
 
                     b.Property<string>("Title")

@@ -42,11 +42,15 @@ namespace Skuld.Core.Generic.Models
         public float VoiceExpDeterminate { get; set; } = .002f;
         public ulong VoiceExpMinMinutes { get; set; } = 5;
         public ulong VoiceExpMaxGrant { get; set; } = 100000;
+        public ulong IssueChannel { get; set; }
 
         #endregion
 
         #region APIConfig
 
+        public string GithubClientUsername { get; set; } = "";
+        public string GithubClientPassword { get; set; } = "";
+        public long GithubRepository { get; set; } = 0;
         public string GoogleAPI { get; set; } = "";
         public string GoogleCx { get; set; } = "";
         public int STANDSUid { get; set; } = 0;

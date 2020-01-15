@@ -20,6 +20,7 @@ namespace Skuld.Core.Models
         public DbSet<CustomCommand> CustomCommands { get; set; }
         public DbSet<GuildFeatures> Features { get; set; }
         public DbSet<IAmRole> IAmRoles { get; set; }
+        public DbSet<Issue> Issues { get; set; }
         public DbSet<LevelRewards> LevelRewards { get; set; }
         public DbSet<GuildModules> Modules { get; set; }
         public DbSet<Guild> Guilds { get; set; }
@@ -62,7 +63,12 @@ namespace Skuld.Core.Models
             await SaveChangesAsync().ConfigureAwait(false);
         }
 
-        public async Task<User> InsertUserAsync(IUser user)
+        /// <summary>
+        /// Insert and returns user, else null if already exists
+        /// </summary>
+        /// <param name="user">Discord User to insert</param>
+        /// <returns>User object or null if exists</returns>
+        public async Task<User> InsertOrGetUserAsync(IUser user)
             => await InsertUserAsync(new User
             {
                 AvatarUrl = new Uri(user.GetAvatarUrl() ?? user.GetDefaultAvatarUrl()),
@@ -70,13 +76,23 @@ namespace Skuld.Core.Models
                 Username = user.Username
             }).ConfigureAwait(false);
 
+        /// <summary>
+        /// Insert and returns user, else null if already exists
+        /// </summary>
+        /// <param name="user">User Class to insert</param>
+        /// <returns>User object or null if exists</returns>
         public async Task<User> InsertUserAsync(User user)
         {
-            Users.Add(user);
+            if(!Users.Any(x=>x.Id == user.Id))
+            {
+                Users.Add(user);
 
-            await SaveChangesAsync().ConfigureAwait(false);
+                await SaveChangesAsync().ConfigureAwait(false);
 
-            return Users.FirstOrDefault(x => x == user);
+                return Users.FirstOrDefault(x => x == user);
+            }
+
+            return null;
         }
 
         public async Task<Guild> InsertGuildAsync(IGuild guild, string prefix, string moneyname, string moneyicon)
@@ -279,7 +295,7 @@ namespace Skuld.Core.Models
             var usr = Users.FirstOrDefault(x => x.Id == user.Id);
 
             if (usr == null)
-                return await InsertUserAsync(user).ConfigureAwait(false);
+                return await InsertOrGetUserAsync(user).ConfigureAwait(false);
 
             return usr;
         }
