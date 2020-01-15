@@ -11,11 +11,11 @@ namespace Skuld.Core.Utilities
     {
         public readonly static string CurrentLogFileName = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + ".log";
 
-        private static StreamWriter LogFile = new StreamWriter(
+        private readonly static StreamWriter LogFile = new StreamWriter(
             File.Open(
                 Path.Combine(SkuldAppContext.LogDirectory, CurrentLogFileName),
-                FileMode.OpenOrCreate,
-                FileAccess.ReadWrite,
+                FileMode.Append,
+                FileAccess.Write,
                 FileShare.Read)
             )
         {
