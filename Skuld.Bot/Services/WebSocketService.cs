@@ -3,7 +3,7 @@ using Fleck;
 using Newtonsoft.Json;
 using Skuld.Bot.Models.Services.WebSocket;
 using Skuld.Core;
-using Skuld.Core.Generic.Models;
+using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Services;
 using System;

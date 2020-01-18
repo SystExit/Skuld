@@ -1,6 +1,5 @@
 ﻿using Discord.Commands;
 using Discord.WebSocket;
-using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
@@ -87,7 +86,7 @@ namespace Skuld.Discord.Utilities
                     if (contentsplit.StartsWith(config.AltPrefix))
                         content = contentsplit.Replace(config.AltPrefix, "");
                 }
-                if ((initiator.Flags & Utils.BotAdmin) != 0 && contentsplit.StartsWith("ayo"))
+                if ((initiator.Flags & DiscordUtilities.BotAdmin) != 0 && contentsplit.StartsWith("ayo"))
                 {
                     var split = arg.Content.Split(' ');
 
@@ -119,7 +118,7 @@ namespace Skuld.Discord.Utilities
                     if (contentsplit.StartsWith(config.Prefix))
                         content = contentsplit.Replace(config.Prefix, "");
                 }
-                if ((initiator.Flags & Utils.BotAdmin) != 0 && contentsplit.StartsWith("ayo"))
+                if ((initiator.Flags & DiscordUtilities.BotAdmin) != 0 && contentsplit.StartsWith("ayo"))
                 {
                     var split = arg.Content.Split(' ');
 
@@ -144,7 +143,7 @@ namespace Skuld.Discord.Utilities
         {
             if (gprefix != null)
             {
-                if ((initiator.Flags & Utils.BotAdmin) != 0)
+                if ((initiator.Flags & DiscordUtilities.BotAdmin) != 0)
                     return message.HasStringPrefix(gprefix, ref config.ArgPos) ||
                        message.HasStringPrefix(config.Prefix, ref config.ArgPos) ||
                        message.HasStringPrefix(config.AltPrefix, ref config.ArgPos) ||
@@ -157,7 +156,7 @@ namespace Skuld.Discord.Utilities
             }
             else
             {
-                if ((initiator.Flags & Utils.BotAdmin) != 0)
+                if ((initiator.Flags & DiscordUtilities.BotAdmin) != 0)
                     return message.HasStringPrefix(config.Prefix, ref config.ArgPos) ||
                        message.HasStringPrefix(config.AltPrefix, ref config.ArgPos) ||
                        message.HasStringPrefix($"ayo {client.CurrentUser.Username.ToLower()} do ", ref config.ArgPos) ||

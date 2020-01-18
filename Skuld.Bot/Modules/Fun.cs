@@ -15,6 +15,7 @@ using Skuld.APIS.WebComics.Explosm.Models;
 using Skuld.APIS.WebComics.XKCD.Models;
 using Skuld.Bot.Extensions;
 using Skuld.Bot.Globalization;
+using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
@@ -22,7 +23,6 @@ using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
 using Skuld.Discord.Services;
-using Skuld.Discord.Utilities;
 using StatsdClient;
 using SysEx.Net;
 using SysEx.Net.Models;
@@ -203,7 +203,7 @@ namespace Skuld.Bot.Commands
             if (int.TryParse(roll, out int upper))
             {
                 await
-                    EmbedExtensions.FromMessage(Utils.GetCaller(),
+                    EmbedExtensions.FromMessage(SkuldAppContext.GetCaller(),
                                                 $"{Context.User.Mention} just rolled and got a {Random.Next(1, (upper + 1))}",
                                                 Color.Teal,
                                                 Context)
@@ -528,7 +528,7 @@ namespace Skuld.Bot.Commands
 
                 case "help":
                     {
-                        await DiscordUtilities.GetCommandHelp(CommandService, Context, "pasta").QueueMessageAsync(Context).ConfigureAwait(false);
+                        await CommandService.GetCommandHelp(Context, "pasta").QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                     break;
 
@@ -881,7 +881,7 @@ namespace Skuld.Bot.Commands
                 int index = 0;
                 foreach (var page in pages)
                 {
-                    await EmbedExtensions.FromMessage($"__Current Templates ({index+1}/{pages.Count})__", page, Context)
+                    await EmbedExtensions.FromMessage($"__Current Templates ({index + 1}/{pages.Count})__", page, Context)
                         .QueueMessageAsync(Context).ConfigureAwait(false);
                     index++;
                 }
@@ -961,7 +961,7 @@ namespace Skuld.Bot.Commands
                 var mostlikely = sorted.FirstOrDefault();
                 string url = !mostlikely.Url.Contains("https:") && !mostlikely.Url.Contains("http:") ? "https:" + mostlikely.Url : mostlikely.Url;
 
-                await EmbedExtensions.FromMessage(Utils.GetCaller(), $"Similarity: {mostlikely.Similarity}%", Context)
+                await EmbedExtensions.FromMessage(SkuldAppContext.GetCaller(), $"Similarity: {mostlikely.Similarity}%", Context)
                     .WithImageUrl(url).QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else

@@ -55,6 +55,7 @@ namespace Skuld.Bot.Extensions
         }
 
         #region Pagination
+
         public static IList<string> PaginateList(this IReadOnlyList<MemeEndpoints> list, int pagehoist = 10)
         {
             var pages = new List<string>();
@@ -126,6 +127,7 @@ namespace Skuld.Bot.Extensions
 
             return pages;
         }
-        #endregion
+
+        #endregion Pagination
     }
 }

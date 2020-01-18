@@ -54,7 +54,7 @@ namespace Skuld.Discord.Handlers
             {
                 await channel.TriggerTypingAsync().ConfigureAwait(false);
                 Log.Info(Key, $"Dispatched message to {channel.Recipient} in DMs");
-                if (backupchannel != channel) msg = await backupchannel.SendMessageAsync(DiscordTools.Ok_Emoji + " Check your DMs").ConfigureAwait(false);
+                if (backupchannel != channel) msg = await backupchannel.SendMessageAsync(DiscordUtilities.Ok_Emoji + " Check your DMs").ConfigureAwait(false);
                 return await channel.SendMessageAsync(message, false, embed ?? null).ConfigureAwait(false);
             }
             catch (Exception ex)
@@ -80,17 +80,5 @@ namespace Skuld.Discord.Handlers
             var msg = await channel.SendMessageAsync(message, false, embed).ConfigureAwait(false);
             await msg.DeleteAfterSecondsAsync((int)timeout).ConfigureAwait(false);
         }
-
-        public static async Task<IUserMessage> ReplyFailedAsync(IMessageChannel channel)
-            => await ReplyAsync(channel, DiscordTools.Failed_Emoji + " Command Execution failed with reason: \"Unknown\"").ConfigureAwait(false);
-
-        public static async Task<IUserMessage> ReplyFailedAsync(IMessageChannel channel, string reason)
-            => await ReplyAsync(channel, DiscordTools.Failed_Emoji + " Command Execution failed with reason: \"" + reason + "\"").ConfigureAwait(false);
-
-        public static async Task<IUserMessage> ReplySuccessAsync(IMessageChannel channel)
-            => await ReplyAsync(channel, DiscordTools.Successful_Emoji + " Command Execution was successful").ConfigureAwait(false);
-
-        public static async Task<IUserMessage> ReplySuccessAsync(IMessageChannel channel, string reason)
-            => await ReplyAsync(channel, DiscordTools.Successful_Emoji + " Command Execution was successful. Extra Information: \"" + reason + "\"").ConfigureAwait(false);
     }
 }

@@ -2,7 +2,6 @@
 using Discord.WebSocket;
 using NodaTime;
 using Skuld.Core.Extensions;
-using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using StatsdClient;
@@ -32,7 +31,7 @@ namespace Skuld.Discord.Extensions
             using var Database = new SkuldDbContextFactory().CreateDbContext();
             var luxp = Database.UserXp.FirstOrDefault(x => x.UserId == user.Id && x.GuildId == guild.Id);
 
-            var xptonextlevel = DiscordTools.GetXPLevelRequirement(luxp.Level + 1, DiscordTools.PHI); //get next level xp requirement based on phi
+            var xptonextlevel = DiscordUtilities.GetXPLevelRequirement(luxp.Level + 1, DiscordUtilities.PHI); //get next level xp requirement based on phi
 
             bool didLevelUp = false;
 
@@ -79,7 +78,7 @@ namespace Skuld.Discord.Extensions
                 });
 
                 didLevelUp = false;
-                
+
                 DogStatsd.Increment("user.levels.processed");
             }
 
@@ -96,7 +95,7 @@ namespace Skuld.Discord.Extensions
             string status;
             if (user.Activity != null)
             {
-                if (user.Activity.Type == ActivityType.Streaming) status = DiscordTools.Streaming_Emote;
+                if (user.Activity.Type == ActivityType.Streaming) status = DiscordUtilities.Streaming_Emote.ToString();
                 else status = user.Status.StatusToEmote();
             }
             else status = user.Status.StatusToEmote();
@@ -157,7 +156,7 @@ namespace Skuld.Discord.Extensions
 
                 var offsetString = guildUser.PremiumSince.Value.GetStringfromOffset(DateTime.UtcNow);
 
-                embed.AddField(DiscordTools.NitroBoostEmote + " Boosting Since", $"{(icon == null ? "" : icon + " ")}{guildUser.PremiumSince.Value.UtcDateTime.ToDMYString()} ({offsetString})\t`DD/MM/YYYY`");
+                embed.AddField(DiscordUtilities.NitroBoostEmote + " Boosting Since", $"{(icon == null ? "" : icon + " ")}{guildUser.PremiumSince.Value.UtcDateTime.ToDMYString()} ({offsetString})\t`DD/MM/YYYY`");
             }
 
             return embed;
@@ -217,35 +216,35 @@ namespace Skuld.Discord.Extensions
 
         public static string StatusToEmote(this UserStatus status) => status switch
         {
-            UserStatus.Online => DiscordTools.Online_Emote,
-            UserStatus.AFK => DiscordTools.Idle_Emote,
-            UserStatus.Idle => DiscordTools.Idle_Emote,
-            UserStatus.DoNotDisturb => DiscordTools.DoNotDisturb_Emote,
-            UserStatus.Invisible => DiscordTools.Offline_Emote,
-            UserStatus.Offline => DiscordTools.Offline_Emote,
+            UserStatus.Online => DiscordUtilities.Online_Emote.ToString(),
+            UserStatus.AFK => DiscordUtilities.Idle_Emote.ToString(),
+            UserStatus.Idle => DiscordUtilities.Idle_Emote.ToString(),
+            UserStatus.DoNotDisturb => DiscordUtilities.DoNotDisturb_Emote.ToString(),
+            UserStatus.Invisible => DiscordUtilities.Offline_Emote.ToString(),
+            UserStatus.Offline => DiscordUtilities.Offline_Emote.ToString(),
 
-            _ => DiscordTools.Offline_Emote,
+            _ => DiscordUtilities.Offline_Emote.ToString(),
         };
 
         public static string BoostMonthToEmote(this DateTimeOffset boostMonths)
         {
-            var months = DiscordTools.MonthsBetween(DateTime.UtcNow, boostMonths.Date);
+            var months = DateTime.UtcNow.MonthsBetween(boostMonths.Date);
 
             if (months <= 1)
             {
-                return DiscordTools.NitroBoostRank1Emote;
+                return DiscordUtilities.NitroBoostRank1Emote.ToString();
             }
             if (months == 2)
             {
-                return DiscordTools.NitroBoostRank2Emote;
+                return DiscordUtilities.NitroBoostRank2Emote.ToString();
             }
             if (months == 3)
             {
-                return DiscordTools.NitroBoostRank3Emote;
+                return DiscordUtilities.NitroBoostRank3Emote.ToString();
             }
             if (months >= 4)
             {
-                return DiscordTools.NitroBoostRank4Emote;
+                return DiscordUtilities.NitroBoostRank4Emote.ToString();
             }
 
             return null;

@@ -11,7 +11,6 @@ using Octokit;
 using Skuld.APIS;
 using Skuld.Bot.Globalization;
 using Skuld.Core;
-using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord;
@@ -66,7 +65,7 @@ namespace Skuld.Bot.Services
                         Log.Verbose("HostService", $"Created new configuration with Id: {conf.Id}");
                     }
 
-                    var configId = SkuldAppContext.GetEnvVar(Utils.ConfigEnvVar);
+                    var configId = SkuldAppContext.GetEnvVar(SkuldAppContext.ConfigEnvVar);
 
                     var c = database.Configurations.FirstOrDefault(x => x.Id == configId);
 

@@ -33,10 +33,10 @@ namespace Skuld.Discord.Extensions
             => FromMessage("⛔Command Error!⛔", message, Color.Red, context);
 
         public static EmbedBuilder FromInfo(string title, string message, ICommandContext context)
-            => FromMessage(title, message, DiscordTools.Warning_Color, context);
+            => FromMessage(title, message, DiscordUtilities.Warning_Color, context);
 
         public static EmbedBuilder FromInfo(string message, ICommandContext context)
-            => FromMessage("⚠Info⚠", message, DiscordTools.Warning_Color, context);
+            => FromMessage("⚠Info⚠", message, DiscordUtilities.Warning_Color, context);
 
         public static EmbedBuilder FromSuccess(ICommandContext context)
             => FromMessage("✔Success✔", "", Color.Green, context);

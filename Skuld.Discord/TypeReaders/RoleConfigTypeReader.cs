@@ -1,5 +1,5 @@
 ﻿using Discord.Commands;
-using Skuld.Core.Generic.Models;
+using Skuld.Core.Models;
 using System;
 using System.Threading.Tasks;
 
@@ -9,7 +9,7 @@ namespace Skuld.Discord.TypeReaders
     {
         public override Task<TypeReaderResult> ReadAsync(ICommandContext context, string input, IServiceProvider services)
         {
-            if (RoleConfig.FromString(input, context, out RoleConfig config))
+            if (RoleConfig.FromString(input, out RoleConfig config))
             {
                 return Task.FromResult(TypeReaderResult.FromSuccess(config));
             }

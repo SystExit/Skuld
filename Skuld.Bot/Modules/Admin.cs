@@ -2,8 +2,8 @@
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using Skuld.Bot.Services;
+using Skuld.Core;
 using Skuld.Core.Extensions;
-using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Exceptions;
@@ -274,7 +274,7 @@ namespace Skuld.Bot.Commands
             await EmbedExtensions.FromSuccess($"Set the icon to: `{guild.MoneyIcon}` & the name to: `{guild.MoneyName}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
-        #endregion
+        #endregion GeneralManagement
 
         #region Mute/Prune
 
@@ -569,7 +569,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        #endregion
+        #endregion Ban/Kick
 
         #region RoleManagement
 
@@ -823,7 +823,7 @@ namespace Skuld.Bot.Commands
             }
             catch (Exception ex)
             {
-                Log.Error(Utils.GetCaller(), ex.Message, ex);
+                Log.Error(SkuldAppContext.GetCaller(), ex.Message, ex);
                 await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }

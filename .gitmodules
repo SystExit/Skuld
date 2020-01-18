@@ -1,0 +1,6 @@
+[submodule "Skuld.Core"]
+	path = Skuld.Core
+	url = https://github.com/skuldbot/Skuld.Core
+[submodule "Skuld.Models"]
+	path = Skuld.Models
+	url = https://github.com/skuldbot/Skuld.Models

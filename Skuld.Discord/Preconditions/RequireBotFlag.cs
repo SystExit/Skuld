@@ -1,4 +1,5 @@
 ﻿using Discord.Commands;
+using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Models;
@@ -32,13 +33,13 @@ namespace Skuld.Discord.Preconditions
         {
             var appInfo = await context.Client.GetApplicationInfoAsync().ConfigureAwait(false);
 
-            if (user.Flags.IsBitSet(Utils.BotCreator) || appInfo.Owner.Id == context.User.Id)
+            if (user.Flags.IsBitSet(DiscordUtilities.BotCreator) || appInfo.Owner.Id == context.User.Id)
                 return BotAccessLevel.BotOwner;
-            if (user.Flags.IsBitSet(Utils.BotAdmin))
+            if (user.Flags.IsBitSet(DiscordUtilities.BotAdmin))
                 return BotAccessLevel.BotAdmin;
-            if (user.Flags.IsBitSet(Utils.BotDonator))
+            if (user.Flags.IsBitSet(DiscordUtilities.BotDonator))
                 return BotAccessLevel.BotDonator;
-            if (user.Flags.IsBitSet(Utils.BotTester))
+            if (user.Flags.IsBitSet(DiscordUtilities.BotTester))
                 return BotAccessLevel.BotTester;
 
             return BotAccessLevel.Normal;

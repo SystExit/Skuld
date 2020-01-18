@@ -20,6 +20,26 @@ namespace Skuld.Bot.Commands
     {
         public GitHubClient GitClient { get; set; }
 
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> SysEx = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetAssembly(typeof(SysExClient)).GetName(),
+            new GitRepoStruct("exsersewo", "SysEx.Net"));
+
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Booru = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetAssembly(typeof(BooruClient)).GetName(),
+            new GitRepoStruct("exsersewo", "Booru.Net"));
+
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Weebsh = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetAssembly(typeof(WeebClient)).GetName(),
+            new GitRepoStruct("Daniele122898", "Weeb.net"));
+
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Twitch = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetAssembly(typeof(TwitchHelixClient)).GetName(),
+            new GitRepoStruct("Akitaux", "Twitch"));
+
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Imghoard = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetAssembly(typeof(ImghoardClient)).GetName(),
+            new GitRepoStruct("Mikibot", "dotnet-miki-api"));
+
         [Command("ping"), Summary("Print Ping")]
         public async Task Ping()
             => await $"PONG: {Context.Client.GetShardFor(Context.Guild).Latency}ms".QueueMessageAsync(Context).ConfigureAwait(false);
@@ -56,11 +76,11 @@ namespace Skuld.Bot.Commands
                     .WithColor(color);
 
                 string apiversions =
-                    $"[Booru.net: {SkuldAppContext.Booru.Key.Version.ToString()}]({SkuldAppContext.Booru.Value.ToString()})\n" +
-                    $"[Imghoard: {SkuldAppContext.Imghoard.Key.Version.ToString()}]({SkuldAppContext.Imghoard.Value.ToString()})\n" +
-                    $"[SysEx.net: {SkuldAppContext.SysEx.Key.Version.ToString()}]({SkuldAppContext.SysEx.Value.ToString()})\n" +
-                    $"[Twitch: {SkuldAppContext.Twitch.Key.Version.ToString()}]({SkuldAppContext.Twitch.Value.ToString()})\n" +
-                    $"[Weebsh: {SkuldAppContext.Weebsh.Key.Version.ToString()}]({SkuldAppContext.Weebsh.Value.ToString()})";
+                    $"[Booru.net: {Booru.Key.Version.ToString()}]({Booru.Value.ToString()})\n" +
+                    $"[Imghoard: {Imghoard.Key.Version.ToString()}]({Imghoard.Value.ToString()})\n" +
+                    $"[SysEx.net: {SysEx.Key.Version.ToString()}]({SysEx.Value.ToString()})\n" +
+                    $"[Twitch: {Twitch.Key.Version.ToString()}]({Twitch.Value.ToString()})\n" +
+                    $"[Weebsh: {Weebsh.Key.Version.ToString()}]({Weebsh.Value.ToString()})";
 
                 var commits = await GitClient.Repository.Commit.GetAll(SkuldAppContext.Skuld.Value.Owner, SkuldAppContext.Skuld.Value.Repo).ConfigureAwait(false);
 

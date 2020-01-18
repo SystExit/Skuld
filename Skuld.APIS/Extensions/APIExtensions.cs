@@ -27,20 +27,10 @@ namespace Skuld.APIS.Extensions
             "death"
         };
 
-        public static string GetMessage(this BooruImage image, string postUrl)
-        {
-            string message = $"`Score: {image.Score}` <{postUrl}>\n{image.ImageUrl}";
-
-            if (image.ImageUrl.IsVideoFile())
-            {
-                message += " (Video)";
-            }
-
-            return message;
-        }
-
         public static StoreScreenshotModel Random(this IReadOnlyList<StoreScreenshotModel> elements)
             => elements[rnd.Next(0, elements.Count)];
+
+        #region Pagination
 
         public static IList<string> PaginateList(this IReadOnlyList<AnimeDataModel> list, int maxrows = 10)
         {
@@ -136,6 +126,22 @@ namespace Skuld.APIS.Extensions
             return Pages;
         }
 
+        #endregion Pagination
+
+        #region Booru
+
+        public static string GetMessage(this BooruImage image, string postUrl)
+        {
+            string message = $"`Score: {image.Score}` <{postUrl}>\n{image.ImageUrl}";
+
+            if (image.ImageUrl.IsVideoFile())
+            {
+                message += " (Video)";
+            }
+
+            return message;
+        }
+
         public static IList<string> AddBlacklistedTags(this IList<string> tags)
         {
             var newtags = new List<string>();
@@ -156,5 +162,7 @@ namespace Skuld.APIS.Extensions
             }
             return returnvalue;
         }
+
+        #endregion Booru
     }
 }

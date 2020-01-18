@@ -8,7 +8,7 @@ using Skuld.APIS;
 using Skuld.Bot.Models.Commands;
 using Skuld.Bot.Services;
 using Skuld.Core;
-using Skuld.Core.Generic.Models;
+using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
@@ -39,12 +39,12 @@ namespace Skuld.Bot.Commands
 
             var usr = Database.Users.FirstOrDefault(x => x.Id == user.Id);
 
-            if (usr.Flags.IsBitSet(Utils.Banned))
+            if (usr.Flags.IsBitSet(DiscordUtilities.Banned))
             {
-                usr.Flags -= Utils.Banned;
+                usr.Flags -= DiscordUtilities.Banned;
                 usr.BanReason = null;
                 await
-                    EmbedExtensions.FromSuccess(Utils.GetCaller(), $"Un-beaned {user.Mention}", Context)
+                    EmbedExtensions.FromSuccess(SkuldAppContext.GetCaller(), $"Un-beaned {user.Mention}", Context)
                 .QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
@@ -56,10 +56,10 @@ namespace Skuld.Bot.Commands
                     .QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
-                usr.Flags += Utils.Banned;
+                usr.Flags += DiscordUtilities.Banned;
                 usr.BanReason = reason;
                 await
-                    EmbedExtensions.FromSuccess(Utils.GetCaller(), $"Beaned {user.Mention} for reason: `{reason}`", Context)
+                    EmbedExtensions.FromSuccess(SkuldAppContext.GetCaller(), $"Beaned {user.Mention} for reason: `{reason}`", Context)
                 .QueueMessageAsync(Context).ConfigureAwait(false);
             }
 
@@ -86,7 +86,7 @@ namespace Skuld.Bot.Commands
                 lines.Add(new string[] { item.ShardId.ToString(), item.ConnectionState.ToString(), item.Latency.ToString(), item.Guilds.Count.ToString() });
             }
 
-            await $"```\n{ConsoleUtils.PrettyLines(lines, 2)}```".QueueMessageAsync(Context).ConfigureAwait(false);
+            await $"```\n{lines.PrettyLines(2)}```".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("getshard"), Summary("Gets all information about specific shard")]
@@ -189,33 +189,33 @@ namespace Skuld.Bot.Commands
             switch (level)
             {
                 case BotAccessLevel.BotOwner:
-                    if (!dbUser.Flags.IsBitSet(Utils.BotCreator))
+                    if (!dbUser.Flags.IsBitSet(DiscordUtilities.BotCreator))
                     {
-                        dbUser.Flags += Utils.BotCreator;
+                        dbUser.Flags += DiscordUtilities.BotCreator;
                         added = true;
                     }
                     break;
 
                 case BotAccessLevel.BotAdmin:
-                    if (!dbUser.Flags.IsBitSet(Utils.BotAdmin))
+                    if (!dbUser.Flags.IsBitSet(DiscordUtilities.BotAdmin))
                     {
-                        dbUser.Flags += Utils.BotAdmin;
+                        dbUser.Flags += DiscordUtilities.BotAdmin;
                         added = true;
                     }
                     break;
 
                 case BotAccessLevel.BotTester:
-                    if (!dbUser.Flags.IsBitSet(Utils.BotTester))
+                    if (!dbUser.Flags.IsBitSet(DiscordUtilities.BotTester))
                     {
-                        dbUser.Flags += Utils.BotTester;
+                        dbUser.Flags += DiscordUtilities.BotTester;
                         added = true;
                     }
                     break;
 
                 case BotAccessLevel.BotDonator:
-                    if (!dbUser.Flags.IsBitSet(Utils.BotDonator))
+                    if (!dbUser.Flags.IsBitSet(DiscordUtilities.BotDonator))
                     {
-                        dbUser.Flags += Utils.BotDonator;
+                        dbUser.Flags += DiscordUtilities.BotDonator;
                         added = true;
                     }
                     break;
@@ -245,13 +245,13 @@ namespace Skuld.Bot.Commands
 
             List<BotAccessLevel> flags = new List<BotAccessLevel>();
 
-            if (dbUser.Flags.IsBitSet(Utils.BotCreator))
+            if (dbUser.Flags.IsBitSet(DiscordUtilities.BotCreator))
                 flags.Add(BotAccessLevel.BotOwner);
-            if (dbUser.Flags.IsBitSet(Utils.BotAdmin))
+            if (dbUser.Flags.IsBitSet(DiscordUtilities.BotAdmin))
                 flags.Add(BotAccessLevel.BotAdmin);
-            if (dbUser.Flags.IsBitSet(Utils.BotDonator))
+            if (dbUser.Flags.IsBitSet(DiscordUtilities.BotDonator))
                 flags.Add(BotAccessLevel.BotDonator);
-            if (dbUser.Flags.IsBitSet(Utils.BotTester))
+            if (dbUser.Flags.IsBitSet(DiscordUtilities.BotTester))
                 flags.Add(BotAccessLevel.BotTester);
 
             flags.Add(BotAccessLevel.Normal);

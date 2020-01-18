@@ -1,4 +1,5 @@
 ﻿using Discord.Commands;
+using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using System;
@@ -8,8 +9,8 @@ namespace Skuld.Discord.Preconditions
 {
     public class DisabledAttribute : PreconditionAttribute
     {
-        private bool DisabledForAdmins = false;
-        private bool DisabledForTesters = false;
+        private readonly bool DisabledForAdmins = false;
+        private readonly bool DisabledForTesters = false;
 
         public DisabledAttribute()
         {
@@ -32,7 +33,7 @@ namespace Skuld.Discord.Preconditions
 
             var usr = await Database.GetUserAsync(context.User);
 
-            if ((!DisabledForTesters && usr.Flags.IsBitSet(Utils.BotTester)) || usr.Flags.IsBitSet(Utils.BotCreator) || (!DisabledForAdmins && usr.Flags.IsBitSet(Utils.BotAdmin)))
+            if ((!DisabledForTesters && usr.Flags.IsBitSet(DiscordUtilities.BotTester)) || usr.Flags.IsBitSet(DiscordUtilities.BotCreator) || (!DisabledForAdmins && usr.Flags.IsBitSet(DiscordUtilities.BotAdmin)))
                 return PreconditionResult.FromSuccess();
 
             return PreconditionResult.FromError("Disabled Command");

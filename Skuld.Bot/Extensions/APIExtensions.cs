@@ -142,26 +142,26 @@ namespace Skuld.Bot.Extensions
             switch (channel.Type.Value)
             {
                 case UserType.Staff:
-                    twitchStatus = DiscordTools.TwitchStaff;
+                    twitchStatus = DiscordUtilities.TwitchStaff.ToString();
                     break;
 
                 case UserType.Admin:
-                    twitchStatus = DiscordTools.TwitchAdmins;
+                    twitchStatus = DiscordUtilities.TwitchAdmins.ToString();
                     break;
 
                 case UserType.GlobalMod:
-                    twitchStatus = DiscordTools.TwitchGlobalMod;
+                    twitchStatus = DiscordUtilities.TwitchGlobalMod.ToString();
                     break;
             }
 
             switch (channel.BroadcasterType.Value)
             {
                 case BroadcasterType.Partner:
-                    channelIcon = DiscordTools.TwitchVerified;
+                    channelIcon = DiscordUtilities.TwitchVerified.ToString();
                     break;
 
                 case BroadcasterType.Affiliate:
-                    channelIcon = DiscordTools.TwitchAffiliate;
+                    channelIcon = DiscordUtilities.TwitchAffiliate.ToString();
                     break;
             }
 

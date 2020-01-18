@@ -3,7 +3,6 @@ using Discord.Commands;
 using Discord.WebSocket;
 using NodaTime;
 using Skuld.Core.Extensions;
-using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
@@ -62,6 +61,7 @@ namespace Skuld.Discord.Handlers
         }
 
         #region CommandService Logs
+
         private static Task CommandService_Log(LogMessage arg)
         {
             var key = $"{Key}-{arg.Source}";
@@ -123,7 +123,7 @@ namespace Skuld.Discord.Handlers
                 bool displayerror = true;
                 if (arg3.ErrorReason.Contains("few parameters"))
                 {
-                    var cmdembed = DiscordUtilities.GetCommandHelp(CommandService, arg2, cmd.Name);
+                    var cmdembed = CommandService.GetCommandHelp(arg2, cmd.Name);
                     await BotService.DiscordClient.SendChannelAsync(arg2.Channel, "You seem to be missing a parameter or 2, here's the help", cmdembed.Build()).ConfigureAwait(false);
                     displayerror = false;
                 }
@@ -171,9 +171,11 @@ namespace Skuld.Discord.Handlers
             }
             watch = new Stopwatch();
         }
-        #endregion
+
+        #endregion CommandService Logs
 
         #region HandleProcessing
+
         public static async Task HandleMessageAsync(SocketMessage arg)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -207,7 +209,7 @@ namespace Skuld.Discord.Handlers
                 else
                 {
                     suser = await Database.GetUserAsync(arg.Author);
-                    if (suser != null && suser.Flags.IsBitSet(Utils.Banned) && (!suser.Flags.IsBitSet(Utils.BotCreator) || !suser.Flags.IsBitSet(Utils.BotAdmin))) return;
+                    if (suser != null && suser.Flags.IsBitSet(DiscordUtilities.Banned) && (!suser.Flags.IsBitSet(DiscordUtilities.BotCreator) || !suser.Flags.IsBitSet(DiscordUtilities.BotAdmin))) return;
                     if (!suser.IsUpToDate(message.Author))
                     {
                         suser.AvatarUrl = new Uri(message.Author.GetAvatarUrl() ?? message.Author.GetDefaultAvatarUrl());
@@ -264,9 +266,9 @@ namespace Skuld.Discord.Handlers
 
             var result = await User.GrantExperienceAsync((ulong)rnd.Next(1, 26), guild);
 
-            if(result != null)
+            if (result != null)
             {
-                if(result is bool b && b)
+                if (result is bool b && b)
                 {
                     UserExperience luxp;
                     List<LevelRewards> rewardsForGuild;
@@ -293,7 +295,7 @@ namespace Skuld.Discord.Handlers
                     if ((sguild.LevelUpChannel != 0 && sguild.LevelUpChannel != backupChannel.Id) || sguild.LevelNotification == LevelNotification.DM)
                         appendix = $"\n\nMessage that caused your level up: {message.GetJumpUrl()}";
 
-                    switch(sguild.LevelNotification)
+                    switch (sguild.LevelNotification)
                     {
                         case LevelNotification.Channel:
                             {
@@ -314,6 +316,7 @@ namespace Skuld.Discord.Handlers
                                 }
                             }
                             break;
+
                         case LevelNotification.DM:
                             {
                                 if (string.IsNullOrEmpty(sguild.LevelUpMessage))
@@ -358,7 +361,8 @@ namespace Skuld.Discord.Handlers
             }
             return;
         }
-        #endregion
+
+        #endregion HandleProcessing
 
         #region Dispatching
 
@@ -386,7 +390,7 @@ namespace Skuld.Discord.Handlers
             watch = new Stopwatch();
         }
 
-        #endregion
+        #endregion Dispatching
 
         #region HandleInsertion
 
@@ -418,7 +422,7 @@ namespace Skuld.Discord.Handlers
             await Database.SaveChangesAsync().ConfigureAwait(false);
         }
 
-        #endregion
+        #endregion HandleInsertion
 
         public static async Task<bool> CheckPermissionToSendMessageAsync(ITextChannel channel)
         {

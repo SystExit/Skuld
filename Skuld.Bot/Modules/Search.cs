@@ -9,7 +9,6 @@ using Skuld.APIS.Pokemon.Models;
 using Skuld.Bot.Extensions;
 using Skuld.Bot.Services;
 using Skuld.Core.Extensions;
-using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;

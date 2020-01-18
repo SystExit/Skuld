@@ -7,13 +7,11 @@ using Skuld.Bot.Globalization;
 using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
-using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
 using Skuld.Discord.Services;
-using Skuld.Discord.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -108,7 +106,7 @@ namespace Skuld.Bot.Commands
         {
             var memberString = new StringBuilder();
 
-            if(role != Context.Guild.EveryoneRole)
+            if (role != Context.Guild.EveryoneRole)
             {
                 var members = await Context.Guild.GetRoleMembersAsync(role).ConfigureAwait(false);
 
@@ -213,7 +211,7 @@ namespace Skuld.Bot.Commands
                         if (user.Activity != null)
                         {
                             if (user.Activity.Type == ActivityType.Streaming)
-                                admins.Add(DiscordTools.Streaming_Emote + $" {user.FullNameWithNickname()}");
+                                admins.Add(DiscordUtilities.Streaming_Emote + $" {user.FullNameWithNickname()}");
                         }
                         else
                         {
@@ -225,7 +223,7 @@ namespace Skuld.Bot.Commands
                         if (user.Activity != null)
                         {
                             if (user.Activity.Type == ActivityType.Streaming)
-                                mods.Add(DiscordTools.Streaming_Emote + $" {user.FullNameWithNickname()}");
+                                mods.Add(DiscordUtilities.Streaming_Emote + $" {user.FullNameWithNickname()}");
                         }
                         else
                         {
@@ -331,6 +329,7 @@ namespace Skuld.Bot.Commands
         }
 
         #region Leaderboards
+
         [Command("leaderboard"), Summary("Get the leaderboard for either \"money\" or \"levels\" globally or locally")]
         [Alias("lb")]
         public async Task GetLeaderboard(string type, bool global = false)
@@ -386,19 +385,19 @@ namespace Skuld.Bot.Commands
             CommandLeaderboardInfo info = null;
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
-                if(Database.CustomCommands.Any(x=>x.Name == command))
+                if (Database.CustomCommands.Any(x => x.Name == command))
                 {
                     var first = Database.CustomCommands.FirstOrDefault(x => x.Name == command);
                     var usage = Database.UserCommandUsage.FirstOrDefault(x => x.UserId == Context.User.Id && x.Command == command);
                     var ranking = await Database.UserCommandUsage.AsAsyncEnumerable().Where(x => x.Command == command).OrderByDescending(x => x.Usage).ToListAsync();
 
-                    if(first != null && usage != null && ranking.Any())
+                    if (first != null && usage != null && ranking.Any())
                     {
                         info = new CommandLeaderboardInfo
                         {
                             Name = first.Name,
                             Usage = usage.Usage,
-                            Rank = (ulong)ranking.IndexOf(ranking.FirstOrDefault(x=>x.UserId == Context.User.Id))+1,
+                            Rank = (ulong)ranking.IndexOf(ranking.FirstOrDefault(x => x.UserId == Context.User.Id)) + 1,
                             Total = (ulong)ranking.Count
                         };
                     }
@@ -409,7 +408,7 @@ namespace Skuld.Bot.Commands
                 }
             }
 
-            if(info == null)
+            if (info == null)
             {
                 var result = CommandService.Search(command);
 
@@ -436,14 +435,14 @@ namespace Skuld.Bot.Commands
                 }
             }
 
-            if(info == null && !existsButNoData)
+            if (info == null && !existsButNoData)
             {
                 await
                     EmbedExtensions.FromError($"Couldn't find a command like: `{command}`. Please verify input and try again.", Context)
                     .QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
-            else if(existsButNoData)
+            else if (existsButNoData)
             {
                 await
                     EmbedExtensions.FromError($"You haven't used the command: `{command}`. Please use it and try again", Context)
@@ -461,16 +460,18 @@ namespace Skuld.Bot.Commands
             .QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
-        class CommandLeaderboardInfo
+        private class CommandLeaderboardInfo
         {
             public string Name;
             public ulong Usage;
             public ulong Rank;
             public ulong Total;
         }
-        #endregion
+
+        #endregion Leaderboards
 
         #region Time
+
         [Command("time"), Summary("Gets current time")]
         public async Task Time()
         {
@@ -496,7 +497,7 @@ namespace Skuld.Bot.Commands
 
             var message = new StringBuilder("```cs\n");
 
-            foreach(var user in users)
+            foreach (var user in users)
             {
                 try
                 {
@@ -518,7 +519,6 @@ namespace Skuld.Bot.Commands
                 }
                 catch
                 {
-
                 }
             }
 
@@ -526,9 +526,11 @@ namespace Skuld.Bot.Commands
 
             await message.QueueMessageAsync(Context).ConfigureAwait(false);
         }
-        #endregion
+
+        #endregion Time
 
         #region IAmRole
+
         [Command("addrole"), Summary("Adds yourself to a role")]
         [Alias("iam"), RequireDatabase]
         public async Task IamRole(int page = 0, [Remainder]IRole role = null)
@@ -621,7 +623,7 @@ namespace Skuld.Bot.Commands
                         {
                             await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
-                        Log.Error(Utils.GetCaller(), ex.Message, ex);
+                        Log.Error(SkuldAppContext.GetCaller(), ex.Message, ex);
                     }
                 }
             }
@@ -658,7 +660,7 @@ namespace Skuld.Bot.Commands
                     {
                         await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
-                    Log.Error(Utils.GetCaller(), ex.Message, ex);
+                    Log.Error(SkuldAppContext.GetCaller(), ex.Message, ex);
                 }
             }
             else
@@ -710,6 +712,7 @@ namespace Skuld.Bot.Commands
 
             return IAmFail.Success;
         }
-        #endregion
+
+        #endregion IAmRole
     }
 }

@@ -1,36 +1,18 @@
 ﻿using Discord;
 using Discord.Commands;
-using Skuld.Discord.Extensions;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
-namespace Skuld.Discord.Utilities
+namespace Skuld.Discord.Extensions
 {
-    public static class DiscordUtilities
+    public static class HelpExtensions
     {
-        public static Regex UserMentionRegex = new Regex("<@.?[0-9]*?>");
-        public static Regex RoleMentionRegex = new Regex("<&[0-9]*?>");
-        public static Regex ChannelMentionRegex = new Regex("<#[0-9]*?>");
-
-        public static GuildPermissions ModeratorPermissions = new GuildPermissions(268443650);
-
-        public static string Level1ServerBoost = "server/level1.svg";
-        public static string Level2ServerBoost = "server/level2.svg";
-        public static string Level3ServerBoost = "server/level3.svg";
-
-        public static string Level1UserBoost = "profile/level1.svg";
-        public static string Level2UserBoost = "profile/level2.svg";
-        public static string Level3UserBoost = "profile/level3.svg";
-
-        public static string Empty = "<:empty:663083920992239638>";
-
-        public static EmbedBuilder GetCommandHelp(CommandService commandService, ICommandContext context, string commandname)
+        public static EmbedBuilder GetCommandHelp(this CommandService commandService, ICommandContext context, string commandname)
         {
             if (commandname.ToLower() != "pasta")
             {
-                var serch = commandService.Search(context, commandname).Commands;
+                var search = commandService.Search(context, commandname).Commands;
 
-                var summ = GetSummary(serch);
+                var summ = search.GetSummary();
 
                 if (summ == null)
                 {
@@ -39,7 +21,7 @@ namespace Skuld.Discord.Utilities
 
                 var embed = EmbedExtensions.FromMessage("Help", $"Here are some commands like **{commandname}**", Color.Teal, context);
 
-                embed.AddField(string.Join(", ", serch[0].Command.Aliases), summ);
+                embed.AddField(string.Join(", ", search[0].Command.Aliases), summ);
 
                 return embed;
             }
@@ -63,7 +45,7 @@ namespace Skuld.Discord.Utilities
             }
         }
 
-        public static string GetSummary(IReadOnlyList<CommandMatch> Variants)
+        public static string GetSummary(this IReadOnlyList<CommandMatch> Variants)
         {
             if (Variants != null)
             {

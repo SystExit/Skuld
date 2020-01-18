@@ -1,7 +1,6 @@
 ﻿using Discord.WebSocket;
 using Skuld.Bot.Models.Services.VoiceExp;
 using Skuld.Core.Extensions;
-using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
@@ -85,7 +84,7 @@ namespace Skuld.Bot.Services
                 totalTime = timeDiff;
             }
 
-            var xpToGrant = Utils.GetExpMultiFromMinutesInVoice(Configuration.VoiceExpDeterminate, Configuration.VoiceExpMinMinutes, 100000, totalTime);
+            var xpToGrant = DiscordUtilities.GetExpMultiFromMinutesInVoice(Configuration.VoiceExpDeterminate, Configuration.VoiceExpMinMinutes, 100000, totalTime);
 
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();

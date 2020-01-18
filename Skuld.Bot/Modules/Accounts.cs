@@ -7,12 +7,10 @@ using Skuld.APIS;
 using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
-using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
-using Skuld.Discord.Utilities;
 using StatsdClient;
 using System;
 using System.IO;
@@ -34,7 +32,7 @@ namespace Skuld.Bot.Commands
 
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await EmbedExtensions.FromError("SkuldBank - Account Information", DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("SkuldBank - Account Information", DiscordUtilities.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -56,7 +54,7 @@ namespace Skuld.Bot.Commands
 
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await EmbedExtensions.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(DiscordUtilities.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -133,7 +131,7 @@ namespace Skuld.Bot.Commands
                 {
                     var prem = Context.Client.GetUser(user.Id).MutualGuilds.FirstOrDefault(x => x.GetUser(user.Id).PremiumSince.HasValue).GetUser(user.Id).PremiumSince;
 
-                    var months = DiscordTools.MonthsBetween(DateTime.UtcNow, prem.Value.Date);
+                    var months = DateTime.UtcNow.MonthsBetween(prem.Value.Date);
                     string emblem = "";
 
                     if (months <= 1)
@@ -274,7 +272,7 @@ namespace Skuld.Bot.Commands
             image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToString("N0")} ({exp.TotalXP.ToString("N0")})"));
             image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: {profileuser.Pats.ToString("N0")}/Patted: {profileuser.Patted.ToString("N0")}"));
 
-            ulong xpToNextLevel = DiscordTools.GetXPLevelRequirement(exp.Level + 1, DiscordTools.PHI);
+            ulong xpToNextLevel = DiscordUtilities.GetXPLevelRequirement(exp.Level + 1, DiscordUtilities.PHI);
 
             //Progressbar
             image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, 471, 580, 500));
@@ -317,7 +315,7 @@ namespace Skuld.Bot.Commands
         {
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await EmbedExtensions.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(DiscordUtilities.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -369,14 +367,14 @@ namespace Skuld.Bot.Commands
         [Command("give"), Summary("Give your money to people")]
         public async Task Give(IGuildUser user, ulong amount)
         {
-            if(user == Context.User)
+            if (user == Context.User)
             {
                 await EmbedExtensions.FromError("SkuldBank - Transaction", "Can't give yourself money", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await EmbedExtensions.FromError("SkuldBank - Transaction", DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("SkuldBank - Transaction", DiscordUtilities.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -427,7 +425,7 @@ namespace Skuld.Bot.Commands
 
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await EmbedExtensions.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(DiscordUtilities.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -542,7 +540,7 @@ namespace Skuld.Bot.Commands
             image.Draw(font, fontmed, encoding, white, new DrawableText(220, 170, $"Rank {index + 1}/{experiences.Count()}"));
             image.Draw(font, fontmed, encoding, white, new DrawableText(220, 210, $"Level: {xp.Level} ({xp.TotalXP.ToString("N0")})"));
 
-            ulong xpToNextLevel = DiscordTools.GetXPLevelRequirement(xp.Level + 1, DiscordTools.PHI);
+            ulong xpToNextLevel = DiscordUtilities.GetXPLevelRequirement(xp.Level + 1, DiscordUtilities.PHI);
 
             int innerHeight = 256;
 
@@ -597,7 +595,7 @@ namespace Skuld.Bot.Commands
         {
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await EmbedExtensions.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(DiscordUtilities.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -649,7 +647,7 @@ namespace Skuld.Bot.Commands
         {
             if (user != null && (user.IsBot || user.IsWebhook))
             {
-                await EmbedExtensions.FromError(DiscordTools.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(DiscordUtilities.NoBotsString, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -907,9 +905,9 @@ namespace Skuld.Bot.Commands
                 TotalXP = 1234567890
             };
 
-            exp.Level = DiscordTools.GetLevelFromTotalXP(exp.TotalXP, DiscordTools.PHI);
+            exp.Level = DiscordUtilities.GetLevelFromTotalXP(exp.TotalXP, DiscordUtilities.PHI);
 
-            exp.XP = DiscordTools.GetXPLevelRequirement(exp.Level, DiscordTools.PHI) / 2;
+            exp.XP = DiscordUtilities.GetXPLevelRequirement(exp.Level, DiscordUtilities.PHI) / 2;
 
             int ylevel1 = 365, ylevel2 = 405, ylevel3 = 445;
 
@@ -989,7 +987,7 @@ namespace Skuld.Bot.Commands
             image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToString("N0")} ({exp.TotalXP.ToString("N0")})"));
             image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: 7,777/Patted: 7,777"));
 
-            ulong xpToNextLevel = DiscordTools.GetXPLevelRequirement(exp.Level + 1, DiscordTools.PHI);
+            ulong xpToNextLevel = DiscordUtilities.GetXPLevelRequirement(exp.Level + 1, DiscordUtilities.PHI);
 
             //Progressbar
             image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, 471, 580, 500));
@@ -1047,7 +1045,7 @@ namespace Skuld.Bot.Commands
 
             await "".QueueMessageAsync(Context, outputStream, type: Discord.Models.MessageType.File).ConfigureAwait(false);
         }
-        
+
         [Command("settimezone"), Summary("Sets your timezone")]
         public async Task SetTimeZone([Remainder]DateTimeZone timezone)
         {

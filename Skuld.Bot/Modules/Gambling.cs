@@ -11,7 +11,6 @@ using Skuld.Discord.Extensions;
 using Skuld.Discord.Handlers;
 using Skuld.Discord.Preconditions;
 using Skuld.Discord.Services;
-using Skuld.Discord.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -327,7 +326,7 @@ namespace Skuld.Bot.Commands
 
                     case WinResult.Draw:
                         {
-                            await EmbedExtensions.FromMessage("Rock Paper Scissors", $"I draw {throwName} and... It's a draw", DiscordTools.Warning_Color, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            await EmbedExtensions.FromMessage("Rock Paper Scissors", $"I draw {throwName} and... It's a draw", DiscordUtilities.Warning_Color, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
                 }
@@ -401,7 +400,7 @@ namespace Skuld.Bot.Commands
             return WinResult.Draw;
         }
 
-        #endregion
+        #endregion Rock Paper Scissors
 
         #region Slots
 
@@ -536,9 +535,9 @@ namespace Skuld.Bot.Commands
         {
             if (!isMiddle)
             {
-                return $"{DiscordUtilities.Empty}" +
+                return $"{DiscordUtilities.Empty_Emote}" +
                     $"{slotIcons.GetValueOrDefault(row[0])} {slotIcons.GetValueOrDefault(row[1])} {slotIcons.GetValueOrDefault(row[2])}" +
-                    $"{DiscordUtilities.Empty}";
+                    $"{DiscordUtilities.Empty_Emote}";
             }
             else
             {
@@ -553,7 +552,7 @@ namespace Skuld.Bot.Commands
             return $"{GetStringRow(slots[0], false)}\n{GetStringRow(slots[1], true)}\n{GetStringRow(slots[2], false)}";
         }
 
-        #endregion
+        #endregion Slots
 
         #region Mia
 
@@ -678,6 +677,6 @@ namespace Skuld.Bot.Commands
                 return WinResult.Draw;
         }
 
-        #endregion
+        #endregion Mia
     }
 }

@@ -2,7 +2,8 @@
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using Skuld.APIS;
-using Skuld.Core.Generic.Models;
+using Skuld.Core;
+using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
@@ -165,83 +166,80 @@ namespace Skuld.Discord.Services
                 }
             }
 
-            if (arg2.Id == Configuration.IssueChannel && user.Flags.IsBitSet(Utils.BotCreator))
+            if (arg2.Id == Configuration.IssueChannel && user.Flags.IsBitSet(DiscordUtilities.BotCreator))
             {
                 var msg = await arg1.GetOrDownloadAsync().ConfigureAwait(false);
 
                 var message = Database.Issues.FirstOrDefault(x => x.IssueChannelMessageId == arg1.Id);
                 if (message != null)
                 {
-                    switch(arg3.Emote.Name)
+                    var emote = arg3.Emote as Emote;
+
+                    if (emote.Id == DiscordUtilities.Tick_Emote.Id)
                     {
-                        case "✔":
+                        if (!message.HasSent)
+                        {
+                            try
                             {
-                                if (!message.HasSent)
+                                var newissue = new Octokit.NewIssue(message.Title)
                                 {
-                                    try
-                                    {
-                                        var newissue = new Octokit.NewIssue(message.Title)
-                                        {
-                                            Body = message.Body
-                                        };
+                                    Body = message.Body
+                                };
 
-                                        newissue.Assignees.Add("exsersewo");
-                                        newissue.Labels.Add("From Command");
+                                newissue.Assignees.Add("exsersewo");
+                                newissue.Labels.Add("From Command");
 
-                                        var issue = await BotService.Services.GetRequiredService<Octokit.GitHubClient>().Issue.Create(Configuration.GithubRepository, newissue).ConfigureAwait(false);
-
-                                        try
-                                        {
-                                            await BotService.DiscordClient.GetUser(message.SubmitterId).SendMessageAsync("", false,
-                                                new EmbedBuilder()
-                                                    .WithTitle("Good News!")
-                                                    .WithDescription($"Your issue:\n\"[{newissue.Title}]({issue.HtmlUrl})\"\n\nhas been accepted")
-                                                    .WithColor(EmbedExtensions.RandomEmbedColor())
-                                                .Build()
-                                            );
-                                        }
-                                        catch { }
-
-                                        await msg.ModifyAsync(x =>
-                                        {
-                                            x.Embed = msg.Embeds.ElementAt(0)
-                                            .ToEmbedBuilder()
-                                            .AddField("Sent", "✔")
-                                            .Build();
-                                        }).ConfigureAwait(false);
-
-                                        message.HasSent = true;
-
-                                        await Database.SaveChangesAsync().ConfigureAwait(false);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        Log.Error("Git-" + Utils.GetCaller(), ex.Message, ex);
-                                    }
-                                }
-                            }
-                            break;
-                        case "❌":
-                            {
-                                Database.Issues.Remove(message);
-
-                                await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                                await msg.DeleteAsync().ConfigureAwait(false);
+                                var issue = await BotService.Services.GetRequiredService<Octokit.GitHubClient>().Issue.Create(Configuration.GithubRepository, newissue).ConfigureAwait(false);
 
                                 try
                                 {
                                     await BotService.DiscordClient.GetUser(message.SubmitterId).SendMessageAsync("", false,
                                         new EmbedBuilder()
-                                            .WithTitle("Bad News")
-                                            .WithDescription($"Your issue:\n\"{message.Title}\"\n\nhas been declined. If you would like to know why, send: {arg3.User.Value.FullName()} as message")
+                                            .WithTitle("Good News!")
+                                            .WithDescription($"Your issue:\n\"[{newissue.Title}]({issue.HtmlUrl})\"\n\nhas been accepted")
                                             .WithColor(EmbedExtensions.RandomEmbedColor())
                                         .Build()
                                     );
                                 }
                                 catch { }
+
+                                await msg.ModifyAsync(x =>
+                                {
+                                    x.Embed = msg.Embeds.ElementAt(0)
+                                    .ToEmbedBuilder()
+                                    .AddField("Sent", DiscordUtilities.Tick_Emote.ToString())
+                                    .Build();
+                                }).ConfigureAwait(false);
+
+                                message.HasSent = true;
+
+                                await Database.SaveChangesAsync().ConfigureAwait(false);
                             }
-                            break;
+                            catch (Exception ex)
+                            {
+                                Log.Error("Git-" + SkuldAppContext.GetCaller(), ex.Message, ex);
+                            }
+                        }
+                    }
+                    else if (emote.Id == DiscordUtilities.Cross_Emote.Id)
+                    {
+                        Database.Issues.Remove(message);
+
+                        await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                        await msg.DeleteAsync().ConfigureAwait(false);
+
+                        try
+                        {
+                            await BotService.DiscordClient.GetUser(message.SubmitterId).SendMessageAsync("", false,
+                                new EmbedBuilder()
+                                    .WithTitle("Bad News")
+                                    .WithDescription($"Your issue:\n\"{message.Title}\"\n\nhas been declined. If you would like to know why, send: {arg3.User.Value.FullName()} as message")
+                                    .WithColor(EmbedExtensions.RandomEmbedColor())
+                                .Build()
+                            );
+                        }
+                        catch { }
                     }
                 }
             }
@@ -362,6 +360,7 @@ namespace Skuld.Discord.Services
         #endregion Users
 
         #region Guilds
+
         private static async Task Bot_LeftGuild(SocketGuild arg)
         {
             using var database = new SkuldDbContextFactory().CreateDbContext();
@@ -406,7 +405,7 @@ namespace Skuld.Discord.Services
                 }
             }
 
-            #endregion
+            #endregion LevelRewards
 
             #region IAmRoles
 
@@ -435,10 +434,11 @@ namespace Skuld.Discord.Services
                 }
             }
 
-            #endregion
+            #endregion IAmRoles
 
             Log.Verbose(Key, $"{arg} deleted in {arg.Guild}");
         }
-        #endregion
+
+        #endregion Guilds
     }
 }

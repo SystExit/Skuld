@@ -3,7 +3,6 @@ using Discord.Commands;
 using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
-using Skuld.Core.Generic.Models;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
@@ -103,7 +102,7 @@ namespace Skuld.Bot.Commands
                 }
                 else
                 {
-                    var cmd = DiscordUtilities.GetCommandHelp(CommandService, Context, command);
+                    var cmd = CommandService.GetCommandHelp(Context, command);
                     if (cmd == null)
                     {
                         await $"Sorry, I couldn't find a command like **{command}**.".QueueMessageAsync(Context).ConfigureAwait(false);
@@ -121,7 +120,6 @@ namespace Skuld.Bot.Commands
             }
         }
 
-
         [Command("issue"), Summary("Create or get an issue on Github")]
         public async Task Issue(string title, [Remainder]string content = null)
         {
@@ -137,7 +135,7 @@ namespace Skuld.Bot.Commands
                 message.AppendLine($"Version: Skuld/{SkuldAppContext.Skuld.Key.Version.ToString()}");
 
                 var newMessage =
-                    await 
+                    await
                         Context.Client.SendChannelAsync(
                             Context.Client.GetChannel(Configuration.IssueChannel),
                             "",
@@ -147,9 +145,9 @@ namespace Skuld.Bot.Commands
                                     .Build()
                         ).ConfigureAwait(false);
 
-                await newMessage.AddReactionAsync(new Emoji("✔")).ConfigureAwait(false);
+                await newMessage.AddReactionAsync(DiscordUtilities.Tick_Emote).ConfigureAwait(false);
 
-                await newMessage.AddReactionAsync(new Emoji("❌")).ConfigureAwait(false);
+                await newMessage.AddReactionAsync(DiscordUtilities.Cross_Emote).ConfigureAwait(false);
 
                 Database.Issues.Add(new Issue
                 {
@@ -163,7 +161,7 @@ namespace Skuld.Bot.Commands
 
                 await
                     EmbedExtensions.FromMessage(
-                        "Issue Tracker", 
+                        "Issue Tracker",
                         $"Your issue has been submitted for approval, if it ends up on the [issue tracker]({SkuldAppContext.Skuld.Value.ToString()}/issues) it has been approved",
                         Context)
                     .QueueMessageAsync(Context)
