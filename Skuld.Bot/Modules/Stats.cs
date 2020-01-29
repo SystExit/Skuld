@@ -1,17 +1,25 @@
-﻿using Discord;
+﻿using Akitaux.Twitch.Helix;
+using Booru.Net;
+using Discord;
 using Discord.Commands;
+using Discord.WebSocket;
+using Miki.API.Images;
 using Octokit;
 using Skuld.Core;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
 using Skuld.Discord.Services;
+using SysEx.Net;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Weeb.net;
 
 namespace Skuld.Bot.Commands
 {
@@ -40,21 +48,13 @@ namespace Skuld.Bot.Commands
             Assembly.GetAssembly(typeof(ImghoardClient)).GetName(),
             new GitRepoStruct("Mikibot", "dotnet-miki-api"));
 
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Discord = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetAssembly(typeof(DiscordShardedClient)).GetName(),
+            new GitRepoStruct("discord-net", "Discord.Net"));
+
         [Command("ping"), Summary("Print Ping")]
         public async Task Ping()
             => await $"PONG: {Context.Client.GetShardFor(Context.Guild).Latency}ms".QueueMessageAsync(Context).ConfigureAwait(false);
-
-        [Command("uptime"), Summary("Current Uptime")]
-        public async Task Uptime()
-            => await $"Uptime: {string.Format("{0:dd} Days {0:hh} Hours {0:mm} Minutes {0:ss} Seconds", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}".QueueMessageAsync(Context).ConfigureAwait(false);
-
-        [Command("netfw"), Summary(".Net Info")]
-        public async Task Netinfo()
-            => await $"{RuntimeInformation.FrameworkDescription} {RuntimeInformation.OSArchitecture}".QueueMessageAsync(Context).ConfigureAwait(false);
-
-        [Command("discord"), Summary("Discord Info")]
-        public async Task Discnet()
-            => await $"Discord.Net Library Version: {DiscordConfig.Version}".QueueMessageAsync(Context).ConfigureAwait(false);
 
         [Command("stats"), Summary("All stats")]
         public async Task StatsAll()
@@ -76,10 +76,12 @@ namespace Skuld.Bot.Commands
                     .WithColor(color);
 
                 string apiversions =
-                    $"[Booru.net: {Booru.Key.Version.ToString()}]({Booru.Value.ToString()})\n" +
-                    $"[Imghoard: {Imghoard.Key.Version.ToString()}]({Imghoard.Value.ToString()})\n" +
-                    $"[SysEx.net: {SysEx.Key.Version.ToString()}]({SysEx.Value.ToString()})\n" +
-                    $"[Twitch: {Twitch.Key.Version.ToString()}]({Twitch.Value.ToString()})\n" +
+                    $"[.Net Core: {RuntimeInformation.FrameworkDescription}](https://github.com/dotnet/core){Environment.NewLine}" +
+                    $"[Booru.Net: {Booru.Key.Version.ToString()}]({Booru.Value.ToString()}){Environment.NewLine}" +
+                    $"[Discord.Net: {Discord.Key.Version.ToString()}]({Discord.Value.ToString()}) {Environment.NewLine}" +
+                    $"[Imghoard: {Imghoard.Key.Version.ToString()}]({Imghoard.Value.ToString()}){Environment.NewLine}" +
+                    $"[SysEx.Net: {SysEx.Key.Version.ToString()}]({SysEx.Value.ToString()}){Environment.NewLine}" +
+                    $"[Twitch: {Twitch.Key.Version.ToString()}]({Twitch.Value.ToString()}){Environment.NewLine}" +
                     $"[Weebsh: {Weebsh.Key.Version.ToString()}]({Weebsh.Value.ToString()})";
 
                 var commits = await GitClient.Repository.Commit.GetAll(SkuldAppContext.Skuld.Value.Owner, SkuldAppContext.Skuld.Value.Repo).ConfigureAwait(false);
