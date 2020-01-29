@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using Skuld.APIS;
+using Skuld.APIS.Extensions;
 using Skuld.APIS.NASA.Models;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
@@ -23,7 +24,7 @@ namespace Skuld.Bot.Modules
         [Command("apod"), Summary("Gets NASA's \"Astronomy Picture of the Day\""), Ratelimit(20, 1, Measure.Minutes)]
         public async Task APOD()
         {
-            var aPOD = await NASAClient.GetAPODAsync();
+            var aPOD = await NASAClient.GetAPODAsync().ConfigureAwait(false);
             DogStatsd.Increment("web.get");
 
             if (aPOD.HDUrl != null && (!aPOD.HDUrl.IsVideoFile() || (!aPOD.Url.Contains("youtube") || !aPOD.Url.Contains("youtu.be"))))

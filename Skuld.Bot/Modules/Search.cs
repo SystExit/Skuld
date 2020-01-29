@@ -1,4 +1,5 @@
-﻿using Akitaux.Twitch.Helix.Requests;
+﻿using Akitaux.Twitch.Helix;
+using Akitaux.Twitch.Helix.Requests;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
@@ -12,7 +13,6 @@ using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
-using Skuld.Discord.Services;
 using SteamStoreQuery;
 using SteamWebAPI2.Interfaces;
 using System;
@@ -34,13 +34,14 @@ namespace Skuld.Bot.Commands
         public GiphyClient Giphy { get; set; }
         public Stands4Client Stands4 { get; set; }
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }
+        public TwitchHelixClient TwitchClient { get; set; }
 
         #region SocialMedia
 
         [Command("twitch"), Summary("Finds a twitch user")]
         public async Task TwitchSearch([Remainder]string twitchStreamer)
         {
-            var channel = await BotService.TwitchClient.GetUsersAsync(new GetUsersParams
+            var channel = await TwitchClient.GetUsersAsync(new GetUsersParams
             {
                 UserNames = new[] { new Utf8String(twitchStreamer) }
             }).ConfigureAwait(false);
@@ -48,7 +49,7 @@ namespace Skuld.Bot.Commands
             var user = channel.Data.FirstOrDefault();
 
             if (user != null)
-                await (await user.GetEmbedAsync(BotService.TwitchClient).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
+                await (await user.GetEmbedAsync(TwitchClient).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
             else
                 await EmbedExtensions.FromError($"Couldn't find user `{twitchStreamer}`. Check your spelling and try again", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
@@ -60,18 +61,10 @@ namespace Skuld.Bot.Commands
 
             var subReddit = await Social.GetSubRedditAsync(subreddit).ConfigureAwait(false);
 
-            var embed = new EmbedBuilder
-            {
-                Title = "https://reddit.com/" + subreddit,
-                Description = subReddit.Data.Posts.PaginatePosts(channel, 25)[0],
-                Footer = new EmbedFooterBuilder
-                {
-                    Text = "Page 1/1"
-                },
-                Color = Color.Blue
-            };
-
-            await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
+            await
+                EmbedExtensions.FromMessage("https://reddit.com/" + subreddit, subReddit.Data.Posts.PaginatePosts(channel, 25)[0], Context)
+                .WithColor(Color.Blue)
+            .QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         #endregion SocialMedia
@@ -136,7 +129,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var prefix = (await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix ?? Configuration.Prefix;
+            var prefix = (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix ?? Configuration.Prefix;
 
             string url = "https://lmgtfy.com/";
             engine = engine.ToLowerInvariant();
@@ -171,24 +164,20 @@ namespace Skuld.Bot.Commands
             if (phrase == null)
                 await (await UrbanDictionary.GetRandomWordAsync().ConfigureAwait(false)).ToEmbed().QueueMessageAsync(Context).ConfigureAwait(false);
             else
-                await (await UrbanDictionary.GetPhraseAsync(phrase).ConfigureAwait(false)).ToEmbed().QueueMessageAsync(Context).ConfigureAwait(false);
+                await (await UrbanDictionary.GetPhrasesAsync(phrase).ConfigureAwait(false)).RandomValue().ToEmbed().QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("wikipedia"), Summary("Gets wikipedia information, supports all languages that wikipedia offers"), Alias("wiki")]
         public async Task Wiki(string langcode, [Remainder]string query)
         {
             var page = await Wikipedia.GetArticleAsync(langcode, query).ConfigureAwait(false);
-            var embed = new EmbedBuilder
-            {
-                Author = new EmbedAuthorBuilder
-                {
-                    Name = page.Name,
-                    Url = page.Url
-                },
-                Color = EmbedExtensions.RandomEmbedColor()
-            };
+            var embed = new EmbedBuilder()
+                .WithAuthor(page.Name, url: page.Url)
+                .WithRandomColor();
+
             embed.AddField("Description", page.Description ?? "Not Available", true);
-            await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
+
+            await embed.QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("define"), Summary("Defines a word")]
@@ -196,20 +185,16 @@ namespace Skuld.Bot.Commands
         {
             var definedword = await Stands4.GetWordAsync(word).ConfigureAwait(false);
 
-            var embed = new EmbedBuilder
-            {
-                Author = new EmbedAuthorBuilder
-                {
-                    Name = definedword.Word
-                },
-                Color = EmbedExtensions.RandomEmbedColor()
-            };
+            var embed = new EmbedBuilder()
+                .WithAuthor(definedword.Word)
+                .WithRandomColor();
+
             embed.AddField("Definition", definedword.Definition ?? "None Available");
             embed.AddField("Example", definedword.Example ?? "Not Available");
             embed.AddField("Part of speech", definedword.PartOfSpeech ?? "Not Available", inline: true);
             embed.AddField("Terms", definedword.Terms ?? "Not Available", inline: true);
 
-            await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
+            await embed.QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         #endregion Definitions/Information

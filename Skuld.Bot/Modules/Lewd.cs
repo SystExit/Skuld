@@ -32,7 +32,7 @@ namespace Skuld.Bot.Commands
             var neko = await NekosLifeClient.GetAsync(NekoImageType.LewdNeko).ConfigureAwait(false);
             StatsdClient.DogStatsd.Increment("web.get");
             if (neko != null)
-                await new EmbedBuilder { ImageUrl = neko }.Build().QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromImage(neko, Color.Purple, Context).QueueMessageAsync(Context).ConfigureAwait(false);
             else
                 await EmbedExtensions.FromError("Hmmm <:Thunk:350673785923567616> I got an empty response. Try again.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }

@@ -7,6 +7,7 @@ using Skuld.APIS;
 using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Conversion;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
@@ -39,8 +40,8 @@ namespace Skuld.Bot.Commands
             if (user == null)
                 user = (IGuildUser)Context.User;
 
-            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
-            var dbusr = await Database.GetUserAsync(user).ConfigureAwait(false);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+            var dbusr = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
             await
                 EmbedExtensions.FromMessage("SkuldBank - Account Information", $"{user.Mention} has {gld.MoneyIcon}{dbusr.Money.ToString("N0")} {gld.MoneyName}", Context)
@@ -61,7 +62,7 @@ namespace Skuld.Bot.Commands
             if (user == null)
                 user = Context.User as IGuildUser;
 
-            var profileuser = await Database.GetUserAsync(user).ConfigureAwait(false);
+            var profileuser = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
             var fontsFolder = SkuldAppContext.FontDirectory;
             var fontFile = Path.Combine(fontsFolder, "NotoSans-Regular.ttf");
@@ -127,39 +128,6 @@ namespace Skuld.Bot.Commands
                     profileBackground.Composite(statusBackground, 96, 96, CompositeOperator.Over);
                 }
 
-                if (Context.Client.GetUser(user.Id).MutualGuilds.Any(x => x.GetUser(user.Id).PremiumSince.HasValue))
-                {
-                    var prem = Context.Client.GetUser(user.Id).MutualGuilds.FirstOrDefault(x => x.GetUser(user.Id).PremiumSince.HasValue).GetUser(user.Id).PremiumSince;
-
-                    var months = DateTime.UtcNow.MonthsBetween(prem.Value.Date);
-                    string emblem = "";
-
-                    if (months <= 1)
-                    {
-                        emblem = DiscordUtilities.Level1UserBoost;
-                    }
-                    if (months == 2)
-                    {
-                        emblem = DiscordUtilities.Level2UserBoost;
-                    }
-                    if (months >= 3)
-                    {
-                        emblem = DiscordUtilities.Level3UserBoost;
-                    }
-
-                    using MagickImage img3 = new MagickImage(Path.Combine(AppContext.BaseDirectory, "storage/boost", emblem), 256, 256);
-
-                    img3.Settings.BackgroundColor = MagickColors.None;
-                    img3.BackgroundColor = MagickColors.None;
-                    img3.Alpha(AlphaOption.Set);
-                    img3.ColorFuzz = new Percentage(10);
-                    img3.FloodFill(MagickColors.None, 1, 1);
-
-                    img3.Resize(48, 48);
-
-                    profileBackground.Composite(img3, -4, 0, CompositeOperator.Over);
-                }
-
                 image.Composite(profileBackground, 236, 32, CompositeOperator.Over);
             }
 
@@ -200,7 +168,7 @@ namespace Skuld.Bot.Commands
             }
 
             //Money
-            using (MagickImage label2 = new MagickImage($"label:{(await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{profileuser.Money.ToString("N0")}", new MagickReadSettings
+            using (MagickImage label2 = new MagickImage($"label:{(await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{profileuser.Money.ToString("N0")}", new MagickReadSettings
             {
                 BackgroundColor = MagickColors.Transparent,
                 FillColor = MagickColors.White,
@@ -272,7 +240,7 @@ namespace Skuld.Bot.Commands
             image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToString("N0")} ({exp.TotalXP.ToString("N0")})"));
             image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: {profileuser.Pats.ToString("N0")}/Patted: {profileuser.Patted.ToString("N0")}"));
 
-            ulong xpToNextLevel = DiscordUtilities.GetXPLevelRequirement(exp.Level + 1, DiscordUtilities.PHI);
+            ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(exp.Level + 1, DiscordUtilities.PHI);
 
             //Progressbar
             image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, 471, 580, 500));
@@ -320,7 +288,7 @@ namespace Skuld.Bot.Commands
             }
 
             using var Database = new SkuldDbContextFactory().CreateDbContext();
-            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
             if (user == null)
                 user = (IGuildUser)Context.User;
@@ -330,8 +298,8 @@ namespace Skuld.Bot.Commands
             if (user.Id == Context.User.Id)
                 isSelf = true;
 
-            var self = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
-            var target = await Database.GetUserAsync(user).ConfigureAwait(false);
+            var self = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+            var target = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
             if (self.LastDaily == 0)
             {
@@ -380,18 +348,18 @@ namespace Skuld.Bot.Commands
 
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
             if (usr.Money >= amount)
             {
-                var usr2 = await Database.GetUserAsync(user).ConfigureAwait(false);
+                var usr2 = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
                 usr.Money -= amount;
                 usr2.Money += amount;
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                var dbGuild = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+                var dbGuild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
                 await
                     EmbedExtensions.FromMessage("Skuld Bank - Transaction", $"{Context.User.Mention} just gave {user.Mention} {dbGuild.MoneyIcon}{amount.ToString("N0")}", Context)
@@ -415,7 +383,7 @@ namespace Skuld.Bot.Commands
             if (user == null)
                 user = (IGuildUser)Context.User;
 
-            var usr = await Database.GetUserAsync(user).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
             if (!Database.Features.FirstOrDefault(x => x.Id == Context.Guild.Id).Experience)
             {
@@ -511,6 +479,8 @@ namespace Skuld.Bot.Commands
 
             var experiences = await Database.UserXp.ToAsyncEnumerable().Where(x => x.GuildId == Context.Guild.Id).ToListAsync();
 
+            experiences = experiences.OrderByDescending(x => x.TotalXP).ToList();
+
             ulong index = 0;
 
             foreach (var x in experiences)
@@ -540,7 +510,7 @@ namespace Skuld.Bot.Commands
             image.Draw(font, fontmed, encoding, white, new DrawableText(220, 170, $"Rank {index + 1}/{experiences.Count()}"));
             image.Draw(font, fontmed, encoding, white, new DrawableText(220, 210, $"Level: {xp.Level} ({xp.TotalXP.ToString("N0")})"));
 
-            ulong xpToNextLevel = DiscordUtilities.GetXPLevelRequirement(xp.Level + 1, DiscordUtilities.PHI);
+            ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(xp.Level + 1, DiscordUtilities.PHI);
 
             int innerHeight = 256;
 
@@ -554,7 +524,7 @@ namespace Skuld.Bot.Commands
             image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, innerHeight, mapped, 278));
 
             //Current XP
-            image.Draw(font, fontmedd, encoding, new DrawableText(25, 275, (xp.XP).ToString("N0") + "XP"));
+            image.Draw(font, fontmedd, encoding, new DrawableText(25, 277, (xp.XP).ToString("N0") + "XP"));
 
             //XP To Next
             using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToString("N0")}XP", new MagickReadSettings
@@ -568,7 +538,7 @@ namespace Skuld.Bot.Commands
                 Font = fontFile
             }))
             {
-                image.Composite(label5, 0, 250, CompositeOperator.Over);
+                image.Composite(label5, 0, 252, CompositeOperator.Over);
             }
 
             MemoryStream outputStream = new MemoryStream();
@@ -584,7 +554,7 @@ namespace Skuld.Bot.Commands
         public async Task HealAmount()
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
-            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
             var amnt = Math.Round(Math.Ceiling(usr.Money * 0.8));
             await $"You can heal for: `{Math.Floor(amnt)}`HP".QueueMessageAsync(Context).ConfigureAwait(false);
@@ -620,9 +590,9 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
-            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
-            var repee = await Database.GetUserAsync(user).ConfigureAwait(false);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+            var repee = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
             if (Database.Reputations.Any(x => x.Repee == repee.Id && x.Reper == Context.User.Id))
             {
@@ -659,8 +629,8 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
-            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
             if (Database.Reputations.Any(x => x.Repee == user.Id && x.Reper == Context.User.Id))
             {
@@ -686,7 +656,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
             if (title == null)
             {
@@ -711,7 +681,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
             usr.RecurringBlock = action;
 
@@ -725,8 +695,8 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
-            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
             if (Hex != null)
             {
@@ -767,8 +737,8 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
-            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
             if (!usr.UnlockedCustBG)
             {
@@ -797,8 +767,8 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
-            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
             if (usr.Money < 900 || string.IsNullOrEmpty(link))
             {
@@ -905,9 +875,9 @@ namespace Skuld.Bot.Commands
                 TotalXP = 1234567890
             };
 
-            exp.Level = DiscordUtilities.GetLevelFromTotalXP(exp.TotalXP, DiscordUtilities.PHI);
+            exp.Level = DatabaseUtilities.GetLevelFromTotalXP(exp.TotalXP, DiscordUtilities.PHI);
 
-            exp.XP = DiscordUtilities.GetXPLevelRequirement(exp.Level, DiscordUtilities.PHI) / 2;
+            exp.XP = DatabaseUtilities.GetXPLevelRequirement(exp.Level, DiscordUtilities.PHI) / 2;
 
             int ylevel1 = 365, ylevel2 = 405, ylevel3 = 445;
 
@@ -987,7 +957,7 @@ namespace Skuld.Bot.Commands
             image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToString("N0")} ({exp.TotalXP.ToString("N0")})"));
             image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: 7,777/Patted: 7,777"));
 
-            ulong xpToNextLevel = DiscordUtilities.GetXPLevelRequirement(exp.Level + 1, DiscordUtilities.PHI);
+            ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(exp.Level + 1, DiscordUtilities.PHI);
 
             //Progressbar
             image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, 471, 580, 500));
@@ -1051,7 +1021,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var user = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var user = await Database.GetOrInsertUserAsync(Context.User).ConfigureAwait(false);
 
             user.TimeZone = timezone.Id;
 

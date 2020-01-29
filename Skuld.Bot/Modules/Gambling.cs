@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Skuld.Bot.Extensions;
 using Skuld.Bot.Globalization;
 using Skuld.Bot.Models;
-using Skuld.Bot.Models.Commands.GamblingModule;
+using Skuld.Bot.Models.GamblingModule;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
@@ -136,8 +136,8 @@ namespace Skuld.Bot.Commands
         public async Task HeadsOrTails(string guess, ulong? bet = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
-            var user = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
-            var guild = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+            var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+            var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
             var ran = BotService.Services.GetRequiredService<Random>();
             var result = ran.Next(0, coinflip.Count);
@@ -243,7 +243,7 @@ namespace Skuld.Bot.Commands
         public async Task RPS(string shoot, ulong? bet = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
-            var user = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
             var skuldThrow = rpsWeights.GetRandomWeightedValue().Value;
 
@@ -259,7 +259,7 @@ namespace Skuld.Bot.Commands
 
                 if (!Context.IsPrivate)
                 {
-                    var guild = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+                    var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
                     MoneyPrefix = guild.MoneyIcon;
                 }
                 else
@@ -408,13 +408,13 @@ namespace Skuld.Bot.Commands
         public async Task Slots(ulong? bet = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
-            var user = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
             string MoneyPrefix;
 
             if (!Context.IsPrivate)
             {
-                var guild = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+                var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
                 MoneyPrefix = guild.MoneyIcon;
             }
             else
@@ -585,7 +585,7 @@ namespace Skuld.Bot.Commands
             var gameresult = DidPlayerWin(bot.GetDies(), player.GetDies());
 
             using var Database = new SkuldDbContextFactory().CreateDbContext();
-            var user = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
             if (bet.HasValue)
             {
@@ -598,7 +598,7 @@ namespace Skuld.Bot.Commands
 
             if (!Context.IsPrivate)
             {
-                var guild = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+                var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
                 MoneyPrefix = guild.MoneyIcon;
             }
             else

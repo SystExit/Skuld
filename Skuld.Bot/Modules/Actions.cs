@@ -3,6 +3,8 @@ using Discord.Commands;
 using Miki.API.Images;
 using Skuld.Core;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Formatting;
+using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
@@ -240,7 +242,7 @@ namespace Skuld.Bot.Commands
 
                 {
                     using SkuldDatabaseContext Database = new SkuldDbContextFactory().CreateDbContext(null);
-                    var initiator = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+                    var initiator = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
                     StringBuilder message = new StringBuilder();
 
@@ -251,7 +253,7 @@ namespace Skuld.Bot.Commands
                         if (usr.IsBot || usr.IsWebhook || usr.Discriminator == "0000" || prune.Contains(usr.Id))
                             continue;
 
-                        var uzr = await Database.GetUserAsync(usr).ConfigureAwait(false);
+                        var uzr = await Database.InsertOrGetUserAsync(usr).ConfigureAwait(false);
 
                         if (!(uzr.RecurringBlock && uzr.Patted.IsRecurring(2)))
                         {

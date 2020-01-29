@@ -29,7 +29,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
             var loc = Locale.GetLocale(usr.Language ?? Locale.defaultLocale);
 
             var raw = await Anime.GetAnimeAsync(animetitle).ConfigureAwait(false);
@@ -38,12 +38,9 @@ namespace Skuld.Bot.Commands
             {
                 var pages = data.PaginateList(25);
 
-                IUserMessage sentmessage = await ReplyAsync(null, false, new EmbedBuilder
-                {
-                    Title = loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s",
-                    Color = Color.Purple,
-                    Description = pages[0]
-                }.Build()).ConfigureAwait(false);
+                IUserMessage sentmessage = await ReplyAsync(null, false,
+                    EmbedExtensions.FromMessage(loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s", pages[0], Context).WithColor(Color.Purple).Build()
+                ).ConfigureAwait(false);
 
                 var response = await NextMessageAsync(true, true, TimeSpan.FromSeconds(30));
                 if (response == null)
@@ -70,7 +67,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
             var loc = Locale.GetLocale(usr.Language ?? Locale.defaultLocale);
 
             var raw = await Manga.GetMangaAsync(mangatitle).ConfigureAwait(false);
@@ -79,12 +76,9 @@ namespace Skuld.Bot.Commands
             {
                 var pages = data.PaginateList(25);
 
-                IUserMessage sentmessage = await ReplyAsync(null, false, new EmbedBuilder
-                {
-                    Title = loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s",
-                    Color = Color.Purple,
-                    Description = pages[0]
-                }.Build()).ConfigureAwait(false);
+                IUserMessage sentmessage = await ReplyAsync(null, false, 
+                    EmbedExtensions.FromMessage(loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s", pages[0], Context).WithColor(Color.Purple).Build()
+                ).ConfigureAwait(false);
 
                 var response = await NextMessageAsync(true, true, TimeSpan.FromSeconds(30));
                 if (response == null)

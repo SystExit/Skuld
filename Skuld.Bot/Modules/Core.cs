@@ -3,6 +3,7 @@ using Discord.Commands;
 using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
@@ -33,7 +34,7 @@ namespace Skuld.Bot.Commands
             {
                 if (command == null)
                 {
-                    string prefix = (await Database.GetGuildAsync(Context.Guild) != null ? (await Database.GetGuildAsync(Context.Guild)).Prefix : Configuration.Prefix);
+                    string prefix = (await Database.GetOrInsertGuildAsync(Context.Guild) != null ? (await Database.GetOrInsertGuildAsync(Context.Guild)).Prefix : Configuration.Prefix);
 
                     string title = $"Commands of: {Context.Client.CurrentUser} that can be invoked in: ";
 
@@ -46,16 +47,12 @@ namespace Skuld.Bot.Commands
                         title += $"{Context.Guild.Name}/{Context.Channel.Name}";
                     }
 
-                    var embed = new EmbedBuilder
-                    {
-                        Author = new EmbedAuthorBuilder
-                        {
-                            Name = title,
-                            IconUrl = Context.Client.CurrentUser.GetAvatarUrl() ?? Context.Client.CurrentUser.GetDefaultAvatarUrl()
-                        },
-                        Color = EmbedExtensions.RandomEmbedColor(),
-                        Description = $"The prefix of **{(Context.Guild == null ? Context.User.FullName() : Context.Guild.Name)}** is: `{prefix}`"
-                    };
+                    var embed =
+                        new EmbedBuilder()
+                        .AddAuthor(Context.Client)
+                        .WithRandomColor()
+                        .WithDescription($"The prefix of **{(Context.Guild == null ? Context.User.FullName() : Context.Guild.Name)}** is: `{prefix}`");
+
                     foreach (var module in CommandService.Modules)
                     {
                         if (Context.IsPrivate) if (module.Name.ToLowerInvariant() == nameof(Admin).ToLowerInvariant()) continue;
@@ -81,7 +78,7 @@ namespace Skuld.Bot.Commands
                         }
                     }
 
-                    if (await Database.GetGuildAsync(Context.Guild) != null)
+                    if (await Database.GetOrInsertGuildAsync(Context.Guild) != null)
                     {
                         var commands = Database.CustomCommands.AsQueryable().Where(x => x.GuildId == Context.Guild.Id);
                         if (commands.Count() > 0)
