@@ -4,6 +4,8 @@ using Discord.Commands;
 using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Pagination;
+using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Exceptions;
@@ -206,7 +208,7 @@ namespace Skuld.Bot.Commands
             };
             if (modules.ContainsKey(module) || modules.ContainsValue(module))
             {
-                var guild = await Database.GetGuildAsync(Context.Guild);
+                var guild = await Database.GetOrInsertGuildAsync(Context.Guild);
 
                 if (guild != null)
                 {
@@ -225,7 +227,7 @@ namespace Skuld.Bot.Commands
 
                     await $"I set `{channel.Name}` as the channel for the `{module}` module".QueueMessageAsync(Context).ConfigureAwait(false);
                 }
-                else await Database.InsertGuildAsync(Context.Guild, MessageHandler.cmdConfig.Prefix, MessageHandler.cmdConfig.MoneyName, MessageHandler.cmdConfig.MoneyIcon).ConfigureAwait(false);
+                else await Database.GetOrInsertGuildAsync(Context.Guild, MessageHandler.cmdConfig.Prefix, MessageHandler.cmdConfig.MoneyName, MessageHandler.cmdConfig.MoneyIcon).ConfigureAwait(false);
             }
             else
             {
@@ -246,7 +248,7 @@ namespace Skuld.Bot.Commands
         public async Task GuildMoney(Emoji icon = null, [Remainder]string name = null)
         {
             using var database = new SkuldDbContextFactory().CreateDbContext();
-            var guild = await database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+            var guild = await database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
             if (icon == null && name == null)
             {
@@ -289,7 +291,7 @@ namespace Skuld.Bot.Commands
             var user = usertomute as IGuildUser;
             var channels = guild.TextChannels;
 
-            var gld = await Database.GetGuildAsync(guild).ConfigureAwait(false);
+            var gld = await Database.GetOrInsertGuildAsync(guild).ConfigureAwait(false);
 
             try
             {
@@ -332,7 +334,7 @@ namespace Skuld.Bot.Commands
 
             try
             {
-                var dbGuild = await Database.GetGuildAsync(guild);
+                var dbGuild = await Database.GetOrInsertGuildAsync(guild);
 
                 if (dbGuild.MutedRole == 0)
                 {
@@ -609,7 +611,7 @@ namespace Skuld.Bot.Commands
 
             var guild = Context.Guild;
 
-            var gld = await Database.GetGuildAsync(guild).ConfigureAwait(false);
+            var gld = await Database.GetOrInsertGuildAsync(guild).ConfigureAwait(false);
 
             if (role == null)
             {
@@ -618,7 +620,7 @@ namespace Skuld.Bot.Commands
                     gld.JoinRole = 0;
                     await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                    if ((await Database.GetGuildAsync(guild).ConfigureAwait(false)).JoinRole == 0)
+                    if ((await Database.GetOrInsertGuildAsync(guild).ConfigureAwait(false)).JoinRole == 0)
                     {
                         await EmbedExtensions.FromSuccess($"Successfully removed the member join role", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
@@ -635,7 +637,7 @@ namespace Skuld.Bot.Commands
                 gld.JoinRole = role.Id;
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                if ((await Database.GetGuildAsync(guild).ConfigureAwait(false)).JoinRole != roleidprev)
+                if ((await Database.GetOrInsertGuildAsync(guild).ConfigureAwait(false)).JoinRole != roleidprev)
                 {
                     await EmbedExtensions.FromSuccess($"Successfully set **{role.Name}** as the member join role", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
@@ -651,7 +653,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var jrole = (await Database.GetGuildAsync(Context.Guild)).JoinRole;
+            var jrole = (await Database.GetOrInsertGuildAsync(Context.Guild)).JoinRole;
 
             if (jrole == 0)
             {
@@ -661,6 +663,43 @@ namespace Skuld.Bot.Commands
             {
                 await $"**{Context.Guild.Name}**'s current auto role is `{Context.Guild.GetRole(jrole).Name}`".QueueMessageAsync(Context).ConfigureAwait(false);
             }
+        }
+
+        [Command("persistentrole"), Summary("Toggle a role's persistent nature"), RequireDatabase]
+        public async Task PersistentRole([Remainder]IRole role)
+        {
+            using SkuldDatabaseContext database = new SkuldDbContextFactory().CreateDbContext();
+
+            PersistentRole prole = database.PersistentRoles.ToList().FirstOrDefault(x => x.RoleId == role.Id);
+
+            if(prole == null)
+            {
+                var usersWithRole = await Context.Guild.GetUsersWithRoleAsync(role).ConfigureAwait(false);
+
+                foreach(var userWithRole in usersWithRole)
+                {
+                    database.PersistentRoles.Add(new PersistentRole
+                    {
+                        GuildId = Context.Guild.Id,
+                        RoleId = role.Id,
+                        UserId = userWithRole.Id
+                    });
+                }
+
+                await
+                    EmbedExtensions.FromSuccess(Context)
+                .QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+            else
+            {
+                database.PersistentRoles.RemoveRange(database.PersistentRoles.ToList().Where(x=>x.RoleId == role.Id && x.GuildId == Context.Guild.Id));
+
+                await
+                    EmbedExtensions.FromSuccess(Context)
+                .QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+
+            await database.SaveChangesAsync().ConfigureAwait(false);
         }
 
         [Command("addassignablerole"), Summary("Adds a new self assignable role. Supported:cost=[cost] require-level=[level] require-role=[rolename/roleid/mention]")]
@@ -675,7 +714,7 @@ namespace Skuld.Bot.Commands
 
             if (config.RequireLevel != 0 && !features.Experience)
             {
-                await EmbedExtensions.FromError("Configuration Error!", $"Enable Experience module first by using `{(await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix}guild-feature experience 1`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Configuration Error!", $"Enable Experience module first by using `{(await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix}guild-feature experience 1`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
@@ -781,7 +820,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("modifyrole"), Summary("Modify a role's settings")]
-        public async Task ModifyRole(IRole role, [Remainder]RoleConfig config = null)
+        public async Task ModifyRole(IRole role, [Remainder]Discord.Models.RoleConfig config = null)
         {
             if (config == null)
             {
@@ -849,7 +888,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var gld = await Database.GetGuildAsync(Context.Guild);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
             if (prefix != null)
             {
                 var oldprefix = gld.Prefix;
@@ -858,7 +897,7 @@ namespace Skuld.Bot.Commands
 
                 await Database.SaveChangesAsync();
 
-                if ((await Database.GetGuildAsync(Context.Guild)).Prefix != oldprefix)
+                if ((await Database.GetOrInsertGuildAsync(Context.Guild)).Prefix != oldprefix)
                     await EmbedExtensions.FromSuccess($"Successfully set `{prefix}` as the Guild's prefix", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 else
                     await EmbedExtensions.FromError($":thinking: It didn't change. Probably because it is the same as the current prefix.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
@@ -869,7 +908,7 @@ namespace Skuld.Bot.Commands
 
                 await Database.SaveChangesAsync();
 
-                if ((await Database.GetGuildAsync(Context.Guild)).Prefix == Configuration.Prefix)
+                if ((await Database.GetOrInsertGuildAsync(Context.Guild)).Prefix == Configuration.Prefix)
                     await EmbedExtensions.FromSuccess($"Successfully reset the Guild's prefix", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 else
                     await EmbedExtensions.FromError($":thinking: It didn't change.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
@@ -882,7 +921,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var gld = await Database.GetGuildAsync(Context.Guild);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild);
 
             if (gld != null)
             {
@@ -894,7 +933,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                await Database.InsertGuildAsync(Context.Guild, MessageHandler.cmdConfig.Prefix, MessageHandler.cmdConfig.MoneyName, MessageHandler.cmdConfig.MoneyIcon).ConfigureAwait(false);
+                await Database.GetOrInsertGuildAsync(Context.Guild, MessageHandler.cmdConfig.Prefix, MessageHandler.cmdConfig.MoneyName, MessageHandler.cmdConfig.MoneyIcon).ConfigureAwait(false);
             }
         }
 
@@ -909,7 +948,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var gld = await Database.GetGuildAsync(Context.Guild);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild);
 
             var oldmessage = gld.JoinMessage;
 
@@ -918,7 +957,7 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            if ((await Database.GetGuildAsync(Context.Guild)).JoinMessage != oldmessage)
+            if ((await Database.GetOrInsertGuildAsync(Context.Guild)).JoinMessage != oldmessage)
                 await EmbedExtensions.FromSuccess($"Set Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
@@ -929,7 +968,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var gld = await Database.GetGuildAsync(Context.Guild);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild);
 
             var oldmessage = gld.JoinMessage;
             var oldchannel = gld.JoinChannel;
@@ -939,7 +978,7 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            var ngld = await Database.GetGuildAsync(Context.Guild);
+            var ngld = await Database.GetOrInsertGuildAsync(Context.Guild);
 
             if (ngld.JoinChannel != oldchannel && ngld.JoinMessage != oldmessage)
                 await EmbedExtensions.FromSuccess("Set Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
@@ -952,14 +991,14 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var gld = await Database.GetGuildAsync(Context.Guild);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild);
 
             gld.JoinChannel = 0;
             gld.JoinMessage = "";
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            var ngld = await Database.GetGuildAsync(Context.Guild);
+            var ngld = await Database.GetOrInsertGuildAsync(Context.Guild);
 
             if (ngld.JoinChannel == 0 && ngld.JoinMessage == "")
                 await EmbedExtensions.FromSuccess("Cleared Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
@@ -977,7 +1016,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var gld = await Database.GetGuildAsync(Context.Guild);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild);
 
             var oldleave = gld.LeaveChannel;
             var oldmessg = gld.LeaveMessage;
@@ -987,7 +1026,7 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            var ngld = await Database.GetGuildAsync(Context.Guild);
+            var ngld = await Database.GetOrInsertGuildAsync(Context.Guild);
 
             if (ngld.LeaveMessage != oldmessg && ngld.LeaveChannel != oldleave)
             {
@@ -1003,7 +1042,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var gld = await Database.GetGuildAsync(Context.Guild);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild);
 
             var oldleave = gld.LeaveChannel;
             var oldmessg = gld.LeaveMessage;
@@ -1013,7 +1052,7 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            var ngld = await Database.GetGuildAsync(Context.Guild);
+            var ngld = await Database.GetOrInsertGuildAsync(Context.Guild);
 
             if (ngld.LeaveMessage != oldmessg && ngld.LeaveChannel != oldleave)
             {
@@ -1028,7 +1067,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var gld = await Database.GetGuildAsync(Context.Guild);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild);
 
             var oldleave = gld.LeaveChannel;
             var oldmessg = gld.LeaveMessage;
@@ -1038,7 +1077,7 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            var ngld = await Database.GetGuildAsync(Context.Guild);
+            var ngld = await Database.GetOrInsertGuildAsync(Context.Guild);
 
             if (ngld.LeaveMessage != oldmessg && ngld.LeaveChannel != oldleave)
             {
@@ -1056,7 +1095,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
             var oldmessg = gld.LeaveMessage;
 
@@ -1064,7 +1103,7 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            var ngld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+            var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
             if (ngld.LevelUpMessage != oldmessg)
             {
@@ -1078,7 +1117,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
             var oldchan = gld.LevelUpChannel;
 
             if (channel == null)
@@ -1087,7 +1126,7 @@ namespace Skuld.Bot.Commands
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                var ngld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+                var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
                 if (ngld.LevelUpChannel != oldchan)
                 {
@@ -1100,7 +1139,7 @@ namespace Skuld.Bot.Commands
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                var ngld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+                var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
                 if (ngld.LevelUpChannel != oldchan)
                 {
@@ -1115,7 +1154,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var gld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
             var old = gld.LevelNotification;
 
@@ -1123,7 +1162,7 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            var ngld = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+            var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
             if (ngld.LevelNotification != old)
             {

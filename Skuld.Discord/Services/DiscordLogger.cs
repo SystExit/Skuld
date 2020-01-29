@@ -1,11 +1,12 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
-using Skuld.APIS;
 using Skuld.Core;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using Skuld.Discord.BotListing;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Handlers;
 using Skuld.Discord.Utilities;
@@ -33,6 +34,7 @@ namespace Skuld.Discord.Services
             BotService.DiscordClient.ShardReady += Bot_ShardReady;
             BotService.DiscordClient.JoinedGuild += Bot_JoinedGuild;
             BotService.DiscordClient.RoleDeleted += Bot_RoleDeleted;
+            BotService.DiscordClient.GuildMemberUpdated += Bot_GuildMemberUpdated;
             BotService.DiscordClient.LeftGuild += Bot_LeftGuild;
             BotService.DiscordClient.UserJoined += Bot_UserJoined;
             BotService.DiscordClient.UserLeft += Bot_UserLeft;
@@ -50,6 +52,7 @@ namespace Skuld.Discord.Services
             BotService.DiscordClient.ShardReady -= Bot_ShardReady;
             BotService.DiscordClient.JoinedGuild -= Bot_JoinedGuild;
             BotService.DiscordClient.RoleDeleted -= Bot_RoleDeleted;
+            BotService.DiscordClient.GuildMemberUpdated -= Bot_GuildMemberUpdated;
             BotService.DiscordClient.LeftGuild -= Bot_LeftGuild;
             BotService.DiscordClient.UserJoined -= Bot_UserJoined;
             BotService.DiscordClient.UserLeft -= Bot_UserLeft;
@@ -122,7 +125,7 @@ namespace Skuld.Discord.Services
 
             if (arg3.User.IsSpecified)
             {
-                user = await Database.GetUserAsync(arg3.User.Value).ConfigureAwait(false);
+                user = await Database.GetOrInsertUserAsync(arg3.User.Value).ConfigureAwait(false);
             }
 
             var guild = BotService.DiscordClient.Guilds.FirstOrDefault(x => x.TextChannels.FirstOrDefault(z => z.Id == arg2.Id) != null);
@@ -196,6 +199,7 @@ namespace Skuld.Discord.Services
                                     await BotService.DiscordClient.GetUser(message.SubmitterId).SendMessageAsync("", false,
                                         new EmbedBuilder()
                                             .WithTitle("Good News!")
+                                            .AddAuthor(BotService.DiscordClient)
                                             .WithDescription($"Your issue:\n\"[{newissue.Title}]({issue.HtmlUrl})\"\n\nhas been accepted")
                                             .WithColor(EmbedExtensions.RandomEmbedColor())
                                         .Build()
@@ -234,6 +238,7 @@ namespace Skuld.Discord.Services
                             await BotService.DiscordClient.GetUser(message.SubmitterId).SendMessageAsync("", false,
                                 new EmbedBuilder()
                                     .WithTitle("Bad News")
+                                    .AddAuthor(BotService.DiscordClient)
                                     .WithDescription($"Your issue:\n\"{message.Title}\"\n\nhas been declined. If you would like to know why, send: {arg3.User.Value.FullName()} as message")
                                     .WithColor(EmbedExtensions.RandomEmbedColor())
                                 .Build()
@@ -293,30 +298,51 @@ namespace Skuld.Discord.Services
         {
             DogStatsd.Increment("guild.users.joined");
 
-            using (var ddb = new SkuldDbContextFactory().CreateDbContext())
             {
-                await ddb.InsertOrGetUserAsync(arg as IUser).ConfigureAwait(false);
+                using SkuldDatabaseContext database = new SkuldDbContextFactory().CreateDbContext();
+
+                await database.InsertOrGetUserAsync(arg as IUser).ConfigureAwait(false);
             }
 
-            using var db = new SkuldDbContextFactory().CreateDbContext();
-
-            var gld = await db.GetGuildAsync(arg.Guild).ConfigureAwait(false);
-
-            if (gld != null)
             {
-                if (gld.JoinRole != 0)
-                {
-                    var joinrole = arg.Guild.GetRole(gld.JoinRole);
-                    await arg.AddRoleAsync(joinrole).ConfigureAwait(false);
-                }
+                using SkuldDatabaseContext database = new SkuldDbContextFactory().CreateDbContext();
 
-                if (gld.JoinChannel != 0 && !string.IsNullOrEmpty(gld.JoinMessage))
+                if(database.PersistentRoles.ToList().Any(x => x.UserId == arg.Id && x.GuildId == arg.Guild.Id))
                 {
-                    var channel = arg.Guild.GetTextChannel(gld.JoinChannel);
-                    var message = gld.JoinMessage.ReplaceGuildEventMessage(arg as IUser, arg.Guild as SocketGuild);
-                    await BotService.DiscordClient.SendChannelAsync(channel, message);
+                    foreach (var persistentRole in database.PersistentRoles.ToList().Where(x => x.UserId == arg.Id && x.GuildId == arg.Guild.Id))
+                    {
+                        try
+                        {
+                            await arg.AddRoleAsync(arg.Guild.GetRole(persistentRole.RoleId)).ConfigureAwait(false);
+                        }
+                        catch { }
+                    }
                 }
             }
+
+            {
+                using SkuldDatabaseContext database = new SkuldDbContextFactory().CreateDbContext();
+
+                var gld = await database.GetOrInsertGuildAsync(arg.Guild).ConfigureAwait(false);
+
+                if (gld != null)
+                {
+                    if (gld.JoinRole != 0)
+                    {
+                        var joinrole = arg.Guild.GetRole(gld.JoinRole);
+                        await arg.AddRoleAsync(joinrole).ConfigureAwait(false);
+                    }
+
+                    if (gld.JoinChannel != 0 && !string.IsNullOrEmpty(gld.JoinMessage))
+                    {
+                        var channel = arg.Guild.GetTextChannel(gld.JoinChannel);
+                        var message = gld.JoinMessage.ReplaceGuildEventMessage(arg as IUser, arg.Guild as SocketGuild);
+                        await BotService.DiscordClient.SendChannelAsync(channel, message);
+                    }
+                }
+            }
+
+
 
             Log.Verbose(Key, $"{arg} joined {arg.Guild}");
         }
@@ -327,7 +353,7 @@ namespace Skuld.Discord.Services
 
             using var db = new SkuldDbContextFactory().CreateDbContext();
 
-            var gld = await db.GetGuildAsync(arg.Guild).ConfigureAwait(false);
+            var gld = await db.GetOrInsertGuildAsync(arg.Guild).ConfigureAwait(false);
 
             if (gld != null)
             {
@@ -349,7 +375,7 @@ namespace Skuld.Discord.Services
             {
                 var db = new SkuldDbContextFactory().CreateDbContext();
 
-                var user = await db.GetUserAsync(arg2).ConfigureAwait(false);
+                var user = await db.InsertOrGetUserAsync(arg2).ConfigureAwait(false);
 
                 user.AvatarUrl = new Uri(arg2.GetAvatarUrl() ?? arg2.GetDefaultAvatarUrl());
 
@@ -382,7 +408,7 @@ namespace Skuld.Discord.Services
 
             await BotService.DiscordClient.SendDataAsync(Configuration.IsDevelopmentBuild, Configuration.DiscordGGKey, Configuration.DBotsOrgKey, Configuration.B4DToken).ConfigureAwait(false);
 
-            await database.InsertGuildAsync(arg, Configuration.Prefix, MessageHandler.cmdConfig.MoneyName, MessageHandler.cmdConfig.MoneyIcon);
+            await database.GetOrInsertGuildAsync(arg, Configuration.Prefix, MessageHandler.cmdConfig.MoneyName, MessageHandler.cmdConfig.MoneyIcon);
 
             MessageQueue.CheckForEmptyGuilds = true;
             Log.Verbose(Key, $"Just left {arg}");
@@ -406,6 +432,21 @@ namespace Skuld.Discord.Services
             }
 
             #endregion LevelRewards
+
+            #region PersistentRoles
+
+            {
+                using var database = new SkuldDbContextFactory().CreateDbContext();
+
+                if (database.PersistentRoles.Any(x => x.RoleId == arg.Id))
+                {
+                    database.PersistentRoles.RemoveRange(database.PersistentRoles.AsQueryable().Where(x => x.RoleId == arg.Id));
+
+                    await database.SaveChangesAsync().ConfigureAwait(false);
+                }
+            }
+
+            #endregion PersistentRoles
 
             #region IAmRoles
 
@@ -437,6 +478,37 @@ namespace Skuld.Discord.Services
             #endregion IAmRoles
 
             Log.Verbose(Key, $"{arg} deleted in {arg.Guild}");
+        }
+
+        private static async Task Bot_GuildMemberUpdated(SocketGuildUser arg1, SocketGuildUser arg2)
+        {   
+            using SkuldDatabaseContext database = new SkuldDbContextFactory().CreateDbContext();
+
+            if(arg1.Roles.Count != arg2.Roles.Count)
+            {
+                var guildPersistentRoles = database.PersistentRoles.AsQueryable().Where(x => x.GuildId == arg2.Guild.Id).DistinctBy(x => x.RoleId).ToList();
+
+                guildPersistentRoles.ForEach(z =>
+                {
+                    arg2.Roles.ToList().ForEach(x =>
+                    {
+                        if (z.RoleId == x.Id)
+                        {
+                            if(!database.PersistentRoles.Any(y=>y.RoleId == z.RoleId && y.UserId == arg2.Id && y.GuildId == arg2.Guild.Id))
+                            {
+                                database.PersistentRoles.Add(new PersistentRole
+                                {
+                                    GuildId = arg2.Guild.Id,
+                                    RoleId = z.RoleId,
+                                    UserId = arg2.Id
+                                });
+                            }
+                        }
+                    });
+                });
+
+                await database.SaveChangesAsync().ConfigureAwait(false);
+            }
         }
 
         #endregion Guilds
