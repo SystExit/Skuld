@@ -1,4 +1,4 @@
-﻿namespace Skuld.Bot.Models.Commands.GamblingModule
+﻿namespace Skuld.Bot.Models.GamblingModule
 {
     public enum WinResult
     {
