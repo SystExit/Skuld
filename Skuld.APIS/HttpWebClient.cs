@@ -1,11 +1,10 @@
 ﻿using HtmlAgilityPack;
-using Skuld.Core;
-using Skuld.Core.Utilities;
 using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -13,7 +12,7 @@ namespace Skuld.APIS
 {
     public static class HttpWebClient
     {
-        public static string UAGENT = "Mozilla/5.0 (compatible; SkuldBot/" + SkuldAppContext.Skuld.Key.Version.ToString().Substring(0, 3) + "; +https://github.com/Skuldbot/Skuld/)";
+        public static string UAGENT = "Mozilla/5.0 (compatible; SkuldBot/ApiVersion=" + Assembly.GetExecutingAssembly().Version.ToString() + "; +https://github.com/Skuldbot/Skuld/)";
 
         public static HttpWebRequest CreateWebRequest(Uri uri, byte[] auth = null)
         {
@@ -43,7 +42,6 @@ namespace Skuld.APIS
                 if (resp.StatusCode == HttpStatusCode.OK)
                 {
                     using var response = new StreamReader(resp.GetResponseStream());
-                    StatsdClient.DogStatsd.Increment("web.get");
                     var stringifiedresponse = await response.ReadToEndAsync().ConfigureAwait(false);
                     resp.Dispose();
                     client.Abort();
@@ -56,9 +54,8 @@ namespace Skuld.APIS
                     return null;
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Log.Error("WebHandler", ex.Message, ex);
                 return null;
             }
         }
@@ -74,7 +71,6 @@ namespace Skuld.APIS
                 {
                     using var response = new MemoryStream();
                     await resp.GetResponseStream().CopyToAsync(response).ConfigureAwait(false);
-                    StatsdClient.DogStatsd.Increment("web.get");
                     resp.Dispose();
                     client.Abort();
                     response.Position = 0;
@@ -87,9 +83,8 @@ namespace Skuld.APIS
                     return null;
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Log.Error("WebHandler", ex.Message, ex);
                 return null;
             }
         }
@@ -105,7 +100,6 @@ namespace Skuld.APIS
                 {
                     var response = new MemoryStream();
                     await resp.GetResponseStream().CopyToAsync(response).ConfigureAwait(false);
-                    StatsdClient.DogStatsd.Increment("web.get");
                     resp.Dispose();
                     client.Abort();
                     response.Position = 0;
@@ -118,9 +112,8 @@ namespace Skuld.APIS
                     return null;
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Log.Error("WebHandler", ex.Message, ex);
                 return null;
             }
         }
@@ -140,7 +133,6 @@ namespace Skuld.APIS
                     if (response.StatusCode == HttpStatusCode.OK)
                     {
                         doc.Load(response.GetResponseStream(), Encoding.UTF8);
-                        StatsdClient.DogStatsd.Increment("web.get");
                         request.Abort();
                     }
                     if (doc != null)
@@ -161,9 +153,8 @@ namespace Skuld.APIS
                     return (null, null);
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Log.Error("WebHandler", ex.Message, ex);
                 return (null, null);
             }
         }
@@ -173,7 +164,6 @@ namespace Skuld.APIS
             var client = new WebClient();
             client.Headers.Add("User-Agent", UAGENT);
             await client.DownloadFileTaskAsync(url, filepath).ConfigureAwait(false);
-            StatsdClient.DogStatsd.Increment("web.download");
             client.Dispose();
             return filepath;
         }
@@ -191,7 +181,6 @@ namespace Skuld.APIS
             using HttpResponseMessage resp = await client.PostAsync(url, content).ConfigureAwait(false);
             if (resp.IsSuccessStatusCode)
             {
-                StatsdClient.DogStatsd.Increment("web.post");
                 return await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
             }
             else
@@ -209,7 +198,6 @@ namespace Skuld.APIS
             using HttpResponseMessage resp = await client.PostAsync(url, content);
             if (resp.IsSuccessStatusCode)
             {
-                StatsdClient.DogStatsd.Increment("web.post");
                 return await resp.Content.ReadAsStreamAsync();
             }
             else
@@ -228,7 +216,6 @@ namespace Skuld.APIS
             using HttpResponseMessage resp = await client.PostAsync(url, content);
             if (resp.IsSuccessStatusCode)
             {
-                StatsdClient.DogStatsd.Increment("web.post");
                 return await resp.Content.ReadAsByteArrayAsync();
             }
             else

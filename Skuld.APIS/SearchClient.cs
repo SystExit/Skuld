@@ -4,8 +4,7 @@ using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Imgur.API.Models;
 using Imgur.API.Models.Impl;
-using Skuld.Core.Extensions;
-using Skuld.Core.Utilities;
+using Skuld.APIS.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -57,8 +56,6 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "exception" });
-                Log.Error("ImgrSch", "Error with Imgur search", ex);
                 return $"Error with search: {ex.Message}";
             }
         }
@@ -68,7 +65,7 @@ namespace Skuld.APIS
             try
             {
                 var endpoint = new GalleryEndpoint(ImgurClient);
-                var images = await endpoint.SearchGalleryAsync(query);
+                var images = await endpoint.SearchGalleryAsync(query).ConfigureAwait(false);
                 var albm = images.RandomValue();
                 dynamic album = null;
                 if (albm is GalleryImage)
@@ -79,7 +76,7 @@ namespace Skuld.APIS
                 {
                     album = albm as IGalleryAlbum;
                 }
-                if (album != null && album.Nsfw)
+                if (album != null && !album.Nsfw)
                 {
                     return "I found this:\n" + album.Link;
                 }
@@ -88,11 +85,9 @@ namespace Skuld.APIS
                     return "I found nothing sorry. :/";
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "exception" });
-                Log.Error("ImgrSch", "Error with Imgur search", ex);
-                return $"Error with search: {ex.Message}";
+                return null;
             }
         }
 
@@ -113,8 +108,6 @@ namespace Skuld.APIS
             }
             catch (Exception ex)
             {
-                StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "exception" });
-                Log.Error("YTBSrch", "Error with Youtube Search", ex);
                 return $"Error with search: {ex.Message}";
             }
         }
@@ -143,17 +136,11 @@ namespace Skuld.APIS
                 }
                 else
                 {
-                    StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-
                     return null;
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "exception" });
-
-                Log.Error("GogSrch", "Error with google search", ex);
-
                 return null;
             }
         }

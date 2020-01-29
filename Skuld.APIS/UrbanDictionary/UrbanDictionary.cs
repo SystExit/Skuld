@@ -1,8 +1,8 @@
 ﻿using Newtonsoft.Json;
 using Skuld.APIS.UrbanDictionary.Models;
 using Skuld.APIS.Utilities;
-using Skuld.Core.Extensions;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Skuld.APIS
@@ -27,12 +27,12 @@ namespace Skuld.APIS
             return JsonConvert.DeserializeObject<UrbanWord>(raw);
         }
 
-        public async Task<UrbanWord> GetPhraseAsync(string phrase)
+        public async Task<IEnumerable<UrbanWord>> GetPhrasesAsync(string phrase)
         {
             if (rateLimiter.IsRatelimited()) return null;
 
             var raw = await HttpWebClient.ReturnStringAsync(new Uri(QueryEndPoint + phrase)).ConfigureAwait(false);
-            return JsonConvert.DeserializeObject<UrbanWordContainer>(raw).List.RandomValue();
+            return JsonConvert.DeserializeObject<UrbanWordContainer>(raw).List;
         }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Skuld.APIS.Animals.Models;
 using Skuld.APIS.Utilities;
-using Skuld.Core.Utilities;
 using System;
 using System.Net;
 using System.Threading.Tasks;
@@ -39,6 +38,8 @@ namespace Skuld.APIS
 
                 case AnimalType.Kitty:
                     return await GetKittyAsync().ConfigureAwait(false);
+                default:
+                    break;
             }
 
             return null;
@@ -67,9 +68,8 @@ namespace Skuld.APIS
                 if (img == null) return "https://i.ytimg.com/vi/29AcbY5ahGo/hqdefault.jpg";
                 return img;
             }
-            catch (Exception ex)
+            catch
             {
-                Log.Error("RandomCat", ex.Message, ex);
                 try
                 {
                     if (cat2rateLimiter.IsRatelimited()) return null;
@@ -85,9 +85,8 @@ namespace Skuld.APIS
                     }
                     else return "https://i.ytimg.com/vi/29AcbY5ahGo/hqdefault.jpg";
                 }
-                catch (Exception ex2)
+                catch
                 {
-                    Log.Error("RandomCat", ex2.Message, ex2);
                     return "https://i.ytimg.com/vi/29AcbY5ahGo/hqdefault.jpg";
                 }
             }
@@ -103,9 +102,8 @@ namespace Skuld.APIS
                 if (resp == null) return "https://i.imgur.com/ZSMi3Zt.jpg";
                 return "https://random.dog/" + resp;
             }
-            catch (Exception ex)
+            catch
             {
-                Log.Error("RandomDog", ex.Message, ex);
                 return "https://i.imgur.com/ZSMi3Zt.jpg";
             }
         }

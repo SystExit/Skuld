@@ -2,7 +2,6 @@
 using Newtonsoft.Json.Linq;
 using Skuld.APIS.Utilities;
 using Skuld.APIS.WebComics.XKCD.Models;
-using Skuld.Core.Utilities;
 using System;
 using System.Threading.Tasks;
 
@@ -69,7 +68,6 @@ namespace Skuld.APIS.WebComics.XKCD
             }
             else
             {
-                Log.Error("XKCDClient", "Ratelimited");
                 return null;
             }
         }

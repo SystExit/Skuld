@@ -1,20 +1,47 @@
 ﻿using Booru.Net;
 using Discord;
+using HtmlAgilityPack;
 using Kitsu.Anime;
 using Kitsu.Manga;
 using Skuld.APIS.Social.Reddit.Models;
-using Skuld.Core.Extensions;
-using Skuld.Core.Utilities;
 using Steam.Models.SteamStore;
 using SteamStoreQuery;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 
 namespace Skuld.APIS.Extensions
 {
     public static class APIExtensions
     {
-        private static readonly Random rnd = new Random((int)ConversionTools.GetEpochMs());
+        private static readonly Random rnd = new Random();
+
+        private static readonly string[] VideoExtensions = {
+            ".webm",
+            ".mkv",
+            ".flv",
+            ".vob",
+            ".ogv",
+            ".ogg",
+            ".avi",
+            ".mov",
+            ".qt",
+            ".wmv",
+            ".mp4",
+            ".m4v",
+            ".mpg",
+            ".mpeg"
+        };
+
+        private static readonly string[] ImageExtensions =
+        {
+            ".jpg",
+            ".bmp",
+            ".gif",
+            ".png",
+            ".apng"
+        };
 
         public static List<string> BlacklistedTags { get; } = new List<string>
         {
@@ -27,8 +54,52 @@ namespace Skuld.APIS.Extensions
             "death"
         };
 
+        public static T RandomValue<T>(this IEnumerable<T> entries) where T : class
+        {
+            var list = entries.ToList();
+
+            var index = rnd.Next(0, list.Count);
+
+            return list[index];
+        }
+
         public static StoreScreenshotModel Random(this IReadOnlyList<StoreScreenshotModel> elements)
             => elements[rnd.Next(0, elements.Count)];
+
+        public static bool IsImageExtension(this string input)
+        {
+            foreach (var ext in ImageExtensions)
+            {
+                if (input.Contains(ext))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static bool IsVideoFile(this string input)
+        {
+            foreach (var x in VideoExtensions)
+            {
+                if (input.Contains(x) || input.EndsWith(x))
+                    return true;
+            }
+            return false;
+        }
+
+        //https://gist.github.com/starquake/8d72f1e55c0176d8240ed336f92116e3
+        public static string StripHtml(this string value)
+        {
+            HtmlDocument htmlDoc = new HtmlDocument();
+            htmlDoc.LoadHtml(value);
+
+            if (htmlDoc == null)
+                return value;
+
+            return htmlDoc.DocumentNode.InnerText;
+        }
 
         #region Pagination
 
@@ -126,7 +197,7 @@ namespace Skuld.APIS.Extensions
             return Pages;
         }
 
-        #endregion Pagination
+        #endregion
 
         #region Booru
 
@@ -163,6 +234,6 @@ namespace Skuld.APIS.Extensions
             return returnvalue;
         }
 
-        #endregion Booru
+        #endregion
     }
 }

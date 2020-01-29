@@ -1,4 +1,4 @@
-﻿using Skuld.Core.Extensions;
+﻿using Skuld.APIS.Extensions;
 using SteamStoreQuery;
 using System.Linq;
 
@@ -15,7 +15,7 @@ namespace Skuld.APIS.Utilities
             var storeurl = BaseSteamStoreUrl + appdata.SteamAppId;
 
             var fulldesc = appdata.AboutTheGame;
-            string desc = "";
+            string desc;
 
             if (fulldesc.Contains("<br"))
             {
