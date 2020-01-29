@@ -155,11 +155,6 @@ namespace Skuld.Bot.Services
                 TotalShards = Configuration.Shards
             });
 
-            BotService.TwitchClient = new TwitchHelixClient
-            {
-                ClientId = new Utf8String(Configuration.TwitchClientID)
-            };
-
             APIS.SearchClient.Configure(Configuration.GoogleAPI, Configuration.GoogleCx, Configuration.ImgurClientID, Configuration.ImgurClientSecret);
         }
 
@@ -197,6 +192,10 @@ namespace Skuld.Bot.Services
                     .AddSingleton(new Stands4Client(Configuration.STANDSUid, Configuration.STANDSToken))
                     .AddSingleton(new InteractiveService(BotService.DiscordClient, TimeSpan.FromSeconds(60)))
                     .AddSingleton(new ImgurClient(Configuration.ImgurClientID, Configuration.ImgurClientSecret))
+                    .AddSingleton(new TwitchHelixClient
+                    {
+                        ClientId = new Utf8String(Configuration.TwitchClientID)
+                    })
                     .BuildServiceProvider();
 
                 Log.Info("Framework", "Successfully built service provider");

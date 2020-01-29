@@ -84,12 +84,12 @@ namespace Skuld.Bot.Services
                 totalTime = timeDiff;
             }
 
-            var xpToGrant = DiscordUtilities.GetExpMultiFromMinutesInVoice(Configuration.VoiceExpDeterminate, Configuration.VoiceExpMinMinutes, 100000, totalTime);
+            var xpToGrant = DatabaseUtilities.GetExpMultiFromMinutesInVoice(Configuration.VoiceExpDeterminate, Configuration.VoiceExpMinMinutes, Configuration.VoiceExpMaxGrant, totalTime);
 
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-                var skUser = await Database.GetUserAsync(user).ConfigureAwait(false);
+                var skUser = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
                 await skUser.GrantExperienceAsync((ulong)xpToGrant, channel.Guild).ConfigureAwait(false);
             }
         }
