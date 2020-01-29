@@ -13,7 +13,7 @@ namespace Skuld.Discord.Preconditions
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            if (MessageTools.ModuleDisabled(Database.Modules.FirstOrDefault(x => x.Id == context.Guild.Id), command))
+            if (MessageTools.ModuleDisabled(Database.Modules.ToList().FirstOrDefault(x => x.Id == context.Guild.Id), command))
             {
                 return Task.FromResult(PreconditionResult.FromError($"The module: `{command.Module.Name}` is disabled, contact a server administrator to enable it"));
             }

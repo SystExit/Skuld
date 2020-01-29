@@ -2,10 +2,11 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using NodaTime;
-using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
+using Skuld.Discord.Models;
 using Skuld.Discord.Services;
 using Skuld.Discord.TypeReaders;
 using Skuld.Discord.Utilities;
@@ -113,7 +114,9 @@ namespace Skuld.Discord.Handlers
 
                     DogStatsd.Histogram("commands.latency", watch.ElapsedMilliseconds(), 0.5, new[] { $"module:{cmd.Module.Name.ToLowerInvariant()}", $"cmd:{cmd.Name.ToLowerInvariant()}" });
 
-                    await InsertCommandAsync(cmd, (await Database.GetUserAsync(cont.User))).ConfigureAwait(false);
+                    var usr = await Database.InsertOrGetUserAsync(cont.User).ConfigureAwait(false);
+
+                    await InsertCommandAsync(cmd, usr).ConfigureAwait(false);
 
                     DogStatsd.Increment("commands.processed", 1, 1, new[] { $"module:{cmd.Module.Name.ToLowerInvariant()}", $"cmd:{cmd.Name.ToLowerInvariant()}" });
                 }
@@ -208,7 +211,7 @@ namespace Skuld.Discord.Handlers
                 }
                 else
                 {
-                    suser = await Database.GetUserAsync(arg.Author);
+                    suser = await Database.GetOrInsertUserAsync(arg.Author);
                     if (suser != null && suser.Flags.IsBitSet(DiscordUtilities.Banned) && (!suser.Flags.IsBitSet(DiscordUtilities.BotCreator) || !suser.Flags.IsBitSet(DiscordUtilities.BotAdmin))) return;
                     if (!suser.IsUpToDate(message.Author))
                     {
@@ -222,7 +225,7 @@ namespace Skuld.Discord.Handlers
                 {
                     var gld = (message.Channel as ITextChannel).Guild;
 
-                    sguild = await Database.GetGuildAsync(gld).ConfigureAwait(false);
+                    sguild = await Database.GetOrInsertGuildAsync(gld).ConfigureAwait(false);
                 }
 
                 if (sguild != null)
@@ -261,7 +264,7 @@ namespace Skuld.Discord.Handlers
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-                User = await Database.GetUserAsync(user).ConfigureAwait(false);
+                User = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
             }
 
             var result = await User.GrantExperienceAsync((ulong)rnd.Next(1, 26), guild);
@@ -350,7 +353,7 @@ namespace Skuld.Discord.Handlers
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var prefix = MessageTools.GetPrefixFromCommand(await Database.GetGuildAsync(context.Guild), context.Message.Content, SkuldConfig);
+            var prefix = MessageTools.GetPrefixFromCommand(await Database.GetOrInsertGuildAsync(context.Guild), context.Message.Content, SkuldConfig);
             var name = MessageTools.GetCommandName(prefix, context.Message);
             var customcommand = Database.CustomCommands.FirstOrDefault(x => x.GuildId == context.Guild.Id && x.Name.ToLower() == name.ToLower());
 
@@ -383,7 +386,9 @@ namespace Skuld.Discord.Handlers
 
             DogStatsd.Histogram("commands.latency", watch.ElapsedMilliseconds(), 0.5, new[] { $"module:custom", $"cmd:{command.Name.ToLowerInvariant()}" });
 
-            await InsertCommandAsync(command, (await Database.GetUserAsync(context.User))).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(context.User).ConfigureAwait(false);
+
+            await InsertCommandAsync(command, usr).ConfigureAwait(false);
 
             DogStatsd.Increment("commands.processed", 1, 1, new[] { $"module:custom", $"cmd:{command.Name.ToLowerInvariant()}" });
 
