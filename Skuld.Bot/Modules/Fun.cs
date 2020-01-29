@@ -1,6 +1,8 @@
 ﻿using Booru.Net;
 using Discord;
+using Discord.Addons.Interactive;
 using Discord.Commands;
+using Discord.WebSocket;
 using ImageMagick;
 using IqdbApi;
 using Microsoft.EntityFrameworkCore;
@@ -31,14 +33,16 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using WenceyWang.FIGlet;
 
 namespace Skuld.Bot.Commands
 {
     [Group, RequireEnabledModule]
-    public class Fun : ModuleBase<ShardedCommandContext>
+    public class Fun : InteractiveBase<ShardedCommandContext>
     {
         public Random Random { get; set; }
         public AnimalClient Animals { get; set; }
@@ -176,7 +180,7 @@ namespace Skuld.Bot.Commands
         public async Task Eightball([Remainder]string question = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
-            var user = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
             var answer = Locale.GetLocale(user.Language).GetString(eightball[Random.Next(0, eightball.Length)]);
 
@@ -295,7 +299,7 @@ namespace Skuld.Bot.Commands
         public async Task Pasta(string cmd, string title, [Remainder]string content)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
-            var user = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
             switch (cmd.ToLowerInvariant())
             {
@@ -395,7 +399,7 @@ namespace Skuld.Bot.Commands
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
             var pasta = Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower());
-            var user = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
             if (pasta != null)
             {
@@ -412,14 +416,14 @@ namespace Skuld.Bot.Commands
 
                             var usr = Context.Client.GetUser(pasta.OwnerId);
                             if (usr != null)
-                                embed.AddField("Author", usr.Username + "#" + usr.Discriminator, inline: true);
+                                embed.AddField("Creator", usr.Mention, inline: true);
                             else
-                                embed.AddField("Author", $"Unknown User ({pasta.OwnerId})");
-                            embed.AddField("Created", pasta.Created.FromEpoch().ToString(new CultureInfo((await Database.GetUserAsync(Context.User).ConfigureAwait(false)).Language)), inline: true);
+                                embed.AddField("Creator", $"Unknown User ({pasta.OwnerId})");
+                            embed.AddField("Created", pasta.Created.FromEpoch().ToString(new CultureInfo((await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false)).Language)), inline: true);
                             //embed.AddField("UpVotes", ":arrow_double_up: " + pasta.Upvotes, inline: true);
                             //embed.AddField("DownVotes", ":arrow_double_down: " + pasta.Downvotes, inline: true);
 
-                            await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
+                            await embed.QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
 
@@ -547,6 +551,155 @@ namespace Skuld.Bot.Commands
                         }
                     }
                     break;
+            }
+        }
+
+        [Command("pasta give"), Summary("Give someone your pasta"), RequireDatabase]
+        public async Task Pasta(string title, [Remainder]IGuildUser user)
+        {
+            if(user == null)
+            {
+                await EmbedExtensions.FromError("Pasta Kitchen", "You can't give no one your pasta", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            Pasta pasta = null;
+            SocketMessage response = null;
+
+            if(Database.Pastas.ToList().Any(x=>x.Name == title))
+            {
+                pasta = Database.Pastas.ToList().FirstOrDefault(x => x.Name == title);
+            }
+            else
+            {
+                await EmbedExtensions.FromError("Pasta Kitchen", $"Pasta, `{title}` doesn't exist", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+
+            await $"{user.Mention} please respond with Y/N if you wish to receive pasta `{title}` from {Context.User.Mention}".QueueMessageAsync(Context).ConfigureAwait(false);
+
+            {
+                using var tokenSource = new CancellationTokenSource();
+
+                Task handler(SocketMessage arg)
+                {
+                    if (arg.Author.Id == user.Id && Context.Message.Channel.Id == arg.Channel.Id)
+                    {
+                        response = arg;
+                        tokenSource.Cancel();
+                    }
+
+                    return Task.CompletedTask;
+                }
+
+                try
+                {
+                    Context.Client.MessageReceived += handler;
+
+                    await Task.Delay(TimeSpan.FromSeconds(60), tokenSource.Token).ConfigureAwait(false);
+
+                    if (response != null)
+                    {
+                    }
+                }
+                catch { }
+                finally
+                {
+                    Context.Client.MessageReceived -= handler;
+                }
+
+            }
+
+            if (response == null)
+            {
+                await EmbedExtensions.FromMessage("Pasta Kitchen", $"User {user.Mention} didn't respond, you get to keep it", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+            else
+            {
+                if (response.Content.ToUpperInvariant().StartsWith("Y"))
+                {
+                    try
+                    {
+                        pasta.OwnerId = user.Id;
+
+                        await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                        await EmbedExtensions.FromSuccess("Pasta Kitchen", $"Successfully transferred the pasta \"{title}\" to {user.Mention}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        await EmbedExtensions.FromError("Pasta Kitchen", $"Error transferring \"{title}\" over to {user.Mention}. Please try again.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                    return;
+                }
+                else if (response.Content.ToUpperInvariant().StartsWith("N"))
+                {
+                    await EmbedExtensions.FromError("Pasta Kitchen", $"Apologies {Context.User.Mention} they don't wish to receive the pasta: {title}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    return;
+                }
+                else
+                {
+                    await EmbedExtensions.FromError("Pasta Kitchen", $"Unknown Repsonce received", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    return;
+                }
+            }
+        }
+
+        [Command("mypasta"), Summary("Spaghetti Meatballs"), RequireDatabase]
+        [Alias("mypastas")]
+        public async Task MyPasta()
+        {
+            SkuldDatabaseContext database = new SkuldDbContextFactory().CreateDbContext();
+
+            IReadOnlyList<Pasta> ownedPastas = database.Pastas.ToList().Where(x => x.OwnerId == Context.User.Id).ToList();
+
+            if(ownedPastas.Any())
+            {
+                StringBuilder pastas = new StringBuilder();
+
+                foreach (Pasta pasta in ownedPastas)
+                {
+                    pastas.Append(pasta.Name);
+
+                    if (pasta != ownedPastas.LastOrDefault())
+                    {
+                        pastas.Append(", ");
+                    }
+                }
+
+                if(pastas.Length >= 2000)
+                {
+                    using MemoryStream stream = new MemoryStream();
+                    using StreamWriter writer = new StreamWriter(stream);
+                    writer.Write(pastas.ToString());
+
+                    stream.Position = 0;
+
+                    await Context.Channel.SendFileAsync(stream, "pastas.txt", "Your pastas have arrived").ConfigureAwait(false);
+                }
+                else
+                {
+                    StringBuilder response = new StringBuilder("`");
+
+                    response.Append(pastas);
+
+                    response.Append("`");
+
+                    await
+                        EmbedExtensions.FromMessage("Pasta Kitchen", $"Your pastas are: {response}", Context)
+                        .QueueMessageAsync(Context)
+                        .ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                await
+                    EmbedExtensions.FromError("Pasta Kitchen", "You have no pastas", Context)
+                    .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
             }
         }
 
@@ -788,12 +941,10 @@ namespace Skuld.Bot.Commands
             var joke = await SysExClient.GetDadJokeAsync().ConfigureAwait(false);
             DogStatsd.Increment("web.get");
 
-            await new EmbedBuilder
-            {
-                Title = joke.Setup,
-                Description = joke.Punchline,
-                Color = EmbedExtensions.RandomEmbedColor()
-            }.QueueMessageAsync(Context).ConfigureAwait(false);
+            await
+                EmbedExtensions.FromMessage(joke.Setup, joke.Punchline, Context)
+                .WithRandomColor()
+            .QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("pickup", RunMode = RunMode.Async), Summary("Cringe at these bad user-submitted pick up lines. (Don't actually use these or else you'll get laughed at. :3)"), Alias("pickupline")]
@@ -802,12 +953,10 @@ namespace Skuld.Bot.Commands
             var pickup = await SysExClient.GetPickupLineAsync().ConfigureAwait(false);
             DogStatsd.Increment("web.get");
 
-            await new EmbedBuilder
-            {
-                Title = pickup.Setup,
-                Description = pickup.Punchline,
-                Color = EmbedExtensions.RandomEmbedColor()
-            }.QueueMessageAsync(Context).ConfigureAwait(false);
+            await
+                EmbedExtensions.FromMessage(pickup.Setup, pickup.Punchline, Context)
+                .WithRandomColor()
+            .QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         #endregion Jokes
