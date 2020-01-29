@@ -1,12 +1,14 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using NCalc;
 using NodaTime;
 using Skuld.Bot.Extensions;
 using Skuld.Bot.Globalization;
 using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
@@ -33,7 +35,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var dbguild = await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+            var dbguild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
             Embed embed = await Context.Guild.GetSummaryAsync(Context.Client, Context, dbguild).ConfigureAwait(false);
 
@@ -170,28 +172,22 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("avatar"), Summary("Gets your avatar url")]
-        public async Task Avatar([Remainder]IUser user = null)
+        public async Task Avatar([Remainder]IGuildUser user = null)
         {
             if (user == null)
-                user = Context.User;
+                user = Context.Guild.GetUser(Context.User.Id);
 
-            var avatar = user.GetAvatarUrl(ImageFormat.Auto, 512);
-            if (avatar.Contains("a_"))
-                avatar = user.GetAvatarUrl(ImageFormat.Gif, 512);
-            else switch (avatar)
-                {
-                    case "":
-                    case null:
-                        avatar = user.GetDefaultAvatarUrl();
-                        break;
-                }
+            var avatar = user.GetAvatarUrl(ImageFormat.Auto, 512) ?? user.GetDefaultAvatarUrl();
 
-            await new EmbedBuilder
-            {
-                Description = $"Avatar for {user.Mention}",
-                ImageUrl = avatar,
-                Color = EmbedExtensions.RandomEmbedColor()
-            }.Build().QueueMessageAsync(Context).ConfigureAwait(false);
+            await
+                EmbedExtensions.FromMessage(
+                    "",
+                    $"Avatar for {user.Mention}",
+                    Context
+                )
+                .WithImageUrl(avatar)
+                .WithColor(user.GetHighestRoleColor(Context.Guild))
+            .QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("mods"), Summary("Gives online status of Moderators/Admins")]
@@ -328,6 +324,29 @@ namespace Skuld.Bot.Commands
             await $"Roles of __**{user.Username}#{user.Discriminator} ({user.Nickname})**__ ({userroles.Count})\n\n`{(roles ?? "No roles")}`".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
+        [Command("calc"), Summary("Calculates an expression")]
+        public async Task Calculate([Remainder] string expression)
+        {
+            Expression exp = new Expression(expression);
+
+            var res = exp.Evaluate();
+
+            var result = res;
+
+            if(result is string)
+            {
+                result = (result as string).Replace("everyone", "\u00A0everyone");
+            }
+
+            await
+                EmbedExtensions.FromMessage(
+                    "Calculator",
+                    $"Expression: `{expression}`\nResult: {result}",
+                    Context
+                )
+            .QueueMessageAsync(Context).ConfigureAwait(false);
+        }
+
         #region Leaderboards
 
         [Command("leaderboard"), Summary("Get the leaderboard for either \"money\" or \"levels\" globally or locally")]
@@ -335,7 +354,7 @@ namespace Skuld.Bot.Commands
         public async Task GetLeaderboard(string type, bool global = false)
         {
             using var database = new SkuldDbContextFactory().CreateDbContext();
-            var dbguild = await database.GetGuildAsync(Context.Guild).ConfigureAwait(false);
+            var dbguild = await database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
             switch (type.ToLowerInvariant())
             {
                 case "money":
@@ -477,7 +496,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var sUser = await Database.GetUserAsync(Context.User).ConfigureAwait(false);
+            var sUser = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
             var time = Instant.FromDateTimeUtc(DateTime.UtcNow).InZone(DateTimeZoneProviders.Tzdb.GetZoneOrNull(sUser.TimeZone)).ToDateTimeUnspecified().ToDMYString();
 
             if (sUser.TimeZone != null)
@@ -501,7 +520,7 @@ namespace Skuld.Bot.Commands
             {
                 try
                 {
-                    var sUser = await Database.GetUserAsync(user).ConfigureAwait(false);
+                    var sUser = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
                     if (sUser.TimeZone != null)
                     {
@@ -551,7 +570,7 @@ namespace Skuld.Bot.Commands
             {
                 if (role == null || !iamlist.Any(x => x.RoleId == role.Id))
                 {
-                    var paged = iamlist.Paginate(await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild, Context.Guild.GetUser(Context.User.Id));
+                    var paged = iamlist.Paginate(await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild, Context.Guild.GetUser(Context.User.Id));
 
                     if (page >= paged.Count)
                     {
@@ -586,11 +605,11 @@ namespace Skuld.Bot.Commands
             {
                 var r = iamlist.FirstOrDefault(x => x.RoleId == role.Id);
 
-                var didpass = CheckIAmValidAsync(await Database.GetUserAsync(Context.User).ConfigureAwait(false), Context.User as IGuildUser, await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild, r);
+                var didpass = CheckIAmValidAsync(await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false), Context.User as IGuildUser, await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild, r);
 
                 if (didpass != IAmFail.Success)
                 {
-                    await EmbedExtensions.FromError(GetErrorIAmFail(didpass, r, await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild), Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError(GetErrorIAmFail(didpass, r, await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild), Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
                 else
                 {
@@ -608,7 +627,7 @@ namespace Skuld.Bot.Commands
 
                         if (r.Price > 0)
                         {
-                            (await Database.GetUserAsync(Context.User).ConfigureAwait(false)).Money -= (ulong)r.Price;
+                            (await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false)).Money -= (ulong)r.Price;
 
                             await Database.SaveChangesAsync().ConfigureAwait(false);
                         }
