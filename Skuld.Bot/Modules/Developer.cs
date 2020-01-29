@@ -4,13 +4,15 @@ using Discord.WebSocket;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Newtonsoft.Json;
-using Skuld.APIS;
-using Skuld.Bot.Models.Commands;
 using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Formatting;
+using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
+using Skuld.Core.Models.Commands;
 using Skuld.Core.Utilities;
+using Skuld.Discord.BotListing;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Models;
 using Skuld.Discord.Preconditions;
@@ -161,9 +163,52 @@ namespace Skuld.Bot.Commands
             await Context.Client.SetGameAsync(status, null, activityType).ConfigureAwait(false);
         }
 
+        [Command("grantxp"), Summary("Grant Exp")]
+        public async Task GrantExp(ulong amount, [Remainder]IUser user = null)
+        {
+            if (user == null)
+                user = Context.User;
+            
+            using var database = new SkuldDbContextFactory().CreateDbContext();
+
+            var usr = await database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+
+            await usr.GrantExperienceAsync(amount, Context.Guild, true).ConfigureAwait(false);
+
+            await EmbedExtensions.FromSuccess($"Gave {user.Mention} {amount.ToString("N0")}xp", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+        }
+
         #endregion BotAdmin
 
         #region BotOwner
+
+        [Command("populate")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
+        public async Task Populate(ulong? guildId = null)
+        {
+            using var database = new SkuldDbContextFactory().CreateDbContext();
+
+            IGuild guild;
+
+            if (guildId.HasValue)
+                guild = Context.Client.GetGuild(guildId.Value);
+            else
+                guild = Context.Guild;
+
+            await guild.DownloadUsersAsync().ConfigureAwait(false);
+
+            var users = await guild.GetUsersAsync().ConfigureAwait(false);
+
+            foreach (var user in users)
+            {
+                await database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+            }
+
+            await
+                EmbedExtensions.FromSuccess(SkuldAppContext.GetCaller(), $"Added all users for guild `{guild.Name}`", Context)
+                .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
+        }
 
         [Command("stop")]
         [RequireBotFlag(BotAccessLevel.BotOwner)]
@@ -182,7 +227,7 @@ namespace Skuld.Bot.Commands
 
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var dbUser = await Database.GetUserAsync(user).ConfigureAwait(false);
+            var dbUser = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
             bool added = false;
 
@@ -241,7 +286,7 @@ namespace Skuld.Bot.Commands
 
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var dbUser = await Database.GetUserAsync(user).ConfigureAwait(false);
+            var dbUser = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
             List<BotAccessLevel> flags = new List<BotAccessLevel>();
 
@@ -265,26 +310,25 @@ namespace Skuld.Bot.Commands
         {
             var Modules = new List<ModuleSkuld>();
 
-            foreach (var module in BotService.CommandService.Modules)
+            BotService.CommandService.Modules.ToList().ForEach(module =>
             {
                 ModuleSkuld mod = new ModuleSkuld
                 {
                     Name = module.Name,
                     Commands = new List<CommandSkuld>()
                 };
-
-                foreach (var cmd in module.Commands)
+                module.Commands.ToList().ForEach(cmd =>
                 {
                     var parameters = new List<ParameterSkuld>();
 
-                    foreach (var paras in cmd.Parameters)
+                    cmd.Parameters.ToList().ForEach(paras =>
                     {
                         parameters.Add(new ParameterSkuld
                         {
                             Name = paras.Name,
                             Optional = paras.IsOptional
                         });
-                    }
+                    });
 
                     mod.Commands.Add(new CommandSkuld
                     {
@@ -293,10 +337,9 @@ namespace Skuld.Bot.Commands
                         Aliases = cmd.Aliases.ToArray(),
                         Parameters = parameters.ToArray()
                     });
-                }
-
+                });
                 Modules.Add(mod);
-            }
+            });
 
             var filename = Path.Combine(SkuldAppContext.StorageDirectory, "commands.json");
 
@@ -523,7 +566,7 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            await $"User {user.Username} now has: {(await Database.GetGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{usr.Money.ToString("N0")}".QueueMessageAsync(Context).ConfigureAwait(false);
+            await $"User {user.Username} now has: {(await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{usr.Money.ToString("N0")}".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("leave"), Summary("Leaves a server by id")]
