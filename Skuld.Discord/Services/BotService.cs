@@ -1,5 +1,4 @@
-﻿using Akitaux.Twitch.Helix;
-using Discord;
+﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Skuld.Core.Utilities;
@@ -17,7 +16,6 @@ namespace Skuld.Discord.Services
     {
         public static DiscordShardedClient DiscordClient;
         public static CommandService CommandService { get => MessageHandler.CommandService; }
-        public static TwitchHelixClient TwitchClient;
         public static IServiceProvider Services;
         private static List<ulong> UserIDs;
         public static int Users { get => UserIDs.Count(); }

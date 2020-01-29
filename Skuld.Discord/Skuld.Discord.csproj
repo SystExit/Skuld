@@ -2,20 +2,22 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <AssemblyVersion>2020.1.75.0</AssemblyVersion>
-    <FileVersion>2020.1.75.0</FileVersion>
+    <AssemblyVersion>2020.1.113.0</AssemblyVersion>
+    <FileVersion>2020.1.113.0</FileVersion>
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="DogStatsD-CSharp-Client" Version="4.0.0" />
     <PackageReference Include="EmojiOne" Version="4.0.1" />
+    <PackageReference Include="NodaTime" Version="2.4.7" />
     <PackageReference Include="Octokit" Version="0.36.0" />
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\Skuld.Core\Skuld.Core.csproj" />
     <ProjectReference Include="..\Skuld.APIS\Skuld.APIS.csproj" />
-    <ProjectReference Include="..\Skuld.Core.Models\Skuld.Core.Models.csproj" />
+    <ProjectReference Include="..\Skuld.Core\Skuld.Core.csproj" />
+    <ProjectReference Include="..\Skuld.Models\Skuld.Core.Models.csproj" />
   </ItemGroup>
 
   <ItemGroup>
