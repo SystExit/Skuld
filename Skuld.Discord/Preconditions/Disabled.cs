@@ -1,5 +1,6 @@
 ﻿using Discord.Commands;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using System;
@@ -31,7 +32,7 @@ namespace Skuld.Discord.Preconditions
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database.GetUserAsync(context.User);
+            var usr = await Database.InsertOrGetUserAsync(context.User);
 
             if ((!DisabledForTesters && usr.Flags.IsBitSet(DiscordUtilities.BotTester)) || usr.Flags.IsBitSet(DiscordUtilities.BotCreator) || (!DisabledForAdmins && usr.Flags.IsBitSet(DiscordUtilities.BotAdmin)))
                 return PreconditionResult.FromSuccess();

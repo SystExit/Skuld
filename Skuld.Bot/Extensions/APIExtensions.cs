@@ -8,6 +8,7 @@ using Skuld.APIS.Extensions;
 using Skuld.APIS.UrbanDictionary.Models;
 using Skuld.APIS.Utilities;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Localisation;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Extensions;
 using SteamStoreQuery;

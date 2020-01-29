@@ -1,5 +1,6 @@
 ﻿using Discord.Commands;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Models;

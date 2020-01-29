@@ -1,5 +1,6 @@
 ﻿using Discord.Commands;
 using Skuld.Core.Models;
+using Skuld.Discord.Models;
 using System;
 using System.Threading.Tasks;
 
