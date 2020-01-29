@@ -39,7 +39,7 @@ namespace Skuld.Discord.Extensions
             int x = 0;
             foreach (var usr in list)
             {
-                pagetext += $"{x + 1}/{list.Count()}. {database.Users.FirstOrDefault(x => x.Id == usr.UserId).Username} - TotalXP: {usr.TotalXP} | Level: {usr.Level} | XP: {usr.XP}/{DiscordUtilities.GetXPLevelRequirement(usr.Level + 1, DiscordUtilities.PHI)}\n";
+                pagetext += $"{x + 1}/{list.Count()}. {database.Users.FirstOrDefault(x => x.Id == usr.UserId).Username} - TotalXP: {usr.TotalXP} | Level: {usr.Level} | XP: {usr.XP}/{DatabaseUtilities.GetXPLevelRequirement(usr.Level + 1, DiscordUtilities.PHI)}\n";
 
                 if ((x + 1) % 10 == 0 || (x + 1) == list.Count())
                 {

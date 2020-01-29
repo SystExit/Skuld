@@ -2,6 +2,7 @@
 using Discord.WebSocket;
 using NodaTime;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using StatsdClient;
@@ -26,24 +27,31 @@ namespace Skuld.Discord.Extensions
                 return $"{usr.Username} ({usr.Nickname})#{usr.Discriminator}";
         }
 
-        public static async Task<object> GrantExperienceAsync(this User user, ulong amount, IGuild guild)
+        public static async Task<object> GrantExperienceAsync(this User user, ulong amount, IGuild guild, bool skipTimeCheck = false)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
             var luxp = Database.UserXp.FirstOrDefault(x => x.UserId == user.Id && x.GuildId == guild.Id);
-
-            var xptonextlevel = DiscordUtilities.GetXPLevelRequirement(luxp.Level + 1, DiscordUtilities.PHI); //get next level xp requirement based on phi
 
             bool didLevelUp = false;
 
             if (luxp != null)
             {
-                if (luxp.LastGranted < (DateTime.UtcNow.ToEpoch() - 60))
+                ulong levelAmount = 0;
+
+                var xptonextlevel = DatabaseUtilities.GetXPLevelRequirement(luxp.Level + 1, DiscordUtilities.PHI); //get next level xp requirement based on phi
+                while ((luxp.XP + amount) >= xptonextlevel)
                 {
-                    if ((luxp.XP + amount) >= xptonextlevel) //if over or equal to next level requirement, update accordingly
+                    xptonextlevel = DatabaseUtilities.GetXPLevelRequirement(luxp.Level + 1 + levelAmount, DiscordUtilities.PHI);
+                    levelAmount++;
+                }
+
+                if (luxp.LastGranted < (DateTime.UtcNow.ToEpoch() - 60) || skipTimeCheck)
+                {
+                    if (levelAmount > 0) //if over or equal to next level requirement, update accordingly
                     {
                         luxp.XP = 0;
                         luxp.TotalXP += amount;
-                        luxp.Level++;
+                        luxp.Level = DatabaseUtilities.GetLevelFromTotalXP(luxp.TotalXP, DiscordUtilities.PHI);
                         luxp.LastGranted = DateTime.UtcNow.ToEpoch();
 
                         didLevelUp = true;
@@ -90,7 +98,7 @@ namespace Skuld.Discord.Extensions
         public static async Task<EmbedBuilder> GetWhoisAsync(this IUser user, IGuildUser guildUser, IReadOnlyCollection<ulong> roles, IDiscordClient Client, SkuldConfig Configuration)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
-            var sUser = await Database.GetUserAsync(user).ConfigureAwait(false);
+            var sUser = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
             string status;
             if (user.Activity != null)
@@ -127,7 +135,10 @@ namespace Skuld.Discord.Extensions
                     clientString.Append(", ");
             }
 
-            embed.AddInlineField($"Active Client{(user.ActiveClients.Count > 1 ? "s" : "")}", $"{clientString}");
+            if(user.ActiveClients.Any())
+            {
+                embed.AddInlineField($"Active Client{(user.ActiveClients.Count > 1 ? "s" : "")}", $"{clientString}");
+            }
 
             if (roles != null)
             {
