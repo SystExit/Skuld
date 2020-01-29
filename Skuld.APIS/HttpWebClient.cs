@@ -12,7 +12,7 @@ namespace Skuld.APIS
 {
     public static class HttpWebClient
     {
-        public static string UAGENT = "Mozilla/5.0 (compatible; SkuldBot/ApiVersion=" + Assembly.GetExecutingAssembly().Version.ToString() + "; +https://github.com/Skuldbot/Skuld/)";
+        public static string UAGENT = "Mozilla/5.0 (compatible; SkuldBot/ApiVersion=" + Assembly.GetExecutingAssembly().GetName().Version.ToString() + "; +https://github.com/Skuldbot/Skuld/)";
 
         public static HttpWebRequest CreateWebRequest(Uri uri, byte[] auth = null)
         {
