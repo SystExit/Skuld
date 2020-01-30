@@ -125,28 +125,52 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("lmgtfy"), Summary("Creates a \"lmgtfy\"(Let me google that for you) link")]
-        public async Task LMGTFY(string engine, [Remainder]string query)
+        public async Task LMGTFY([Remainder]string query)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
             var prefix = (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix ?? Configuration.Prefix;
 
             string url = "https://lmgtfy.com/";
-            engine = engine.ToLowerInvariant();
-            if (engine == "g" || engine == "google")
-            { url = url + "?q=" + query.Replace(" ", "%20"); }
-            if (engine == "b" || engine == "bing")
-            { url = url + "?s=b&q=" + query.Replace(" ", "%20"); }
-            if (engine == "y" || engine == "yahoo")
-            { url = url + "?s=y&q=" + query.Replace(" ", "%20"); }
-            if (engine == "a" || engine == "aol")
-            { url = url + "?a=b&q=" + query.Replace(" ", "%20"); }
-            if (engine == "k" || engine == "ask")
-            { url = url + "?k=b&q=" + query.Replace(" ", "%20"); }
-            if (engine == "d" || engine == "duckduckgo")
-            { url = url + "?s=d&q=" + query.Replace(" ", "%20"); }
+
+            var firstPart = query.Split(" ")[0];
+
+            switch(firstPart.ToLowerInvariant())
+            {
+                case "b":
+                case "bing":
+                    url = url + "?s=b&q=" + query.ReplaceFirst(firstPart, "").Replace(" ", "%20");
+                    break;
+                case "y":
+                case "yahoo":
+                    url = url + "?s=y&q=" + query.ReplaceFirst(firstPart, "").Replace(" ", "%20");
+                    break;
+                case "a":
+                case "aol":
+                    url = url + "?a=b&q=" + query.ReplaceFirst(firstPart, "").Replace(" ", "%20");
+                    break;
+                case "k":
+                case "ask":
+                    url = url + "?k=b&q=" + query.ReplaceFirst(firstPart, "").Replace(" ", "%20");
+                    break;
+                case "d":
+                case "duckduckgo":
+                case "ddg":
+                    url = url + "?s=d&q=" + query.ReplaceFirst(firstPart, "").Replace(" ", "%20");
+                    break;
+                case "g":
+                case "google":
+                    url = url + "?q=" + query.ReplaceFirst(firstPart, "").Replace(" ", "%20");
+                    break;
+                default:
+                    url = url + "?q=" + query.Replace(" ", "%20");
+                    break;
+            }
+
             if (url != "https://lmgtfy.com/")
+            {
                 await url.QueueMessageAsync(Context).ConfigureAwait(false);
+            }
             else
             {
                 await EmbedExtensions.FromError($"Ensure your parameters are correct, example: `{Configuration.Prefix}lmgtfy g How to use lmgtfy`", Context).QueueMessageAsync(Context).ConfigureAwait(false);

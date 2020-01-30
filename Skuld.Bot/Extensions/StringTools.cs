@@ -96,6 +96,17 @@ namespace Skuld.Bot.Extensions
             "🇿"
         };
 
+        //https://stackoverflow.com/a/8809437
+        public static string ReplaceFirst(this string text, string search, string replace)
+        {
+            int pos = text.IndexOf(search);
+            if (pos < 0)
+            {
+                return text;
+            }
+            return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
+        }
+
         public static string ToRegionalIndicator(this string value)
         {
             StringBuilder ret = new StringBuilder();
