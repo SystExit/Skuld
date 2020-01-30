@@ -651,7 +651,7 @@ namespace Skuld.Bot.Commands
     {
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }
 
-        [Command("title"), Summary("Sets Title")]
+        [Command("title"), Summary("Sets Title"), RequireDatabase]
         public async Task SetTitle([Remainder]string title = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -676,18 +676,45 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("recurring-block"), Summary("Blocks people from patting you on recurring digits")]
-        public async Task BlockRecurring(bool action)
+        [Command("recurring-block"), Summary("Blocks people from patting you on recurring digits"), RequireDatabase]
+        public async Task BlockRecurring()
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
             var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
-            usr.RecurringBlock = action;
+            usr.RecurringBlock = !usr.RecurringBlock;
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            await EmbedExtensions.FromSuccess($"Set RecurringBlock to: {action}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            await EmbedExtensions.FromSuccess($"Set RecurringBlock to: {usr.RecurringBlock}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+        }
+
+        [Command("block-actions"), Summary("Blocks people from performing actions"), RequireDatabase]
+        public async Task BlockActions([Remainder] IUser user)
+        {
+            using var database = new SkuldDbContextFactory().CreateDbContext();
+
+            var res = database.BlockedActions.ToList().FirstOrDefault(x => x.Blocker == Context.User.Id && x.Blockee == user.Id);
+
+            if (res != null)
+            {
+                database.BlockedActions.Remove(res);
+
+                await EmbedExtensions.FromSuccess($"Unblocked {user.Mention}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+            else
+            {
+                database.BlockedActions.Add(new BlockedAction
+                {
+                    Blocker = Context.User.Id,
+                    Blockee = user.Id
+                });
+
+                await EmbedExtensions.FromSuccess($"Blocked {user.Mention}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+
+            await database.SaveChangesAsync().ConfigureAwait(false);
         }
 
         [Command("set-hexbg"), Summary("Sets your background to a Hex Color"), RequireDatabase]

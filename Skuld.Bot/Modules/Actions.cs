@@ -33,7 +33,7 @@ namespace Skuld.Bot.Commands
                 {
                     foreach (var mentionedUser in Context.Message.MentionedUsers)
                     {
-                        var res = Database.BlockedActions.FirstOrDefault(x => x.Blockee == mentionedUser.Id && x.Blocker == Context.User.Id);
+                        var res = Database.BlockedActions.FirstOrDefault(x => x.Blocker == mentionedUser.Id && x.Blockee == Context.User.Id);
 
                         if (res != null)
                             prune.Add(mentionedUser.Id);
@@ -224,52 +224,72 @@ namespace Skuld.Bot.Commands
                 .AddAuthor(Context.Client)
                 .AddFooter(Context);
 
-            if (Context.Message.MentionedUsers.Any())
+            if(target != null)
             {
-                List<ulong> prune = new List<ulong>();
-
+                if (Context.Message.MentionedUsers.Any())
                 {
-                    using SkuldDatabaseContext Database = new SkuldDbContextFactory().CreateDbContext(null);
+                    List<ulong> prune = new List<ulong>();
 
-                    foreach (var mentionedUser in Context.Message.MentionedUsers)
                     {
-                        var res = Database.BlockedActions.FirstOrDefault(x => x.Blockee == mentionedUser.Id && x.Blocker == Context.User.Id);
+                        using SkuldDatabaseContext Database = new SkuldDbContextFactory().CreateDbContext(null);
 
-                        if (res != null)
-                            prune.Add(mentionedUser.Id);
-                    }
-                }
-
-                {
-                    using SkuldDatabaseContext Database = new SkuldDbContextFactory().CreateDbContext(null);
-                    var initiator = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-
-                    StringBuilder message = new StringBuilder();
-
-                    var msg = target;
-
-                    foreach (var usr in Context.Message.MentionedUsers)
-                    {
-                        if (usr.IsBot || usr.IsWebhook || usr.Discriminator == "0000" || prune.Contains(usr.Id))
-                            continue;
-
-                        var uzr = await Database.InsertOrGetUserAsync(usr).ConfigureAwait(false);
-
-                        if (!(uzr.RecurringBlock && uzr.Patted.IsRecurring(2)))
+                        foreach (var mentionedUser in Context.Message.MentionedUsers)
                         {
-                            uzr.Patted += 1;
-                            initiator.Pats += 1;
+                            var res = Database.BlockedActions.FirstOrDefault(x => x.Blockee == Context.User.Id && x.Blocker == mentionedUser.Id);
 
-                            message.Append(usr.Mention + " ");
+                            if (res != null)
+                                prune.Add(mentionedUser.Id);
+                        }
+                    }
+
+                    {
+                        using SkuldDatabaseContext Database = new SkuldDbContextFactory().CreateDbContext(null);
+                        var initiator = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+
+                        StringBuilder message = new StringBuilder($"{Context.User.Mention} pets ");
+
+                        var msg = target;
+
+                        foreach (var usr in Context.Message.MentionedUsers)
+                        {
+                            if (usr.IsBot || usr.IsWebhook || usr.Discriminator == "0000" || prune.Contains(usr.Id))
+                                continue;
+
+                            var uzr = await Database.InsertOrGetUserAsync(usr).ConfigureAwait(false);
+
+                            if (!(uzr.RecurringBlock && uzr.Patted.IsRecurring(2)))
+                            {
+                                uzr.Patted += 1;
+                                initiator.Pats += 1;
+
+                                message.Append(usr.Mention + " ");
+                            }
+                            else
+                            {
+                                msg.PruneMention(usr.Id);
+                            }
+                        }
+
+                        await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                        if(message.ToString() != $"{Context.User.Mention} pets ")
+                        {
+                            action.WithDescription(message.ToString());
                         }
                         else
                         {
-                            msg.PruneMention(usr.Id);
+                            action.WithDescription($"{Context.User.Mention} pets the air 😢😢");
                         }
                     }
-
-                    await Database.SaveChangesAsync().ConfigureAwait(false);
                 }
+                else
+                {
+                    action.WithDescription($"{Context.User.Mention} pets {target}");
+                }
+            }
+            else
+            {
+                action.WithDescription($"{Context.Client.CurrentUser.Mention} pets {Context.User.Mention}");
             }
 
             await action.QueueMessageAsync(Context).ConfigureAwait(false);
