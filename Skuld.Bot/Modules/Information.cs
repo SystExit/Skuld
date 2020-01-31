@@ -76,7 +76,7 @@ namespace Skuld.Bot.Commands
 
                 serverroles += thing;
 
-                if (item != guild.Roles.Last())
+                if (item != roles.Last())
                 { 
                     serverroles += ", ";
                 }
