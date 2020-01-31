@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace Skuld.APIS
 {
-    public class YNWTFClient : BaseClient
+    public class YNWTFClient
     {
         private readonly RateLimiter rateLimiter;
 
-        public YNWTFClient() : base()
+        public YNWTFClient()
         {
             rateLimiter = new RateLimiter();
         }
@@ -19,7 +19,7 @@ namespace Skuld.APIS
         {
             if (rateLimiter.IsRatelimited()) return null;
 
-            return JsonConvert.DeserializeObject<YNWTFResponce>((await ReturnStringAsync(new Uri($"https://yesno.wtf/api"))));
+            return JsonConvert.DeserializeObject<YNWTFResponce>(await HttpWebClient.ReturnStringAsync(new Uri($"https://yesno.wtf/api")).ConfigureAwait(false));
         }
     }
 }

@@ -1,7 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <AssemblyVersion>2020.1.53.0</AssemblyVersion>
+    <FileVersion>2020.1.53.0</FileVersion>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,26 +15,21 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Akitaux.Twitch.Core" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.Helix" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.Pubsub" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.Rest" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.WebSocket" Version="0.1.0-build-00009" />
-    <PackageReference Include="Booru.Net" Version="1.0.0.3" />
-    <PackageReference Include="Discord.Net" Version="2.0.2-dev-01059" />
-    <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.38.0.1369" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.9.1" />
+    <PackageReference Include="Booru.Net" Version="1.0.0.4" />
+    <PackageReference Include="Discord.Net" Version="2.2.0-dev-20191226.1" />
+    <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.43.0.1369" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.17" />
     <PackageReference Include="Imgur.API" Version="5.0.0-beta1" />
-    <PackageReference Include="Kitsu" Version="1.4.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
-    <PackageReference Include="Steam.Models" Version="3.0.8" />
-    <PackageReference Include="SteamWebAPI2" Version="4.0.8" />
+    <PackageReference Include="Kitsu" Version="1.4.2" />
+    <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="2.9.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="Steam.Models" Version="3.0.10" />
+    <PackageReference Include="SteamWebAPI2" Version="4.0.14" />
     <PackageReference Include="SysEx.Net" Version="1.0.7" />
-    <PackageReference Include="YoutubeExplode" Version="4.6.6" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Skuld.Core\Skuld.Core.csproj" />
+    <PackageReference Include="YoutubeExplode" Version="4.7.12" />
   </ItemGroup>
   
 </Project>

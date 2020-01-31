@@ -1,10 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
-using Skuld.Core.Models;
-using Skuld.Core.Models.Discord;
-using Skuld.Discord.Services;
+using Skuld.Discord.Models;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Skuld.Discord.Preconditions
@@ -30,21 +27,20 @@ namespace Skuld.Discord.Preconditions
         public AccessLevel GetPermission(ICommandContext c)
         {
             if (c.User.IsBot)
-            { return AccessLevel.Blocked; }
-            if (SkuldConfig.Load().Discord.BotAdmins.Contains(c.User.Id) || (BotService.DiscordClient.GetApplicationInfoAsync().Result).Owner.Id == c.User.Id)
-            { return AccessLevel.BotOwner; }
+                return AccessLevel.Blocked;
+
             IGuildUser user = (IGuildUser)c.User;
             if (user != null)
             {
                 if (c.Guild.OwnerId == user.Id)
-                { return AccessLevel.ServerOwner; }
+                    return AccessLevel.ServerOwner;
                 if (user.GuildPermissions.Administrator)
-                { return AccessLevel.ServerAdmin; }
+                    return AccessLevel.ServerAdmin;
                 if (user.GuildPermissions.ManageMessages && user.GuildPermissions.KickMembers && user.GuildPermissions.ManageRoles)
-                { return AccessLevel.ServerMod; }
+                    return AccessLevel.ServerMod;
             }
 
-            return AccessLevel.User;                             // If nothing else, return a default permission.
+            return AccessLevel.User;
         }
     }
 }

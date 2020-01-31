@@ -1,9 +1,9 @@
 ﻿namespace Skuld.APIS
 {
     //Coming Soon
-    public class EntertainmentClient : BaseClient
+    public class EntertainmentClient
     {
-        public EntertainmentClient() : base()
+        public EntertainmentClient()
         {
         }
     }

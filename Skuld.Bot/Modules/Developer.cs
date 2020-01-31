@@ -1,112 +1,72 @@
 ﻿using Discord;
-using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
-using Skuld.APIS;
+using Newtonsoft.Json;
+using Skuld.Bot.Extensions;
+using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Formatting;
+using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
+using Skuld.Core.Models.Commands;
 using Skuld.Core.Utilities;
-using Skuld.Database;
-using Skuld.Discord.Commands;
+using Skuld.Discord.BotListing;
 using Skuld.Discord.Extensions;
+using Skuld.Discord.Models;
 using Skuld.Discord.Preconditions;
 using Skuld.Discord.Services;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
-using Skuld.Bot.Models;
-using Newtonsoft.Json;
 
 namespace Skuld.Bot.Commands
 {
-    [Group, RequireBotAdmin]
-    public class Developer : InteractiveBase<SkuldCommandContext>
+    [Group]
+    [RequireBotFlag(BotAccessLevel.BotAdmin)]
+    public class Developer : ModuleBase<ShardedCommandContext>
     {
-        public Random Random { get; set; }
-        public SkuldConfig Configuration { get; set; }
-        public BotListingClient BotListing { get; set; }
+        public SkuldConfig Configuration { get => HostSerivce.Configuration; }
 
-        [Command("stop")]
-        public async Task Stop()
-        {
-            await "Stopping!".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-            await BotService.StopBotAsync("StopCmd").ConfigureAwait(false);
-        }
+        #region BotAdmin
 
         [Command("bean")]
-        public async Task Bean([Remainder]IGuildUser user)
+        public async Task Bean(IGuildUser user, [Remainder]string reason = null)
         {
-            var usrresp = await DatabaseClient.GetUserAsync(user.Id);
-            if(usrresp.Successful)
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var usr = Database.Users.FirstOrDefault(x => x.Id == user.Id);
+
+            if (usr.Flags.IsBitSet(DiscordUtilities.Banned))
             {
-                var usr = usrresp.Data as SkuldUser;
-                if (usr.Banned)
-                {
-                    usr.Banned = false;
-                    var resp = await DatabaseClient.UpdateUserAsync(usr);
-                    if (resp.Successful)
-                        await $"Un-beaned {user.Mention}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                }
-                else
-                {
-                    usr.Banned = true;
-                    var resp = await DatabaseClient.UpdateUserAsync(usr);
-                    if (resp.Successful)
-                        await $"Beaned {user.Mention}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                }
+                usr.Flags -= DiscordUtilities.Banned;
+                usr.BanReason = null;
+                await
+                    EmbedExtensions.FromSuccess(SkuldAppContext.GetCaller(), $"Un-beaned {user.Mention}", Context)
+                .QueueMessageAsync(Context).ConfigureAwait(false);
             }
-        }
-
-        [Command("jsoncommands")]
-        public async Task Commands()
-        {
-            var Modules = new List<ModuleSkuld>();
-
-            foreach (var module in BotService.CommandService.Modules)
+            else
             {
-
-                ModuleSkuld mod = new ModuleSkuld
+                if (reason == null)
                 {
-                    Name = module.Name,
-                    Commands = new List<CommandSkuld>()
-                };
-
-                List<CommandSkuld> comm = new List<CommandSkuld>();
-
-                foreach (var cmd in module.Commands)
-                {
-                    var parameters = new List<ParameterSkuld>();
-
-                    foreach(var paras in cmd.Parameters)
-                    {
-                        parameters.Add(new ParameterSkuld
-                        {
-                            Name = paras.Name,
-                            Optional = paras.IsOptional
-                        });
-                    }
-
-                    mod.Commands.Add(new CommandSkuld
-                    {
-                        Name = cmd.Name,
-                        Description = cmd.Summary,
-                        Aliases = cmd.Aliases.ToArray(),
-                        Parameters = parameters.ToArray()
-                    });
+                    await
+                        EmbedExtensions.FromError($"{nameof(reason)} needs a value", Context)
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
+                    return;
                 }
-                Modules.Add(mod);
+                usr.Flags += DiscordUtilities.Banned;
+                usr.BanReason = reason;
+                await
+                    EmbedExtensions.FromSuccess(SkuldAppContext.GetCaller(), $"Beaned {user.Mention} for reason: `{reason}`", Context)
+                .QueueMessageAsync(Context).ConfigureAwait(false);
             }
 
-            File.WriteAllText(AppContext.BaseDirectory + "commands.txt", JsonConvert.SerializeObject(Modules));
-
-            await $"Written commands to {AppContext.BaseDirectory}commands.txt".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            await Database.SaveChangesAsync().ConfigureAwait(false);
         }
 
         [Command("shardrestart"), Summary("Restarts shard")]
@@ -115,49 +75,6 @@ namespace Skuld.Bot.Commands
             await Context.Client.GetShard(shard).StopAsync().ConfigureAwait(false);
             await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
             await Context.Client.GetShard(shard).StartAsync().ConfigureAwait(false);
-        }
-
-        [Command("setgame"), Summary("Set Game")]
-        public async Task Game([Remainder]string title)
-        {
-            try
-            {
-                await Context.Client.SetGameAsync(title);
-                await Context.Message.DeleteAsync();
-            }
-            catch
-            {
-                await ":nauseated_face: Something went wrong. Try again.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-            }
-        }
-
-        [Command("resetgame"), Summary("Reset Game")]
-        public async Task ResetGame()
-        {
-            try
-            {
-                foreach(var shard in Context.Client.Shards)
-                {
-                    await shard.SetGameAsync($"{Configuration.Discord.Prefix}help | {shard.ShardId + 1}/{Context.Client.Shards.Count}", type: ActivityType.Listening);
-                }
-                await Context.Message.DeleteAsync();
-            }
-            catch
-            {
-                await ":nauseated_face: Something went wrong. Try again.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-            }
-        }
-
-        [Command("setstream"), Summary("Sets stream")]
-        public async Task Stream(string streamer, [Remainder]string title)
-        {
-            await Context.Client.SetGameAsync(title, "https://twitch.tv/" + streamer, ActivityType.Streaming);
-        }
-
-        [Command("setactivity"), Summary("Sets activity")]
-        public async Task ActivityAsync(ActivityType activityType, [Remainder]string status)
-        {
-            await Context.Client.SetGameAsync(status, null, activityType);
         }
 
         [Command("dumpshards"), Summary("Shard Info"), Alias("dumpshard")]
@@ -172,7 +89,7 @@ namespace Skuld.Bot.Commands
                 lines.Add(new string[] { item.ShardId.ToString(), item.ConnectionState.ToString(), item.Latency.ToString(), item.Guilds.Count.ToString() });
             }
 
-            await $"```\n{ConsoleUtils.PrettyLines(lines, 2)}```".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            await $"```\n{lines.PrettyLines(2)}```".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("getshard"), Summary("Gets all information about specific shard")]
@@ -199,65 +116,462 @@ namespace Skuld.Bot.Commands
                     Text = "Generated at"
                 },
                 Timestamp = DateTime.Now,
-                Color = EmbedUtils.RandomColor()
+                Color = EmbedExtensions.RandomEmbedColor()
             };
             embed.AddInlineField("Guilds", shard.Guilds.Count.ToString());
             embed.AddInlineField("Status", shard.ConnectionState);
             embed.AddInlineField("Latency", shard.Latency + "ms");
             embed.AddField("Game", shard.Activity.Name);
-            await embed.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("shard"), Summary("Gets the shard the guild is on")]
-        public async Task ShardGet() =>
-            await $"{Context.User.Mention} the server: `{Context.Guild.Name}` is on `{Context.Client.GetShardIdFor(Context.Guild)}`".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-
-        [Command("name"), Summary("Name")]
-        public async Task Name([Remainder]string name) => await Context.Client.CurrentUser.ModifyAsync(x => x.Username = name);
-
-        [Command("status"), Summary("Status")]
-        public async Task Status(string status)
+        public async Task ShardGet(ulong guildId = 0)
         {
-            if (status.ToLower() == "online")
-            { await SetStatus(UserStatus.Online); }
-            if (status.ToLower() == "afk")
-            { await SetStatus(UserStatus.AFK); }
-            if (status.ToLower() == "dnd" || status.ToLower() == "do not disturb" || status.ToLower() == "donotdisturb")
-            { await SetStatus(UserStatus.DoNotDisturb); }
-            if (status.ToLower() == "idle")
-            { await SetStatus(UserStatus.Idle); }
-            if (status.ToLower() == "offline")
-            { await SetStatus(UserStatus.Offline); }
-            if (status.ToLower() == "invisible")
-            { await SetStatus(UserStatus.Invisible); }
+            IGuild guild;
+            if (guildId != 0)
+                guild = BotService.DiscordClient.GetGuild(guildId);
+            else
+                guild = Context.Guild;
+
+            await $"{Context.User.Mention} the server: `{guild.Name}` is on `{Context.Client.GetShardIdFor(guild)}`".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
-        public async Task SetStatus(UserStatus status) =>
-            await Context.Client.SetStatusAsync(status);
-
-        [Command("moneyadd"), Summary("Gives money to people"), RequireDatabase]
-        public async Task GiveMoney(IGuildUser user, ulong amount)
+        [Command("setgame"), Summary("Set Game")]
+        public async Task Game([Remainder]string title)
         {
-            var suserresp = await DatabaseClient.GetUserAsync(user.Id);
-            if(suserresp.Successful)
+            await Context.Client.SetGameAsync(title).ConfigureAwait(false);
+        }
+
+        [Command("resetgame"), Summary("Reset Game")]
+        public async Task ResetGame()
+        {
+            foreach (var shard in Context.Client.Shards)
             {
-                if (suserresp.Data is SkuldUser suser)
-                {
-                    suser.Money += amount;
-
-                    await DatabaseClient.UpdateUserAsync(suser);
-
-                    await $"User {user.Username} now has: {Configuration.Preferences.MoneySymbol}{suser.Money}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel); ;
-                }
-                else
-                {
-                    await DatabaseClient.InsertUserAsync(user as SocketUser);
-                    await GiveMoney(user, amount).ConfigureAwait(false);
-                }
+                await shard.SetGameAsync($"{Configuration.Prefix}help | {shard.ShardId + 1}/{Context.Client.Shards.Count}", type: ActivityType.Listening).ConfigureAwait(false);
             }
         }
 
+        [Command("setstream"), Summary("Sets stream")]
+        public async Task Stream(string streamer, [Remainder]string title)
+        {
+            await Context.Client.SetGameAsync(title, "https://twitch.tv/" + streamer, ActivityType.Streaming).ConfigureAwait(false);
+        }
+
+        [Command("setactivity"), Summary("Sets activity")]
+        public async Task ActivityAsync(ActivityType activityType, [Remainder]string status)
+        {
+            await Context.Client.SetGameAsync(status, null, activityType).ConfigureAwait(false);
+        }
+
+        [Command("grantxp"), Summary("Grant Exp")]
+        public async Task GrantExp(ulong amount, [Remainder]IUser user = null)
+        {
+            if (user == null)
+                user = Context.User;
+            
+            using var database = new SkuldDbContextFactory().CreateDbContext();
+
+            var usr = await database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+
+            await usr.GrantExperienceAsync(amount, Context.Guild, true).ConfigureAwait(false);
+
+            await EmbedExtensions.FromSuccess($"Gave {user.Mention} {amount.ToFormattedString()}xp", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+        }
+
+        #endregion BotAdmin
+
+        #region BotOwner
+
+        [Command("populate")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
+        public async Task Populate(ulong? guildId = null)
+        {
+            using var database = new SkuldDbContextFactory().CreateDbContext();
+
+            IGuild guild;
+
+            if (guildId.HasValue)
+                guild = Context.Client.GetGuild(guildId.Value);
+            else
+                guild = Context.Guild;
+
+            await guild.DownloadUsersAsync().ConfigureAwait(false);
+
+            var users = await guild.GetUsersAsync().ConfigureAwait(false);
+
+            foreach (var user in users)
+            {
+                await database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+            }
+
+            await
+                EmbedExtensions.FromSuccess(SkuldAppContext.GetCaller(), $"Added all users for guild `{guild.Name}`", Context)
+                .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
+        }
+
+        [Command("stop")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
+        public async Task Stop()
+        {
+            await "Stopping!".QueueMessageAsync(Context).ConfigureAwait(false);
+            await BotService.StopBotAsync("StopCmd").ConfigureAwait(false);
+        }
+
+        [Command("addflag")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
+        public async Task SetFlag(BotAccessLevel level, [Remainder]IUser user = null)
+        {
+            if (user == null)
+                user = Context.User;
+
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var dbUser = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+
+            bool added = false;
+
+            switch (level)
+            {
+                case BotAccessLevel.BotOwner:
+                    if (!dbUser.Flags.IsBitSet(DiscordUtilities.BotCreator))
+                    {
+                        dbUser.Flags += DiscordUtilities.BotCreator;
+                        added = true;
+                    }
+                    break;
+
+                case BotAccessLevel.BotAdmin:
+                    if (!dbUser.Flags.IsBitSet(DiscordUtilities.BotAdmin))
+                    {
+                        dbUser.Flags += DiscordUtilities.BotAdmin;
+                        added = true;
+                    }
+                    break;
+
+                case BotAccessLevel.BotTester:
+                    if (!dbUser.Flags.IsBitSet(DiscordUtilities.BotTester))
+                    {
+                        dbUser.Flags += DiscordUtilities.BotTester;
+                        added = true;
+                    }
+                    break;
+
+                case BotAccessLevel.BotDonator:
+                    if (!dbUser.Flags.IsBitSet(DiscordUtilities.BotDonator))
+                    {
+                        dbUser.Flags += DiscordUtilities.BotDonator;
+                        added = true;
+                    }
+                    break;
+            }
+
+            if (added)
+            {
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await $"Added flag `{level}` to {user.Mention}".QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+            else
+            {
+                await $"{user.Mention} already has the flag `{level}`".QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+        }
+
+        [Command("flags")]
+        public async Task GetFlags([Remainder]IUser user = null)
+        {
+            if (user == null)
+                user = Context.User;
+
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var dbUser = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+
+            List<BotAccessLevel> flags = new List<BotAccessLevel>();
+
+            if (dbUser.Flags.IsBitSet(DiscordUtilities.BotCreator))
+                flags.Add(BotAccessLevel.BotOwner);
+            if (dbUser.Flags.IsBitSet(DiscordUtilities.BotAdmin))
+                flags.Add(BotAccessLevel.BotAdmin);
+            if (dbUser.Flags.IsBitSet(DiscordUtilities.BotDonator))
+                flags.Add(BotAccessLevel.BotDonator);
+            if (dbUser.Flags.IsBitSet(DiscordUtilities.BotTester))
+                flags.Add(BotAccessLevel.BotTester);
+
+            flags.Add(BotAccessLevel.Normal);
+
+            await $"{user.Mention} has the flags `{string.Join(", ", flags)}`".QueueMessageAsync(Context).ConfigureAwait(false);
+        }
+
+        [Command("jsoncommands")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
+        public async Task Commands()
+        {
+            var Modules = new List<ModuleSkuld>();
+
+            BotService.CommandService.Modules.ToList().ForEach(module =>
+            {
+                ModuleSkuld mod = new ModuleSkuld
+                {
+                    Name = module.Name,
+                    Commands = new List<CommandSkuld>()
+                };
+                module.Commands.ToList().ForEach(cmd =>
+                {
+                    var parameters = new List<ParameterSkuld>();
+
+                    cmd.Parameters.ToList().ForEach(paras =>
+                    {
+                        parameters.Add(new ParameterSkuld
+                        {
+                            Name = paras.Name,
+                            Optional = paras.IsOptional
+                        });
+                    });
+
+                    mod.Commands.Add(new CommandSkuld
+                    {
+                        Name = cmd.Name,
+                        Description = cmd.Summary,
+                        Aliases = cmd.Aliases.ToArray(),
+                        Parameters = parameters.ToArray()
+                    });
+                });
+                Modules.Add(mod);
+            });
+
+            var filename = Path.Combine(SkuldAppContext.StorageDirectory, "commands.json");
+
+            File.WriteAllText(filename, JsonConvert.SerializeObject(Modules));
+
+            await $"Written commands to {filename}".QueueMessageAsync(Context).ConfigureAwait(false);
+        }
+
+        [Command("name"), Summary("Name")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
+        public async Task Name([Remainder]string name)
+            => await Context.Client.CurrentUser.ModifyAsync(x => x.Username = name).ConfigureAwait(false);
+
+        [Command("status"), Summary("Status")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
+        public async Task Status(string status)
+        {
+            switch (status.ToLowerInvariant())
+            {
+                case "online":
+                    await Context.Client.SetStatusAsync(UserStatus.Online).ConfigureAwait(false);
+                    break;
+
+                case "afk":
+                    await Context.Client.SetStatusAsync(UserStatus.AFK).ConfigureAwait(false);
+                    break;
+
+                case "dnd":
+                case "do not disturb":
+                case "donotdisturb":
+                case "busy":
+                    await Context.Client.SetStatusAsync(UserStatus.DoNotDisturb).ConfigureAwait(false);
+                    break;
+
+                case "idle":
+                case "away":
+                    await Context.Client.SetStatusAsync(UserStatus.Idle).ConfigureAwait(false);
+                    break;
+
+                case "offline":
+                    await Context.Client.SetStatusAsync(UserStatus.Offline).ConfigureAwait(false);
+                    break;
+
+                case "invisible":
+                    await Context.Client.SetStatusAsync(UserStatus.Invisible).ConfigureAwait(false);
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        [Command("dropuser")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
+        public async Task DropUser(ulong userId)
+        {
+            using var database = new SkuldDbContextFactory().CreateDbContext();
+
+            await database.DropUserAsync(userId);
+        }
+
+        [Command("dropguild")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
+        public async Task DropGuild(ulong guildId)
+        {
+            using var database = new SkuldDbContextFactory().CreateDbContext();
+
+            await database.DropGuildAsync(guildId);
+        }
+
+        [Command("merge")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
+        public async Task Merge(ulong oldId, ulong newId)
+        {
+            if (Context.Client.GetUser(newId) == null)
+            {
+                await $"No. {newId} is not a valid user Id".QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+            if (newId == oldId)
+            {
+                await $"No.".QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+            try
+            {
+                //UserAccount
+                {
+                    using var db = new SkuldDbContextFactory().CreateDbContext();
+
+                    var oldUser = db.Users.FirstOrDefault(x => x.Id == oldId);
+                    var newUser = db.Users.FirstOrDefault(x => x.Id == newId);
+
+                    if (oldUser != null && newUser != null)
+                    {
+                        newUser.Money += oldUser.Money;
+                        newUser.Title = oldUser.Title;
+                        newUser.Language = oldUser.Language;
+                        newUser.Patted = oldUser.Patted;
+                        newUser.Pats = oldUser.Pats;
+                        newUser.UnlockedCustBG = oldUser.UnlockedCustBG;
+                        newUser.Background = oldUser.Background;
+
+                        await db.SaveChangesAsync().ConfigureAwait(false);
+                    }
+                }
+
+                //Reputation
+                {
+                    using var db = new SkuldDbContextFactory().CreateDbContext();
+
+                    var repee = db.Reputations.AsQueryable().Where(x => x.Repee == oldId);
+                    var reper = db.Reputations.AsQueryable().Where(x => x.Reper == oldId);
+
+                    if (repee.Any())
+                    {
+                        foreach (var rep in repee)
+                        {
+                            if (!db.Reputations.Any(x => x.Repee == newId && x.Reper == rep.Reper))
+                            {
+                                rep.Repee = newId;
+                            }
+                        }
+                    }
+
+                    if (reper.Any())
+                    {
+                        foreach (var rep in reper)
+                        {
+                            if (!db.Reputations.Any(x => x.Reper == newId && x.Repee == rep.Repee))
+                            {
+                                rep.Reper = newId;
+                            }
+                        }
+                    }
+
+                    if (repee.Any() || reper.Any())
+                    {
+                        await db.SaveChangesAsync().ConfigureAwait(false);
+                    }
+                }
+
+                //Pastas
+                {
+                    using var db = new SkuldDbContextFactory().CreateDbContext();
+
+                    var pastas = db.Pastas.AsQueryable().Where(x => x.OwnerId == oldId);
+
+                    if (pastas.Any())
+                    {
+                        foreach (var pasta in pastas)
+                        {
+                            pasta.OwnerId = newId;
+                        }
+
+                        await db.SaveChangesAsync().ConfigureAwait(false);
+                    }
+                }
+
+                //PastaVotes
+                {
+                    //TODO: Add When implemented
+                    using var db = new SkuldDbContextFactory().CreateDbContext();
+                }
+
+                //CommandUsage
+                {
+                    using var db = new SkuldDbContextFactory().CreateDbContext();
+
+                    var commands = db.UserCommandUsage.AsQueryable().Where(x => x.UserId == oldId);
+
+                    if (commands.Any())
+                    {
+                        foreach (var command in commands)
+                        {
+                            command.UserId = newId;
+                        }
+
+                        await db.SaveChangesAsync().ConfigureAwait(false);
+                    }
+                }
+
+                //Experience
+                {
+                    using var db = new SkuldDbContextFactory().CreateDbContext();
+
+                    var experiences = db.UserXp.AsQueryable().Where(x => x.UserId == oldId);
+
+                    if (experiences.Any())
+                    {
+                        foreach (var experience in experiences)
+                        {
+                            experience.UserId = newId;
+                        }
+
+                        await db.SaveChangesAsync().ConfigureAwait(false);
+                    }
+                }
+
+                //Prune Old User
+                {
+                    using var db = new SkuldDbContextFactory().CreateDbContext();
+
+                    await db.DropUserAsync(oldId);
+                }
+
+                await $"Successfully merged data from {oldId} into {newId}".QueueMessageAsync(Context);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("MergeCmd", ex.Message, ex);
+                await "Check the console log".QueueMessageAsync(Context);
+            }
+        }
+
+        [Command("moneyadd"), Summary("Gives money to people"), RequireDatabase]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
+        public async Task GiveMoney(IGuildUser user, ulong amount)
+        {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var usr = Database.Users.FirstOrDefault(x => x.Id == user.Id);
+            usr.Money += amount;
+
+            await Database.SaveChangesAsync().ConfigureAwait(false);
+
+            await $"User {user.Username} now has: {(await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{usr.Money.ToFormattedString()}".QueueMessageAsync(Context).ConfigureAwait(false);
+        }
+
         [Command("leave"), Summary("Leaves a server by id")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
         public async Task LeaveServer(ulong id)
         {
             var guild = Context.Client.GetGuild(id);
@@ -265,111 +579,39 @@ namespace Skuld.Bot.Commands
             {
                 if (Context.Client.GetGuild(id) == null)
                 {
-                    await $"Left guild **{guild.Name}**".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
+                    await EmbedExtensions.FromSuccess($"Left guild **{guild.Name}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
                 else
                 {
-                    await $"Hmm, I haven't left **{guild.Name}**".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                    await EmbedExtensions.FromError($"Hmm, I haven't left **{guild.Name}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
-            });
+            }).ConfigureAwait(false);
         }
 
         [Command("pubstats"), Summary("no")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
         public async Task PubStats()
         {
-            await "Ok, publishing stats to the Discord Bot lists.".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            await "Ok, publishing stats to the Discord Bot lists.".QueueMessageAsync(Context).ConfigureAwait(false);
             string list = "";
             int shardcount = Context.Client.Shards.Count;
-            await BotListing.SendDataAsync(Configuration.BotListing.SysExToken, Configuration.BotListing.DiscordGGKey, Configuration.BotListing.DBotsOrgKey, Configuration.BotListing.B4DToken);
+            await Context.Client.SendDataAsync(Configuration.IsDevelopmentBuild, Configuration.DiscordGGKey, Configuration.DBotsOrgKey, Configuration.B4DToken).ConfigureAwait(false);
             foreach (var shard in Context.Client.Shards)
             {
                 list += $"I sent ShardID: {shard.ShardId} Guilds: {shard.Guilds.Count} Shards: {shardcount}\n";
             }
-            await list.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-        }
-
-        [Command("sql")]
-        public async Task Sql(string query)
-        {
-            if (query.ToUpper().Contains("DROP"))
-            {
-                var nxt = await NextMessageAsync();
-                if (nxt.Content.ToLowerInvariant().StartsWith("y"))
-                {
-                    await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("SQLCMD", $"{Context.User.Username}#{Context.User.Discriminator} - {Context.User.Id} just used a DROP statement, full query: \"{query}\"", LogSeverity.Critical));
-                }
-                else { return; }
-            }
-            var command = new MySql.Data.MySqlClient.MySqlCommand(query);
-            var result = await DatabaseClient.SingleQueryAsync(command);
-
-            if (result.Successful)
-            {
-                await $"Response: {result.Data ?? "No Response Available"}".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
-            }
-            else
-            {
-                await $"{result.Error}\nStack Trace:```{result.Exception}```".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel, null, result.Exception);
-            }
-        }
-
-        [Command("rebuildusers")]
-        public async Task RebuildUsers()
-        {
-            Thread thd = new Thread(async () =>
-            {
-                Thread.CurrentThread.IsBackground = true;
-                string message = "";
-                int count = 0;
-                foreach (var guild in Context.Client.Guilds)
-                {
-                    await guild.DownloadUsersAsync();
-                    foreach (var user in guild.Users)
-                    {
-                        count++;
-                        await DatabaseClient.InsertUserAsync(user, "en-GB");
-                        Thread.Sleep(2000);
-                        message += count + ". Inserted\n";
-                    }
-                }
-                await message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-            })
-            {
-                IsBackground = true
-            };
-            thd.Start();
-        }
-
-        [Command("rebuildguilds")]
-        public async Task RebuildGuilds()
-        {
-            Thread thd = new Thread(async () =>
-            {
-                string message = "";
-                int count = 0;
-                foreach (var guild in Context.Client.Guilds)
-                {
-                    count++;
-                    await DatabaseClient.InsertGuildAsync(guild.Id, Configuration.Discord.Prefix);
-                    Thread.Sleep(2000);
-                    message += count + ". Inserted\n";
-                }
-                await message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-            })
-            {
-                IsBackground = true
-            };
-            thd.Start();
+            await list.QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("eval"), Summary("no")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
         public async Task EvalStuff([Remainder]string code)
         {
             try
             {
                 if (code.ToLowerInvariant().Contains("token") || code.ToLowerInvariant().Contains("key"))
                 {
-                    await "Nope.".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                    await EmbedExtensions.FromError("Nope.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
                 if (code.StartsWith("```cs", StringComparison.Ordinal))
@@ -383,34 +625,36 @@ namespace Skuld.Bot.Commands
                 }
 
                 var embed = new EmbedBuilder();
-                var globals = new Globals().Context = Context as SkuldCommandContext;
+                var globals = new Globals().Context = Context as ShardedCommandContext;
                 var soptions = ScriptOptions
                     .Default
-                    .WithReferences(typeof(SkuldCommandContext).Assembly, typeof(ShardedCommandContext).Assembly,
+                    .WithReferences(typeof(SkuldDatabaseContext).Assembly)
+                    .WithReferences(typeof(ShardedCommandContext).Assembly, typeof(ShardedCommandContext).Assembly,
                     typeof(SocketGuildUser).Assembly, typeof(Task).Assembly, typeof(Queryable).Assembly,
                     typeof(BotService).Assembly)
-                    .WithImports(typeof(SkuldCommandContext).FullName, typeof(ShardedCommandContext).FullName,
+                    .WithImports(typeof(SkuldDatabaseContext).FullName)
+                    .WithImports(typeof(ShardedCommandContext).FullName, typeof(ShardedCommandContext).FullName,
                     typeof(SocketGuildUser).FullName, typeof(Task).FullName, typeof(Queryable).FullName,
                     typeof(BotService).FullName);
 
                 var script = CSharpScript.Create(code, soptions, globalsType: typeof(ShardedCommandContext));
                 script.Compile();
 
-                var result = (await script.RunAsync(globals: globals)).ReturnValue;
+                var result = (await script.RunAsync(globals: globals).ConfigureAwait(false)).ReturnValue;
 
                 embed.Author = new EmbedAuthorBuilder
                 {
                     Name = result.GetType().ToString()
                 };
-                embed.Color = EmbedUtils.RandomColor();
+                embed.Color = EmbedExtensions.RandomEmbedColor();
                 embed.Description = $"{result}";
                 if (result != null)
                 {
-                    await embed.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
                 }
                 else
                 {
-                    await "Result is empty or null".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                    await "Result is empty or null".QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
 #pragma warning disable CS0168 // Variable is declared but never used
@@ -418,17 +662,9 @@ namespace Skuld.Bot.Commands
 #pragma warning restore CS0168 // Variable is declared but never used
             catch (Exception ex)
             {
-                var embed = new EmbedBuilder
-                {
-                    Author = new EmbedAuthorBuilder
-                    {
-                        Name = "ERROR WITH EVAL"
-                    },
-                    Color = Color.Red,
-                    Description = $"{ex.Message}"
-                };
-                await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("EvalCMD", "Error with eval command " + ex.Message, LogSeverity.Error, ex));
-                await embed.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                Log.Error("EvalCMD", "Error with eval command " + ex.Message, ex);
+
+                await EmbedExtensions.FromError($"Error with eval command\n\n{ex.Message}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -436,5 +672,7 @@ namespace Skuld.Bot.Commands
         {
             public ShardedCommandContext Context { get; set; }
         }
+
+        #endregion BotOwner
     }
 }

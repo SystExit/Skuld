@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using Skuld.APIS.Extensions;
 using Skuld.APIS.UrbanDictionary.Models;
 using Skuld.APIS.Utilities;
 using System;
@@ -8,14 +7,14 @@ using System.Threading.Tasks;
 
 namespace Skuld.APIS
 {
-    public class UrbanDictionaryClient : BaseClient
+    public class UrbanDictionaryClient
     {
         private static readonly Uri RandomEndpoint = new Uri("http://api.urbandictionary.com/v0/random");
         private static readonly Uri QueryEndPoint = new Uri("http://api.urbandictionary.com/v0/define?term=");
 
         private readonly RateLimiter rateLimiter;
 
-        public UrbanDictionaryClient() : base()
+        public UrbanDictionaryClient()
         {
             rateLimiter = new RateLimiter();
         }
@@ -24,17 +23,16 @@ namespace Skuld.APIS
         {
             if (rateLimiter.IsRatelimited()) return null;
 
-            var raw = await ReturnStringAsync(RandomEndpoint);
+            var raw = await HttpWebClient.ReturnStringAsync(RandomEndpoint).ConfigureAwait(false);
             return JsonConvert.DeserializeObject<UrbanWord>(raw);
         }
 
-        public async Task<UrbanWord> GetPhraseAsync(string phrase)
+        public async Task<IEnumerable<UrbanWord>> GetPhrasesAsync(string phrase)
         {
             if (rateLimiter.IsRatelimited()) return null;
 
-            var raw = await ReturnStringAsync(new Uri(QueryEndPoint + phrase));
-
-            return JsonConvert.DeserializeObject<UrbanWordContainer>(raw).List.GetRandomEntry();
+            var raw = await HttpWebClient.ReturnStringAsync(new Uri(QueryEndPoint + phrase)).ConfigureAwait(false);
+            return JsonConvert.DeserializeObject<UrbanWordContainer>(raw).List;
         }
     }
 }

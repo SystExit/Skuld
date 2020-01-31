@@ -1,13 +1,11 @@
 ﻿using Discord;
-using Discord.Addons.Interactive;
 using Discord.Commands;
 using Skuld.APIS;
+using Skuld.APIS.Extensions;
 using Skuld.APIS.NASA.Models;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
-using Skuld.Core.Utilities;
 using Skuld.Discord.Attributes;
-using Skuld.Discord.Commands;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
 using StatsdClient;
@@ -18,7 +16,7 @@ using System.Threading.Tasks;
 namespace Skuld.Bot.Modules
 {
     [Group, RequireEnabledModule]
-    public class Space : InteractiveBase<SkuldCommandContext>
+    public class Space : ModuleBase<ShardedCommandContext>
     {
         public NASAClient NASAClient { get; set; }
         public ISSClient ISSClient { get; set; }
@@ -26,28 +24,23 @@ namespace Skuld.Bot.Modules
         [Command("apod"), Summary("Gets NASA's \"Astronomy Picture of the Day\""), Ratelimit(20, 1, Measure.Minutes)]
         public async Task APOD()
         {
-            var aPOD = await NASAClient.GetAPODAsync();
+            var aPOD = await NASAClient.GetAPODAsync().ConfigureAwait(false);
             DogStatsd.Increment("web.get");
 
             if (aPOD.HDUrl != null && (!aPOD.HDUrl.IsVideoFile() || (!aPOD.Url.Contains("youtube") || !aPOD.Url.Contains("youtu.be"))))
             {
-                var embed = new EmbedBuilder
-                {
-                    Color = EmbedUtils.RandomColor(),
-                    Title = aPOD.Title,
-                    Url = "https://apod.nasa.gov/",
-                    ImageUrl = aPOD.HDUrl,
-                    Timestamp = Convert.ToDateTime(aPOD.Date),
-                    Author = new EmbedAuthorBuilder
-                    {
-                        Name = aPOD.CopyRight
-                    }
-                };
-                await embed.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await new EmbedBuilder()
+                    .WithColor(EmbedExtensions.RandomEmbedColor())
+                    .WithTitle(aPOD.Title)
+                    .WithUrl("https://apod.nasa.gov/")
+                    .WithImageUrl(aPOD.HDUrl)
+                    .WithTimestamp(Convert.ToDateTime(aPOD.Date))
+                    .WithAuthor(aPOD.CopyRight)
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                await aPOD.Url.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await aPOD.Url.QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -69,7 +62,7 @@ namespace Skuld.Bot.Modules
             {
                 if (!(image.Data is RoverPhotoWrapper imgdata) || imgdata.Photos.Count() == 0)
                 {
-                    await $"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                    await EmbedExtensions.FromError($"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
 
@@ -77,21 +70,16 @@ namespace Skuld.Bot.Modules
 
                 var date = DateTime.ParseExact(photo.EarthDate, "yyyy-MM-dd", null);
 
-                var embed = new EmbedBuilder
-                {
-                    ImageUrl = photo.ImageUrl,
-                    Color = EmbedUtils.RandomColor(),
-                    Title = "Camera: " + photo.Camera.FullName,
-                    Timestamp = date,
-                    Footer = new EmbedFooterBuilder
-                    {
-                        Text = "Rover: Curiosity"
-                    }
-                }.Build();
-
-                await embed.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await new EmbedBuilder()
+                    .WithImageUrl(photo.ImageUrl)
+                    .WithColor(EmbedExtensions.RandomEmbedColor())
+                    .WithTitle($"Camera: {photo.Camera.FullName}")
+                    .WithTimestamp(date)
+                    .WithFooter("Rover: Curiosity")
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
             }
-            else { await image.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel); }
+            else
+                await EmbedExtensions.FromError(image.Error, Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("opportunity"), Summary("Gets stuff from NASA's Opportunity Rover"), Ratelimit(20, 1, Measure.Minutes)]
@@ -112,7 +100,7 @@ namespace Skuld.Bot.Modules
             {
                 if (!(image.Data is RoverPhotoWrapper imgdata) || imgdata.Photos.Count() == 0)
                 {
-                    await $"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                    await EmbedExtensions.FromError($"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
 
@@ -120,21 +108,16 @@ namespace Skuld.Bot.Modules
 
                 var date = DateTime.ParseExact(photo.EarthDate, "yyyy-MM-dd", null);
 
-                var embed = new EmbedBuilder
-                {
-                    ImageUrl = photo.ImageUrl,
-                    Color = EmbedUtils.RandomColor(),
-                    Title = "Camera: " + photo.Camera.FullName,
-                    Timestamp = date,
-                    Footer = new EmbedFooterBuilder
-                    {
-                        Text = "Rover: Opportunity"
-                    }
-                }.Build();
-
-                await embed.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await new EmbedBuilder()
+                    .WithImageUrl(photo.ImageUrl)
+                    .WithColor(EmbedExtensions.RandomEmbedColor())
+                    .WithTitle($"Camera: {photo.Camera.FullName}")
+                    .WithTimestamp(date)
+                    .WithFooter("Rover: Opportunity")
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
             }
-            else { await image.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel); }
+            else
+                await EmbedExtensions.FromError(image.Error, Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("spirit"), Summary("Gets stuff from NASA's Spirit Rover"), Ratelimit(20, 1, Measure.Minutes)]
@@ -149,13 +132,13 @@ namespace Skuld.Bot.Modules
                 camera = "pancam";
             }
 
-            var image = await GetRoverAsync(NasaRover.Spirit, cam, SOL);
+            var image = await GetRoverAsync(NasaRover.Spirit, cam, SOL).ConfigureAwait(false);
 
             if (image.Successful)
             {
-                if (!(image.Data is RoverPhotoWrapper imgdata) || imgdata.Photos.Count() == 0)
+                if (!(image.Data is RoverPhotoWrapper imgdata) || !imgdata.Photos.Any())
                 {
-                    await $"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                    await EmbedExtensions.FromError($"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
 
@@ -163,72 +146,72 @@ namespace Skuld.Bot.Modules
 
                 var date = DateTime.ParseExact(photo.EarthDate, "yyyy-MM-dd", null);
 
-                var embed = new EmbedBuilder
-                {
-                    ImageUrl = photo.ImageUrl,
-                    Color = EmbedUtils.RandomColor(),
-                    Title = "Camera: " + photo.Camera.FullName,
-                    Timestamp = date,
-                    Footer = new EmbedFooterBuilder
-                    {
-                        Text = "Rover: Spirit"
-                    }
-                }.Build();
-
-                await embed.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await new EmbedBuilder()
+                    .WithImageUrl(photo.ImageUrl)
+                    .WithRandomColor()
+                    .WithTitle($"Camera: {photo.Camera.FullName}")
+                    .WithTimestamp(date)
+                    .WithFooter("Rover: Spirit")
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
             }
-            else { await image.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel); }
+            else
+                await EmbedExtensions.FromError(image.Error, Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("astronauts"), Summary("Gets a list of astronauts currently in space"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task Astros()
         {
-            var astros = await ISSClient.GetAstronautsInSpace();
+            var astros = await ISSClient.GetAstronautsInSpace().ConfigureAwait(false);
 
             string msg = "Current list of astronauts in space:\n";
 
-            foreach(var astro in astros.Astronauts)
+            foreach (var astro in astros.Astronauts)
             {
                 msg += $"{astro.Name} - {astro.Craft}\n";
             }
 
-            await msg.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+            await msg.QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("iss"), Summary("Gets the current position of the International Space Station"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task ISS()
         {
-            var iss = await ISSClient.GetISSPositionAsync();
+            var iss = await ISSClient.GetISSPositionAsync().ConfigureAwait(false);
 
-            await $"The ISS is currently at:\nLAT: {iss.IISPosition.Latitude} LONG: {iss.IISPosition.Longitude}".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+            await $"The ISS is currently at:\nLAT: {iss.IISPosition.Latitude} LONG: {iss.IISPosition.Longitude}".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         private EventResult IncorrectCamera = EventResult.FromFailure("Incorrect camera for rover");
 
         private async Task<EventResult> GetRoverAsync(NasaRover rover, NasaRoverCamera camera, int SOL = 2199)
         {
-            if(rover == NasaRover.Opportunity || rover == NasaRover.Spirit)
+            if (rover == NasaRover.Opportunity || rover == NasaRover.Spirit)
             {
-                switch(camera)
+                switch (camera)
                 {
                     case NasaRoverCamera.MAST:
                         return IncorrectCamera;
+
                     case NasaRoverCamera.CHEMCAM:
                         return IncorrectCamera;
+
                     case NasaRoverCamera.MAHLI:
                         return IncorrectCamera;
+
                     case NasaRoverCamera.MARDI:
                         return IncorrectCamera;
                 }
             }
-            if(rover == NasaRover.Curiosity)
+            if (rover == NasaRover.Curiosity)
             {
-                switch(camera)
+                switch (camera)
                 {
                     case NasaRoverCamera.PANCAM:
                         return IncorrectCamera;
+
                     case NasaRoverCamera.ENTRY:
                         return IncorrectCamera;
+
                     case NasaRoverCamera.MINITES:
                         return IncorrectCamera;
                 }
@@ -236,14 +219,14 @@ namespace Skuld.Bot.Modules
 
             try
             {
-                var resp = await NASAClient.GetRoverPhotoAsync(rover, camera, SOL);
+                var resp = await NASAClient.GetRoverPhotoAsync(rover, camera, SOL).ConfigureAwait(false);
 
                 if (resp == null)
                     return EventResult.FromFailure("Error parsing JSON");
 
                 return EventResult.FromSuccess(resp);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return EventResult.FromFailureException(ex.Message, ex);
             }

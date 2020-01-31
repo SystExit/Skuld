@@ -1,40 +1,60 @@
-﻿using Discord;
-using Discord.Addons.Interactive;
+﻿using Akitaux.Twitch.Helix;
+using Booru.Net;
+using Discord;
 using Discord.Commands;
+using Discord.WebSocket;
+using Miki.API.Images;
+using Octokit;
 using Skuld.Core;
 using Skuld.Core.Utilities;
-using Skuld.Core.Utilities.Stats;
-using Skuld.Discord.Commands;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
 using Skuld.Discord.Services;
+using SysEx.Net;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text.RegularExpressions;
+using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Weeb.net;
 
 namespace Skuld.Bot.Commands
 {
     [Group, RequireEnabledModule]
-    public class Stats : InteractiveBase<SkuldCommandContext>
+    public class Stats : ModuleBase<ShardedCommandContext>
     {
+        public GitHubClient GitClient { get; set; }
+
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> SysEx = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetAssembly(typeof(SysExClient)).GetName(),
+            new GitRepoStruct("exsersewo", "SysEx.Net"));
+
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Booru = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetAssembly(typeof(BooruClient)).GetName(),
+            new GitRepoStruct("exsersewo", "Booru.Net"));
+
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Weebsh = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetAssembly(typeof(WeebClient)).GetName(),
+            new GitRepoStruct("Daniele122898", "Weeb.net"));
+
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Twitch = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetAssembly(typeof(TwitchHelixClient)).GetName(),
+            new GitRepoStruct("Akitaux", "Twitch"));
+
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Imghoard = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetAssembly(typeof(ImghoardClient)).GetName(),
+            new GitRepoStruct("Mikibot", "dotnet-miki-api"));
+
+        public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Discord = new KeyValuePair<AssemblyName, GitRepoStruct>(
+            Assembly.GetAssembly(typeof(DiscordShardedClient)).GetName(),
+            new GitRepoStruct("discord-net", "Discord.Net"));
+
         [Command("ping"), Summary("Print Ping")]
         public async Task Ping()
-            => await $"PONG: {Context.Client.GetShardFor(Context.Guild).Latency}ms".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-
-        [Command("uptime"), Summary("Current Uptime")]
-        public async Task Uptime()
-            => await $"Uptime: {string.Format("{0:dd} Days {0:hh} Hours {0:mm} Minutes {0:ss} Seconds", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-
-        [Command("netfw"), Summary(".Net Info")]
-        public async Task Netinfo()
-            => await $"{RuntimeInformation.FrameworkDescription} {RuntimeInformation.OSArchitecture}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-
-        [Command("discord"), Summary("Discord Info")]
-        public async Task Discnet()
-            => await $"Discord.Net Library Version: {DiscordConfig.Version}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            => await $"PONG: {Context.Client.GetShardFor(Context.Guild).Latency}ms".QueueMessageAsync(Context).ConfigureAwait(false);
 
         [Command("stats"), Summary("All stats")]
         public async Task StatsAll()
@@ -42,46 +62,55 @@ namespace Skuld.Bot.Commands
             try
             {
                 var currentuser = Context.Client.CurrentUser;
+                var avatar = currentuser.GetAvatarUrl() ?? currentuser.GetDefaultAvatarUrl();
+                var color = Color.Teal;
 
-                var embed = new EmbedBuilder
-                {
-                    Footer = new EmbedFooterBuilder { Text = "Generated" },
-                    Author = new EmbedAuthorBuilder { IconUrl = currentuser.GetAvatarUrl(), Name = currentuser.Username },
-                    ThumbnailUrl = currentuser.GetAvatarUrl(),
-                    Timestamp = DateTime.Now,
-                    Title = "Stats",
-                    Color = EmbedUtils.RandomColor()
-                };
+                if (!Context.IsPrivate)
+                    color = Context.Guild.GetUser(currentuser.Id).GetHighestRoleColor(Context.Guild);
+
+                var embed = new EmbedBuilder()
+                    .WithFooter("Generated")
+                    .WithAuthor(currentuser.Username, "", SkuldAppContext.Website)
+                    .WithThumbnailUrl(avatar)
+                    .WithCurrentTimestamp()
+                    .WithColor(color);
 
                 string apiversions =
-                    $"[Booru: {SoftwareStats.Booru.Key.Version.ToString()}]({SoftwareStats.Booru.Value})\n" +   
-                    $"[SysEx: {SoftwareStats.SysEx.Key.Version.ToString()}]({SoftwareStats.SysEx.Value})\n" +
-                    $"[Twitch: {SoftwareStats.Twitch.Key.Version.ToString()}]({SoftwareStats.Twitch.Value})\n" +
-                    $"[Weebsh: {SoftwareStats.Weebsh.Key.Version.ToString()}]({SoftwareStats.Weebsh.Value})";
+                    $"[.Net Core: {RuntimeInformation.FrameworkDescription}](https://github.com/dotnet/core){Environment.NewLine}" +
+                    $"[Booru.Net: {Booru.Key.Version.ToString()}]({Booru.Value.ToString()}){Environment.NewLine}" +
+                    $"[Discord.Net: {Discord.Key.Version.ToString()}]({Discord.Value.ToString()}) {Environment.NewLine}" +
+                    $"[Imghoard: {Imghoard.Key.Version.ToString()}]({Imghoard.Value.ToString()}){Environment.NewLine}" +
+                    $"[SysEx.Net: {SysEx.Key.Version.ToString()}]({SysEx.Value.ToString()}){Environment.NewLine}" +
+                    $"[Twitch: {Twitch.Key.Version.ToString()}]({Twitch.Value.ToString()}){Environment.NewLine}" +
+                    $"[Weebsh: {Weebsh.Key.Version.ToString()}]({Weebsh.Value.ToString()})";
+
+                var commits = await GitClient.Repository.Commit.GetAll(SkuldAppContext.Skuld.Value.Owner, SkuldAppContext.Skuld.Value.Repo).ConfigureAwait(false);
 
                 string botstats = "";
-                    botstats += $"[Skuld: {SoftwareStats.Skuld.Key.Version.ToString()}]({SoftwareStats.Skuld.Value})\n";
-                    botstats += "Uptime: " + string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime)) + "\n";
-                    botstats += "Ping: " + Context.Client.GetShardFor(Context.Guild).Latency + "ms\n";
-                    botstats += "Guilds: " + Context.Client.Guilds.Count + "\n";
-                    botstats += "Users: " + BotService.Users + "\n";
-                    botstats += "Shards: " + Context.Client.Shards.Count + "\n";
-                    botstats += "Commands: " + BotService.CommandService.Commands.Count();
+                botstats += $"[Skuld: {SkuldAppContext.Skuld.Key.Version.ToString()}]({SkuldAppContext.Skuld.Value.ToString()})\n";
+                botstats += $"Uptime: {string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}\n";
+                botstats += $"Ping: {Context.Client.GetShardFor(Context.Guild).Latency}ms\n";
+                botstats += $"Guilds: {Context.Client.Guilds.Count}\n";
+                botstats += $"Users: {BotService.Users}\n";
+                botstats += $"Shards: {Context.Client.Shards.Count}\n";
+                botstats += $"Commands: {BotService.CommandService.Commands.Count()}\n";
+                botstats += $"Commits: {commits.Count}\n";
+                botstats += $"Most Recent Commit: [`{commits.First().Sha.Substring(0, 7)}`]({commits.First().HtmlUrl}) {commits.First().Commit.Message}";
 
                 string systemstats =
-                    "Memory Used: " + HardwareStats.Memory.GetMBUsage + "MB\n" +
-                    "Operating System: " + SoftwareStats.WindowsVersion;
+                    "Memory Used: " + SkuldAppContext.Memory.GetMBUsage + "MB\n" +
+                    "Operating System: " + SkuldAppContext.WindowsVersion;
 
                 embed.AddField("Bot", botstats);
                 embed.AddField("APIs", apiversions);
                 embed.AddField("System", systemstats);
 
-                await embed.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("Stats-Cmd", ex.Message, LogSeverity.Error, ex));
-                await ex.Message.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
+                Log.Error("Stats-Cmd", ex.Message, ex);
+                await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
     }

@@ -16,6 +16,8 @@ namespace Skuld.Discord.Preconditions
 
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
+            if (context.Guild == null) return Task.FromResult(PreconditionResult.FromSuccess());
+
             var perm = GetPermission(context);
             if (perm)
             { return Task.FromResult(PreconditionResult.FromSuccess()); }

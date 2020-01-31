@@ -1,53 +1,48 @@
 ﻿using Discord;
-using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
+using NCalc;
 using NodaTime;
-using Skuld.APIS;
+using Skuld.Bot.Extensions;
+using Skuld.Bot.Globalization;
 using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
-using Skuld.Core.Globalization;
+using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
-using Skuld.Database;
-using Skuld.Discord.Commands;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
-using Skuld.Discord.Utilities;
+using Skuld.Discord.Services;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
     [Group, RequireEnabledModule]
-    public class Information : InteractiveBase<SkuldCommandContext>
+    public class Information : ModuleBase<ShardedCommandContext>
     {
+        public CommandService CommandService { get => BotService.CommandService; }
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }
-        public BaseClient WebHandler { get; set; }
         public Locale Locale { get; set; }
 
         [Command("server"), Summary("Gets information about the server")]
         public async Task GetServer()
         {
-            Embed embed = null;
-            if (await DatabaseClient.CheckConnectionAsync())
-            {
-                embed = await Context.Guild.GetSummaryAsync(Context.Client, Context.DBGuild);
-            }
-            else
-            {
-                embed = await Context.Guild.GetSummaryAsync(Context.Client);
-            }
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            await embed.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            var dbguild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+            Embed embed = await Context.Guild.GetSummaryAsync(Context.Client, Context, dbguild).ConfigureAwait(false);
+
+            await embed.QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
-        [Command("server-emojis")]
+        [Command("server-emojis"), RequireContext(ContextType.Guild)]
         public async Task ServerEmoji()
         {
             var guild = Context.Guild;
@@ -64,96 +59,164 @@ namespace Skuld.Bot.Commands
                     else
                     { message += $"{emoji.Name} <:{emoji.Name}:{emoji.Id}>\n"; }
                 }
-                message = message.Substring(0, message.Length - 2);
+                message = message[0..^2];
             }
-            await message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            await message.QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
-        [Command("server-roles")]
+        [Command("server-roles"), RequireContext(ContextType.Guild)]
         public async Task ServerRoles()
         {
             var guild = Context.Guild;
-            var roles = guild.Roles;
+            var roles = guild.Roles.OrderByDescending(x=>x.Position);
             string serverroles = null;
             foreach (var item in roles)
             {
                 string thing = item.Name.TrimStart('@');
-                if (item == guild.Roles.Last())
-                { serverroles += thing; }
-                else
-                { serverroles += thing + ", "; }
+
+                serverroles += thing;
+
+                if (item != guild.Roles.Last())
+                { 
+                    serverroles += ", ";
+                }
             }
             string message = null;
             message += $"Roles of __**{guild.Name}**__ ({roles.Count()})\n" + Environment.NewLine;
-            if (roles.Count() != 0)
-            { message += "`" + serverroles + "`"; }
-            await message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            if (roles.Any())
+            {
+                message += "`" + serverroles + "`";
+            }
+            await message.QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
-        [Command("id-guild"), Summary("Get ID of Guild")]
+        [Command("id-guild"), Summary("Get ID of Guild"), RequireContext(ContextType.Guild)]
         public async Task GuildID() =>
-            await $"The ID of **{Context.Guild.Name}** is `{Context.Guild.Id}`".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            await $"The ID of **{Context.Guild.Name}** is `{Context.Guild.Id}`"
+                .QueueMessageAsync(Context).ConfigureAwait(false);
 
         [Command("id"), Summary("Gets a users ID")]
         public async Task GetID(IUser user = null)
         {
             if (user == null)
                 user = Context.User;
-            await $"The ID of **{user.Username + "#" + user.DiscriminatorValue}** is: `{user.Id}`".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            await $"The ID of **{user.Username + "#" + user.DiscriminatorValue}** is: `{user.Id}`"
+                .QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
-        [Command("id"), Summary("Get id of channel")]
+        [Command("id"), Summary("Get id of channel"), RequireContext(ContextType.Guild)]
         public async Task ChanID(IChannel channel) =>
-            await $"The ID of **{channel.Name}** is `{channel.Id}`".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            await $"The ID of **{channel?.Name}** is `{channel.Id}`".QueueMessageAsync(Context).ConfigureAwait(false);
+
+        [Command("roleinfo")]
+        public async Task RoleInfo([Remainder] IRole role)
+        {
+            var memberString = new StringBuilder();
+
+            var orderedRoles = Context.Guild.Roles.OrderBy(x => x.Position);
+
+            IRole previousRole = null;
+            if(role != orderedRoles.FirstOrDefault())
+            {
+                previousRole = orderedRoles.ElementAtOrDefault(role.Position - 1);
+            }
+            IRole nextRole = null;
+            if(role != orderedRoles.LastOrDefault())
+            {
+                nextRole = orderedRoles.ElementAtOrDefault(role.Position + 1);
+            }
+
+            var members = await Context.Guild.GetRoleMembersAsync(role).ConfigureAwait(false);
+
+            if (role != Context.Guild.EveryoneRole)
+            {
+                foreach (var member in members)
+                {
+                    memberString.Append(member.Mention);
+
+                    if (member != members.LastOrDefault())
+                    {
+                        memberString.Append(", ");
+                    }
+                }
+            }
+            else
+            {
+                memberString.Append(role.Mention);
+                memberString.Append(" ");
+                memberString.Append("😝");
+            }
+
+
+
+            await
+                new EmbedBuilder()
+                    .AddFooter(Context)
+                    .WithTitle(role.Name)
+                    .WithColor(role.Color)
+                    .AddAuthor(Context.Client)
+                    .AddInlineField("Hoisted", role.IsHoisted)
+                    .AddInlineField("Managed By Discord", role.IsManaged)
+                    .AddInlineField("Mentionable", role.IsMentionable)
+                    .AddInlineField("Position", $"{role.Position}{(previousRole != null ? $"\nBelow {previousRole.Mention}({previousRole.Position})" : "")}{(nextRole != null ? $"\nAbove {nextRole.Mention}({nextRole.Position})" : "")}")
+                    .AddInlineField("Color", role.Color.ToHex())
+                    .AddField("Members", memberString.Length <= 1024 ? memberString.ToString() : members.Count.ToFormattedString())
+                    .AddField("Created", role.CreatedAt)
+            .QueueMessageAsync(Context).ConfigureAwait(false);
+        }
+
+        [Command("screenshare"), Summary("Get's the screenshare channel link"), RequireContext(ContextType.Guild), RequireGuildVoiceChannel]
+        [Alias("sc")]
+        public async Task Screenshare()
+            => await $"<https://discordapp.com/channels/{Context.Guild.Id}/{(Context.User as IGuildUser)?.VoiceChannel.Id}>".QueueMessageAsync(Context).ConfigureAwait(false);
 
         [Command("support"), Summary("Gives discord invite")]
         public async Task DevDisc()
-        {
-            await $"Join the support server at: http://discord.gg/JYzvjah".QueueMessage(Discord.Models.MessageType.DMS, Context.User, Context.Channel);
-        }
+            => await $"Join the support server at: https://discord.skuldbot.uk/discord?ref=bot"
+            .QueueMessageAsync(Context, type: Discord.Models.MessageType.DMS).ConfigureAwait(false);
 
         [Command("invite"), Summary("OAuth2 Invite")]
         public async Task BotInvite()
-            => await $"Invite me using: https://discordapp.com/oauth2/authorize?client_id={Context.Client.CurrentUser.Id}&scope=bot&permissions=1073802246".QueueMessage(Discord.Models.MessageType.DMS, Context.User, Context.Channel);
+            => await $"Invite me using: https://discord.skuldbot.uk/bot?ref=bot".QueueMessageAsync(Context, type: Discord.Models.MessageType.DMS).ConfigureAwait(false);
 
         [Command("userratio"), Summary("Gets the ratio of users to bots")]
         public async Task HumanToBotRatio()
         {
             var guild = Context.Guild as SocketGuild;
-            var bots = await guild.RobotMembersAsync();
-            var users = await guild.HumanMembersAsync();
-            var ratio = await guild.GetBotUserRatioAsync();
+            var bots = await guild.RobotMembersAsync().ConfigureAwait(false);
+            var users = await guild.HumanMembersAsync().ConfigureAwait(false);
+            var ratio = await guild.GetBotUserRatioAsync().ConfigureAwait(false);
             var usercount = guild.Users.Count;
-            await $"Current Bots are: {bots}\nCurrent Users are: {users}\nTotal Guild Users: {usercount}\n{ratio}% of the Guild Users are bots".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            await $"Current Bots are: {bots}\nCurrent Users are: {users}\nTotal Guild Users: {usercount}\n{ratio}% of the Guild Users are bots"
+                .QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("avatar"), Summary("Gets your avatar url")]
-        public async Task Avatar([Remainder]IUser user = null)
+        public async Task Avatar([Remainder]IGuildUser user = null)
         {
             if (user == null)
-                user = Context.User;
+                user = Context.Guild.GetUser(Context.User.Id);
 
-            var avatar = user.GetAvatarUrl(ImageFormat.Auto, 512);
-            if (avatar.Contains("a_"))
-                avatar = user.GetAvatarUrl(ImageFormat.Gif, 512);
-            else if (avatar == "" || avatar == null)
-                avatar = user.GetDefaultAvatarUrl();
+            var avatar = user.GetAvatarUrl(ImageFormat.Auto, 512) ?? user.GetDefaultAvatarUrl();
 
-            await new EmbedBuilder
-            {
-                Description = $"Avatar for {user.Mention}",
-                ImageUrl = avatar,
-                Color = EmbedUtils.RandomColor()
-            }.Build().QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            await
+                EmbedExtensions.FromMessage(
+                    "",
+                    $"Avatar for {user.Mention}",
+                    Context
+                )
+                .WithImageUrl(avatar)
+                .WithColor(user.GetHighestRoleColor(Context.Guild))
+            .QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("mods"), Summary("Gives online status of Moderators/Admins")]
         public async Task ModsOnline()
         {
             var guild = Context.Guild as SocketGuild;
-            await guild.DownloadUsersAsync();
-            string modstatus = "__Moderators__\n";
-            string adminstatus = "__Administrators__\n";
+            await guild.DownloadUsersAsync().ConfigureAwait(false);
+            List<string> admins = new List<string>();
+            List<string> mods = new List<string>();
             foreach (var user in guild.Users)
             {
                 if (user.IsBot) { }
@@ -161,28 +224,50 @@ namespace Skuld.Bot.Commands
                 {
                     if (user.GuildPermissions.Administrator)
                     {
-                        if (user.Status == UserStatus.Online) adminstatus += DiscordTools.Online_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
-                        if (user.Status == UserStatus.AFK || user.Status == UserStatus.Idle) adminstatus += DiscordTools.Idle_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
-                        if (user.Status == UserStatus.DoNotDisturb) adminstatus += DiscordTools.DoNotDisturb_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
-                        if (user.Status == UserStatus.Invisible) adminstatus += DiscordTools.Invisible_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
-                        if (user.Status == UserStatus.Offline) adminstatus += DiscordTools.Invisible_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
+                        if (user.Activity != null)
+                        {
+                            if (user.Activity.Type == ActivityType.Streaming)
+                                admins.Add(DiscordUtilities.Streaming_Emote + $" {user.FullNameWithNickname()}");
+                        }
+                        else
+                        {
+                            admins.Add($"{user.Status.StatusToEmote()} {user.FullNameWithNickname()}");
+                        }
                     }
                     else if (user.GuildPermissions.RawValue == DiscordUtilities.ModeratorPermissions.RawValue)
                     {
-                        if (user.Status == UserStatus.Online) modstatus += DiscordTools.Online_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
-                        if (user.Status == UserStatus.AFK || user.Status == UserStatus.Idle) modstatus += DiscordTools.Idle_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
-                        if (user.Status == UserStatus.DoNotDisturb) modstatus += DiscordTools.DoNotDisturb_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
-                        if (user.Status == UserStatus.Invisible) modstatus += DiscordTools.Invisible_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
-                        if (user.Status == UserStatus.Offline) modstatus += DiscordTools.Invisible_Emote + $" {user.Username}#{user.DiscriminatorValue}\n";
+                        if (user.Activity != null)
+                        {
+                            if (user.Activity.Type == ActivityType.Streaming)
+                                mods.Add(DiscordUtilities.Streaming_Emote + $" {user.FullNameWithNickname()}");
+                        }
+                        else
+                        {
+                            mods.Add($"{user.Status.StatusToEmote()} {user.FullNameWithNickname()}");
+                        }
                     }
                 }
             }
-            string message = "";
-            if (modstatus != "__Moderators__\n")
-            { message = modstatus + "\n" + adminstatus; }
-            else
-            { message = adminstatus; }
-            await message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+
+            StringBuilder message = new StringBuilder();
+
+            if (admins.Any())
+            {
+                message.Append("__Administrators__");
+                message.Append(Environment.NewLine);
+                message.AppendJoin(Environment.NewLine, admins);
+            }
+            if (mods.Any())
+            {
+                if (admins.Any())
+                {
+                    message.Append(Environment.NewLine);
+                }
+                message.Append("__Moderators__");
+                message.AppendJoin(Environment.NewLine, mods);
+            }
+
+            await message.QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("createinvite", RunMode = RunMode.Async), Summary("Creates a new invite to the guild")]
@@ -190,13 +275,22 @@ namespace Skuld.Bot.Commands
         {
             IInviteMetadata invite;
             if (maxAge > 0 && maxUses < 0)
-            { invite = await channel.CreateInviteAsync(maxAge, null, permanent, unique); }
+            {
+                invite = await channel.CreateInviteAsync(maxAge, null, permanent, unique).ConfigureAwait(false);
+            }
             else if (maxAge < 0 && maxUses > 0)
-            { invite = await channel.CreateInviteAsync(null, maxUses, permanent, unique); }
+            {
+                invite = await channel.CreateInviteAsync(null, maxUses, permanent, unique).ConfigureAwait(false);
+            }
             else if (maxAge < 0 && maxUses < 0)
-            { invite = await channel.CreateInviteAsync(null, null, permanent, unique); }
+            {
+                invite = await channel.CreateInviteAsync(null, null, permanent, unique).ConfigureAwait(false);
+            }
             else
-            { invite = await channel.CreateInviteAsync(maxAge, maxUses, permanent, unique); }
+            {
+                invite = await channel.CreateInviteAsync(maxAge, maxUses, permanent, unique).ConfigureAwait(false);
+            }
+
             await ("I created the invite with the following settings:\n" +
                 "```cs\n" +
                 $"       Channel : {channel.Name}\n" +
@@ -204,35 +298,37 @@ namespace Skuld.Bot.Commands
                 $"  Maximum Uses : {maxUses}\n" +
                 $"     Permanent : {permanent}\n" +
                 $"        Unique : {unique}" +
-                $"```Here's the link: {invite.Url}").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-        }
-
-        [Command("nick", RunMode = RunMode.Async), Summary("Gets the user behind the nickname")]
-        public async Task Nickname([Remainder]IGuildUser user)
-        {
-            if (!string.IsNullOrEmpty(user.Nickname))
-            { await $"The user **{user.Username}#{user.DiscriminatorValue}** has a nickname of: {user.Nickname}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel); }
-            else
-            { await "This user doesn't have a nickname set.".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel); }
+                $"```Here's the link: {invite.Url}").QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("me")]
         public async Task Whois()
-            => await GetProile(Context.User as IGuildUser).ConfigureAwait(false);
+        {
+            if (!Context.IsPrivate)
+            {
+                await GetProileAsync(Context.User as IGuildUser).ConfigureAwait(false);
+                return;
+            }
+            else
+            {
+                await (await Context.User.GetWhoisAsync(null, null, Context.Client, Configuration).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+        }
 
         [Command("whois"), Summary("Get's information about a user"), Alias("user")]
-        public async Task GetProile([Remainder]IGuildUser whois = null)
+        public async Task GetProileAsync([Remainder]IGuildUser whois = null)
         {
-            if (whois == null)
-                whois = (IGuildUser)Context.User;
-            try
+            if (!Context.IsPrivate)
             {
-                await whois.GetWhois(EmbedUtils.RandomColor(), Context.Client, Configuration).QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                if (whois == null)
+                    whois = (IGuildUser)Context.User;
+
+                await (await whois.GetWhoisAsync(whois, whois.RoleIds, Context.Client, Configuration).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            else
             {
-                await ex.Message.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel, null, ex);
-                await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("Cmd", "Error Encountered Parsing Whois", LogSeverity.Error, ex));
+                await (await Context.User.GetWhoisAsync(null, null, Context.Client, Configuration).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -245,164 +341,430 @@ namespace Skuld.Bot.Commands
             var guild = Context.Guild;
             var userroles = user.RoleIds;
             var roles = userroles.Select(query => guild.GetRole(query).Name).Aggregate((current, next) => current.TrimStart('@') + ", " + next);
-            await $"Roles of __**{user.Username}#{user.Discriminator} ({user.Nickname})**__ ({userroles.Count})\n\n`{(roles ?? "No roles")}`".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+            await $"Roles of __**{user.Username}#{user.Discriminator} ({user.Nickname})**__ ({userroles.Count})\n\n`{(roles ?? "No roles")}`".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
-        [Command("leaderboard"), Summary("Get the guilds XP Leaderboard, use \"money\" for the global money leaderboard")]
-        [Alias("lb")]
-        public async Task GetLeaderboard(string type)
+        [Command("calc"), Summary("Calculates an expression")]
+        public async Task Calculate([Remainder] string expression)
         {
-            switch (type.ToLower())
+            Expression exp = new Expression(expression);
+
+            var res = exp.Evaluate();
+
+            var result = res;
+
+            if(result is string)
+            {
+                result = (result as string).Replace("everyone", "\u00A0everyone");
+            }
+
+            await
+                EmbedExtensions.FromMessage(
+                    "Calculator",
+                    $"Expression: `{expression}`\nResult: {result}",
+                    Context
+                )
+            .QueueMessageAsync(Context).ConfigureAwait(false);
+        }
+
+        #region Leaderboards
+
+        [Command("leaderboard"), Summary("Get the leaderboard for either \"money\" or \"levels\" globally or locally")]
+        [Alias("lb")]
+        public async Task GetLeaderboard(string type, bool global = false)
+        {
+            using var database = new SkuldDbContextFactory().CreateDbContext();
+            var dbguild = await database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+            switch (type.ToLowerInvariant())
             {
                 case "money":
                 case "credits":
                     {
-                        var moneylbresp = await DatabaseClient.GetMoneyLeaderboardAsync();
-                        if (moneylbresp.Successful)
+                        if (global)
                         {
-                            var moneylb = moneylbresp.Data as IList<MoneyLeaderboardEntry>;
-
-                            var pages = moneylb.PaginateLeaderboard(Configuration);
-
-                            if (pages.Count > 1)
-                            {
-                                await PagedReplyAsync(new PaginatedMessage
-                                {
-                                    Pages = pages,
-                                    Title = $"__Experience of {Context.Guild.Name}__",
-                                    Color = Color.Purple
-                                });
-                            }
-                            else
-                            {
-                                await $"{string.Join("\n", pages)}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                            }
-                            return;
+                            await EmbedExtensions.FromInfo($"View the global money leaderboard at: {SkuldAppContext.LeaderboardMoney}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         else
                         {
-                            await moneylbresp.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                            return;
+                            await EmbedExtensions.FromInfo($"View this server's money leaderboard at: {SkuldAppContext.LeaderboardMoney}/{Context.Guild.Id}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                     }
+                    break;
 
                 case "experience":
-                case "level":
                 case "levels":
                     {
-                        if (Context.DBGuild.Features.Experience)
+                        if (!database.Features.FirstOrDefault(x => x.Id == dbguild.Id).Experience && !global)
                         {
-                            var guildCountResp = await DatabaseClient.GetGuildExperienceCountAsync(Context.Guild.Id).ConfigureAwait(false);
-                            int guildCount = -1;
-                            if (guildCountResp.Successful && guildCountResp.Data != null)
-                                guildCount = ConversionTools.ParseInt32OrDefault(Convert.ToString(guildCountResp.Data));
-                            else
-                            {
-                                await $"Guild not opted into Experience module. Use: `{Context.DBGuild.Prefix}guild-feature levels 1`".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                                return;
-                            }
-
-                            var gldxpresp = await DatabaseClient.GetGuildExperienceAsync(Context.Guild.Id);
-                            if (gldxpresp.Successful && gldxpresp.Data != null)
-                            {
-                                var gldlb = gldxpresp.Data as IList<ExperienceLeaderboardEntry>;
-
-                                var pages = gldlb.PaginateLeaderboard();
-
-                                if (pages.Count > 1)
-                                {
-                                    await PagedReplyAsync(new PaginatedMessage
-                                    {
-                                        Pages = pages,
-                                        Title = $"__Experience of {Context.Guild.Name}__",
-                                        Color = Color.Purple
-                                    });
-                                }
-                                else
-                                {
-                                    await $"__Experience of {Context.Guild.Name}__:\n{string.Join("\n", pages)}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-                                }
-                                return;
-                            }
+                            await EmbedExtensions.FromError($"Guild not opted into Experience module. Use: `{dbguild.Prefix}guild-feature levels 1`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            return;
                         }
-                        await $"Guild not opted into Experience module. Use: `{Context.DBGuild.Prefix}guild-feature levels 1`".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                        break;
+
+                        if (global)
+                        {
+                            await EmbedExtensions.FromInfo($"View the global experience leaderboard at: {SkuldAppContext.LeaderboardExperience}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            await EmbedExtensions.FromInfo($"View this server's experience leaderboard at: {SkuldAppContext.LeaderboardExperience}/{Context.Guild.Id}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        }
                     }
+                    break;
 
                 default:
-                    await $"Unknown argument: {type}".QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                    return;
+                    await EmbedExtensions.FromError($"Unknown argument: {type}\n\nMaybe you were looking for: \"levels\", \"experience\", \"money\", \"credits\"", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    break;
             }
         }
 
-        [Command("epoch"), Summary("Gets a DateTime DD/MM/YYYY HH:MM:SS (24 Hour) or the current time in POSIX/Unix Epoch time")]
-        public async Task Epoch([Remainder]string epoch = null)
+        [Command("commandusage"), Summary("Get the usage for the command specified or all")]
+        public async Task GetCommandUsage([Remainder]string command)
         {
-            if (epoch == null)
+            bool existsButNoData = false;
+            CommandLeaderboardInfo info = null;
             {
-                var dtnowutc = DateTime.UtcNow;
-                await $"The current time in UTC ({dtnowutc.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")}) in epoch is: {(Int32)(dtnowutc.Subtract(new DateTime(1970, 1, 1))).TotalSeconds}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+                if (Database.CustomCommands.Any(x => x.Name == command))
+                {
+                    var first = Database.CustomCommands.FirstOrDefault(x => x.Name == command);
+                    var usage = Database.UserCommandUsage.FirstOrDefault(x => x.UserId == Context.User.Id && x.Command == command);
+                    var ranking = await Database.UserCommandUsage.AsAsyncEnumerable().Where(x => x.Command == command).OrderByDescending(x => x.Usage).ToListAsync();
+
+                    if (first != null && usage != null && ranking.Any())
+                    {
+                        info = new CommandLeaderboardInfo
+                        {
+                            Name = first.Name,
+                            Usage = usage.Usage,
+                            Rank = (ulong)ranking.IndexOf(ranking.FirstOrDefault(x => x.UserId == Context.User.Id)) + 1,
+                            Total = (ulong)ranking.Count
+                        };
+                    }
+                    else if (first != null)
+                    {
+                        existsButNoData = true;
+                    }
+                }
+            }
+
+            if (info == null)
+            {
+                var result = CommandService.Search(command);
+
+                if (result.IsSuccess)
+                {
+                    using var Database = new SkuldDbContextFactory().CreateDbContext();
+                    var usage = Database.UserCommandUsage.FirstOrDefault(x => x.UserId == Context.User.Id && x.Command == command);
+                    var ranking = await Database.UserCommandUsage.AsAsyncEnumerable().Where(x => x.Command == command).OrderByDescending(x => x.Usage).ToListAsync();
+
+                    if (usage != null && ranking.Any())
+                    {
+                        info = new CommandLeaderboardInfo
+                        {
+                            Name = result.Commands.FirstOrDefault().Command.Name,
+                            Usage = usage.Usage,
+                            Rank = (ulong)ranking.IndexOf(ranking.FirstOrDefault(x => x.UserId == Context.User.Id)) + 1,
+                            Total = (ulong)ranking.Count
+                        };
+                    }
+                    else
+                    {
+                        existsButNoData = true;
+                    }
+                }
+            }
+
+            if (info == null && !existsButNoData)
+            {
+                await
+                    EmbedExtensions.FromError($"Couldn't find a command like: `{command}`. Please verify input and try again.", Context)
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+            else if (existsButNoData)
+            {
+                await
+                    EmbedExtensions.FromError($"You haven't used the command: `{command}`. Please use it and try again", Context)
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+
+            await
+                new EmbedBuilder()
+                .AddAuthor(Context.Client)
+                .AddFooter(Context)
+                .AddInlineField("Command", info.Name)
+                .AddInlineField("Usage", info.Usage)
+                .AddInlineField("Rank", $"{info.Rank}/{info.Total}")
+            .QueueMessageAsync(Context).ConfigureAwait(false);
+        }
+
+        private class CommandLeaderboardInfo
+        {
+            public string Name;
+            public ulong Usage;
+            public ulong Rank;
+            public ulong Total;
+        }
+
+        #endregion Leaderboards
+
+        #region Time
+
+        [Command("time"), Summary("Gets current time")]
+        public async Task Time()
+        {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var sUser = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+            var time = Instant.FromDateTimeUtc(DateTime.UtcNow).InZone(DateTimeZoneProviders.Tzdb.GetZoneOrNull(sUser.TimeZone)).ToDateTimeUnspecified().ToDMYString();
+
+            if (sUser.TimeZone != null)
+            {
+                await $"Your time is currently; {time}".QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                var datetime = Convert.ToDateTime(epoch, new CultureInfo("en-GB"));
-                var epochdt = (Int32)(datetime.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
-                await $"Your DateTime ({datetime.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")}) in epoch is: {epochdt}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                await $"UTC Time is currently: {DateTime.UtcNow.ToDMYString()}".QueueMessageAsync(Context).ConfigureAwait(false);
             }
-        }
-
-        [Command("epoch"), Summary("epoch to DateTime format")]
-        public async Task Epoch(ulong epoch)
-        {
-            var epochtodt = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(Convert.ToDouble(epoch));
-            await $"Your epoch ({epoch}) in DateTime is: {epochtodt.ToString("dd'/'MM'/'yyyy hh:mm:ss tt")}".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-        }
-
-        [Command("isup"), Summary("Check if a website is online"), Alias("downforeveryone", "isitonline")]
-        public async Task IsUp(Uri website)
-        {
-            var res = await WebHandler.ScrapeUrlAsync(website);
-
-            if (res != null)
-            { await $"The website: `{website}` is working and replying as intended.".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel); }
-            else
-            { await $"The website: `{website}` is down or not replying.".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel); }
         }
 
         [Command("time"), Summary("Converts a time to a set of times")]
-        public async Task ConvertTime(string primarytimezone, string time, [Remainder]string timezones)
+        public async Task ConvertTime(params IGuildUser[] users)
         {
-            try
-            {
-                var usertimes = timezones.Split(' ');
-                string response = $"The requested time of: {primarytimezone} - {time} is:```";
-                var primaryDateTime = Convert.ToDateTime(time);
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-                foreach (var usertime in usertimes)
+            var message = new StringBuilder("```cs\n");
+
+            foreach (var user in users)
+            {
+                try
                 {
-                    var convertedTime = ConvertDateTimeToDifferentTimeZone(primaryDateTime, primarytimezone, usertime);
-                    response += $"\n{usertime} - {convertedTime}";
+                    var sUser = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+
+                    if (sUser.TimeZone != null)
+                    {
+                        message.Append("\"The time for ");
+                        message.Append(user.Username);
+                        message.Append(" is: ");
+                        message.Append($"{Instant.FromDateTimeUtc(DateTime.UtcNow).InZone(DateTimeZoneProviders.Tzdb.GetZoneOrNull(sUser.TimeZone)).ToDateTimeUnspecified().ToDMYString()}\"\n");
+                    }
+                    else
+                    {
+                        message.Append("\"");
+                        message.Append(sUser.Username);
+                        message.Append(" has not given me their timezone\"\n");
+                    }
                 }
+                catch
+                {
+                }
+            }
 
-                await (response + "```").QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
-            }
-            catch (Exception ex)
-            {
-                await ex.Message.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-            }
+            message.Append("```");
+
+            await message.QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
-        //https://stackoverflow.com/questions/39208477/is-this-the-proper-way-to-convert-between-time-zones-in-nodatime
-        public static DateTime ConvertDateTimeToDifferentTimeZone(DateTime fromDateTime, string fromZoneId, string toZoneId)
+        #endregion Time
+
+        #region IAmRole
+
+        [Command("addrole"), Summary("Adds yourself to a role")]
+        [Alias("iam"), RequireDatabase]
+        public async Task IamRole(int page = 0, [Remainder]IRole role = null)
         {
-            var fromLocal = LocalDateTime.FromDateTime(fromDateTime);
-            var fromZone = DateTimeZoneProviders.Tzdb[fromZoneId];
-            var fromZoned = fromLocal.InZoneLeniently(fromZone);
+            if (page != 0)
+                page -= 1;
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var toZone = DateTimeZoneProviders.Tzdb[toZoneId];
-            var toZoned = fromZoned.WithZone(toZone);
-            var toLocal = toZoned.LocalDateTime;
-            return toLocal.ToDateTimeUnspecified();
+            if (Context.IsPrivate)
+            {
+                await EmbedExtensions.FromError("DM's are not supported for this command", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+
+            var iamlist = await Database.IAmRoles.ToAsyncEnumerable().Where(x => x.GuildId == Context.Guild.Id).ToListAsync();
+
+            if (iamlist.Any())
+            {
+                if (role == null || !iamlist.Any(x => x.RoleId == role.Id))
+                {
+                    var paged = iamlist.Paginate(await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild, Context.Guild.GetUser(Context.User.Id));
+
+                    if (page >= paged.Count)
+                    {
+                        await EmbedExtensions.FromError($"There are only {paged.Count} pages to scroll through", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        return;
+                    }
+
+                    await EmbedExtensions.FromMessage($"Joinable roles of __{Context.Guild.Name}__ {page + 1}/{paged.Count}", paged[page], Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                await EmbedExtensions.FromError($"{Context.Guild.Name} has no joinable roles", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            }
         }
+
+        [Command("addrole"), Summary("Adds yourself to a role")]
+        [Alias("iam"), RequireDatabase]
+        public async Task IamRole([Remainder]IRole role)
+        {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            if (Context.IsPrivate)
+            {
+                await EmbedExtensions.FromError("DM's are not supported for this command", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+
+            var iamlist = await Database.IAmRoles.ToAsyncEnumerable().Where(x => x.GuildId == Context.Guild.Id).ToListAsync();
+
+            if (iamlist.Any())
+            {
+                var r = iamlist.FirstOrDefault(x => x.RoleId == role.Id);
+
+                if (r != null)
+                {
+                    var didpass = CheckIAmValidAsync(await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false), Context.User as IGuildUser, await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild, r);
+
+                    if (didpass != IAmFail.Success)
+                    {
+                        await EmbedExtensions.FromError(GetErrorIAmFail(didpass, r, await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild), Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        if ((Context.User as IGuildUser).RoleIds.Any(x => x == r.RoleId))
+                        {
+                            await EmbedExtensions.FromError("You already have that role", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            return;
+                        }
+
+                        try
+                        {
+                            var ro = Context.Guild.GetRole(r.RoleId);
+                            await (Context.User as IGuildUser).AddRoleAsync(ro).ConfigureAwait(false);
+                            await EmbedExtensions.FromSuccess($"You now have the role \"{ro.Name}\"", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+
+                            if (r.Price > 0)
+                            {
+                                (await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false)).Money -= (ulong)r.Price;
+
+                                await Database.SaveChangesAsync().ConfigureAwait(false);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            if (ex.Message.Contains("403"))
+                            {
+                                await EmbedExtensions.FromError("I need to be above the role and have the permission `MANAGE_ROLES` in order to give the role", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            }
+                            Log.Error(SkuldAppContext.GetCaller(), ex.Message, ex);
+                        }
+                    }
+                }
+                else
+                {
+                    await EmbedExtensions.FromError("Role isn\'t configured to be self assignable", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                await EmbedExtensions.FromInfo($"{Context.Guild.Name} has no joinable roles", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+        }
+
+        [Command("removerole"), Summary("Removes yourself from a role")]
+        [Alias("iamnot"), RequireDatabase]
+        public async Task IamNotRole([Remainder]IRole role)
+        {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var g = Context.User as IGuildUser;
+
+            var iamlist = await Database.IAmRoles.ToAsyncEnumerable().Where(x => x.GuildId == Context.Guild.Id).ToListAsync();
+
+            if (iamlist.Any(x => x.RoleId == role.Id))
+            {
+                if (g.RoleIds.Contains(role.Id))
+                {
+                    try
+                    {
+                        await g.RemoveRoleAsync(role).ConfigureAwait(false);
+                        await EmbedExtensions.FromSuccess($"You are no longer \"{role.Name}\"", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex.Message.Contains("403"))
+                        {
+                            await EmbedExtensions.FromError($"Ensure that I have `MANAGE_ROLES` and that I am above the role \"{role.Name}\" in order to remove it", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        }
+                        Log.Error(SkuldAppContext.GetCaller(), ex.Message, ex);
+                    }
+                }
+                else
+                {
+                    await EmbedExtensions.FromInfo("You don\'t have that role", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                await EmbedExtensions.FromError("Role isn\'t configured to be self assignable", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+        }
+
+        private string GetErrorIAmFail(IAmFail amFail, IAmRole role, Guild sguild, IGuild guild)
+            => amFail switch
+            {
+                IAmFail.Price => $"You don\'t have enough money. You need at least {sguild.MoneyIcon}{role.Price}",
+                IAmFail.Level => $"You don\'t have the level required for this role (Level: {role.LevelRequired})",
+                IAmFail.RequiredRole => $"You don\'t have the required role for this role. You need the role \"{guild.GetRole(role.RequiredRoleId).Name}\"",
+                _ => "",
+            };
+
+        private IAmFail CheckIAmValidAsync(User suser, IGuildUser user, Guild sguild, IGuild guild, IAmRole roleconf)
+        {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            if (roleconf.RequiredRoleId != 0)
+            {
+                if (!user.RoleIds.Any(x => x == roleconf.RequiredRoleId))
+                {
+                    return IAmFail.RequiredRole;
+                }
+            }
+
+            if (suser.Money < (ulong)roleconf.Price)
+            {
+                return IAmFail.Price;
+            }
+
+            var guildExperience = Database.UserXp.FirstOrDefault(x => x.UserId == suser.Id && x.GuildId == guild.Id);
+
+            if (guildExperience != null)
+            {
+                if (guildExperience.Level < (ulong)roleconf.LevelRequired && Database.Features.FirstOrDefault(x => x.Id == sguild.Id).Experience)
+                {
+                    return IAmFail.Level;
+                }
+            }
+            else if (roleconf.LevelRequired != 0)
+            {
+                return IAmFail.Level;
+            }
+
+            return IAmFail.Success;
+        }
+
+        #endregion IAmRole
     }
 }

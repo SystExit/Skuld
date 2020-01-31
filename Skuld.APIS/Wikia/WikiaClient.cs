@@ -1,9 +1,9 @@
 ﻿namespace Skuld.APIS
 {
     //Coming Soon
-    public class WikiaClient : BaseClient
+    public class WikiaClient
     {
-        public WikiaClient() : base()
+        public WikiaClient()
         {
         }
     }

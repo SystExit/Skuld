@@ -10,13 +10,13 @@ using System.Xml.Linq;
 
 namespace Skuld.APIS
 {
-    public class Stands4Client : BaseClient
+    public class Stands4Client
     {
         private readonly RateLimiter rateLimiter;
         private readonly int stands4userid;
         private readonly string stands4usertoken;
 
-        public Stands4Client(int userid, string token) : base()
+        public Stands4Client(int userid, string token)
         {
             rateLimiter = new RateLimiter();
             stands4userid = userid;
@@ -27,7 +27,7 @@ namespace Skuld.APIS
         {
             if (rateLimiter.IsRatelimited()) return null;
 
-            var stringifiedxml = await ReturnStringAsync(new Uri($"http://www.stands4.com/services/v2/defs.php?uid={stands4userid}&tokenid={stands4usertoken}&word={word}"));
+            var stringifiedxml = await HttpWebClient.ReturnStringAsync(new Uri($"http://www.stands4.com/services/v2/defs.php?uid={stands4userid}&tokenid={stands4usertoken}&word={word}"));
             var xml = new XmlDocument();
 
             xml.LoadXml(stringifiedxml);

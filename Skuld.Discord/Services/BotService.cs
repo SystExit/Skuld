@@ -1,9 +1,7 @@
-﻿using Akitaux.Twitch.Helix;
-using Discord;
+﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using Skuld.APIS;
-using Skuld.Core;
+using Skuld.Core.Utilities;
 using Skuld.Discord.Handlers;
 using StatsdClient;
 using System;
@@ -18,9 +16,8 @@ namespace Skuld.Discord.Services
     {
         public static DiscordShardedClient DiscordClient;
         public static CommandService CommandService { get => MessageHandler.CommandService; }
-        public static TwitchHelixClient TwitchClient;
         public static IServiceProvider Services;
-        static List<ulong> UserIDs;
+        private static List<ulong> UserIDs;
         public static int Users { get => UserIDs.Count(); }
 
         public static void ConfigureBot(DiscordSocketConfig config)
@@ -35,9 +32,6 @@ namespace Skuld.Discord.Services
         public static void AddServices(IServiceProvider services)
             => Services = services;
 
-        public static void AddBotLister(BotListingClient botLister)
-            => DiscordLogger.AddBotLister(botLister);
-
         public static async Task StopBotAsync(string source)
         {
             DiscordLogger.UnRegisterEvents();
@@ -46,11 +40,10 @@ namespace Skuld.Discord.Services
             await DiscordClient.StopAsync();
             await DiscordClient.LogoutAsync();
 
-            await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage(source, "Skuld is shutting down", LogSeverity.Info));
+            Log.Info(source, "Skuld is shutting down");
             DogStatsd.Event("FrameWork", $"Bot Stopped", alertType: "info", hostname: "Skuld");
 
-            await GenericLogger.sw.WriteLineAsync("-------------------------------------------").ConfigureAwait(false);
-            GenericLogger.sw.Close();
+            Log.FlushNewLine();
 
             await Console.Out.WriteLineAsync("Bot shutdown").ConfigureAwait(false);
             Console.ReadLine();
@@ -102,7 +95,7 @@ namespace Skuld.Discord.Services
                     foreach (var gld in DiscordClient.Guilds)
                     {
                         var humans = gld.Users.Where(x => x.IsBot == false);
-                        foreach(var human in humans)
+                        foreach (var human in humans)
                         {
                             if (!UserIDs.Contains(human.Id))
                                 UserIDs.Add(human.Id);

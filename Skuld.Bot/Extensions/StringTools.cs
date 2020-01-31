@@ -96,6 +96,26 @@ namespace Skuld.Bot.Extensions
             "🇿"
         };
 
+        //https://stackoverflow.com/a/8809437
+        public static string ReplaceFirst(this string text, string search, string replace)
+        {
+            int pos = text.IndexOf(search);
+            if (pos < 0)
+            {
+                return text;
+            }
+            return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
+        }
+
+        public static string ToFormattedString(this ulong Value)
+            => Value.ToString("N0");
+        public static string ToFormattedString(this long Value)
+            => Value.ToString("N0");
+        public static string ToFormattedString(this int Value)
+            => Value.ToString("N0");
+        public static string ToFormattedString(this uint Value)
+            => Value.ToString("N0");
+
         public static string ToRegionalIndicator(this string value)
         {
             StringBuilder ret = new StringBuilder();
@@ -110,7 +130,7 @@ namespace Skuld.Bot.Extensions
                         continue;
                     }
 
-                    ret.Append(regionalIndicator[alphabet.FirstOrDefault(x => x.Key == chr.ToString().ToLower()).Value]+" ");
+                    ret.Append(regionalIndicator[alphabet.FirstOrDefault(x => x.Key == chr.ToString().ToLower()).Value] + " ");
                 }
                 else
                 {
@@ -124,7 +144,7 @@ namespace Skuld.Bot.Extensions
         {
             StringBuilder ret = new StringBuilder();
 
-            foreach(var chr in value)
+            foreach (var chr in value)
             {
                 if (!char.IsWhiteSpace(chr))
                 {

@@ -1,16 +1,15 @@
 ﻿using Newtonsoft.Json;
 using Skuld.APIS.Animals.Models;
 using Skuld.APIS.Utilities;
-using Skuld.Core;
 using System;
 using System.Net;
 using System.Threading.Tasks;
 
 namespace Skuld.APIS
 {
-    public class AnimalClient : BaseClient
+    public class AnimalClient
     {
-        private readonly Uri BIRDAPI = new Uri("https://birdsare.cool/bird.json");
+        private readonly Uri BIRDAPI = new Uri("https://random.birb.pw/tweet.json/");
         private readonly Uri KITTYAPI = new Uri("https://aws.random.cat/meow");
         private readonly Uri KITTYAPI2 = new Uri("http://thecatapi.com/api/images/get");
         private readonly Uri DOGGOAPI = new Uri("https://random.dog/woof");
@@ -19,7 +18,7 @@ namespace Skuld.APIS
         private readonly RateLimiter birdrateLimiter;
         private readonly RateLimiter dograteLimiter;
 
-        public AnimalClient() : base()
+        public AnimalClient()
         {
             cat1rateLimiter = new RateLimiter();
             cat2rateLimiter = new RateLimiter();
@@ -39,6 +38,8 @@ namespace Skuld.APIS
 
                 case AnimalType.Kitty:
                     return await GetKittyAsync().ConfigureAwait(false);
+                default:
+                    break;
             }
 
             return null;
@@ -48,11 +49,11 @@ namespace Skuld.APIS
         {
             if (birdrateLimiter.IsRatelimited()) return null;
 
-            var rawresp = await ReturnStringAsync(BIRDAPI);
+            var rawresp = await HttpWebClient.ReturnStringAsync(BIRDAPI).ConfigureAwait(false);
             dynamic data = JsonConvert.DeserializeObject(rawresp);
-            var birb = data["url"];
+            var birb = data["file"];
             if (birb == null) return null;
-            return birb;
+            return "https://random.birb.pw/img/" + birb;
         }
 
         private async Task<string> GetKittyAsync()
@@ -61,23 +62,22 @@ namespace Skuld.APIS
             {
                 if (cat1rateLimiter.IsRatelimited()) return null;
 
-                var rawresp = await ReturnStringAsync(KITTYAPI);
+                var rawresp = await HttpWebClient.ReturnStringAsync(KITTYAPI).ConfigureAwait(false);
                 dynamic item = JsonConvert.DeserializeObject(rawresp);
                 var img = item["file"];
                 if (img == null) return "https://i.ytimg.com/vi/29AcbY5ahGo/hqdefault.jpg";
                 return img;
             }
-            catch (Exception ex)
+            catch
             {
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("RandomCat", ex.Message, Discord.LogSeverity.Error, ex));
                 try
                 {
                     if (cat2rateLimiter.IsRatelimited()) return null;
 
                     var webcli = (HttpWebRequest)WebRequest.Create(KITTYAPI2);
-                    webcli.Headers.Add(HttpRequestHeader.UserAgent, UAGENT);
+                    webcli.Headers.Add(HttpRequestHeader.UserAgent, HttpWebClient.UAGENT);
                     webcli.AllowAutoRedirect = true;
-                    WebResponse resp = await webcli.GetResponseAsync();
+                    WebResponse resp = await webcli.GetResponseAsync().ConfigureAwait(false);
                     if (resp != null)
                     {
                         if (resp.ResponseUri != null) return resp.ResponseUri.OriginalString;
@@ -85,9 +85,8 @@ namespace Skuld.APIS
                     }
                     else return "https://i.ytimg.com/vi/29AcbY5ahGo/hqdefault.jpg";
                 }
-                catch (Exception ex2)
+                catch
                 {
-                    await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("RandomCat", ex2.Message, Discord.LogSeverity.Error, ex2));
                     return "https://i.ytimg.com/vi/29AcbY5ahGo/hqdefault.jpg";
                 }
             }
@@ -99,13 +98,12 @@ namespace Skuld.APIS
             {
                 if (dograteLimiter.IsRatelimited()) return null;
 
-                var resp = await ReturnStringAsync(DOGGOAPI);
+                var resp = await HttpWebClient.ReturnStringAsync(DOGGOAPI).ConfigureAwait(false);
                 if (resp == null) return "https://i.imgur.com/ZSMi3Zt.jpg";
                 return "https://random.dog/" + resp;
             }
-            catch (Exception ex)
+            catch
             {
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("RandomDog", ex.Message, Discord.LogSeverity.Error, ex));
                 return "https://i.imgur.com/ZSMi3Zt.jpg";
             }
         }

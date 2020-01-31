@@ -1,22 +1,24 @@
 ﻿using Discord.Commands;
-using Skuld.Database;
+using Skuld.Core.Models;
 using System;
 using System.Threading.Tasks;
 
 namespace Skuld.Discord.Preconditions
 {
-    public class RequireDatabase : PreconditionAttribute
+    public class RequireDatabaseAttribute : PreconditionAttribute
     {
-        public RequireDatabase()
+        public RequireDatabaseAttribute()
         {
         }
 
-        public override async Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
+        public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
-            if (await DatabaseClient.CheckConnectionAsync())
-                return PreconditionResult.FromSuccess();
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            return PreconditionResult.FromError("Command requires an active Database Connection");
+            if (Database.IsConnected)
+                return Task.FromResult(PreconditionResult.FromSuccess());
+
+            return Task.FromResult(PreconditionResult.FromError("Command requires an active Database Connection"));
         }
     }
 }

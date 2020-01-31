@@ -1,38 +1,42 @@
 ﻿using Discord;
-using Discord.Addons.Interactive;
 using Discord.Commands;
+using Skuld.Bot.Services;
 using Skuld.Core;
+using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
-using Skuld.Database;
-using Skuld.Discord.Commands;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Handlers;
 using Skuld.Discord.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
     [Group]
-    public class Core : InteractiveBase<SkuldCommandContext>
+    public class Core : ModuleBase<ShardedCommandContext>
     {
-        public SkuldConfig Configuration { get; set; }
+        public SkuldConfig Configuration { get => HostSerivce.Configuration; }
         private CommandService CommandService { get => MessageHandler.CommandService; }
+        public Octokit.GitHubClient GitClient { get; set; }
 
         [Command("help"), Summary("Gets all commands or a specific command's information")]
         public async Task Help([Remainder]string command = null)
         {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
             try
             {
                 if (command == null)
                 {
-                    string prefix = (Context.DBGuild != null ? Context.DBGuild.Prefix : Configuration.Discord.Prefix);
+                    string prefix = (await Database.GetOrInsertGuildAsync(Context.Guild) != null ? (await Database.GetOrInsertGuildAsync(Context.Guild)).Prefix : Configuration.Prefix);
 
-                    string title = $"Commands of: {Context.Client.CurrentUser.Username}#{Context.Client.CurrentUser.DiscriminatorValue} that can be invoked in: ";
+                    string title = $"Commands of: {Context.Client.CurrentUser} that can be invoked in: ";
 
                     if (Context.IsPrivate)
                     {
@@ -40,28 +44,26 @@ namespace Skuld.Bot.Commands
                     }
                     else
                     {
-                        title += $"**{Context.Guild.Name}/{Context.Channel.Name}**";
+                        title += $"{Context.Guild.Name}/{Context.Channel.Name}";
                     }
 
-                    var embed = new EmbedBuilder
-                    {
-                        Author = new EmbedAuthorBuilder
-                        {
-                            Name = title,
-                            IconUrl = Context.Client.CurrentUser.GetAvatarUrl()
-                        },
-                        Color = EmbedUtils.RandomColor(),
-                        Description = $"The prefix of **{Context.Guild.Name}** is: `{prefix}`"
-                    };
+                    var embed =
+                        new EmbedBuilder()
+                        .AddAuthor(Context.Client)
+                        .WithRandomColor()
+                        .WithDescription($"The prefix of **{(Context.Guild == null ? Context.User.FullName() : Context.Guild.Name)}** is: `{prefix}`");
+
                     foreach (var module in CommandService.Modules)
                     {
+                        if (Context.IsPrivate) if (module.Name.ToLowerInvariant() == nameof(Admin).ToLowerInvariant()) continue;
+
                         string desc = "";
                         foreach (var cmd in module.Commands)
                         {
-                            var result = await cmd.CheckPreconditionsAsync(Context);
+                            var result = await cmd.CheckPreconditionsAsync(Context).ConfigureAwait(false);
                             if (result.IsSuccess)
                             {
-                                desc += $"{cmd.Aliases.First()}, ";
+                                desc += $"{cmd.Aliases[0]}, ";
                             }
                             else continue;
                         }
@@ -76,40 +78,166 @@ namespace Skuld.Bot.Commands
                         }
                     }
 
-                    var allCommandsResp = await DatabaseClient.GetAllCustomCommandsAsync(Context.Guild.Id);
-                    if (allCommandsResp.Successful)
+                    if (await Database.GetOrInsertGuildAsync(Context.Guild) != null)
                     {
-                        var commands = allCommandsResp.Data as IReadOnlyList<CustomCommand>;
-                        string commandsText = "";
-                        foreach (var cmd in commands)
+                        var commands = Database.CustomCommands.AsQueryable().Where(x => x.GuildId == Context.Guild.Id);
+                        if (commands.Count() > 0)
                         {
-                            commandsText += $"{cmd.CommandName}, ";
+                            string commandsText = "";
+                            foreach (var cmd in commands)
+                            {
+                                commandsText += $"{cmd.Name}, ";
+                            }
+                            commandsText = commandsText[0..^2];
+                            embed.AddField("Custom Commands", $"`{commandsText}`");
                         }
-                        commandsText = commandsText.Substring(0, commandsText.Length - 2);
-                        embed.AddField("Custom Commands", $"`{commandsText}`");
                     }
 
                     var dmchan = await Context.User.GetOrCreateDMChannelAsync();
 
-                    await embed.Build().QueueMessage(Discord.Models.MessageType.DMS, Context.User, Context.Channel);
+                    await embed.QueueMessageAsync(Context, type: Discord.Models.MessageType.DMS).ConfigureAwait(false);
                 }
                 else
                 {
-                    var cmd = DiscordUtilities.GetCommandHelp(CommandService, Context, command);
+                    var cmd = CommandService.GetCommandHelp(Context, command);
                     if (cmd == null)
                     {
-                        await $"Sorry, I couldn't find a command like **{command}**.".QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                        await $"Sorry, I couldn't find a command like **{command}**.".QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                     else
                     {
-                        await cmd.QueueMessage(Discord.Models.MessageType.Standard, Context.User, Context.Channel);
+                        await cmd.QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                 }
             }
             catch (Exception ex)
             {
-                await ex.Message.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel, null, ex);
-                await GenericLogger.AddToLogsAsync(new Skuld.Core.Models.LogMessage("CMD-HELP", ex.Message, LogSeverity.Error, ex));
+                await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                Log.Error("CMD-HELP", ex.Message, ex);
+            }
+        }
+
+        [Command("issue"), Summary("Create or get an issue on Github")]
+        public async Task Issue(string title, [Remainder]string content = null)
+        {
+            if (!string.IsNullOrEmpty(content))
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                var message = new StringBuilder();
+                message.AppendLine(content);
+                message.AppendLine();
+                message.AppendLine("===METADATA===");
+                message.AppendLine($"Submitter: {Context.User.Username}");
+                message.AppendLine($"Version: Skuld/{SkuldAppContext.Skuld.Key.Version.ToString()}");
+
+                var newMessage =
+                    await
+                        Context.Client.SendChannelAsync(
+                            Context.Client.GetChannel(Configuration.IssueChannel),
+                            "",
+                            EmbedExtensions.FromMessage("New Issue", $"Issue requires approval, react to approve or deny before posting to github", Context)
+                                        .AddField("Content", message.ToString())
+                                        .AddField("Submitter", $"{Context.User.FullName()} ({Context.User.Id})")
+                                    .Build()
+                        ).ConfigureAwait(false);
+
+                await newMessage.AddReactionAsync(DiscordUtilities.Tick_Emote).ConfigureAwait(false);
+
+                await newMessage.AddReactionAsync(DiscordUtilities.Cross_Emote).ConfigureAwait(false);
+
+                Database.Issues.Add(new Issue
+                {
+                    IssueChannelMessageId = newMessage.Id,
+                    Body = message.ToString(),
+                    Title = title,
+                    SubmitterId = Context.User.Id
+                });
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await
+                    EmbedExtensions.FromMessage(
+                        "Issue Tracker",
+                        $"Your issue has been submitted for approval, if it ends up on the [issue tracker]({SkuldAppContext.Skuld.Value.ToString()}/issues) it has been approved",
+                        Context)
+                    .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                if (int.TryParse(title, System.Globalization.NumberStyles.Integer, null, out int number))
+                {
+                    var issue = await GitClient.Issue.Get(Configuration.GithubRepository, number).ConfigureAwait(false);
+
+                    if (issue != null)
+                    {
+                        var Labels = new StringBuilder();
+
+                        foreach (var label in issue.Labels)
+                        {
+                            Labels.Append(label.Name);
+
+                            if (label != issue.Labels.LastOrDefault())
+                            {
+                                Labels.Append(", ");
+                            }
+                        }
+
+                        await
+                            EmbedExtensions.FromMessage(Context)
+                            .WithUrl(issue.HtmlUrl)
+                            .WithTitle(issue.Title)
+                            .WithDescription(issue.Body)
+                            .AddInlineField("Labels", Labels.ToString())
+                            .AddInlineField("Status", issue.State.StringValue.CapitaliseFirstLetter())
+                            .WithColor(issue.State.StringValue[0] == 'o' ? Color.Green : Color.Red)
+                        .QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await
+                            EmbedExtensions.FromError($"Couldn't find an issue with the number: `{title}`", Context)
+                        .QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                }
+                else
+                {
+                    var issues = await GitClient.Issue.GetAllForRepository(Configuration.GithubRepository).ConfigureAwait(false);
+
+                    var issue = issues.FirstOrDefault(x => x.Title.ToUpperInvariant() == title.ToUpperInvariant());
+
+                    if (issue != null)
+                    {
+                        var Labels = new StringBuilder();
+
+                        foreach (var label in issue.Labels)
+                        {
+                            Labels.Append(label.Name);
+
+                            if (label != issue.Labels.LastOrDefault())
+                            {
+                                Labels.Append(", ");
+                            }
+                        }
+
+                        await
+                            EmbedExtensions.FromMessage(Context)
+                            .WithUrl(issue.HtmlUrl)
+                            .WithTitle(issue.Title)
+                            .WithDescription(issue.Body)
+                            .AddInlineField("Labels", Labels.ToString())
+                            .AddInlineField("Status", issue.State.StringValue.CapitaliseFirstLetter())
+                            .WithColor(issue.State.StringValue[0] == 'o' ? Color.Green : Color.Red)
+                        .QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await
+                            EmbedExtensions.FromError($"Couldn't find an issue with the name: `{title}`", Context)
+                        .QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                }
             }
         }
     }

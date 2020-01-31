@@ -1,24 +1,23 @@
 ﻿using Discord.Commands;
 using Discord.WebSocket;
-using DiscordNet = Discord;
-using Skuld.Core;
-using Skuld.Core.Extensions;
 using Skuld.Core.Models;
-using Skuld.Database;
+using Skuld.Core.Utilities;
+using Skuld.Discord.Extensions;
 using System;
 using System.Threading.Tasks;
-using System.Linq;
+using DiscordNet = Discord;
 
 namespace Skuld.Discord.Utilities
 {
     public static class MessageTools
     {
+        private static readonly string Key = "MsgTools";
         public static string ModAdminBypass = "-!{MA_commands}";
         public static string NoOneCommands = "-!commands";
 
         public static async Task<bool> CheckEmbedPermission(DiscordShardedClient client, DiscordNet.IChannel channel)
         {
-            if(channel is DiscordNet.IDMChannel)
+            if (channel is DiscordNet.IDMChannel)
             {
                 return true;
             }
@@ -28,20 +27,13 @@ namespace Skuld.Discord.Utilities
             return gusr.GetPermissions(gchan).EmbedLinks;
         }
 
-        public static async Task<CustomCommand> GetCustomCommandAsync(SocketGuild guild, string command)
-        {
-            var resp = await DatabaseClient.GetCustomCommandAsync(guild.Id, command).ConfigureAwait(false);
-            if (resp.Successful && resp.Data is CustomCommand) return resp.Data as CustomCommand;
-            return null;
-        }
-
-        public static string GetPrefixFromCommand(SkuldGuild guild, string command, SkuldConfig config)
+        public static string GetPrefixFromCommand(Guild guild, string command, SkuldConfig config)
         {
             if (guild != null) { if (command.StartsWith(guild.Prefix)) { return guild.Prefix; } }
 
-            if (command.StartsWith(config.Discord.Prefix)) { return config.Discord.Prefix; }
+            if (command.StartsWith(config.Prefix)) { return config.Prefix; }
 
-            if (command.StartsWith(config.Discord.AltPrefix)) { return config.Discord.AltPrefix; }
+            if (command.StartsWith(config.AltPrefix)) { return config.AltPrefix; }
 
             return null;
         }
@@ -72,39 +64,7 @@ namespace Skuld.Discord.Utilities
             return true;
         }
 
-        public static async Task<SkuldGuild> GetGuildOrInsertAsync(DiscordNet.IGuild guild)
-        {
-            var resp = await DatabaseClient.GetGuildAsync(guild.Id).ConfigureAwait(false);
-            if(resp.Successful && resp.Data is SkuldGuild)
-            {
-                return resp.Data as SkuldGuild;
-            }
-            else
-            {
-                await DatabaseClient.InsertGuildAsync(guild.Id, SkuldConfig.Load().Discord.Prefix);
-                resp = await DatabaseClient.GetGuildAsync(guild.Id);
-
-                return resp.Data as SkuldGuild;
-            }
-        }
-
-        public static async Task<SkuldUser> GetUserOrInsertAsync(DiscordNet.IUser user)
-        {
-            var resp = await DatabaseClient.GetUserAsync(user.Id).ConfigureAwait(false);
-            if (resp.Successful && resp.Data is SkuldUser)
-            {
-                return resp.Data as SkuldUser;
-            }
-            else
-            {
-                await DatabaseClient.InsertUserAsync(user);
-                resp = await DatabaseClient.GetUserAsync(user.Id);
-
-                return resp.Data as SkuldUser;
-            }
-        }
-
-        public static string GetCmdName(DiscordNet.IUserMessage arg, DiscordConfig config, DiscordShardedClient client, SkuldGuild sguild = null)
+        public static string GetCmdName(DiscordNet.IUserMessage arg, SkuldConfig config, DiscordShardedClient client, User initiator, Guild sguild = null)
         {
             string content = "";
             var contentsplit = arg.Content.Split(' ')[0];
@@ -126,7 +86,7 @@ namespace Skuld.Discord.Utilities
                     if (contentsplit.StartsWith(config.AltPrefix))
                         content = contentsplit.Replace(config.AltPrefix, "");
                 }
-                if (SkuldConfig.Load().Discord.BotAdmins.Contains(arg.Author.Id) && contentsplit.StartsWith("ayo"))
+                if ((initiator.Flags & DiscordUtilities.BotAdmin) != 0 && contentsplit.StartsWith("ayo"))
                 {
                     var split = arg.Content.Split(' ');
 
@@ -158,7 +118,7 @@ namespace Skuld.Discord.Utilities
                     if (contentsplit.StartsWith(config.Prefix))
                         content = contentsplit.Replace(config.Prefix, "");
                 }
-                if (SkuldConfig.Load().Discord.BotAdmins.Contains(arg.Author.Id) && contentsplit.StartsWith("ayo"))
+                if ((initiator.Flags & DiscordUtilities.BotAdmin) != 0 && contentsplit.StartsWith("ayo"))
                 {
                     var split = arg.Content.Split(' ');
 
@@ -179,11 +139,11 @@ namespace Skuld.Discord.Utilities
             return content;
         }
 
-        public static bool HasPrefix(DiscordNet.IUserMessage message, DiscordShardedClient client, SkuldConfig sconf, MessageServiceConfig config, string gprefix = null)
+        public static bool HasPrefix(DiscordNet.IUserMessage message, DiscordShardedClient client, MessageServiceConfig config, User initiator, string gprefix = null)
         {
             if (gprefix != null)
             {
-                if (sconf.Discord.BotAdmins.Contains(message.Author.Id))
+                if ((initiator.Flags & DiscordUtilities.BotAdmin) != 0)
                     return message.HasStringPrefix(gprefix, ref config.ArgPos) ||
                        message.HasStringPrefix(config.Prefix, ref config.ArgPos) ||
                        message.HasStringPrefix(config.AltPrefix, ref config.ArgPos) ||
@@ -196,7 +156,7 @@ namespace Skuld.Discord.Utilities
             }
             else
             {
-                if (sconf.Discord.BotAdmins.Contains(message.Author.Id))
+                if ((initiator.Flags & DiscordUtilities.BotAdmin) != 0)
                     return message.HasStringPrefix(config.Prefix, ref config.ArgPos) ||
                        message.HasStringPrefix(config.AltPrefix, ref config.ArgPos) ||
                        message.HasStringPrefix($"ayo {client.CurrentUser.Username.ToLower()} do ", ref config.ArgPos) ||
@@ -207,45 +167,47 @@ namespace Skuld.Discord.Utilities
             }
         }
 
-        public static string GetPrefix(DiscordNet.IUserMessage message, DiscordShardedClient client, SkuldConfig sconf, MessageServiceConfig config, string gprefix = null)
+        public static string GetPrefix(DiscordNet.IUserMessage message, MessageServiceConfig config, string gprefix = null)
         {
             if (message.Content.StartsWith(config.Prefix))
                 return config.Prefix;
             if (message.Content.StartsWith(config.AltPrefix))
                 return config.AltPrefix;
 
-            if(gprefix != null)
+            if (gprefix != null)
                 if (message.Content.StartsWith(gprefix))
                     return gprefix;
 
             return null;
         }
 
-        public static bool ModuleDisabled(GuildCommandModules cmdmods, CommandInfo command)
+        public static bool ModuleDisabled(GuildModules cmdmods, CommandInfo command)
         {
-            if (!cmdmods.AccountsEnabled && command.Module.Name.ToLowerInvariant() == "accounts")
+            if (!cmdmods.Accounts && command.Module.Name.ToLowerInvariant() == "accounts")
             { return true; }
-            if (!cmdmods.ActionsEnabled && command.Module.Name.ToLowerInvariant() == "actions")
+            if (!cmdmods.Actions && command.Module.Name.ToLowerInvariant() == "actions")
             { return true; }
-            if (!cmdmods.AdminEnabled && command.Module.Name.ToLowerInvariant() == "admin")
+            if (!cmdmods.Admin && command.Module.Name.ToLowerInvariant() == "admin")
             { return true; }
-            if (!cmdmods.FunEnabled && command.Module.Name.ToLowerInvariant() == "fun")
+            if (!cmdmods.Fun && command.Module.Name.ToLowerInvariant() == "fun")
             { return true; }
-            if (!cmdmods.InformationEnabled && command.Module.Name.ToLowerInvariant() == "information")
+            if (!cmdmods.Information && command.Module.Name.ToLowerInvariant() == "information")
             { return true; }
-            if (!cmdmods.LewdEnabled && command.Module.Name.ToLowerInvariant() == "lewd")
+            if (!cmdmods.Lewd && command.Module.Name.ToLowerInvariant() == "lewd")
             { return true; }
-            if (!cmdmods.SearchEnabled && command.Module.Name.ToLowerInvariant() == "search")
+            if (!cmdmods.Search && command.Module.Name.ToLowerInvariant() == "search")
             { return true; }
-            if (!cmdmods.SpaceEnabled && command.Module.Name.ToLowerInvariant() == "space")
+            if (!cmdmods.Space && command.Module.Name.ToLowerInvariant() == "space")
             { return true; }
-            if (!cmdmods.StatsEnabled && command.Module.Name.ToLowerInvariant() == "stats")
+            if (!cmdmods.Stats && command.Module.Name.ToLowerInvariant() == "stats")
             { return true; }
-            if (!cmdmods.WeebEnabled && command.Module.Name.ToLowerInvariant() == "weeb")
+            if (!cmdmods.Weeb && command.Module.Name.ToLowerInvariant() == "weeb")
             { return true; }
 
             return false;
         }
+
+#pragma warning disable IDE0060
 
         public static async Task<DiscordNet.IUserMessage> SendChannelAsync(this DiscordShardedClient client, DiscordNet.IChannel channel, string message)
         {
@@ -255,15 +217,17 @@ namespace Skuld.Discord.Utilities
                 var mesgChan = (DiscordNet.IMessageChannel)channel;
                 if (channel == null || textChan == null || mesgChan == null) { return null; }
                 await mesgChan.TriggerTypingAsync();
-                await GenericLogger.AddToLogsAsync(new LogMessage("MsgDisp", $"Dispatched message to {(channel as DiscordNet.IGuildChannel).Guild} in {(channel as DiscordNet.IGuildChannel).Name}", DiscordNet.LogSeverity.Info));
+                Log.Info(Key, $"Dispatched message to {(channel as DiscordNet.IGuildChannel).Guild} in {(channel as DiscordNet.IGuildChannel).Name}");
                 return await mesgChan.SendMessageAsync(message);
             }
             catch (Exception ex)
             {
-                await GenericLogger.AddToLogsAsync(new LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", DiscordNet.LogSeverity.Warning, ex));
+                Log.Error(Key, $"Error dispatching Message - {ex.Message}", ex);
                 return null;
             }
         }
+
+#pragma warning restore IDE0060
 
         public static async Task<DiscordNet.IUserMessage> SendChannelAsync(this DiscordShardedClient client, DiscordNet.IChannel channel, string message, DiscordNet.Embed embed)
         {
@@ -290,12 +254,12 @@ namespace Skuld.Discord.Utilities
                 {
                     msg = await mesgChan.SendMessageAsync(message, false, embed);
                 }
-                await GenericLogger.AddToLogsAsync(new LogMessage("MsgDisp", $"Dispatched message to {(channel as DiscordNet.IGuildChannel).Guild} in {(channel as DiscordNet.IGuildChannel).Name}", DiscordNet.LogSeverity.Info));
+                Log.Info(Key, $"Dispatched message to {(channel as DiscordNet.IGuildChannel).Guild} in {(channel as DiscordNet.IGuildChannel).Name}");
                 return msg;
             }
             catch (Exception ex)
             {
-                await GenericLogger.AddToLogsAsync(new LogMessage("MH-ChNV", "Error dispatching Message, printed exception to logs.", DiscordNet.LogSeverity.Warning, ex));
+                Log.Error(Key, $"Error dispatching Message - {ex.Message}", ex);
                 return null;
             }
         }

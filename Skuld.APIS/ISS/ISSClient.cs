@@ -7,13 +7,13 @@ using System.Threading.Tasks;
 
 namespace Skuld.APIS
 {
-    public class ISSClient : BaseClient
+    public class ISSClient
     {
         private readonly RateLimiter rateLimiter;
-        private string AstrosEndpoint = "http://api.open-notify.org/astros.json";
-        private string PositionEndpoint = "http://api.open-notify.org/iss-now.json";
+        private readonly string AstrosEndpoint = "http://api.open-notify.org/astros.json";
+        private readonly string PositionEndpoint = "http://api.open-notify.org/iss-now.json";
 
-        public ISSClient() : base()
+        public ISSClient()
         {
             rateLimiter = new RateLimiter();
         }
@@ -23,7 +23,7 @@ namespace Skuld.APIS
             if (rateLimiter.IsRatelimited()) return null;
 
             var client = (HttpWebRequest)WebRequest.Create(AstrosEndpoint);
-            client.Headers.Add(HttpRequestHeader.UserAgent, UAGENT);
+            client.Headers.Add(HttpRequestHeader.UserAgent, HttpWebClient.UAGENT);
 
             var response = (HttpWebResponse)await client.GetResponseAsync();
 
@@ -38,7 +38,7 @@ namespace Skuld.APIS
             if (rateLimiter.IsRatelimited()) return null;
 
             var client = (HttpWebRequest)WebRequest.Create(PositionEndpoint);
-            client.Headers.Add(HttpRequestHeader.UserAgent, UAGENT);
+            client.Headers.Add(HttpRequestHeader.UserAgent, HttpWebClient.UAGENT);
 
             var response = (HttpWebResponse)await client.GetResponseAsync();
 

@@ -1,49 +1,42 @@
-﻿using Discord;
-using Discord.WebSocket;
+﻿using Discord.WebSocket;
 using Fleck;
 using Newtonsoft.Json;
+using Skuld.Bot.Models.Services.WebSocket;
 using Skuld.Core;
 using Skuld.Core.Models;
-using Skuld.Core.Utilities.Stats;
-using Skuld.Bot.Models;
-using Skuld.Bot.Models.WebSocket;
+using Skuld.Core.Utilities;
 using Skuld.Discord.Services;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace Skuld.Bot.Services
 {
-    public class WebSocketService
+    public class WebSocketService : IDisposable
     {
-        public DiscordShardedClient Client { get => BotService.DiscordClient; }
+        public DiscordShardedClient Client => BotService.DiscordClient;
         private readonly WebSocketServer _server;
 
-        public WebSocketService()
+        public WebSocketService(SkuldConfig configuration)
         {
-            _server = new WebSocketServer("ws://127.0.0.1:37821");
+            _server = new WebSocketServer($"{(configuration.WebsocketSecure ? "wss" : "ws")}://{configuration.WebsocketHost}:{configuration.WebsocketPort}");
             _server.Start(x =>
             {
-                x.OnMessage = async (message) => await HandleMessageAsync(x, message);
+                x.OnMessage = async (message) => await HandleMessageAsync(x, message).ConfigureAwait(false);
             });
-            GenericLogger.AddToLogsAsync(new Core.Models.LogMessage
-            {
-                Source = "WebSocketService - Ctr",
-                Message = "New WebSocketServer started on: "+_server.Location,
-                TimeStamp = DateTime.UtcNow,
-                Severity = LogSeverity.Info
-            }).GetAwaiter().GetResult();
+
+            Log.Info("WebSocketService - Ctr", "New WebSocketServer started on: " + _server.Location);
         }
 
         public void ShutdownServer()
-            => _server.Dispose();
+            => Dispose();
 
         public async Task HandleMessageAsync(IWebSocketConnection conn, string message)
         {
             if (string.IsNullOrEmpty(message)) return;
-            if (message.StartsWith("user:"))
+            if (message.StartsWith("user:", StringComparison.InvariantCultureIgnoreCase))
             {
                 ulong.TryParse(message.Replace("user:", ""), out var userid);
 
@@ -63,14 +56,14 @@ namespace Skuld.Bot.Services
 
                     var cnv = JsonConvert.SerializeObject(res);
 
-                    await conn.Send(cnv);
+                    await conn.Send(cnv).ConfigureAwait(false);
                 }
                 else
                 {
-                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("User not found")));
+                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("User not found"))).ConfigureAwait(false);
                 }
             }
-            if (message.StartsWith("guild:"))
+            if (message.StartsWith("guild:", StringComparison.InvariantCultureIgnoreCase))
             {
                 ulong.TryParse(message.Replace("guild:", ""), out var guildid);
 
@@ -88,33 +81,182 @@ namespace Skuld.Bot.Services
 
                     var cnv = JsonConvert.SerializeObject(res);
 
-                    await conn.Send(cnv);
+                    await conn.Send(cnv).ConfigureAwait(false);
                 }
                 else
                 {
-                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found")));
+                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found"))).ConfigureAwait(false);
                 }
             }
-            if (message.ToLower() == "stats" || message.ToLower() == "status")
+            if (message.StartsWith("roles:", StringComparison.InvariantCultureIgnoreCase))
             {
-                var mem = "";
+                ulong.TryParse(message.Replace("roles:", ""), out var guildid);
 
-                if (HardwareStats.Memory.GetMBUsage > 1024)
-                    mem = HardwareStats.Memory.GetGBUsage + "GB";
+                var gld = Client.GetGuild(guildid);
+                if (gld != null)
+                {
+                    List<WebSocketSnowFlake> snowflakes = new List<WebSocketSnowFlake>();
+
+                    foreach (var role in gld.Roles)
+                    {
+                        snowflakes.Add(new WebSocketSnowFlake
+                        {
+                            Name = role.Name,
+                            ID = role.Id
+                        });
+                    }
+
+                    var wsgld = new WebSocketSnowFlakes
+                    {
+                        Type = "roles",
+                        GuildID = guildid,
+                        Data = snowflakes
+                    };
+
+                    var res = EventResult.FromSuccess(wsgld);
+
+                    var cnv = JsonConvert.SerializeObject(res);
+
+                    await conn.Send(cnv).ConfigureAwait(false);
+                }
                 else
-                    mem = HardwareStats.Memory.GetMBUsage + "MB";
+                {
+                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found"))).ConfigureAwait(false);
+                }
+            }
+            if (message.StartsWith("tchannels:", StringComparison.InvariantCultureIgnoreCase))
+            {
+                ulong.TryParse(message.Replace("tchannels:", ""), out var guildid);
 
-                var rawjson = $"{{\"Skuld\":\"{SoftwareStats.Skuld.Key.Version.ToString()}\"]({SoftwareStats.Skuld.Value})," +
-                    $"\"Uptime\":\"{string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}\"," +
-                    $"\"Ping\":\"{Client.Latency}ms\"," +
+                var gld = Client.GetGuild(guildid);
+                if (gld != null)
+                {
+                    List<WebSocketSnowFlake> snowflakes = new List<WebSocketSnowFlake>();
+
+                    foreach (var role in gld.TextChannels)
+                    {
+                        snowflakes.Add(new WebSocketSnowFlake
+                        {
+                            Name = role.Name,
+                            ID = role.Id
+                        });
+                    }
+
+                    var wsgld = new WebSocketSnowFlakes
+                    {
+                        Type = "tchannels",
+                        GuildID = guildid,
+                        Data = snowflakes
+                    };
+
+                    var res = EventResult.FromSuccess(wsgld);
+
+                    var cnv = JsonConvert.SerializeObject(res);
+
+                    await conn.Send(cnv).ConfigureAwait(false);
+                }
+                else
+                {
+                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found"))).ConfigureAwait(false);
+                }
+            }
+            if (message.StartsWith("cchannels:", StringComparison.InvariantCultureIgnoreCase))
+            {
+                ulong.TryParse(message.Replace("cchannels:", ""), out var guildid);
+
+                var gld = Client.GetGuild(guildid);
+                if (gld != null)
+                {
+                    List<WebSocketSnowFlake> snowflakes = new List<WebSocketSnowFlake>();
+
+                    foreach (var role in gld.CategoryChannels)
+                    {
+                        snowflakes.Add(new WebSocketSnowFlake
+                        {
+                            Name = role.Name,
+                            ID = role.Id
+                        });
+                    }
+
+                    var wsgld = new WebSocketSnowFlakes
+                    {
+                        Type = "cchannels",
+                        GuildID = guildid,
+                        Data = snowflakes
+                    };
+
+                    var res = EventResult.FromSuccess(wsgld);
+
+                    var cnv = JsonConvert.SerializeObject(res);
+
+                    await conn.Send(cnv).ConfigureAwait(false);
+                }
+                else
+                {
+                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found"))).ConfigureAwait(false);
+                }
+            }
+            if (message.StartsWith("vchannels:", StringComparison.InvariantCultureIgnoreCase))
+            {
+                ulong.TryParse(message.Replace("vchannels:", "", StringComparison.InvariantCultureIgnoreCase), System.Globalization.NumberStyles.Integer, null, out var guildid);
+
+                var gld = Client.GetGuild(guildid);
+                if (gld != null)
+                {
+                    List<WebSocketSnowFlake> snowflakes = new List<WebSocketSnowFlake>();
+
+                    foreach (var role in gld.VoiceChannels)
+                    {
+                        snowflakes.Add(new WebSocketSnowFlake
+                        {
+                            Name = role.Name,
+                            ID = role.Id
+                        });
+                    }
+
+                    var wsgld = new WebSocketSnowFlakes
+                    {
+                        Type = "vchannels",
+                        GuildID = guildid,
+                        Data = snowflakes
+                    };
+
+                    var res = EventResult.FromSuccess(wsgld);
+
+                    var cnv = JsonConvert.SerializeObject(res);
+
+                    await conn.Send(cnv).ConfigureAwait(false);
+                }
+                else
+                {
+                    await conn.Send(JsonConvert.SerializeObject(EventResult.FromFailure("Guild not found"))).ConfigureAwait(false);
+                }
+            }
+            if (message.ToLowerInvariant() == "stats" || message.ToLowerInvariant() == "status")
+            {
+                string mem;
+                if (SkuldAppContext.Memory.GetMBUsage > 1024)
+                    mem = SkuldAppContext.Memory.GetGBUsage + "GB";
+                else
+                    mem = SkuldAppContext.Memory.GetMBUsage + "MB";
+
+                var rawjson = $"{{\"Skuld\":\"{SkuldAppContext.Skuld.Key.Version.ToString()}\"," +
+                    $"\"Uptime\":\"{$"{DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime):dd}d {DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime):hh}:{DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime):mm}"}\"," +
+                    $"\"Ping\":{Client.Latency}," +
                     $"\"Guilds\":{Client.Guilds.Count}," +
                     $"\"Users\":{BotService.Users}," +
                     $"\"Shards\":{Client.Shards.Count}," +
                     $"\"Commands\":{BotService.CommandService.Commands.Count()}," +
                     $"\"MemoryUsed\":\"{mem}\"}}";
 
-                await conn.Send(JsonConvert.SerializeObject(rawjson));
+                await conn.Send(JsonConvert.SerializeObject(rawjson)).ConfigureAwait(false);
             }
+        }
+
+        public void Dispose()
+        {
+            _server.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 }

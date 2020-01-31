@@ -1,17 +1,16 @@
 ﻿using Newtonsoft.Json;
 using Skuld.APIS.Social.Reddit.Models;
 using Skuld.APIS.Utilities;
-using Skuld.Core;
 using System;
 using System.Threading.Tasks;
 
 namespace Skuld.APIS.Social.Reddit
 {
-    public class RedditClient : BaseClient
+    public class RedditClient
     {
         private readonly RateLimiter rateLimiter;
 
-        public RedditClient() : base()
+        public RedditClient()
         {
             rateLimiter = new RateLimiter();
         }
@@ -25,12 +24,10 @@ namespace Skuld.APIS.Social.Reddit
             {
                 if (rateLimiter.IsRatelimited()) return null;
 
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("RedditGet", $"Attempting to access {subRedditName} for {amountOfPosts} posts", Discord.LogSeverity.Info));
                 var uri = new Uri("https://www.reddit.com/" + subRedditName + "/.json?limit=" + amountOfPosts);
-                var response = await ReturnStringAsync(uri);
+                var response = await HttpWebClient.ReturnStringAsync(uri);
                 if (!string.IsNullOrEmpty(response) || !string.IsNullOrWhiteSpace(response))
                 {
-                    await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("RedditGet", "I got a response from " + subRedditName, Discord.LogSeverity.Verbose));
                     return JsonConvert.DeserializeObject<SubReddit>(response);
                 }
                 else
@@ -38,9 +35,8 @@ namespace Skuld.APIS.Social.Reddit
                     throw new Exception("Empty response from " + uri);
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                await GenericLogger.AddToLogsAsync(new Core.Models.LogMessage("RedditGet", ex.Message, Discord.LogSeverity.Error, ex));
                 return null;
             }
         }

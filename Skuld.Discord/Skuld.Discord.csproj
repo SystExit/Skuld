@@ -1,21 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <AssemblyVersion>2020.1.116.0</AssemblyVersion>
+    <FileVersion>2020.1.116.0</FileVersion>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Akitaux.Twitch.Core" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.Helix" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.Pubsub" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.Rest" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.WebSocket" Version="0.1.0-build-00009" />
+    <PackageReference Include="DogStatsD-CSharp-Client" Version="4.0.0" />
+    <PackageReference Include="EmojiOne" Version="4.0.1" />
+    <PackageReference Include="NodaTime" Version="2.4.7" />
+    <PackageReference Include="Octokit" Version="0.36.0" />
   </ItemGroup>
   
   <ItemGroup>
     <ProjectReference Include="..\Skuld.APIS\Skuld.APIS.csproj" />
     <ProjectReference Include="..\Skuld.Core\Skuld.Core.csproj" />
-    <ProjectReference Include="..\Skuld.Database\Skuld.Database.csproj" />
+    <ProjectReference Include="..\Skuld.Models\Skuld.Core.Models.csproj" />
   </ItemGroup>
 
   <ItemGroup>

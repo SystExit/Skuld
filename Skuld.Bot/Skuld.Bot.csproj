@@ -2,36 +2,51 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
-    <Version>0.3.9.7</Version>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <Version>2020.01</Version>
     <StartupObject>Skuld.Bot.Program</StartupObject>
     <ApplicationIcon />
+    <AssemblyVersion>2020.1.242.0</AssemblyVersion>
+    <FileVersion>2020.1.242.0</FileVersion>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Akitaux.Twitch.Core" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.Helix" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.Pubsub" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.Rest" Version="0.1.0-build-00009" />
-    <PackageReference Include="Akitaux.Twitch.WebSocket" Version="0.1.0-build-00009" />
-    <PackageReference Include="Discord.Net" Version="2.0.2-dev-01059" />
+    <PackageReference Include="Akitaux.Twitch.Helix" Version="0.1.0-build-00012" />
+    <PackageReference Include="CoreCLR-NCalc" Version="2.2.70" />
+    <PackageReference Include="Discord.Net" Version="2.2.0-dev-20191226.1" />
+    <PackageReference Include="DogStatsD-CSharp-Client" Version="4.0.0" />
     <PackageReference Include="FIGlet.Net" Version="1.1.1" />
+    <PackageReference Include="Fleck" Version="1.1.0" />
     <PackageReference Include="IqdbApi" Version="1.4.0" />
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="7.11.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
-    <PackageReference Include="PokeApi.NET" Version="1.1.1" />
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="7.15.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="2.9.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="NodaTime" Version="2.4.7" />
+    <PackageReference Include="Octokit" Version="0.36.0" />
+    <PackageReference Include="PokeApi.NET" Version="1.1.2" />
     <PackageReference Include="SauceNET" Version="1.0.1" />
+    <PackageReference Include="System.Drawing.Common" Version="4.7.0" />
     <PackageReference Include="TraceMoe.NET" Version="1.0.5" />
+    <PackageReference Include="Weeb.net" Version="1.0.7" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Skuld.APIS\Skuld.APIS.csproj" />
+    <ProjectReference Include="..\Skuld.Core\Skuld.Core.csproj" />
     <ProjectReference Include="..\Skuld.Discord\Skuld.Discord.csproj" />
+    <ProjectReference Include="..\Skuld.Models\Skuld.Core.Models.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="Discord.Addons.Interactive">
       <HintPath>..\References\Discord.Addons.Interactive.dll</HintPath>
+    </Reference>
+    <Reference Include="Miki.API.Images">
+      <HintPath>..\References\Miki.API.Images.dll</HintPath>
     </Reference>
     <Reference Include="SteamStoreQuery">
       <HintPath>..\References\SteamStoreQuery.dll</HintPath>

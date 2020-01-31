@@ -2,9 +2,9 @@
 
 namespace Skuld.Bot
 {
-    class Program
+    internal class Program
     {
-        static void Main()
-            => new HostSerivce().CreateAsync().GetAwaiter().GetResult();
+        private static void Main(string[] args)
+            => HostSerivce.CreateAsync(args).GetAwaiter().GetResult();
     }
 }
