@@ -5,6 +5,7 @@ using Discord.Addons.Interactive;
 using Discord.WebSocket;
 using Imgur.API.Authentication.Impl;
 using IqdbApi;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Miki.API.Images;
 using Octokit;
@@ -52,6 +53,25 @@ namespace Skuld.Bot.Services
             {
                 Directory.CreateDirectory(SkuldAppContext.FontDirectory);
             }
+
+            if(args.Contains("--migrate"))
+            {
+                try
+                {
+                    var database = new SkuldDbContextFactory().CreateDbContext();
+
+                    database.Database.Migrate();
+
+                    var migrations = await database.Database.GetAppliedMigrationsAsync().ConfigureAwait(false);
+
+                    Log.Info("Framework", $"Migrated successfully, latest applied: {migrations.LastOrDefault()}");
+                }
+                catch(Exception ex)
+                {
+                    Log.Critical("Framework", ex.Message, ex);
+                }
+            }
+
             try
             {
                 {

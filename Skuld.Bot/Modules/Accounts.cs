@@ -4,6 +4,7 @@ using ImageMagick;
 using Microsoft.EntityFrameworkCore.Internal;
 using NodaTime;
 using Skuld.APIS;
+using Skuld.Bot.Extensions;
 using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
@@ -44,7 +45,7 @@ namespace Skuld.Bot.Commands
             var dbusr = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
             await
-                EmbedExtensions.FromMessage("SkuldBank - Account Information", $"{user.Mention} has {gld.MoneyIcon}{dbusr.Money.ToString("N0")} {gld.MoneyName}", Context)
+                EmbedExtensions.FromMessage("SkuldBank - Account Information", $"{user.Mention} has {gld.MoneyIcon}{dbusr.Money.ToFormattedString()} {gld.MoneyName}", Context)
             .QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
@@ -168,7 +169,7 @@ namespace Skuld.Bot.Commands
             }
 
             //Money
-            using (MagickImage label2 = new MagickImage($"label:{(await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{profileuser.Money.ToString("N0")}", new MagickReadSettings
+            using (MagickImage label2 = new MagickImage($"label:{(await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{profileuser.Money.ToFormattedString()}", new MagickReadSettings
             {
                 BackgroundColor = MagickColors.Transparent,
                 FillColor = MagickColors.White,
@@ -222,7 +223,7 @@ namespace Skuld.Bot.Commands
             {
                 (ulong, ulong) rank = ((ulong)rankraw.IndexOf(rankraw.FirstOrDefault(x => x.UserId == profileuser.Id)) + 1, (ulong)rankraw.Count());
 
-                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: {rank.Item1.ToString("N0")}/{rank.Item2.ToString("N0")}"));
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: {rank.Item1.ToFormattedString()}/{rank.Item2.ToFormattedString()}"));
             }
             else
             {
@@ -232,13 +233,13 @@ namespace Skuld.Bot.Commands
             image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel1, dailyText));
 
             //YLevel 2
-            image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel2, $"Pasta Karma: {Database.GetPastaKarma(profileuser.Id).ToString("N0")}"));
+            image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel2, $"Pasta Karma: {Database.GetPastaKarma(profileuser.Id).ToFormattedString()}"));
             var favcommand = (await Database.UserCommandUsage.AsAsyncEnumerable().Where(x => x.UserId == profileuser.Id).OrderByDescending(x => x.Usage).ToListAsync()).FirstOrDefault();
-            image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel2, $"Fav. Cmd: {(favcommand == null ? "N/A" : favcommand.Command)} ({(favcommand == null ? "0" : favcommand.Usage.ToString("N0"))})"));
+            image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel2, $"Fav. Cmd: {(favcommand == null ? "N/A" : favcommand.Command)} ({(favcommand == null ? "0" : favcommand.Usage.ToFormattedString())})"));
 
             //YLevel 3
-            image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToString("N0")} ({exp.TotalXP.ToString("N0")})"));
-            image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: {profileuser.Pats.ToString("N0")}/Patted: {profileuser.Patted.ToString("N0")}"));
+            image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToFormattedString()} ({exp.TotalXP.ToFormattedString()})"));
+            image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: {profileuser.Pats.ToFormattedString()}/Patted: {profileuser.Patted.ToFormattedString()}"));
 
             ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(exp.Level + 1, DiscordUtilities.PHI);
 
@@ -252,10 +253,10 @@ namespace Skuld.Bot.Commands
             image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, 473, mapped, 498));
 
             //Current XP
-            image.Draw(font, fontsize, encoding, new DrawableText(25, 493, (exp.XP).ToString("N0") + "XP"));
+            image.Draw(font, fontsize, encoding, new DrawableText(25, 493, (exp.XP).ToFormattedString() + "XP"));
 
             //XP To Next
-            using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToString("N0")}XP", new MagickReadSettings
+            using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToFormattedString()}XP", new MagickReadSettings
             {
                 BackgroundColor = MagickColors.Transparent,
                 FillColor = MagickColors.Black,
@@ -362,7 +363,7 @@ namespace Skuld.Bot.Commands
                 var dbGuild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
                 await
-                    EmbedExtensions.FromMessage("Skuld Bank - Transaction", $"{Context.User.Mention} just gave {user.Mention} {dbGuild.MoneyIcon}{amount.ToString("N0")}", Context)
+                    EmbedExtensions.FromMessage("Skuld Bank - Transaction", $"{Context.User.Mention} just gave {user.Mention} {dbGuild.MoneyIcon}{amount.ToFormattedString()}", Context)
                     .QueueMessageAsync(Context).ConfigureAwait(false);
 
                 DogStatsd.Increment("bank.transactions");
@@ -508,7 +509,7 @@ namespace Skuld.Bot.Commands
             }
 
             image.Draw(font, fontmed, encoding, white, new DrawableText(220, 170, $"Rank {index + 1}/{experiences.Count()}"));
-            image.Draw(font, fontmed, encoding, white, new DrawableText(220, 210, $"Level: {xp.Level} ({xp.TotalXP.ToString("N0")})"));
+            image.Draw(font, fontmed, encoding, white, new DrawableText(220, 210, $"Level: {xp.Level} ({xp.TotalXP.ToFormattedString()})"));
 
             ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(xp.Level + 1, DiscordUtilities.PHI);
 
@@ -524,10 +525,10 @@ namespace Skuld.Bot.Commands
             image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, innerHeight, mapped, 278));
 
             //Current XP
-            image.Draw(font, fontmedd, encoding, new DrawableText(25, 277, (xp.XP).ToString("N0") + "XP"));
+            image.Draw(font, fontmedd, encoding, new DrawableText(25, 277, (xp.XP).ToFormattedString() + "XP"));
 
             //XP To Next
-            using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToString("N0")}XP", new MagickReadSettings
+            using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToFormattedString()}XP", new MagickReadSettings
             {
                 BackgroundColor = MagickColors.Transparent,
                 FillColor = MagickColors.Black,
@@ -981,7 +982,7 @@ namespace Skuld.Bot.Commands
             image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel2, $"Fav. Cmd: profile (123,456,789)"));
 
             //YLevel 3
-            image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToString("N0")} ({exp.TotalXP.ToString("N0")})"));
+            image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToFormattedString()} ({exp.TotalXP.ToFormattedString()})"));
             image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: 7,777/Patted: 7,777"));
 
             ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(exp.Level + 1, DiscordUtilities.PHI);
@@ -996,10 +997,10 @@ namespace Skuld.Bot.Commands
             image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, 473, mapped, 498));
 
             //Current XP
-            image.Draw(font, fontsize, encoding, new DrawableText(25, 493, (exp.XP).ToString("N0") + "XP"));
+            image.Draw(font, fontsize, encoding, new DrawableText(25, 493, (exp.XP).ToFormattedString() + "XP"));
 
             //XP To Next
-            using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToString("N0")}XP", new MagickReadSettings
+            using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToFormattedString()}XP", new MagickReadSettings
             {
                 BackgroundColor = MagickColors.Transparent,
                 FillColor = MagickColors.Black,

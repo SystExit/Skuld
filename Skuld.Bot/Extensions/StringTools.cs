@@ -107,6 +107,15 @@ namespace Skuld.Bot.Extensions
             return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
         }
 
+        public static string ToFormattedString(this ulong Value)
+            => Value.ToString("N0");
+        public static string ToFormattedString(this long Value)
+            => Value.ToString("N0");
+        public static string ToFormattedString(this int Value)
+            => Value.ToString("N0");
+        public static string ToFormattedString(this uint Value)
+            => Value.ToString("N0");
+
         public static string ToRegionalIndicator(this string value)
         {
             StringBuilder ret = new StringBuilder();

@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Newtonsoft.Json;
+using Skuld.Bot.Extensions;
 using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
@@ -175,7 +176,7 @@ namespace Skuld.Bot.Commands
 
             await usr.GrantExperienceAsync(amount, Context.Guild, true).ConfigureAwait(false);
 
-            await EmbedExtensions.FromSuccess($"Gave {user.Mention} {amount.ToString("N0")}xp", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            await EmbedExtensions.FromSuccess($"Gave {user.Mention} {amount.ToFormattedString()}xp", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         #endregion BotAdmin
@@ -566,7 +567,7 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            await $"User {user.Username} now has: {(await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{usr.Money.ToString("N0")}".QueueMessageAsync(Context).ConfigureAwait(false);
+            await $"User {user.Username} now has: {(await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{usr.Money.ToFormattedString()}".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("leave"), Summary("Leaves a server by id")]

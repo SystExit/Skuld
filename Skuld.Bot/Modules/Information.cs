@@ -68,20 +68,25 @@ namespace Skuld.Bot.Commands
         public async Task ServerRoles()
         {
             var guild = Context.Guild;
-            var roles = guild.Roles;
+            var roles = guild.Roles.OrderByDescending(x=>x.Position);
             string serverroles = null;
             foreach (var item in roles)
             {
                 string thing = item.Name.TrimStart('@');
-                if (item == guild.Roles.Last())
-                { serverroles += thing; }
-                else
-                { serverroles += thing + ", "; }
+
+                serverroles += thing;
+
+                if (item != guild.Roles.Last())
+                { 
+                    serverroles += ", ";
+                }
             }
             string message = null;
             message += $"Roles of __**{guild.Name}**__ ({roles.Count()})\n" + Environment.NewLine;
             if (roles.Any())
-            { message += "`" + serverroles + "`"; }
+            {
+                message += "`" + serverroles + "`";
+            }
             await message.QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
@@ -108,10 +113,23 @@ namespace Skuld.Bot.Commands
         {
             var memberString = new StringBuilder();
 
+            var orderedRoles = Context.Guild.Roles.OrderBy(x => x.Position);
+
+            IRole previousRole = null;
+            if(role != orderedRoles.FirstOrDefault())
+            {
+                previousRole = orderedRoles.ElementAtOrDefault(role.Position - 1);
+            }
+            IRole nextRole = null;
+            if(role != orderedRoles.LastOrDefault())
+            {
+                nextRole = orderedRoles.ElementAtOrDefault(role.Position + 1);
+            }
+
+            var members = await Context.Guild.GetRoleMembersAsync(role).ConfigureAwait(false);
+
             if (role != Context.Guild.EveryoneRole)
             {
-                var members = await Context.Guild.GetRoleMembersAsync(role).ConfigureAwait(false);
-
                 foreach (var member in members)
                 {
                     memberString.Append(member.Mention);
@@ -129,6 +147,8 @@ namespace Skuld.Bot.Commands
                 memberString.Append("😝");
             }
 
+
+
             await
                 new EmbedBuilder()
                     .AddFooter(Context)
@@ -136,13 +156,13 @@ namespace Skuld.Bot.Commands
                     .WithColor(role.Color)
                     .AddAuthor(Context.Client)
                     .AddInlineField("Hoisted", role.IsHoisted)
-                    .AddInlineField("Managed", role.IsManaged)
+                    .AddInlineField("Managed By Discord", role.IsManaged)
                     .AddInlineField("Mentionable", role.IsMentionable)
-                    .AddInlineField("Position", role.Position)
+                    .AddInlineField("Position", $"{role.Position}{(previousRole != null ? $"\nBelow {previousRole.Mention}({previousRole.Position})" : "")}{(nextRole != null ? $"\nAbove {nextRole.Mention}({nextRole.Position})" : "")}")
                     .AddInlineField("Color", role.Color.ToHex())
-                    .AddField("Members", memberString)
+                    .AddField("Members", memberString.Length <= 1024 ? memberString.ToString() : members.Count.ToFormattedString())
                     .AddField("Created", role.CreatedAt)
-                .QueueMessageAsync(Context).ConfigureAwait(false);
+            .QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("screenshare"), Summary("Get's the screenshare channel link"), RequireContext(ContextType.Guild), RequireGuildVoiceChannel]
@@ -605,45 +625,52 @@ namespace Skuld.Bot.Commands
             {
                 var r = iamlist.FirstOrDefault(x => x.RoleId == role.Id);
 
-                var didpass = CheckIAmValidAsync(await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false), Context.User as IGuildUser, await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild, r);
-
-                if (didpass != IAmFail.Success)
+                if (r != null)
                 {
-                    await EmbedExtensions.FromError(GetErrorIAmFail(didpass, r, await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild), Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    var didpass = CheckIAmValidAsync(await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false), Context.User as IGuildUser, await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild, r);
+
+                    if (didpass != IAmFail.Success)
+                    {
+                        await EmbedExtensions.FromError(GetErrorIAmFail(didpass, r, await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild), Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        if ((Context.User as IGuildUser).RoleIds.Any(x => x == r.RoleId))
+                        {
+                            await EmbedExtensions.FromError("You already have that role", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            return;
+                        }
+
+                        try
+                        {
+                            var ro = Context.Guild.GetRole(r.RoleId);
+                            await (Context.User as IGuildUser).AddRoleAsync(ro).ConfigureAwait(false);
+                            await EmbedExtensions.FromSuccess($"You now have the role \"{ro.Name}\"", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+
+                            if (r.Price > 0)
+                            {
+                                (await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false)).Money -= (ulong)r.Price;
+
+                                await Database.SaveChangesAsync().ConfigureAwait(false);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            if (ex.Message.Contains("403"))
+                            {
+                                await EmbedExtensions.FromError("I need to be above the role and have the permission `MANAGE_ROLES` in order to give the role", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            }
+                            Log.Error(SkuldAppContext.GetCaller(), ex.Message, ex);
+                        }
+                    }
                 }
                 else
                 {
-                    if ((Context.User as IGuildUser).RoleIds.Any(x => x == r.RoleId))
-                    {
-                        await EmbedExtensions.FromError("You already have that role", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                        return;
-                    }
-
-                    try
-                    {
-                        var ro = Context.Guild.GetRole(r.RoleId);
-                        await (Context.User as IGuildUser).AddRoleAsync(ro).ConfigureAwait(false);
-                        await EmbedExtensions.FromSuccess($"You now have the role \"{ro.Name}\"", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-
-                        if (r.Price > 0)
-                        {
-                            (await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false)).Money -= (ulong)r.Price;
-
-                            await Database.SaveChangesAsync().ConfigureAwait(false);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        if (ex.Message.Contains("403"))
-                        {
-                            await EmbedExtensions.FromError("I need to be above the role as well as have `MANAGE_ROLES` in order to give the role", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                        }
-                        else
-                        {
-                            await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                        }
-                        Log.Error(SkuldAppContext.GetCaller(), ex.Message, ex);
-                    }
+                    await EmbedExtensions.FromError("Role isn\'t configured to be self assignable", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
             else
@@ -664,28 +691,34 @@ namespace Skuld.Bot.Commands
 
             if (iamlist.Any(x => x.RoleId == role.Id))
             {
-                try
+                if (g.RoleIds.Contains(role.Id))
                 {
-                    await g.RemoveRoleAsync(role).ConfigureAwait(false);
-                    await EmbedExtensions.FromSuccess($"You are no longer \"{role.Name}\"", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    try
+                    {
+                        await g.RemoveRoleAsync(role).ConfigureAwait(false);
+                        await EmbedExtensions.FromSuccess($"You are no longer \"{role.Name}\"", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (ex.Message.Contains("403"))
+                        {
+                            await EmbedExtensions.FromError($"Ensure that I have `MANAGE_ROLES` and that I am above the role \"{role.Name}\" in order to remove it", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        }
+                        Log.Error(SkuldAppContext.GetCaller(), ex.Message, ex);
+                    }
                 }
-                catch (Exception ex)
+                else
                 {
-                    if (ex.Message.Contains("403"))
-                    {
-                        await EmbedExtensions.FromError($"Ensure that I have `MANAGE_ROLES` and that I am above the role \"{role.Name}\" in order to remove it", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    }
-                    Log.Error(SkuldAppContext.GetCaller(), ex.Message, ex);
+                    await EmbedExtensions.FromInfo("You don\'t have that role", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
             else
             {
-                await EmbedExtensions.FromInfo("You already don\'t have that role", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                return;
+                await EmbedExtensions.FromError("Role isn\'t configured to be self assignable", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 

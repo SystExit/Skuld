@@ -58,11 +58,13 @@ namespace Skuld.Discord.Extensions
         public static EmbedBuilder AddAuthor(this EmbedBuilder builder, IDiscordClient client)
             => builder.WithAuthor(client.CurrentUser.Username,
                                   client.CurrentUser.GetAvatarUrl() ?? client.CurrentUser.GetDefaultAvatarUrl(),
-                                  SkuldAppContext.Website);
+                                  SkuldAppContext.Website)
+                .WithCurrentTimestamp();
 
         public static EmbedBuilder AddFooter(this EmbedBuilder builder, ICommandContext context)
             => builder.WithFooter($"Command executed for: {context.User.Username}#{context.User.Discriminator}",
-                                  context.User.GetAvatarUrl() ?? context.User.GetDefaultAvatarUrl());
+                                  context.User.GetAvatarUrl() ?? context.User.GetDefaultAvatarUrl())
+                .WithCurrentTimestamp();
 
         public static EmbedBuilder WithRandomColor(this EmbedBuilder builder)
             => builder.WithColor(RandomEmbedColor());

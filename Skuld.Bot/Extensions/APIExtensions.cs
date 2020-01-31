@@ -208,7 +208,7 @@ namespace Skuld.Bot.Extensions
                     });
                     embed.AddInlineField("Playing", resp.Data.FirstOrDefault().Name);*/
                 }
-                embed.AddInlineField("Viewers 👀👀", $"{((stream.ViewerCount.IsSpecified ? stream.ViewerCount.Value : -1) > -1 ? stream.ViewerCount.Value.ToString("N0") : "N/A")}");
+                embed.AddInlineField("Viewers 👀👀", $"{((stream.ViewerCount.IsSpecified ? stream.ViewerCount.Value : -1) > -1 ? stream.ViewerCount.Value.ToFormattedString() : "N/A")}");
 
                 if (stream.ThumbnailUrl.IsSpecified)
                 {
@@ -244,7 +244,7 @@ namespace Skuld.Bot.Extensions
             }
             else
             {
-                embed.AddInlineField("Total Views", channel.TotalViews.Value.ToString("N0"));
+                embed.AddInlineField("Total Views", channel.TotalViews.Value.ToFormattedString());
             }
 
             return embed;

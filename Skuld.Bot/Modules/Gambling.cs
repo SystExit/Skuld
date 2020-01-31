@@ -269,7 +269,7 @@ namespace Skuld.Bot.Commands
 
                 if (user.Money < bet.Value)
                 {
-                    await EmbedExtensions.FromError("Rock Paper Scissors", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToString("N0")} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError("Rock Paper Scissors", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
 
@@ -426,7 +426,7 @@ namespace Skuld.Bot.Commands
             {
                 if (user.Money < bet.Value)
                 {
-                    await EmbedExtensions.FromError("Slots", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToString("N0")} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError("Slots", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
 
@@ -462,7 +462,7 @@ namespace Skuld.Bot.Commands
 
                 if (percentageMod == 0.0d)
                 {
-                    await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou lost {bet.Value.ToString("N0")}! You now have {MoneyPrefix}`{user.Money}`", Color.Red, Context).Build()).ConfigureAwait(false);
+                    await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou lost {bet.Value.ToFormattedString()}! You now have {MoneyPrefix}`{user.Money}`", Color.Red, Context).Build()).ConfigureAwait(false);
                 }
                 else
                 {
@@ -470,7 +470,7 @@ namespace Skuld.Bot.Commands
 
                     await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                    await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou won {amount.ToString("N0")}! You now have {MoneyPrefix}`{user.Money}`", Color.Green, Context).Build()).ConfigureAwait(false);
+                    await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou won {amount.ToFormattedString()}! You now have {MoneyPrefix}`{user.Money}`", Color.Green, Context).Build()).ConfigureAwait(false);
                 }
             }
             else
@@ -616,7 +616,7 @@ namespace Skuld.Bot.Commands
 
                             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                            await EmbedExtensions.FromSuccess("Mia", $"You Win! You now have {MoneyPrefix}{user.Money.ToString("N0")}", Context)
+                            await EmbedExtensions.FromSuccess("Mia", $"You Win! You now have {MoneyPrefix}{user.Money.ToFormattedString()}", Context)
                                 .AddInlineField(Context.Client.CurrentUser.Username, botRoll)
                                 .AddInlineField(Context.User.Username, plaRoll)
                                 .QueueMessageAsync(Context).ConfigureAwait(false);
@@ -635,7 +635,7 @@ namespace Skuld.Bot.Commands
                     {
                         if (bet.HasValue)
                         {
-                            await EmbedExtensions.FromError("Mia", $"You Lost! You now have {MoneyPrefix}{user.Money.ToString("N0")}", Context)
+                            await EmbedExtensions.FromError("Mia", $"You Lost! You now have {MoneyPrefix}{user.Money.ToFormattedString()}", Context)
                                 .AddInlineField(Context.Client.CurrentUser.Username, botRoll)
                                 .AddInlineField(Context.User.Username, plaRoll)
                                 .QueueMessageAsync(Context).ConfigureAwait(false);
