@@ -145,7 +145,7 @@ namespace Skuld.Bot.Commands
             {
                 exp.TotalXP += experience.TotalXP;
                 exp.XP += experience.XP;
-                exp.Level += exp.Level;
+                exp.Level += experience.Level;
             }
 
             int ylevel1 = 365, ylevel2 = 405, ylevel3 = 445;

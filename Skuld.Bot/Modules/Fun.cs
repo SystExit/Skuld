@@ -420,8 +420,8 @@ namespace Skuld.Bot.Commands
                             else
                                 embed.AddField("Creator", $"Unknown User ({pasta.OwnerId})");
                             embed.AddField("Created", pasta.Created.FromEpoch().ToString(new CultureInfo((await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false)).Language)), inline: true);
-                            //embed.AddField("UpVotes", ":arrow_double_up: " + pasta.Upvotes, inline: true);
-                            //embed.AddField("DownVotes", ":arrow_double_down: " + pasta.Downvotes, inline: true);
+                            embed.AddField("UpVotes", ":arrow_double_up: " + Database.PastaVotes.ToList().Count(x=>x.PastaId == pasta.Id && x.Upvote));
+                            embed.AddField("DownVotes", ":arrow_double_down: " + Database.PastaVotes.ToList().Count(x => x.PastaId == pasta.Id && !x.Upvote));
 
                             await embed.QueueMessageAsync(Context).ConfigureAwait(false);
                         }
@@ -429,31 +429,45 @@ namespace Skuld.Bot.Commands
 
                     case "upvote":
                         {
-                            /*var result = await await Database.GetUserAsync(Context.User).CastPastaVoteAsync(pastaLocal, true);
-
-                            if (result.Successful)
+                            var vote = Database.PastaVotes.ToList().FirstOrDefault(x => x.VoterId == Context.User.Id && x.PastaId == pasta.Id);
+                            if (vote == null)
                             {
-                                await $"Added your vote to `{pastaLocal.Name}`".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
+                                Database.PastaVotes.Add(new PastaVotes
+                                {
+                                    PastaId = pasta.Id,
+                                    Upvote = true,
+                                    VoterId = Context.User.Id
+                                });
+                                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                                await EmbedExtensions.FromSuccess("Pasta Kitchen", "Successfully casted your vote", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                             }
                             else
                             {
-                                await result.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                            }*/
+                                await EmbedExtensions.FromError("Pasta Kitchen", $"You have already voted for \"{pasta.Name}\"", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            }
                         }
                         break;
 
                     case "downvote":
                         {
-                            /*var result = await await Database.GetUserAsync(Context.User).CastPastaVoteAsync(pastaLocal, false);
-
-                            if (result.Successful)
+                            var vote = Database.PastaVotes.ToList().FirstOrDefault(x => x.VoterId == Context.User.Id && x.PastaId == pasta.Id);
+                            if (vote == null)
                             {
-                                await $"Added your vote to `{pastaLocal.Name}`".QueueMessage(Discord.Models.MessageType.Success, Context.User, Context.Channel);
+                                Database.PastaVotes.Add(new PastaVotes
+                                {
+                                    PastaId = pasta.Id,
+                                    Upvote = false,
+                                    VoterId = Context.User.Id
+                                });
+                                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                                await EmbedExtensions.FromSuccess("Pasta Kitchen", "Successfully casted your vote", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                             }
                             else
                             {
-                                await result.Error.QueueMessage(Discord.Models.MessageType.Failed, Context.User, Context.Channel);
-                            }*/
+                                await EmbedExtensions.FromError("Pasta Kitchen", $"You have already voted for \"{pasta.Name}\"", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            }
                         }
                         break;
 

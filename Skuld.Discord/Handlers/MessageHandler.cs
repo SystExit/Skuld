@@ -215,7 +215,7 @@ namespace Skuld.Discord.Handlers
                     if (suser != null && suser.Flags.IsBitSet(DiscordUtilities.Banned) && (!suser.Flags.IsBitSet(DiscordUtilities.BotCreator) || !suser.Flags.IsBitSet(DiscordUtilities.BotAdmin))) return;
                     if (!suser.IsUpToDate(message.Author))
                     {
-                        suser.AvatarUrl = new Uri(message.Author.GetAvatarUrl() ?? message.Author.GetDefaultAvatarUrl());
+                        suser.AvatarUrl = message.Author.GetAvatarUrl() ?? message.Author.GetDefaultAvatarUrl();
                         suser.Username = message.Author.Username;
                         await Database.SaveChangesAsync().ConfigureAwait(false);
                     }

@@ -377,7 +377,7 @@ namespace Skuld.Discord.Services
 
                 var user = await db.InsertOrGetUserAsync(arg2).ConfigureAwait(false);
 
-                user.AvatarUrl = new Uri(arg2.GetAvatarUrl() ?? arg2.GetDefaultAvatarUrl());
+                user.AvatarUrl = arg2.GetAvatarUrl() ?? arg2.GetDefaultAvatarUrl();
 
                 await db.SaveChangesAsync().ConfigureAwait(false);
             }
