@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
+    [Group, RequireEnabledModule]
     public class Gambling : ModuleBase<ShardedCommandContext>
     {
         public Locale Locale { get; set; }
@@ -242,6 +243,12 @@ namespace Skuld.Bot.Commands
         [Command("rps")]
         public async Task RPS(string shoot, ulong? bet = null)
         {
+            if (bet.HasValue && bet.Value <= 0)
+            {
+                await EmbedExtensions.FromError("Rock Paper Scissors", $"Can't bet 0", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+
             using var Database = new SkuldDbContextFactory().CreateDbContext();
             var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
@@ -407,6 +414,12 @@ namespace Skuld.Bot.Commands
         [Command("slots")]
         public async Task Slots(ulong? bet = null)
         {
+            if (bet.HasValue && bet.Value <= 0)
+            {
+                await EmbedExtensions.FromError("Slots", $"Can't bet 0", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+
             using var Database = new SkuldDbContextFactory().CreateDbContext();
             var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
@@ -559,6 +572,34 @@ namespace Skuld.Bot.Commands
         [Command("mia"), Summary("Play a game of mia")]
         public async Task Mia(ulong? bet = null)
         {
+            if(bet.HasValue && bet.Value <= 0)
+            {
+                await EmbedExtensions.FromError("Mia", $"Can't bet 0", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            string MoneyPrefix;
+
+            if (!Context.IsPrivate)
+            {
+                var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+                MoneyPrefix = guild.MoneyIcon;
+            }
+            else
+            {
+                MoneyPrefix = MessageHandler.cmdConfig.MoneyIcon;
+            }
+
+            var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+
+            if (user.Money < bet.Value)
+            {
+                await EmbedExtensions.FromError("Mia", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+
             var bot = new Dice(2, BotService.Services.GetRequiredService<Random>());
             var player = new Dice(2, BotService.Services.GetRequiredService<Random>());
 
@@ -583,28 +624,6 @@ namespace Skuld.Bot.Commands
             plaRoll = plaRoll[0..^2];
 
             var gameresult = DidPlayerWin(bot.GetDies(), player.GetDies());
-
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-            var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-
-            if (bet.HasValue)
-            {
-                user.Money -= bet.Value;
-
-                await Database.SaveChangesAsync().ConfigureAwait(false);
-            }
-
-            string MoneyPrefix;
-
-            if (!Context.IsPrivate)
-            {
-                var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-                MoneyPrefix = guild.MoneyIcon;
-            }
-            else
-            {
-                MoneyPrefix = MessageHandler.cmdConfig.MoneyIcon;
-            }
 
             switch (gameresult)
             {
@@ -635,6 +654,10 @@ namespace Skuld.Bot.Commands
                     {
                         if (bet.HasValue)
                         {
+                            user.Money -= bet.Value;
+
+                            await Database.SaveChangesAsync().ConfigureAwait(false);
+
                             await EmbedExtensions.FromError("Mia", $"You Lost! You now have {MoneyPrefix}{user.Money.ToFormattedString()}", Context)
                                 .AddInlineField(Context.Client.CurrentUser.Username, botRoll)
                                 .AddInlineField(Context.User.Username, plaRoll)

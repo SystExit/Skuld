@@ -110,143 +110,154 @@ namespace Skuld.Discord.Services
         {
             DogStatsd.Increment("messages.reactions.added");
 
-            if (arg3.User.IsSpecified)
+            try
             {
-                var usr = arg3.User.GetValueOrDefault(null);
-                if (usr != null)
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                User user = null;
+
+                if (arg3.User.IsSpecified)
                 {
-                    if (usr.IsBot || usr.IsWebhook) return;
-                }
-            }
-
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            User user = null;
-
-            if (arg3.User.IsSpecified)
-            {
-                user = await Database.GetOrInsertUserAsync(arg3.User.Value).ConfigureAwait(false);
-            }
-
-            var guild = BotService.DiscordClient.Guilds.FirstOrDefault(x => x.TextChannels.FirstOrDefault(z => z.Id == arg2.Id) != null);
-            var feats = Database.Features.FirstOrDefault(x => x.Id == guild.Id);
-
-            if (feats.Pinning)
-            {
-                var pins = await arg2.GetPinnedMessagesAsync();
-
-                if (pins.Count < 50)
-                {
-                    var dldedmsg = await arg1.GetOrDownloadAsync();
-
-                    int pinboardThreshold = Configuration.PinboardThreshold;
-                    int pinboardReactions = dldedmsg.Reactions.FirstOrDefault(x => x.Key.Name == "📌").Value.ReactionCount;
-
-                    if (pinboardReactions >= pinboardThreshold)
+                    var usr = arg3.User.GetValueOrDefault(null);
+                    if (usr != null)
                     {
-                        var now = dldedmsg.CreatedAt;
-                        var dt = DateTime.UtcNow.AddDays(-Configuration.PinboardDateLimit);
-                        if ((now - dt).TotalDays > 0)
-                        {
-                            if (!dldedmsg.IsPinned)
-                            {
-                                await dldedmsg.PinAsync();
+                        if (usr.IsBot || usr.IsWebhook) return;
+                        user = await Database.GetOrInsertUserAsync(arg3.User.Value).ConfigureAwait(false);
+                    }
+                }
 
-                                Log.Info("PinBoard", "Message reached threshold, pinned a message");
+                if(arg2 is IGuildChannel)
+                {
+                    var guild = BotService.DiscordClient.Guilds.FirstOrDefault(x => x.TextChannels.FirstOrDefault(z => z.Id == arg2.Id) != null);
+
+                    if (guild != null)
+                    {
+                        var feats = Database.Features.FirstOrDefault(x => x.Id == guild.Id);
+
+                        if (feats.Pinning)
+                        {
+                            var pins = await arg2.GetPinnedMessagesAsync();
+
+                            if (pins.Count < 50)
+                            {
+                                var dldedmsg = await arg1.GetOrDownloadAsync();
+
+                                int pinboardThreshold = Configuration.PinboardThreshold;
+                                int pinboardReactions = dldedmsg.Reactions.FirstOrDefault(x => x.Key.Name == "📌").Value.ReactionCount;
+
+                                if (pinboardReactions >= pinboardThreshold)
+                                {
+                                    var now = dldedmsg.CreatedAt;
+                                    var dt = DateTime.UtcNow.AddDays(-Configuration.PinboardDateLimit);
+                                    if ((now - dt).TotalDays > 0)
+                                    {
+                                        if (!dldedmsg.IsPinned)
+                                        {
+                                            await dldedmsg.PinAsync();
+
+                                            Log.Info("PinBoard", "Message reached threshold, pinned a message");
+                                        }
+                                    }
+                                }
+
+                                await dldedmsg.Channel.SendMessageAsync(
+                                    guild.Owner.Mention,
+                                    false,
+                                    new EmbedBuilder()
+                                        .AddAuthor(BotService.DiscordClient)
+                                        .WithDescription($"Can't pin a message in this channel, please clean out some pins.")
+                                        .WithColor(Color.Red)
+                                        .Build()
+                                ).ConfigureAwait(false);
                             }
                         }
+
                     }
-
-                    await dldedmsg.Channel.SendMessageAsync(
-                        guild.Owner.Mention,
-                        false,
-                        new EmbedBuilder()
-                            .AddAuthor(BotService.DiscordClient)
-                            .WithDescription($"Can't pin a message in this channel, please clean out some pins.")
-                            .WithColor(Color.Red)
-                            .Build()
-                    ).ConfigureAwait(false);
                 }
-            }
 
-            if (arg2.Id == Configuration.IssueChannel && user.Flags.IsBitSet(DiscordUtilities.BotCreator))
-            {
-                var msg = await arg1.GetOrDownloadAsync().ConfigureAwait(false);
-
-                var message = Database.Issues.FirstOrDefault(x => x.IssueChannelMessageId == arg1.Id);
-                if (message != null)
+                if (arg2.Id == Configuration.IssueChannel && user.Flags.IsBitSet(DiscordUtilities.BotCreator))
                 {
-                    var emote = arg3.Emote as Emote;
+                    var msg = await arg1.GetOrDownloadAsync().ConfigureAwait(false);
 
-                    if (emote.Id == DiscordUtilities.Tick_Emote.Id)
+                    var message = Database.Issues.FirstOrDefault(x => x.IssueChannelMessageId == arg1.Id);
+                    if (message != null)
                     {
-                        if (!message.HasSent)
+                        var emote = arg3.Emote as Emote;
+
+                        if (emote.Id == DiscordUtilities.Tick_Emote.Id)
                         {
-                            try
+                            if (!message.HasSent)
                             {
-                                var newissue = new Octokit.NewIssue(message.Title)
-                                {
-                                    Body = message.Body
-                                };
-
-                                newissue.Assignees.Add("exsersewo");
-                                newissue.Labels.Add("From Command");
-
-                                var issue = await BotService.Services.GetRequiredService<Octokit.GitHubClient>().Issue.Create(Configuration.GithubRepository, newissue).ConfigureAwait(false);
-
                                 try
                                 {
-                                    await BotService.DiscordClient.GetUser(message.SubmitterId).SendMessageAsync("", false,
-                                        new EmbedBuilder()
-                                            .WithTitle("Good News!")
-                                            .AddAuthor(BotService.DiscordClient)
-                                            .WithDescription($"Your issue:\n\"[{newissue.Title}]({issue.HtmlUrl})\"\n\nhas been accepted")
-                                            .WithColor(EmbedExtensions.RandomEmbedColor())
-                                        .Build()
-                                    );
+                                    var newissue = new Octokit.NewIssue(message.Title)
+                                    {
+                                        Body = message.Body
+                                    };
+
+                                    newissue.Assignees.Add("exsersewo");
+                                    newissue.Labels.Add("From Command");
+
+                                    var issue = await BotService.Services.GetRequiredService<Octokit.GitHubClient>().Issue.Create(Configuration.GithubRepository, newissue).ConfigureAwait(false);
+
+                                    try
+                                    {
+                                        await BotService.DiscordClient.GetUser(message.SubmitterId).SendMessageAsync("", false,
+                                            new EmbedBuilder()
+                                                .WithTitle("Good News!")
+                                                .AddAuthor(BotService.DiscordClient)
+                                                .WithDescription($"Your issue:\n\"[{newissue.Title}]({issue.HtmlUrl})\"\n\nhas been accepted")
+                                                .WithColor(EmbedExtensions.RandomEmbedColor())
+                                            .Build()
+                                        );
+                                    }
+                                    catch { }
+
+                                    await msg.ModifyAsync(x =>
+                                    {
+                                        x.Embed = msg.Embeds.ElementAt(0)
+                                        .ToEmbedBuilder()
+                                        .AddField("Sent", DiscordUtilities.Tick_Emote.ToString())
+                                        .Build();
+                                    }).ConfigureAwait(false);
+
+                                    message.HasSent = true;
+
+                                    await Database.SaveChangesAsync().ConfigureAwait(false);
                                 }
-                                catch { }
-
-                                await msg.ModifyAsync(x =>
+                                catch (Exception ex)
                                 {
-                                    x.Embed = msg.Embeds.ElementAt(0)
-                                    .ToEmbedBuilder()
-                                    .AddField("Sent", DiscordUtilities.Tick_Emote.ToString())
-                                    .Build();
-                                }).ConfigureAwait(false);
-
-                                message.HasSent = true;
-
-                                await Database.SaveChangesAsync().ConfigureAwait(false);
-                            }
-                            catch (Exception ex)
-                            {
-                                Log.Error("Git-" + SkuldAppContext.GetCaller(), ex.Message, ex);
+                                    Log.Error("Git-" + SkuldAppContext.GetCaller(), ex.Message, ex);
+                                }
                             }
                         }
-                    }
-                    else if (emote.Id == DiscordUtilities.Cross_Emote.Id)
-                    {
-                        Database.Issues.Remove(message);
-
-                        await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                        await msg.DeleteAsync().ConfigureAwait(false);
-
-                        try
+                        else if (emote.Id == DiscordUtilities.Cross_Emote.Id)
                         {
-                            await BotService.DiscordClient.GetUser(message.SubmitterId).SendMessageAsync("", false,
-                                new EmbedBuilder()
-                                    .WithTitle("Bad News")
-                                    .AddAuthor(BotService.DiscordClient)
-                                    .WithDescription($"Your issue:\n\"{message.Title}\"\n\nhas been declined. If you would like to know why, send: {arg3.User.Value.FullName()} as message")
-                                    .WithColor(EmbedExtensions.RandomEmbedColor())
-                                .Build()
-                            );
+                            Database.Issues.Remove(message);
+
+                            await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                            await msg.DeleteAsync().ConfigureAwait(false);
+
+                            try
+                            {
+                                await BotService.DiscordClient.GetUser(message.SubmitterId).SendMessageAsync("", false,
+                                    new EmbedBuilder()
+                                        .WithTitle("Bad News")
+                                        .AddAuthor(BotService.DiscordClient)
+                                        .WithDescription($"Your issue:\n\"{message.Title}\"\n\nhas been declined. If you would like to know why, send: {arg3.User.Value.FullName()} as message")
+                                        .WithColor(EmbedExtensions.RandomEmbedColor())
+                                    .Build()
+                                );
+                            }
+                            catch { }
                         }
-                        catch { }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                Log.Critical(Key, ex.Message, ex);
             }
         }
 

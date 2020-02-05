@@ -11,6 +11,8 @@ namespace Skuld.Discord.Preconditions
     {
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
+            if (context.Guild == null) return Task.FromResult(PreconditionResult.FromSuccess());
+
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
             if (MessageTools.ModuleDisabled(Database.Modules.ToList().FirstOrDefault(x => x.Id == context.Guild.Id), command))

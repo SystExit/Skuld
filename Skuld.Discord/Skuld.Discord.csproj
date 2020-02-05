@@ -2,10 +2,14 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <AssemblyVersion>2020.1.120.0</AssemblyVersion>
-    <FileVersion>2020.1.120.0</FileVersion>
+    <AssemblyVersion>2020.2.137.0</AssemblyVersion>
+    <FileVersion>2020.2.137.0</FileVersion>
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Services\DiscordLogger.cs~RF306db4.TMP" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="DogStatsD-CSharp-Client" Version="4.0.0" />

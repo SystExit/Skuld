@@ -183,28 +183,21 @@ namespace Skuld.Discord.Utilities
 
         public static bool ModuleDisabled(GuildModules cmdmods, CommandInfo command)
         {
-            if (!cmdmods.Accounts && command.Module.Name.ToLowerInvariant() == "accounts")
-            { return true; }
-            if (!cmdmods.Actions && command.Module.Name.ToLowerInvariant() == "actions")
-            { return true; }
-            if (!cmdmods.Admin && command.Module.Name.ToLowerInvariant() == "admin")
-            { return true; }
-            if (!cmdmods.Fun && command.Module.Name.ToLowerInvariant() == "fun")
-            { return true; }
-            if (!cmdmods.Information && command.Module.Name.ToLowerInvariant() == "information")
-            { return true; }
-            if (!cmdmods.Lewd && command.Module.Name.ToLowerInvariant() == "lewd")
-            { return true; }
-            if (!cmdmods.Search && command.Module.Name.ToLowerInvariant() == "search")
-            { return true; }
-            if (!cmdmods.Space && command.Module.Name.ToLowerInvariant() == "space")
-            { return true; }
-            if (!cmdmods.Stats && command.Module.Name.ToLowerInvariant() == "stats")
-            { return true; }
-            if (!cmdmods.Weeb && command.Module.Name.ToLowerInvariant() == "weeb")
-            { return true; }
-
-            return false;
+            return (command.Module.Name.ToLowerInvariant()) switch
+            {
+                "accounts" => !cmdmods.Accounts,
+                "actions" => !cmdmods.Actions,
+                "admin" => !cmdmods.Admin,
+                "fun" => !cmdmods.Fun,
+                "gambling" => !cmdmods.Gambling,
+                "information" => !cmdmods.Information,
+                "lewd" => !cmdmods.Lewd,
+                "search" => !cmdmods.Search,
+                "space" => !cmdmods.Space,
+                "stats" => !cmdmods.Stats,
+                "weeb" => !cmdmods.Weeb,
+                _ => false,
+            };
         }
 
 #pragma warning disable IDE0060

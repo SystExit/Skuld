@@ -34,8 +34,6 @@ namespace Skuld.Bot.Commands
             {
                 if (command == null)
                 {
-                    string prefix = (await Database.GetOrInsertGuildAsync(Context.Guild) != null ? (await Database.GetOrInsertGuildAsync(Context.Guild)).Prefix : Configuration.Prefix);
-
                     string title = $"Commands of: {Context.Client.CurrentUser} that can be invoked in: ";
 
                     if (Context.IsPrivate)
@@ -51,7 +49,7 @@ namespace Skuld.Bot.Commands
                         new EmbedBuilder()
                         .AddAuthor(Context.Client)
                         .WithRandomColor()
-                        .WithDescription($"The prefix of **{(Context.Guild == null ? Context.User.FullName() : Context.Guild.Name)}** is: `{prefix}`");
+                        .WithDescription($"The prefix of **{(Context.Guild == null ? Context.User.FullName() : Context.Guild.Name)}** is: `{(Context.Guild == null ? Configuration.Prefix : (await Database.GetOrInsertGuildAsync(Context.Guild)).Prefix)}`");
 
                     foreach (var module in CommandService.Modules)
                     {
@@ -78,18 +76,21 @@ namespace Skuld.Bot.Commands
                         }
                     }
 
-                    if (await Database.GetOrInsertGuildAsync(Context.Guild) != null)
+                    if(Context.Guild != null)
                     {
-                        var commands = Database.CustomCommands.AsQueryable().Where(x => x.GuildId == Context.Guild.Id);
-                        if (commands.Count() > 0)
+                        if (await Database.GetOrInsertGuildAsync(Context.Guild) != null)
                         {
-                            string commandsText = "";
-                            foreach (var cmd in commands)
+                            var commands = Database.CustomCommands.ToList().Where(x => x.GuildId == Context.Guild.Id);
+                            if (commands.Any())
                             {
-                                commandsText += $"{cmd.Name}, ";
+                                string commandsText = "";
+                                foreach (var cmd in commands)
+                                {
+                                    commandsText += $"{cmd.Name}, ";
+                                }
+                                commandsText = commandsText[0..^2];
+                                embed.AddField("Custom Commands", $"`{commandsText}`");
                             }
-                            commandsText = commandsText[0..^2];
-                            embed.AddField("Custom Commands", $"`{commandsText}`");
                         }
                     }
 

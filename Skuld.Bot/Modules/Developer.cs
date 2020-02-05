@@ -570,6 +570,21 @@ namespace Skuld.Bot.Commands
             await $"User {user.Username} now has: {(await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{usr.Money.ToFormattedString()}".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
+        [Command("setmoney")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
+        public async Task SetMoney(IGuildUser user, ulong amount)
+        {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var usr = await Database.GetOrInsertUserAsync(user).ConfigureAwait(false);
+
+            usr.Money = amount;
+
+            await Database.SaveChangesAsync().ConfigureAwait(false);
+
+            await EmbedExtensions.FromSuccess($"Set money of {user.Mention} to {usr.Money}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+        }
+
         [Command("leave"), Summary("Leaves a server by id")]
         [RequireBotFlag(BotAccessLevel.BotOwner)]
         public async Task LeaveServer(ulong id)

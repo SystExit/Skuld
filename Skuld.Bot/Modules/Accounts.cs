@@ -398,11 +398,6 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            if (user == null)
-            {
-                user = Context.User as IGuildUser;
-            }
-
             var fontFile = Path.Combine(SkuldAppContext.FontDirectory, "NotoSans-Regular.ttf");
 
             if (!Directory.Exists(SkuldAppContext.FontDirectory))
@@ -416,13 +411,13 @@ namespace Skuld.Bot.Commands
                 Format = MagickFormat.Png
             };
 
-            if (usr.Background.StartsWith('#'))
-            {
-                image.Draw(new DrawableFillColor(new MagickColor(usr.Background)), new DrawableRectangle(0, 0, 750, 300));
-            }
-            else if (string.IsNullOrEmpty(usr.Background))
+            if (string.IsNullOrEmpty(usr.Background))
             {
                 image.Draw(new DrawableFillColor(new MagickColor("#3F51B5")), new DrawableRectangle(0, 0, 750, 300));
+            }
+            else if (usr.Background.StartsWith('#'))
+            {
+                image.Draw(new DrawableFillColor(new MagickColor(usr.Background)), new DrawableRectangle(0, 0, 750, 300));
             }
             else
             {

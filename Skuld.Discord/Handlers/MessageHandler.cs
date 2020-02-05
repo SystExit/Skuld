@@ -230,7 +230,16 @@ namespace Skuld.Discord.Handlers
 
                 if (sguild != null)
                 {
-                    var features = Database.Features.FirstOrDefault(x => x.Id == sguild.Id);
+                    if (!Database.Features.Any(x=>x.Id == sguild.Id))
+                    {
+                        Database.Features.Add(new GuildFeatures
+                        {
+                            Id = sguild.Id
+                        });
+                        await Database.SaveChangesAsync().ConfigureAwait(false);
+                    }
+
+                    GuildFeatures features = Database.Features.FirstOrDefault(x => x.Id == sguild.Id);
                     if (features.Experience)
                     {
                         var _ = HandleExperienceAsync(message, message.Author, ((message.Channel as ITextChannel).Guild), sguild, message.Channel);
@@ -243,7 +252,18 @@ namespace Skuld.Discord.Handlers
 
                 if (sguild != null)
                 {
-                    var modules = Database.Modules.FirstOrDefault(x => x.Id == sguild.Id);
+
+                    if (!Database.Modules.Any(x => x.Id == sguild.Id))
+                    {
+                        Database.Modules.Add(new GuildModules
+                        {
+                            Id = sguild.Id
+                        });
+                        await Database.SaveChangesAsync().ConfigureAwait(false);
+                    }
+
+                    GuildModules modules = Database.Modules.FirstOrDefault(x => x.Id == sguild.Id);
+
                     if (modules.Custom)
                     {
                         var _ = HandleCustomCommandAsync(context);
