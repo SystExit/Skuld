@@ -110,12 +110,12 @@ namespace Skuld.Bot.Commands
         private static readonly List<ushort[]> miaValues = new List<ushort[]>
         {
             new ushort[] { 2, 1 },
-            new ushort[] { 1, 1 },
-            new ushort[] { 2, 2 },
-            new ushort[] { 3, 3 },
-            new ushort[] { 4, 4 },
-            new ushort[] { 5, 5 },
             new ushort[] { 6, 6 },
+            new ushort[] { 5, 5 },
+            new ushort[] { 4, 4 },
+            new ushort[] { 3, 3 },
+            new ushort[] { 2, 2 },
+            new ushort[] { 1, 1 },
             new ushort[] { 6, 5 },
             new ushort[] { 6, 4 },
             new ushort[] { 6, 3 },
