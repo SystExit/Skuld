@@ -1,27 +1,33 @@
 ﻿using Discord;
 using Discord.Commands;
+using Microsoft.Extensions.DependencyInjection;
+using Skuld.Core.Models;
+using Skuld.Discord.Attributes;
+using Skuld.Discord.Services;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Skuld.Discord.Extensions
 {
     public static class HelpExtensions
     {
-        public static EmbedBuilder GetCommandHelp(this CommandService commandService, ICommandContext context, string commandname)
+        public static async Task<EmbedBuilder> GetCommandHelpAsync(this CommandService commandService, ICommandContext context, string commandname)
         {
             if (commandname.ToLower() != "pasta")
             {
                 var search = commandService.Search(context, commandname).Commands;
 
-                var summ = search.GetSummary();
+                var summ = await search.GetSummaryAsync(commandService, context);
 
                 if (summ == null)
                 {
                     return null;
                 }
 
-                var embed = EmbedExtensions.FromMessage("Help", $"Here are some commands like **{commandname}**", Color.Teal, context);
+                var embed = EmbedExtensions.FromMessage("Help", $"Here is a command with the name **{commandname}**", Color.Teal, context);
 
-                embed.AddField(string.Join(", ", search[0].Command.Aliases), summ);
+                embed.AddField("Attributes", summ);
 
                 return embed;
             }
@@ -45,55 +51,36 @@ namespace Skuld.Discord.Extensions
             }
         }
 
-        public static string GetSummary(this IReadOnlyList<CommandMatch> Variants)
+        public static async Task<string> GetSummaryAsync(this IReadOnlyList<CommandMatch> Variants, CommandService commandService, ICommandContext context)
         {
             if (Variants != null)
             {
-                if (Variants.Count > 0)
+                if (Variants.Any())
                 {
                     var primary = Variants[0];
 
-                    string summ = "Summary: " + primary.Command.Summary;
-                    int totalparams = 0;
+                    string summ = "**Summary:**\n" + primary.Command.Summary;
 
-                    foreach (var com in Variants)
+                    summ += $"\n\n**Can Execute:**\n{(await primary.CheckPreconditionsAsync(context).ConfigureAwait(false)).IsSuccess}";
+
+                    summ += "\n\n**Usage:**\n";
+
+                    foreach(var att in primary.Command.Attributes)
                     {
-                        totalparams += com.Command.Parameters.Count;
-                    }
-
-                    if (totalparams > 0)
-                    {
-                        summ += "\nParameters:\n";
-
-                        int instance = 0;
-
-                        foreach (var cmd in Variants)
+                        if(att.GetType() == typeof(UsageAttribute))
                         {
-                            instance++;
-                            if (Variants.Count > 1)
+                            var usage = (UsageAttribute)att;
+
+                            summ += $"{BotService.Services.GetRequiredService<SkuldConfig>().Prefix}{usage.Usage}";
+
+                            if (att != primary.Command.Attributes.LastOrDefault(x=>x.GetType() == typeof(UsageAttribute)))
                             {
-                                summ += $"**Command Version: {instance}**\n";
-                            }
-                            if (cmd.Command.Parameters.Count == 0)
-                            {
-                                summ += "No Parameters\n";
-                            }
-                            foreach (var param in cmd.Command.Parameters)
-                            {
-                                if (param.IsOptional)
-                                {
-                                    summ += $"**[Optional]** {param.Name} - {param.Type.Name}\n";
-                                }
-                                else
-                                {
-                                    summ += $"**[Required]** {param.Name} - {param.Type.Name}\n";
-                                }
+                                summ += "\n";
                             }
                         }
-
-                        return summ;
                     }
-                    return summ + "\nParameters: None";
+
+                    return summ;
                 }
             }
 

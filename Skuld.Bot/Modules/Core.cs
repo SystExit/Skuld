@@ -2,10 +2,10 @@
 using Discord.Commands;
 using Skuld.Bot.Services;
 using Skuld.Core;
-using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Handlers;
 using Skuld.Discord.Utilities;
@@ -19,13 +19,15 @@ using System.Threading.Tasks;
 namespace Skuld.Bot.Commands
 {
     [Group]
-    public class Core : ModuleBase<ShardedCommandContext>
+    public class CoreCommands : ModuleBase<ShardedCommandContext>
     {
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }
         private CommandService CommandService { get => MessageHandler.CommandService; }
         public Octokit.GitHubClient GitClient { get; set; }
 
-        [Command("help"), Summary("Gets all commands or a specific command's information")]
+        [Command("help")]
+        [Summary("Gets all commands or a specific command's information")]
+        [Usage("help <command>")]
         public async Task Help([Remainder]string command = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -49,7 +51,7 @@ namespace Skuld.Bot.Commands
                         new EmbedBuilder()
                         .AddAuthor(Context.Client)
                         .WithRandomColor()
-                        .WithDescription($"The prefix of **{(Context.Guild == null ? Context.User.FullName() : Context.Guild.Name)}** is: `{(Context.Guild == null ? Configuration.Prefix : (await Database.GetOrInsertGuildAsync(Context.Guild)).Prefix)}`");
+                        .WithDescription($"The prefix of **{(Context.Guild == null ? Context.User.FullName() : Context.Guild.Name)}** is: `{(Context.Guild == null ? Configuration.Prefix : (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix)}`");
 
                     foreach (var module in CommandService.Modules)
                     {
@@ -78,7 +80,7 @@ namespace Skuld.Bot.Commands
 
                     if(Context.Guild != null)
                     {
-                        if (await Database.GetOrInsertGuildAsync(Context.Guild) != null)
+                        if (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false) != null)
                         {
                             var commands = Database.CustomCommands.ToList().Where(x => x.GuildId == Context.Guild.Id);
                             if (commands.Any())
@@ -94,13 +96,13 @@ namespace Skuld.Bot.Commands
                         }
                     }
 
-                    var dmchan = await Context.User.GetOrCreateDMChannelAsync();
+                    var dmchan = await Context.User.GetOrCreateDMChannelAsync().ConfigureAwait(false);
 
                     await embed.QueueMessageAsync(Context, type: Discord.Models.MessageType.DMS).ConfigureAwait(false);
                 }
                 else
                 {
-                    var cmd = CommandService.GetCommandHelp(Context, command);
+                    var cmd = await CommandService.GetCommandHelpAsync(Context, command).ConfigureAwait(false);
                     if (cmd == null)
                     {
                         await $"Sorry, I couldn't find a command like **{command}**.".QueueMessageAsync(Context).ConfigureAwait(false);
@@ -118,7 +120,9 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("issue"), Summary("Create or get an issue on Github")]
+        [Command("issue")]
+        [Summary("Create or get an issue on Github")]
+        [Usage("issue \"Command x doesn't work\" I tried to run command `x` and it threw the error `error`")]
         public async Task Issue(string title, [Remainder]string content = null)
         {
             if (!string.IsNullOrEmpty(content))

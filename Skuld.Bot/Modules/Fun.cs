@@ -78,7 +78,9 @@ namespace Skuld.Bot.Commands
             "SKULD_FUN_8BALL_NO5"
         };
 
-        [Command("fuse"), Summary("Fuses 2 of the 1st generation pokemon")]
+        [Command("fuse")]
+        [Summary("Fuses 2 of the 1st generation pokemon")]
+        [Usage("fuse 5 96")]
         public async Task Fuse(int int1, int int2)
         {
             if (int1 > 151 || int1 < 0) await EmbedExtensions.FromError($"{int1} over/under limit. (151)", Context).QueueMessageAsync(Context).ConfigureAwait(false);
@@ -93,7 +95,10 @@ namespace Skuld.Bot.Commands
 
         #region WeebAnimals
 
-        [Command("neko"), Summary("neko grill"), Ratelimit(20, 1, Measure.Minutes)]
+        [Command("neko")]
+        [Summary("neko grill")]
+        [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("neko")]
         public async Task Neko()
         {
             var neko = await NekoLife.GetAsync(NekoImageType.Neko).ConfigureAwait(false);
@@ -102,7 +107,10 @@ namespace Skuld.Bot.Commands
             else await EmbedExtensions.FromError("Hmmm <:Thunk:350673785923567616> I got an empty response.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
-        [Command("kitsune"), Summary("Kitsunemimi Grill"), Ratelimit(20, 1, Measure.Minutes)]
+        [Command("kitsune")]
+        [Summary("Kitsunemimi Grill")]
+        [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("kitsune")]
         public async Task Kitsune()
         {
             var kitsu = await SysExClient.GetKitsuneAsync().ConfigureAwait(false);
@@ -114,8 +122,11 @@ namespace Skuld.Bot.Commands
 
         #region Animals
 
-        [Command("kitty"), Summary("kitty"), Ratelimit(20, 1, Measure.Minutes)]
+        [Command("kitty")]
+        [Summary("kitty")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         [Alias("cat", "cats", "kittycat", "kitty cat", "meow", "kitties", "kittys")]
+        [Usage("kitty")]
         public async Task Kitty()
         {
             var kitty = await Animals.GetAnimalAsync(AnimalType.Kitty).ConfigureAwait(false);
@@ -129,8 +140,11 @@ namespace Skuld.Bot.Commands
                 await EmbedExtensions.FromImage(kitty, EmbedExtensions.RandomEmbedColor(), Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
-        [Command("doggo"), Summary("doggo"), Ratelimit(20, 1, Measure.Minutes)]
+        [Command("doggo")]
+        [Summary("doggo")]
+        [Usage("doggo")]
         [Alias("dog", "dogs", "doggy")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Doggo()
         {
             var doggo = await Animals.GetAnimalAsync(AnimalType.Doggo).ConfigureAwait(false);
@@ -143,8 +157,11 @@ namespace Skuld.Bot.Commands
                 await EmbedExtensions.FromImage(doggo, EmbedExtensions.RandomEmbedColor(), Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
-        [Command("bird"), Summary("birb"), Ratelimit(20, 1, Measure.Minutes)]
+        [Command("bird")]
+        [Summary("birb")]
         [Alias("birb")]
+        [Usage("bird")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Birb()
         {
             var birb = await Animals.GetAnimalAsync(AnimalType.Bird).ConfigureAwait(false);
@@ -546,7 +563,7 @@ namespace Skuld.Bot.Commands
 
                 case "help":
                     {
-                        await CommandService.GetCommandHelp(Context, "pasta").QueueMessageAsync(Context).ConfigureAwait(false);
+                        await (await CommandService.GetCommandHelpAsync(Context, "pasta").ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                     break;
 

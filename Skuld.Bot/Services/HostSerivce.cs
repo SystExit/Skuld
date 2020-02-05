@@ -190,6 +190,7 @@ namespace Skuld.Bot.Services
                 github.Connection.Credentials = new Credentials(Configuration.GithubClientUsername, Configuration.GithubClientPassword);
 
                 Services = new ServiceCollection()
+                    .AddSingleton(Configuration)
                     .AddSingleton(locale)
                     .AddSingleton(github)
                     .AddSingleton<Random>()

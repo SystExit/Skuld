@@ -126,7 +126,7 @@ namespace Skuld.Discord.Handlers
                 bool displayerror = true;
                 if (arg3.ErrorReason.Contains("few parameters"))
                 {
-                    var cmdembed = CommandService.GetCommandHelp(arg2, cmd.Name);
+                    var cmdembed = await CommandService.GetCommandHelpAsync(arg2, cmd.Name);
                     await BotService.DiscordClient.SendChannelAsync(arg2.Channel, "You seem to be missing a parameter or 2, here's the help", cmdembed.Build()).ConfigureAwait(false);
                     displayerror = false;
                 }
