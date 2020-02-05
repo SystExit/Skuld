@@ -279,28 +279,25 @@ namespace Skuld.Bot.Commands
                     await EmbedExtensions.FromError("Rock Paper Scissors", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
-                
-                user.Money -= bet.Value;
+
+                if (user.Money - bet.Value >= 0)
+                    user.Money -= bet.Value;
+                else
+                    user.Money = 0;
+
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
                 switch (result)
                 {
                     case WinResult.BotWin:
                         {
-                            if (user.Money - bet.Value >= 0)
-                                user.Money -= bet.Value;
-                            else
-                                user.Money = 0;
-
-                            await Database.SaveChangesAsync().ConfigureAwait(false);
-
                             await EmbedExtensions.FromError("Rock Paper Scissors", $"I draw {throwName} and... You lost, you now have {MoneyPrefix}`{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
 
                     case WinResult.PlayerWin:
                         {
-                            if (bet.Value < ulong.MaxValue)
+                            if (user.Money + bet.Value < ulong.MaxValue)
                                 user.Money += bet.Value;
                             else
                                 user.Money = ulong.MaxValue;
@@ -313,6 +310,13 @@ namespace Skuld.Bot.Commands
 
                     case WinResult.Draw:
                         {
+                            if (user.Money + bet.Value < ulong.MaxValue)
+                                user.Money += bet.Value;
+                            else
+                                user.Money = ulong.MaxValue;
+
+                            await Database.SaveChangesAsync().ConfigureAwait(false);
+
                             await EmbedExtensions.FromInfo("Rock Paper Scissors", $"I draw {throwName} and... It's a draw, your money has not been affected", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
@@ -640,7 +644,10 @@ namespace Skuld.Bot.Commands
                     {
                         if (bet.HasValue)
                         {
-                            user.Money += bet.Value * 2;
+                            if ((user.Money + bet.Value * 2) < ulong.MaxValue)
+                                user.Money += bet.Value * 2;
+                            else
+                                user.Money = ulong.MaxValue;
 
                             await Database.SaveChangesAsync().ConfigureAwait(false);
 
@@ -663,10 +670,6 @@ namespace Skuld.Bot.Commands
                     {
                         if (bet.HasValue)
                         {
-                            user.Money -= bet.Value;
-
-                            await Database.SaveChangesAsync().ConfigureAwait(false);
-
                             await EmbedExtensions.FromError("Mia", $"You Lost! You now have {MoneyPrefix}{user.Money.ToFormattedString()}", Context)
                                 .AddInlineField(Context.Client.CurrentUser.Username, botRoll)
                                 .AddInlineField(Context.User.Username, plaRoll)
@@ -684,6 +687,15 @@ namespace Skuld.Bot.Commands
 
                 case WinResult.Draw:
                     {
+                        if(bet.HasValue)
+                        {
+                            if (user.Money + bet.Value < ulong.MaxValue)
+                                user.Money += bet.Value;
+                            else
+                                user.Money = ulong.MaxValue;
+
+                            await Database.SaveChangesAsync().ConfigureAwait(false);
+                        }
                         await EmbedExtensions.FromInfo("Mia", $"It's a draw!", Context)
                                 .AddInlineField(Context.Client.CurrentUser.Username, botRoll)
                                 .AddInlineField(Context.User.Username, plaRoll)
