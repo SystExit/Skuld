@@ -261,7 +261,7 @@ namespace Skuld.Bot.Commands
             var throwName = Locale.GetLocale(user.Language).GetString(rps.FirstOrDefault(x => x.Key == skuldThrow).Value);
 
             if (bet.HasValue)
-            {
+            {                
                 string MoneyPrefix;
 
                 if (!Context.IsPrivate)
@@ -279,6 +279,9 @@ namespace Skuld.Bot.Commands
                     await EmbedExtensions.FromError("Rock Paper Scissors", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
+                
+                user.Money -= bet.Value;
+                await Database.SaveChangesAsync().ConfigureAwait(false);
 
                 switch (result)
                 {
@@ -594,10 +597,16 @@ namespace Skuld.Bot.Commands
 
             var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
-            if (user.Money < bet.Value)
+            if (bet.HasValue)
             {
-                await EmbedExtensions.FromError("Mia", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                return;
+                if (user.Money < bet.Value)
+                {
+                    await EmbedExtensions.FromError("Mia", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    return;
+                }
+            
+                user.Money -= bet.Value;
+                await Database.SaveChangesAsync().ConfigureAwait(false);
             }
 
             var bot = new Dice(2, BotService.Services.GetRequiredService<Random>());
