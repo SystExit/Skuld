@@ -11,6 +11,7 @@ using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Conversion;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
 using StatsdClient;
@@ -21,8 +22,8 @@ using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
-    [Group, RequireEnabledModule, RequireDatabase]
-    public class Profiles : ModuleBase<ShardedCommandContext>
+    [Group, Name("Accounts"), RequireEnabledModule, RequireDatabase]
+    public class Account : ModuleBase<ShardedCommandContext>
     {
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }
 
@@ -50,6 +51,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("profile"), Summary("Get a users profile")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Profile([Remainder]IGuildUser user = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -377,6 +379,7 @@ namespace Skuld.Bot.Commands
 
         [Command("rank"), Summary("Gets your or someone's current level")]
         [Alias("exp")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Level(IGuildUser user = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -547,6 +550,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("heal"), Summary("Shows you how much you can heal by")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task HealAmount()
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -557,6 +561,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("rep"), Summary("Gives someone rep or checks your rep")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task GiveRep([Remainder]IGuildUser user = null)
         {
             if (user != null && (user.IsBot || user.IsWebhook))
@@ -609,6 +614,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("unrep"), Summary("Removes a rep")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task RemoveRep([Remainder]IGuildUser user)
         {
             if (user != null && (user.IsBot || user.IsWebhook))
@@ -640,12 +646,6 @@ namespace Skuld.Bot.Commands
 
             await "You haven't given this person a reputation point.".QueueMessageAsync(Context).ConfigureAwait(false);
         }
-    }
-
-    [Group, Name("Accounts"), RequireDatabase]
-    public class Account : ModuleBase<ShardedCommandContext>
-    {
-        public SkuldConfig Configuration { get => HostSerivce.Configuration; }
 
         [Command("title"), Summary("Sets Title"), RequireDatabase]
         public async Task SetTitle([Remainder]string title = null)
@@ -830,6 +830,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("custom-bg preview"), Summary("Previews a custom bg")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task PreviewCustomBG(Uri link)
         {
             var fontsFolder = SkuldAppContext.FontDirectory;

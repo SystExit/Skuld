@@ -7,6 +7,7 @@ using Skuld.Bot.Models;
 using Skuld.Bot.Models.GamblingModule;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Handlers;
 using Skuld.Discord.Preconditions;
@@ -23,15 +24,13 @@ namespace Skuld.Bot.Commands
     {
         public Locale Locale { get; set; }
 
-        public Dice Dice = new Dice();
-
-        private readonly Dictionary<string, string> coinflip = new Dictionary<string, string>
+        private readonly IReadOnlyDictionary<string, string> coinflip = new Dictionary<string, string>
         {
             { "SKULD_COINFLIP_HEADS", "https://static.skuldbot.uk/img/flip/heads.png" },
             { "SKULD_COINFLIP_TAILS", "https://static.skuldbot.uk/img/flip/tails.png" }
         };
 
-        private readonly Dictionary<RockPaperScissors, string> rps = new Dictionary<RockPaperScissors, string>()
+        private readonly IReadOnlyDictionary<RockPaperScissors, string> rps = new Dictionary<RockPaperScissors, string>()
         {
             { RockPaperScissors.Rock, "SKULD_RPS_ROCK" },
             { RockPaperScissors.Paper, "SKULD_RPS_PAPER" },
@@ -96,7 +95,7 @@ namespace Skuld.Bot.Commands
             }
         };
 
-        private static readonly Dictionary<SlotIcon, string> slotIcons = new Dictionary<SlotIcon, string>
+        private static readonly IReadOnlyDictionary<SlotIcon, string> slotIcons = new Dictionary<SlotIcon, string>
         {
             { SlotIcon.Bell, "🔔" },
             { SlotIcon.Cherry, "🍒" },
@@ -107,7 +106,7 @@ namespace Skuld.Bot.Commands
             { SlotIcon.Star, "⭐" }
         };
 
-        private static readonly List<ushort[]> miaValues = new List<ushort[]>
+        private static readonly IReadOnlyList<ushort[]> miaValues = new List<ushort[]>
         {
             new ushort[] { 2, 1 },
             new ushort[] { 6, 6 },
@@ -134,6 +133,7 @@ namespace Skuld.Bot.Commands
 
         [Command("flip")]
         [Disabled(false, true)]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task HeadsOrTails(string guess, ulong? bet = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -241,6 +241,8 @@ namespace Skuld.Bot.Commands
         #region Rock Paper Scissors
 
         [Command("rps")]
+        [Usage("rps [rock/paper/scissors/r/p/s] <bet>")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task RPS(string shoot, ulong? bet = null)
         {
             if (bet.HasValue && bet.Value <= 0)
@@ -419,6 +421,7 @@ namespace Skuld.Bot.Commands
         #region Slots
 
         [Command("slots")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Slots(ulong? bet = null)
         {
             if (bet.HasValue && bet.Value <= 0)
@@ -577,6 +580,7 @@ namespace Skuld.Bot.Commands
         #region Mia
 
         [Command("mia"), Summary("Play a game of mia")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Mia(ulong? bet = null)
         {
             if(bet.HasValue && bet.Value <= 0)

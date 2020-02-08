@@ -28,6 +28,9 @@ namespace Skuld.Bot.Extensions
             return item;
         }
 
+        public static int FindIndex<T>(this IReadOnlyList<T> collection, Predicate<T> match)
+            => collection.ToArray().FindIndex(match);
+
         public static void Shuffle<T>(this IList<T> list)
         {
             int n = list.Count;

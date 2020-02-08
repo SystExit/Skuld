@@ -131,6 +131,16 @@ namespace Skuld.Discord.Handlers
                     displayerror = false;
                 }
 
+                if (arg3.ErrorReason.Contains("Timeout"))
+                {
+                    var hourglass = new Emoji("⏳");
+                    if (!arg2.Message.Reactions.Any(x=>x.Key == hourglass && x.Value.IsMe))
+                    {
+                        await arg2.Message.AddReactionAsync(hourglass).ConfigureAwait(false);
+                    }
+                    displayerror = false;
+                }
+
                 if (arg3.Error != CommandError.UnknownCommand && displayerror)
                 {
                     Log.Error(Key, "Error with command, Error is: " + arg3);

@@ -81,6 +81,7 @@ namespace Skuld.Bot.Commands
         [Command("fuse")]
         [Summary("Fuses 2 of the 1st generation pokemon")]
         [Usage("fuse 5 96")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Fuse(int int1, int int2)
         {
             if (int1 > 151 || int1 < 0) await EmbedExtensions.FromError($"{int1} over/under limit. (151)", Context).QueueMessageAsync(Context).ConfigureAwait(false);
@@ -194,6 +195,7 @@ namespace Skuld.Bot.Commands
 
         [Command("eightball"), Summary("Eightball")]
         [Alias("8ball")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Eightball([Remainder]string question = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -219,6 +221,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("roll"), Summary("Roll a die")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Roll(string roll)
         {
             if (int.TryParse(roll, out int upper))
@@ -237,6 +240,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("choose"), Summary("Choose from things, eg: \"reading books\" \"playing games\"")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Choose(params string[] choices)
         {
             if (choices.Any())
@@ -283,6 +287,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("yn"), Summary("Yes, no, maybe. I don't know, can you repeat the question?")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task YN([Remainder]string question = null)
         {
             var YNResp = await YNWTFcli.AskYNWTF().ConfigureAwait(false);
@@ -313,6 +318,7 @@ namespace Skuld.Bot.Commands
         #region Pasta
 
         [Command("pasta"), Summary("Pastas are nice"), RequireDatabase]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Pasta(string cmd, string title, [Remainder]string content)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -411,6 +417,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("pasta"), Summary("Pastas are nice"), RequireDatabase]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Pasta(string cmd, string title)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -512,6 +519,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("pasta"), Summary("Pastas are nice"), RequireDatabase]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Pasta(string title)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -586,6 +594,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("pasta give"), Summary("Give someone your pasta"), RequireDatabase]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Pasta(string title, [Remainder]IGuildUser user)
         {
             if(user == null)
@@ -681,6 +690,7 @@ namespace Skuld.Bot.Commands
 
         [Command("mypasta"), Summary("Spaghetti Meatballs"), RequireDatabase]
         [Alias("mypastas")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task MyPasta()
         {
             SkuldDatabaseContext database = new SkuldDbContextFactory().CreateDbContext();
@@ -739,10 +749,12 @@ namespace Skuld.Bot.Commands
         #region Emoji
 
         [Command("emoji"), Summary("Turns text into bigmoji")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Emojify([Remainder]string message)
             => await message.ToRegionalIndicator().QueueMessageAsync(Context).ConfigureAwait(false);
 
         [Command("emojidance"), Summary("Dancing Emoji")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task DanceEmoji([Remainder]string message)
             => await message.ToDancingEmoji().QueueMessageAsync(Context).ConfigureAwait(false);
 
@@ -956,6 +968,7 @@ namespace Skuld.Bot.Commands
         #region Jokes
 
         [Command("roast"), Summary("\"Roasts\" a user, these are all taken as jokes, and aren't actually meant to cause harm.")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task RoastCmd(IUser user = null)
         {
             if (user == null)
@@ -967,6 +980,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("dadjoke"), Summary("Gives you a bad dad joke to facepalm at.")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task DadJoke()
         {
             var joke = await SysExClient.GetDadJokeAsync().ConfigureAwait(false);
@@ -979,6 +993,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("pickup", RunMode = RunMode.Async), Summary("Cringe at these bad user-submitted pick up lines. (Don't actually use these or else you'll get laughed at. :3)"), Alias("pickupline")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task PickUp()
         {
             var pickup = await SysExClient.GetPickupLineAsync().ConfigureAwait(false);
@@ -997,6 +1012,7 @@ namespace Skuld.Bot.Commands
         private const int FIGLETWIDTH = 16;
 
         [Command("figlet"), Summary("Make a big ascii text lol")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Figlet([Remainder]string text)
         {
             var splittext = text.ToCharArray();
@@ -1131,6 +1147,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("iqdb"), Summary("Reverse image-search")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task IQDB(string image)
         {
             var results = await IqdbClient.SearchUrl(image).ConfigureAwait(false);

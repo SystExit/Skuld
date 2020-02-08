@@ -28,6 +28,7 @@ namespace Skuld.Bot.Commands
         [Command("help")]
         [Summary("Gets all commands or a specific command's information")]
         [Usage("help <command>")]
+        [Ratelimit(1, 10, Measure.Minutes)]
         public async Task Help([Remainder]string command = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -123,6 +124,7 @@ namespace Skuld.Bot.Commands
         [Command("issue")]
         [Summary("Create or get an issue on Github")]
         [Usage("issue \"Command x doesn't work\" I tried to run command `x` and it threw the error `error`")]
+        [Ratelimit(1, 10, Measure.Minutes)]
         public async Task Issue(string title, [Remainder]string content = null)
         {
             if (!string.IsNullOrEmpty(content))

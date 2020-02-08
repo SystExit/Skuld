@@ -7,7 +7,6 @@ using Newtonsoft.Json;
 using Skuld.Bot.Extensions;
 using Skuld.Bot.Services;
 using Skuld.Core;
-using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;

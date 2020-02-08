@@ -3,7 +3,6 @@ using Discord.Commands;
 using Skuld.APIS;
 using Skuld.APIS.Extensions;
 using Skuld.APIS.NASA.Models;
-using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;

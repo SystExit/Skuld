@@ -31,41 +31,31 @@ namespace Skuld.Discord.Services
         public static void RegisterEvents()
         {
             /*All Events needed for running Skuld*/
-            BotService.DiscordClient.ShardReady += Bot_ShardReady;
-            BotService.DiscordClient.JoinedGuild += Bot_JoinedGuild;
-            BotService.DiscordClient.RoleDeleted += Bot_RoleDeleted;
-            BotService.DiscordClient.GuildMemberUpdated += Bot_GuildMemberUpdated;
-            BotService.DiscordClient.LeftGuild += Bot_LeftGuild;
-            BotService.DiscordClient.UserJoined += Bot_UserJoined;
-            BotService.DiscordClient.UserLeft += Bot_UserLeft;
-            BotService.DiscordClient.ReactionAdded += Bot_ReactionAdded;
-            BotService.DiscordClient.ReactionRemoved += Bot_ReactionRemoved;
-            BotService.DiscordClient.ReactionsCleared += Bot_ReactionsCleared;
             BotService.DiscordClient.ShardConnected += Bot_ShardConnected;
             BotService.DiscordClient.ShardDisconnected += Bot_ShardDisconnected;
-            BotService.DiscordClient.Log += Bot_Log;
-            BotService.DiscordClient.UserUpdated += Bot_UserUpdated;
+            BotService.DiscordClient.ShardReady += Bot_ShardReady;
         }
 
         public static void UnRegisterEvents()
         {
-            BotService.DiscordClient.ShardReady -= Bot_ShardReady;
-            BotService.DiscordClient.JoinedGuild -= Bot_JoinedGuild;
-            BotService.DiscordClient.RoleDeleted -= Bot_RoleDeleted;
-            BotService.DiscordClient.GuildMemberUpdated -= Bot_GuildMemberUpdated;
-            BotService.DiscordClient.LeftGuild -= Bot_LeftGuild;
-            BotService.DiscordClient.UserJoined -= Bot_UserJoined;
-            BotService.DiscordClient.UserLeft -= Bot_UserLeft;
-            BotService.DiscordClient.ReactionAdded -= Bot_ReactionAdded;
-            BotService.DiscordClient.ReactionRemoved -= Bot_ReactionRemoved;
-            BotService.DiscordClient.ReactionsCleared -= Bot_ReactionsCleared;
             BotService.DiscordClient.ShardConnected -= Bot_ShardConnected;
             BotService.DiscordClient.ShardDisconnected -= Bot_ShardDisconnected;
-            BotService.DiscordClient.Log -= Bot_Log;
-            BotService.DiscordClient.UserUpdated -= Bot_UserUpdated;
+            BotService.DiscordClient.ShardReady -= Bot_ShardReady;
+
             foreach (var shard in BotService.DiscordClient.Shards)
             {
                 shard.MessageReceived -= MessageHandler.HandleMessageAsync;
+                shard.JoinedGuild -= Bot_JoinedGuild;
+                shard.RoleDeleted -= Bot_RoleDeleted;
+                shard.GuildMemberUpdated -= Bot_GuildMemberUpdated;
+                shard.LeftGuild -= Bot_LeftGuild;
+                shard.UserJoined -= Bot_UserJoined;
+                shard.UserLeft -= Bot_UserLeft;
+                shard.ReactionAdded -= Bot_ReactionAdded;
+                shard.ReactionRemoved -= Bot_ReactionRemoved;
+                shard.ReactionsCleared -= Bot_ReactionsCleared;
+                shard.Log -= Bot_Log;
+                shard.UserUpdated -= Bot_UserUpdated;
             }
         }
 
@@ -245,7 +235,7 @@ namespace Skuld.Discord.Services
                                     new EmbedBuilder()
                                         .WithTitle("Bad News")
                                         .AddAuthor(BotService.DiscordClient)
-                                        .WithDescription($"Your issue:\n\"{message.Title}\"\n\nhas been declined. If you would like to know why, send: {arg3.User.Value.FullName()} as message")
+                                        .WithDescription($"Your issue:\n\"{message.Title}\"\n\nhas been declined. If you would like to know why, send: {arg3.User.Value.FullName()} a message")
                                         .WithColor(EmbedExtensions.RandomEmbedColor())
                                     .Build()
                                 );
@@ -283,6 +273,17 @@ namespace Skuld.Discord.Services
             if (!ShardsReady.Contains(arg.ShardId))
             {
                 arg.MessageReceived += MessageHandler.HandleMessageAsync;
+                arg.JoinedGuild += Bot_JoinedGuild;
+                arg.RoleDeleted += Bot_RoleDeleted;
+                arg.GuildMemberUpdated += Bot_GuildMemberUpdated;
+                arg.LeftGuild += Bot_LeftGuild;
+                arg.UserJoined += Bot_UserJoined;
+                arg.UserLeft += Bot_UserLeft;
+                arg.ReactionAdded += Bot_ReactionAdded;
+                arg.ReactionRemoved += Bot_ReactionRemoved;
+                arg.ReactionsCleared += Bot_ReactionsCleared;
+                arg.Log += Bot_Log;
+                arg.UserUpdated += Bot_UserUpdated;
                 ShardsReady.Add(arg.ShardId);
             }
 

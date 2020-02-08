@@ -7,6 +7,7 @@ using Miki.API.Images;
 using Octokit;
 using Skuld.Core;
 using Skuld.Core.Utilities;
+using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
 using Skuld.Discord.Services;
@@ -53,10 +54,12 @@ namespace Skuld.Bot.Commands
             new GitRepoStruct("discord-net", "Discord.Net"));
 
         [Command("ping"), Summary("Print Ping")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Ping()
             => await $"PONG: {Context.Client.GetShardFor(Context.Guild).Latency}ms".QueueMessageAsync(Context).ConfigureAwait(false);
 
         [Command("stats"), Summary("All stats")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task StatsAll()
         {
             try

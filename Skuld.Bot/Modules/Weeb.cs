@@ -8,6 +8,7 @@ using Skuld.Bot.Extensions;
 using Skuld.Bot.Globalization;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
+using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
 using SysEx.Net;
 using System;
@@ -25,6 +26,7 @@ namespace Skuld.Bot.Commands
         public SysExClient SysExClient { get; set; }
 
         [Command("anime"), Summary("Gets information about an anime")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task GetAnime([Remainder]string animetitle)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -63,6 +65,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("manga"), Summary("Gets information about a manga")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task GetMangaAsync([Remainder]string mangatitle)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -101,6 +104,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("weebgif"), Summary("Gets a weeb gif")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task WeebGif()
         {
             var gif = await SysExClient.GetWeebReactionGifAsync().ConfigureAwait(false);
@@ -114,6 +118,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("whatanime"), Summary("Searches Trace.Moe")]
+        [Ratelimit(20, 1, Measure.Minutes)]
         public async Task WhatAnime(Uri url = null)
         {
             if (url == null)
