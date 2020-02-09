@@ -184,7 +184,7 @@ namespace Skuld.Bot.Services
             {
                 var random = new Random();
                 var locale = new Locale();
-                await locale.InitialiseLocalesAsync().ConfigureAwait(false);
+                locale.InitialiseLocales();
 
                 var github = new GitHubClient(new ProductHeaderValue("Skuld", SkuldAppContext.Skuld.Key.Version.ToString()));
                 github.Connection.Credentials = new Credentials(Configuration.GithubClientUsername, Configuration.GithubClientPassword);
