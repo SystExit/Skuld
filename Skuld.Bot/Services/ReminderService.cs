@@ -28,7 +28,7 @@ namespace Skuld.Bot.Services
                     {
                         if (entry.Timeout <= currentTime)
                         {
-                            await MessageSender.ReplyAsync((await entry.User.GetOrCreateDMChannelAsync() ?? entry.Channel), $"On {entry.Created.ToString("yyyy'/'MM'/'dd HH:mm:ss")} you asked me to remind you: {entry.Content}");
+                            await MessageSender.ReplyAsync((await entry.User.GetOrCreateDMChannelAsync().ConfigureAwait(false) ?? entry.Channel), $"On {entry.Created.ToString("yyyy'/'MM'/'dd HH:mm:ss")} you asked me to remind you: {entry.Content}").ConfigureAwait(false);
 
                             RemoveReminders.Add(entry);
                         }
@@ -40,7 +40,7 @@ namespace Skuld.Bot.Services
                     }
                 }
 
-                await Task.Delay(50);
+                await Task.Delay(50).ConfigureAwait(false);
             }
         }
 
@@ -51,6 +51,6 @@ namespace Skuld.Bot.Services
             => reminders.Remove(reminders.FirstOrDefault(x => x.Id == Id && x.User.Id == user.Id));
 
         public static void Run()
-            => Task.Run(async () => await ExecuteAsync());
+            => Task.Run(async () => await ExecuteAsync().ConfigureAwait(false));
     }
 }
