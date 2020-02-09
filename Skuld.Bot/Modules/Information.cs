@@ -368,6 +368,9 @@ namespace Skuld.Bot.Commands
         {
             Expression exp = new Expression(expression);
 
+            exp.Parameters.Add("Pi", Math.PI);
+            exp.Parameters.Add("e", Math.E);
+
             var res = exp.Evaluate();
 
             var result = res;
