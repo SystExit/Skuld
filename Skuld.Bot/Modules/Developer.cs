@@ -278,6 +278,66 @@ namespace Skuld.Bot.Commands
             }
         }
 
+        [Command("remflag")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
+        public async Task DelFlag(BotAccessLevel level, [Remainder]IUser user = null)
+        {
+            if (user == null)
+                user = Context.User;
+
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var dbUser = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+
+            bool remove = false;
+
+            switch (level)
+            {
+                case BotAccessLevel.BotOwner:
+                    if (dbUser.Flags.IsBitSet(DiscordUtilities.BotCreator))
+                    {
+                        dbUser.Flags -= DiscordUtilities.BotCreator;
+                        remove = true;
+                    }
+                    break;
+
+                case BotAccessLevel.BotAdmin:
+                    if (dbUser.Flags.IsBitSet(DiscordUtilities.BotAdmin))
+                    {
+                        dbUser.Flags -= DiscordUtilities.BotAdmin;
+                        remove = true;
+                    }
+                    break;
+
+                case BotAccessLevel.BotTester:
+                    if (dbUser.Flags.IsBitSet(DiscordUtilities.BotTester))
+                    {
+                        dbUser.Flags -= DiscordUtilities.BotTester;
+                        remove = true;
+                    }
+                    break;
+
+                case BotAccessLevel.BotDonator:
+                    if (dbUser.Flags.IsBitSet(DiscordUtilities.BotDonator))
+                    {
+                        dbUser.Flags -= DiscordUtilities.BotDonator;
+                        remove = true;
+                    }
+                    break;
+            }
+
+            if (remove)
+            {
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await $"Removed flag `{level}` from {user.Mention}".QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+            else
+            {
+                await $"{user.Mention} doesn't have the flag `{level}`".QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+        }
+
         [Command("flags")]
         public async Task GetFlags([Remainder]IUser user = null)
         {
