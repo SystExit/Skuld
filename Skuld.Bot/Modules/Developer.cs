@@ -26,9 +26,9 @@ using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
-    [Group]
+    [Group, Name("Developer")]
     [RequireBotFlag(BotAccessLevel.BotAdmin)]
-    public class Developer : ModuleBase<ShardedCommandContext>
+    public class DeveloperModule : ModuleBase<ShardedCommandContext>
     {
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }
 
@@ -398,7 +398,7 @@ namespace Skuld.Bot.Commands
         {
             using var database = new SkuldDbContextFactory().CreateDbContext();
 
-            await database.DropUserAsync(userId);
+            await database.DropUserAsync(userId).ConfigureAwait(false);
         }
 
         [Command("dropguild")]
@@ -407,7 +407,7 @@ namespace Skuld.Bot.Commands
         {
             using var database = new SkuldDbContextFactory().CreateDbContext();
 
-            await database.DropGuildAsync(guildId);
+            await database.DropGuildAsync(guildId).ConfigureAwait(false);
         }
 
         [Command("merge")]
@@ -543,15 +543,15 @@ namespace Skuld.Bot.Commands
                 {
                     using var db = new SkuldDbContextFactory().CreateDbContext();
 
-                    await db.DropUserAsync(oldId);
+                    await db.DropUserAsync(oldId).ConfigureAwait(false);
                 }
 
-                await $"Successfully merged data from {oldId} into {newId}".QueueMessageAsync(Context);
+                await $"Successfully merged data from {oldId} into {newId}".QueueMessageAsync(Context).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 Log.Error("MergeCmd", ex.Message, ex);
-                await "Check the console log".QueueMessageAsync(Context);
+                await "Check the console log".QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 

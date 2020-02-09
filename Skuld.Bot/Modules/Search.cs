@@ -24,8 +24,8 @@ using Voltaic;
 
 namespace Skuld.Bot.Commands
 {
-    [Group, RequireEnabledModule]
-    public class Search : InteractiveBase<ShardedCommandContext>
+    [Group, Name("Search"), RequireEnabledModule]
+    public class SearchModule : InteractiveBase<ShardedCommandContext>
     {
         public SocialAPIS Social { get; set; }
         public Random Random { get; set; }
@@ -117,13 +117,13 @@ namespace Skuld.Bot.Commands
             if (platform == "youtube" || platform == "yt")
             {
                 await $"🔍 Searching Youtube for: {query}".QueueMessageAsync(Context).ConfigureAwait(false);
-                var result = await SearchClient.SearchYoutubeAsync(query);
+                var result = await SearchClient.SearchYoutubeAsync(query).ConfigureAwait(false);
                 await result.QueueMessageAsync(Context).ConfigureAwait(false);
             }
             if (platform == "imgur")
             {
                 await "🔍 Searching Imgur for: {query}".QueueMessageAsync(Context).ConfigureAwait(false);
-                var result = await SearchClient.SearchImgurAsync(query);
+                var result = await SearchClient.SearchImgurAsync(query).ConfigureAwait(false);
                 await result.QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
@@ -247,7 +247,7 @@ namespace Skuld.Bot.Commands
 
                     await $"Type the number of what you want:\n{string.Join("\n", Pages)}".QueueMessageAsync(Context).ConfigureAwait(false);
 
-                    var message = await NextMessageAsync();
+                    var message = await NextMessageAsync().ConfigureAwait(false);
 
                     int.TryParse(message.Content, out int selectedapp);
                     if (selectedapp <= 0)
@@ -274,12 +274,12 @@ namespace Skuld.Bot.Commands
         [Command("pokemon"), Summary("Gets information about a pokemon id")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task GetPokemon(string pokemon, string group = null)
-            => await SendPokemonAsync(await DataFetcher.GetNamedApiObject<PokemonSpecies>(pokemon.ToLowerInvariant()), group ?? "default").ConfigureAwait(false);
+            => await SendPokemonAsync(await DataFetcher.GetNamedApiObject<PokemonSpecies>(pokemon.ToLowerInvariant()).ConfigureAwait(false), group ?? "default").ConfigureAwait(false);
 
         [Command("pokemon"), Summary("Gets information about a pokemon id")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task GetPokemon(int pokemonid, string group = null)
-            => await SendPokemonAsync(await DataFetcher.GetApiObject<PokemonSpecies>(pokemonid), group ?? "default").ConfigureAwait(false);
+            => await SendPokemonAsync(await DataFetcher.GetApiObject<PokemonSpecies>(pokemonid).ConfigureAwait(false), group ?? "default").ConfigureAwait(false);
 
         public async Task SendPokemonAsync(PokemonSpecies pokemon, string group)
         {

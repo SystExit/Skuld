@@ -19,8 +19,8 @@ using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
-    [Group, RequireNsfw, RequireEnabledModule]
-    public class Lewd : ModuleBase<ShardedCommandContext>
+    [Group, Name("Lewd"), RequireNsfw, RequireEnabledModule]
+    public class LewdModule : ModuleBase<ShardedCommandContext>
     {
         public SysExClient SysExClient { get; set; }
         public BooruClient BooruClient { get; set; }

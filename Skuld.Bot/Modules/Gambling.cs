@@ -19,8 +19,8 @@ using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
-    [Group, RequireEnabledModule]
-    public class Gambling : ModuleBase<ShardedCommandContext>
+    [Group, Name("Gambling"), RequireEnabledModule]
+    public class GamblingModule : ModuleBase<ShardedCommandContext>
     {
         public Locale Locale { get; set; }
 

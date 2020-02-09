@@ -23,7 +23,7 @@ using System.Threading.Tasks;
 namespace Skuld.Bot.Commands
 {
     [Group, Name("Accounts"), RequireEnabledModule, RequireDatabase]
-    public class Account : ModuleBase<ShardedCommandContext>
+    public class AccountModule : ModuleBase<ShardedCommandContext>
     {
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }
 
@@ -91,7 +91,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                using MagickImage img2 = new MagickImage(await HttpWebClient.ReturnStreamAsync(new Uri(profileuser.Background)))
+                using MagickImage img2 = new MagickImage(await HttpWebClient.ReturnStreamAsync(new Uri(profileuser.Background)).ConfigureAwait(false))
                 {
                     FilterType = FilterType.Quadratic
                 };
@@ -102,7 +102,7 @@ namespace Skuld.Bot.Commands
 
             var avatar = user.GetAvatarUrl(ImageFormat.Png) ?? user.GetDefaultAvatarUrl();
 
-            using (MagickImage profileBackground = new MagickImage(await HttpWebClient.ReturnStreamAsync(new Uri(avatar)), new MagickReadSettings
+            using (MagickImage profileBackground = new MagickImage(await HttpWebClient.ReturnStreamAsync(new Uri(avatar)).ConfigureAwait(false), new MagickReadSettings
             {
                 Format = MagickFormat.Png,
                 BackgroundColor = MagickColors.None,
@@ -424,7 +424,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                using MagickImage img2 = new MagickImage(await HttpWebClient.ReturnStreamAsync(new Uri(usr.Background)))
+                using MagickImage img2 = new MagickImage(await HttpWebClient.ReturnStreamAsync(new Uri(usr.Background)).ConfigureAwait(false))
                 {
                     FilterType = FilterType.Quadratic
                 };
@@ -438,7 +438,7 @@ namespace Skuld.Bot.Commands
 
             var avatar = user.GetAvatarUrl(ImageFormat.Png) ?? user.GetDefaultAvatarUrl();
 
-            using (MagickImage profileBackground = new MagickImage(await HttpWebClient.ReturnStreamAsync(new Uri(avatar)), new MagickReadSettings
+            using (MagickImage profileBackground = new MagickImage(await HttpWebClient.ReturnStreamAsync(new Uri(avatar)).ConfigureAwait(false), new MagickReadSettings
             {
                 Format = MagickFormat.Png,
                 BackgroundColor = MagickColors.None,
@@ -506,7 +506,7 @@ namespace Skuld.Bot.Commands
                 image.Composite(label3, 220, 80, CompositeOperator.Over);
             }
 
-            image.Draw(font, fontmed, encoding, white, new DrawableText(220, 170, $"Rank {index + 1}/{experiences.Count()}"));
+            image.Draw(font, fontmed, encoding, white, new DrawableText(220, 170, $"Rank {index + 1}/{experiences.Count}"));
             image.Draw(font, fontmed, encoding, white, new DrawableText(220, 210, $"Level: {xp.Level} ({xp.TotalXP.ToFormattedString()})"));
 
             ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(xp.Level + 1, DiscordUtilities.PHI);
@@ -847,7 +847,7 @@ namespace Skuld.Bot.Commands
                 Format = MagickFormat.Png
             };
 
-            using MagickImage img2 = new MagickImage(await HttpWebClient.ReturnStreamAsync(link))
+            using MagickImage img2 = new MagickImage(await HttpWebClient.ReturnStreamAsync(link).ConfigureAwait(false))
             {
                 FilterType = FilterType.Quadratic
             };

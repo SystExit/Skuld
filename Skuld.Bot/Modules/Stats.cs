@@ -24,8 +24,8 @@ using Weeb.net;
 
 namespace Skuld.Bot.Commands
 {
-    [Group, RequireEnabledModule]
-    public class Stats : ModuleBase<ShardedCommandContext>
+    [Group, Name("Stats"), RequireEnabledModule]
+    public class StatsModule : ModuleBase<ShardedCommandContext>
     {
         public GitHubClient GitClient { get; set; }
 

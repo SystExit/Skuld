@@ -41,8 +41,8 @@ using WenceyWang.FIGlet;
 
 namespace Skuld.Bot.Commands
 {
-    [Group, RequireEnabledModule]
-    public class Fun : InteractiveBase<ShardedCommandContext>
+    [Group, Name("Fun"), RequireEnabledModule]
+    public class FunModule : InteractiveBase<ShardedCommandContext>
     {
         public Random Random { get; set; }
         public AnimalClient Animals { get; set; }
@@ -523,7 +523,7 @@ namespace Skuld.Bot.Commands
         public async Task Pasta(string title)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
-            var pastas = await Database.Pastas.AsQueryable().ToListAsync();
+            var pastas = await Database.Pastas.AsQueryable().ToListAsync().ConfigureAwait(false);
 
             switch (title.ToLowerInvariant())
             {
@@ -1017,9 +1017,9 @@ namespace Skuld.Bot.Commands
         {
             var splittext = text.ToCharArray();
             var textrows = new List<string>();
-            if (splittext.Count() > FIGLETWIDTH)
+            if (splittext.Length > FIGLETWIDTH)
             {
-                int count = (int)Math.Round(splittext.Count() / (decimal)FIGLETWIDTH, MidpointRounding.AwayFromZero);
+                int count = (int)Math.Round(splittext.Length / (decimal)FIGLETWIDTH, MidpointRounding.AwayFromZero);
 
                 int prevamount = 0;
                 for (int x = 1; x <= count; x++)
@@ -1030,7 +1030,7 @@ namespace Skuld.Bot.Commands
                     prevamount = amount;
                 }
 
-                if (count * FIGLETWIDTH < splittext.Count())
+                if (count * FIGLETWIDTH < splittext.Length)
                 {
                     var temp = splittext.ToList();
                     temp.RemoveRange(0, count * FIGLETWIDTH);
@@ -1111,8 +1111,8 @@ namespace Skuld.Bot.Commands
 
                 if (endpoints.Any(x => x.Name.ToLower() == template.ToLower()))
                 {
-                    var endpoint = endpoints.First(x => x.Name.ToLower() == template.ToLower());
-                    if (endpoint.RequiredSources == imageLinks.Count())
+                    var endpoint = endpoints.First(x => x.Name.ToLowerInvariant() == template.ToLowerInvariant());
+                    if (endpoint.RequiredSources == imageLinks.Count)
                     {
                         var resp = await SysExClient.GetMemeImageAsync(endpoint.Name, imageLinks.ToArray()).ConfigureAwait(false);
 

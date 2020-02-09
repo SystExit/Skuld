@@ -14,8 +14,8 @@ using System.Threading.Tasks;
 
 namespace Skuld.Bot.Modules
 {
-    [Group, RequireEnabledModule]
-    public class Space : ModuleBase<ShardedCommandContext>
+    [Group, Name("Space"), RequireEnabledModule]
+    public class SpaceModule : ModuleBase<ShardedCommandContext>
     {
         public NASAClient NASAClient { get; set; }
         public ISSClient ISSClient { get; set; }
@@ -55,11 +55,11 @@ namespace Skuld.Bot.Modules
                 camera = "FHAZ";
             }
 
-            var image = await GetRoverAsync(NasaRover.Curiosity, cam, SOL);
+            var image = await GetRoverAsync(NasaRover.Curiosity, cam, SOL).ConfigureAwait(false);
 
             if (image.Successful)
             {
-                if (!(image.Data is RoverPhotoWrapper imgdata) || imgdata.Photos.Count() == 0)
+                if (!(image.Data is RoverPhotoWrapper imgdata) || !imgdata.Photos.Any())
                 {
                     await EmbedExtensions.FromError($"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
@@ -93,11 +93,11 @@ namespace Skuld.Bot.Modules
                 camera = "pancam";
             }
 
-            var image = await GetRoverAsync(NasaRover.Opportunity, cam, SOL);
+            var image = await GetRoverAsync(NasaRover.Opportunity, cam, SOL).ConfigureAwait(false);
 
             if (image.Successful)
             {
-                if (!(image.Data is RoverPhotoWrapper imgdata) || imgdata.Photos.Count() == 0)
+                if (!(image.Data is RoverPhotoWrapper imgdata) || !imgdata.Photos.Any())
                 {
                     await EmbedExtensions.FromError($"No images found for camera: **{camera.ToUpper()}** at SOL: **{SOL}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;

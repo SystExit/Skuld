@@ -24,8 +24,8 @@ using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
-    [Group, RequireEnabledModule]
-    public class Information : ModuleBase<ShardedCommandContext>
+    [Group, Name("Information"), RequireEnabledModule]
+    public class InformationModule : ModuleBase<ShardedCommandContext>
     {
         public CommandService CommandService { get => BotService.CommandService; }
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }

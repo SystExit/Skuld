@@ -18,8 +18,8 @@ using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
-    [Group]
-    public class CoreCommands : ModuleBase<ShardedCommandContext>
+    [Group, Name("Core")]
+    public class CoreModule : ModuleBase<ShardedCommandContext>
     {
         public SkuldConfig Configuration { get => HostSerivce.Configuration; }
         private CommandService CommandService { get => MessageHandler.CommandService; }
@@ -56,7 +56,7 @@ namespace Skuld.Bot.Commands
 
                     foreach (var module in CommandService.Modules)
                     {
-                        if (Context.IsPrivate) if (module.Name.ToLowerInvariant() == nameof(Admin).ToLowerInvariant()) continue;
+                        if (Context.IsPrivate) if (module.Name.ToLowerInvariant() == "Admin") continue;
 
                         string desc = "";
                         foreach (var cmd in module.Commands)
