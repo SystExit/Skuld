@@ -90,7 +90,7 @@ namespace Skuld.Bot.Extensions
         public static async Task<EmbedBuilder> GetEmbedAsync(this Listing game)
         {
             var SteamStore = new SteamWebAPI2.Interfaces.SteamStore();
-            var app = await SteamStore.GetStoreAppDetailsAsync(Convert.ToUInt32(game.AppId));
+            var app = await SteamStore.GetStoreAppDetailsAsync(Convert.ToUInt32(game.AppId)).ConfigureAwait(false);
 
             string releasetext = app.ReleaseDate.ComingSoon ? "Coming soon! (Date Number may not be accurate)" : "Released on:";
 
@@ -127,7 +127,7 @@ namespace Skuld.Bot.Extensions
             var stream = await client.GetStreamsAsync(new GetStreamsParams
             {
                 UserNames = new[] { channel.Name.Value }
-            });
+            }).ConfigureAwait(false);
 
             return stream.Data.FirstOrDefault();
         }
@@ -194,7 +194,7 @@ namespace Skuld.Bot.Extensions
                 embed.AddInlineField("Channel Badges", channelBadges);
             }
 
-            var stream = await channel.GetStreamAsync(client);
+            var stream = await channel.GetStreamAsync(client).ConfigureAwait(false);
 
             if (stream != null)
             {

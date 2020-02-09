@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Skuld.Bot.Extensions
 {
-    public static class Extensions
+    public static class GenericExtensions
     {
         public static Weightable<T> GetRandomWeightedValue<T>(this IList<Weightable<T>> items)
         {
@@ -26,22 +26,6 @@ namespace Skuld.Bot.Extensions
             }
 
             return item;
-        }
-
-        public static int FindIndex<T>(this IReadOnlyList<T> collection, Predicate<T> match)
-            => collection.ToArray().FindIndex(match);
-
-        public static void Shuffle<T>(this IList<T> list)
-        {
-            int n = list.Count;
-            while (n > 1)
-            {
-                n--;
-                int k = HostSerivce.Services.GetRequiredService<Random>().Next(n + 1);
-                T value = list[k];
-                list[k] = list[n];
-                list[n] = value;
-            }
         }
     }
 }

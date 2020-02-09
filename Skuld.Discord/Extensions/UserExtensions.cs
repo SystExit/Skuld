@@ -47,16 +47,15 @@ namespace Skuld.Discord.Extensions
 
                 if (luxp.LastGranted < (DateTime.UtcNow.ToEpoch() - 60) || skipTimeCheck)
                 {
+                    DogStatsd.Increment("user.levels.processed");
                     if (levelAmount > 0) //if over or equal to next level requirement, update accordingly
                     {
                         luxp.XP = 0;
                         luxp.TotalXP += amount;
-                        luxp.Level = DatabaseUtilities.GetLevelFromTotalXP(luxp.TotalXP, DiscordUtilities.PHI);
+                        luxp.Level += levelAmount;
                         luxp.LastGranted = DateTime.UtcNow.ToEpoch();
 
                         didLevelUp = true;
-
-                        DogStatsd.Increment("user.levels.processed");
                     }
                     else
                     {
@@ -65,8 +64,6 @@ namespace Skuld.Discord.Extensions
                         luxp.LastGranted = DateTime.UtcNow.ToEpoch();
 
                         didLevelUp = false;
-
-                        DogStatsd.Increment("user.levels.processed");
                     }
                 }
                 else
@@ -82,7 +79,8 @@ namespace Skuld.Discord.Extensions
                     XP = amount,
                     UserId = user.Id,
                     GuildId = guild.Id,
-                    TotalXP = amount
+                    TotalXP = amount,
+                    Level = DatabaseUtilities.GetLevelFromTotalXP(amount, DiscordUtilities.PHI)
                 });
 
                 didLevelUp = false;
