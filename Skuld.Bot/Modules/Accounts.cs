@@ -9,6 +9,7 @@ using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Conversion;
+using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Attributes;
@@ -18,6 +19,7 @@ using StatsdClient;
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
@@ -291,48 +293,60 @@ namespace Skuld.Bot.Commands
             }
 
             using var Database = new SkuldDbContextFactory().CreateDbContext();
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            if (user == null)
-                user = (IGuildUser)Context.User;
-
-            bool isSelf = false;
-
-            if (user.Id == Context.User.Id)
-                isSelf = true;
 
             var self = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-            var target = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
-            if (self.LastDaily == 0)
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+            ulong MoneyAmount = self.GetDailyAmount(Configuration);
+            ulong StreakAmount = self.Flags.IsBitSet(DiscordUtilities.BotDonator) ? Configuration.MaxStreak * 2 : Configuration.MaxStreak;
+
+            if (user == null)
             {
-                self.LastDaily = DateTime.UtcNow.ToEpoch();
-                target.Money += Configuration.DailyAmount;
-                await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                await $"You {(!isSelf ? $"just gave {user.Mention}" : "just got")} your daily of {gld.MoneyIcon}{Configuration.DailyAmount}".QueueMessageAsync(Context).ConfigureAwait(false);
-
-                return;
-            }
-            else
-            {
-                if (self.LastDaily < DateTime.UtcNow.Date.ToEpoch())
+                if(self.ProcessDaily(Configuration))
                 {
-                    self.LastDaily = DateTime.UtcNow.ToEpoch();
-                    target.Money += Configuration.DailyAmount;
-                    await Database.SaveChangesAsync().ConfigureAwait(false);
+                    var embed = EmbedExtensions.FromMessage("SkuldBank - Daily", $"You just got your daily of {gld.MoneyIcon}{MoneyAmount}", Context);
 
-                    await $"You {(!isSelf ? $"just gave {user.Mention}" : "just got")} your daily of {gld.MoneyIcon}{Configuration.DailyAmount}".QueueMessageAsync(Context).ConfigureAwait(false);
+                    if (self.Streak > 0)
+                    {
+                        embed.AddField("Streak", $"You're on streak!!\n{self.Streak}/{StreakAmount}");
+                    }
 
-                    return;
+                    await embed
+                        .QueueMessageAsync(Context).ConfigureAwait(false);
                 }
                 else
                 {
                     TimeSpan remain = TimeSpan.FromTicks((DateTime.Today.AddDays(1).ToEpoch() - DateTime.UtcNow.ToEpoch()).FromEpoch().Ticks);
                     string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
-                    await $"You must wait `{remaining}`".QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError("SkuldBank - Daily", $"You must wait `{remaining}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
+            else
+            {
+                var target = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+                if (target.ProcessDaily(Configuration, self))
+                {
+                    var embed = EmbedExtensions.FromMessage("SkuldBank - Daily", $"You just gave your daily of {gld.MoneyIcon}{MoneyAmount} to {user.Mention}", Context);
+
+                    if (self.Streak > 0)
+                    {
+                        embed.AddField("Streak", $"You're on streak!!\n{self.Streak}/{StreakAmount}");
+                    }
+
+                    await embed
+                        .QueueMessageAsync(Context).ConfigureAwait(false);
+                }
+                else
+                {
+                    TimeSpan remain = TimeSpan.FromTicks((DateTime.Today.AddDays(1).ToEpoch() - DateTime.UtcNow.ToEpoch()).FromEpoch().Ticks);
+                    string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
+
+                    await EmbedExtensions.FromError("SkuldBank - Daily", $"You must wait `{remaining}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                }
+            }
+
+            await Database.SaveChangesAsync().ConfigureAwait(false);
         }
 
         [Command("give"), Summary("Give your money to people")]

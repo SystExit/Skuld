@@ -3,6 +3,7 @@ using Discord.WebSocket;
 using NodaTime;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
+using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using StatsdClient;
@@ -310,6 +311,62 @@ namespace Skuld.Discord.Extensions
             var userslist = await guild.GetUsersAsync().ConfigureAwait(false);
             var users = userslist.Count;
             return Math.Round((((decimal)botusers / users) * 100m), 2);
+        }
+
+        public static bool IsStreakReset(this User target, SkuldConfig config)
+        {
+            if (target.Flags.IsBitSet(DiscordUtilities.BotDonator))
+                return target.Streak > (config.MaxStreak * 2) || target.LastDaily > target.LastDaily.FromEpoch().AddDays((config.StreakLimitDays * 2)).ToEpoch();
+            else
+                return target.Streak > config.MaxStreak || target.LastDaily > target.LastDaily.FromEpoch().AddDays(config.StreakLimitDays).ToEpoch();
+        }
+
+        public static ulong GetDailyAmount(this User target, SkuldConfig config)
+        {
+            if (target.Flags.IsBitSet(DiscordUtilities.BotDonator))
+                return config.DailyAmount + (config.DailyAmount * Math.Min(100, target.Streak)) * 2;
+            else
+                return config.DailyAmount + (config.DailyAmount * Math.Min(100, target.Streak));
+        }
+
+        public static bool ProcessDaily(this User target, SkuldConfig config, User donor = null)
+        {
+            bool wasSuccessful = false;
+
+            if (donor == null)
+            {
+                if (target.LastDaily == 0 || target.LastDaily < DateTime.UtcNow.Date.ToEpoch())
+                {
+                    target.Money += target.GetDailyAmount(config);
+                    target.LastDaily = DateTime.UtcNow.ToEpoch();
+                    wasSuccessful = true;
+
+                    target.Streak += 1;
+
+                    if (target.IsStreakReset(config))
+                    {
+                        target.Streak = 0;
+                    }
+                }
+            }
+            else
+            {
+                if (donor.LastDaily == 0 || donor.LastDaily < DateTime.UtcNow.Date.ToEpoch())
+                {
+                    target.Money += donor.GetDailyAmount(config);
+                    donor.LastDaily = DateTime.UtcNow.ToEpoch();
+                    wasSuccessful = true;
+
+                    donor.Streak += 1;
+
+                    if (donor.IsStreakReset(config))
+                    {
+                        donor.Streak = 0;
+                    }
+                }
+            }
+
+            return wasSuccessful;
         }
     }
 }
