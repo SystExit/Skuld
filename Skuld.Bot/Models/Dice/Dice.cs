@@ -14,28 +14,19 @@ namespace Skuld.Bot.Models
 
         public Dice(int amount) : this()
         {
-            var random = new Random();
             for (int x = 0; x < amount; x++)
             {
-                dies.Add(new Die(random));
+                dies.Add(new Die());
             }
         }
 
-        public Dice(int amount, Random random) : this()
-        {
-            for (int x = 0; x < amount; x++)
-            {
-                dies.Add(new Die(random));
-            }
-        }
-
-        public void SetDice(int amount, Random random = null)
+        public void SetDice(int amount)
         {
             dies.Clear();
 
             for (int x = 0; x < amount; x++)
             {
-                dies.Add(new Die(random ?? new Random()));
+                dies.Add(new Die());
             }
         }
 
@@ -65,10 +56,10 @@ namespace Skuld.Bot.Models
 
         public Die[] Roll()
         {
-            dies.ForEach(x =>
+            foreach(var die in dies)
             {
-                x = x.Roll();
-            });
+                die.Roll();
+            }
 
             return dies.ToArray();
         }

@@ -28,7 +28,6 @@ namespace Skuld.Bot.Commands
     public class SearchModule : InteractiveBase<ShardedCommandContext>
     {
         public SocialAPIS Social { get; set; }
-        public Random Random { get; set; }
         public SteamStore SteamStoreClient { get; set; }
         public UrbanDictionaryClient UrbanDictionary { get; set; }
         public WikipediaClient Wikipedia { get; set; }

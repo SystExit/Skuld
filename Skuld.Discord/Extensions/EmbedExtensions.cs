@@ -73,10 +73,7 @@ namespace Skuld.Discord.Extensions
         {
             var bytes = new byte[3];
 
-            if (seed == 0)
-                seed = new Random().Next(1, int.MaxValue);
-
-            new Random(seed).NextBytes(bytes);
+            SkuldRandom.Fill(bytes);
 
             return new Color(bytes[0], bytes[1], bytes[2]);
         }

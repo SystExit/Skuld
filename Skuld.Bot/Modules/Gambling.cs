@@ -1,18 +1,16 @@
 ﻿using Discord;
 using Discord.Commands;
-using Microsoft.Extensions.DependencyInjection;
 using Skuld.Bot.Extensions;
 using Skuld.Bot.Globalization;
 using Skuld.Bot.Models;
 using Skuld.Bot.Models.GamblingModule;
-using Skuld.Core.Extensions;
+using Skuld.Core;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Handlers;
 using Skuld.Discord.Preconditions;
-using Skuld.Discord.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,13 +23,13 @@ namespace Skuld.Bot.Commands
     {
         public Locale Locale { get; set; }
 
-        private readonly IReadOnlyDictionary<string, string> coinflip = new Dictionary<string, string>
+        private readonly Dictionary<string, string> coinflip = new Dictionary<string, string>
         {
             { "SKULD_COINFLIP_HEADS", "https://static.skuldbot.uk/img/flip/heads.png" },
             { "SKULD_COINFLIP_TAILS", "https://static.skuldbot.uk/img/flip/tails.png" }
         };
 
-        private readonly IReadOnlyDictionary<RockPaperScissors, string> rps = new Dictionary<RockPaperScissors, string>()
+        private readonly Dictionary<RockPaperScissors, string> rps = new Dictionary<RockPaperScissors, string>()
         {
             { RockPaperScissors.Rock, "SKULD_RPS_ROCK" },
             { RockPaperScissors.Paper, "SKULD_RPS_PAPER" },
@@ -96,7 +94,7 @@ namespace Skuld.Bot.Commands
             }
         };
 
-        private static readonly IReadOnlyDictionary<SlotIcon, string> slotIcons = new Dictionary<SlotIcon, string>
+        private static readonly Dictionary<SlotIcon, string> slotIcons = new Dictionary<SlotIcon, string>
         {
             { SlotIcon.Bell, "🔔" },
             { SlotIcon.Cherry, "🍒" },
@@ -107,7 +105,7 @@ namespace Skuld.Bot.Commands
             { SlotIcon.Star, "⭐" }
         };
 
-        private static readonly IReadOnlyList<ushort[]> miaValues = new List<ushort[]>
+        private static readonly List<ushort[]> miaValues = new List<ushort[]>
         {
             new ushort[] { 2, 1 },
             new ushort[] { 6, 6 },
@@ -141,8 +139,7 @@ namespace Skuld.Bot.Commands
             var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
             var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
-            var ran = BotService.Services.GetRequiredService<Random>();
-            var result = ran.Next(0, coinflip.Count);
+            var result = SkuldRandom.Next(0, coinflip.Count);
 
             if (!bet.HasValue)
             {
@@ -584,13 +581,13 @@ namespace Skuld.Bot.Commands
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Mia(ulong? bet = null)
         {
-            if(bet.HasValue && bet.Value <= 0)
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            if (bet.HasValue && bet.Value <= 0)
             {
                 await EmbedExtensions.FromError("Mia", $"Can't bet 0", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
-
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
 
             string MoneyPrefix;
 
@@ -613,13 +610,12 @@ namespace Skuld.Bot.Commands
                     await EmbedExtensions.FromError("Mia", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
-            
+
                 user.Money -= bet.Value;
-                await Database.SaveChangesAsync().ConfigureAwait(false);
             }
 
-            var bot = new Dice(2, BotService.Services.GetRequiredService<Random>());
-            var player = new Dice(2, BotService.Services.GetRequiredService<Random>());
+            var bot = new Dice(2);
+            var player = new Dice(2);
 
             bot.Roll();
             player.Roll();
@@ -653,8 +649,6 @@ namespace Skuld.Bot.Commands
                                 user.Money += bet.Value * 2;
                             else
                                 user.Money = ulong.MaxValue;
-
-                            await Database.SaveChangesAsync().ConfigureAwait(false);
 
                             await EmbedExtensions.FromSuccess("Mia", $"You Win! You now have {MoneyPrefix}{user.Money.ToFormattedString()}", Context)
                                 .AddInlineField(Context.Client.CurrentUser.Username, botRoll)
@@ -692,7 +686,7 @@ namespace Skuld.Bot.Commands
 
                 case WinResult.Draw:
                     {
-                        if(bet.HasValue)
+                        if (bet.HasValue)
                         {
                             if (user.Money + bet.Value < ulong.MaxValue)
                                 user.Money += bet.Value;
@@ -708,6 +702,8 @@ namespace Skuld.Bot.Commands
                     }
                     break;
             }
+
+            await Database.SaveChangesAsync().ConfigureAwait(false);
         }
 
         private static WinResult DidPlayerWin(Die[] bot, Die[] player)

@@ -6,8 +6,8 @@
     <Version>2020.01</Version>
     <StartupObject>Skuld.Bot.Program</StartupObject>
     <ApplicationIcon />
-    <AssemblyVersion>2020.2.298.0</AssemblyVersion>
-    <FileVersion>2020.2.301.0</FileVersion>
+    <AssemblyVersion>2020.2.326.0</AssemblyVersion>
+    <FileVersion>2020.2.329.0</FileVersion>
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
 

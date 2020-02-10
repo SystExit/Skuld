@@ -4,6 +4,7 @@ using HtmlAgilityPack;
 using Kitsu.Anime;
 using Kitsu.Manga;
 using Skuld.APIS.Social.Reddit.Models;
+using Skuld.Core;
 using Steam.Models.SteamStore;
 using SteamStoreQuery;
 using System;
@@ -15,8 +16,6 @@ namespace Skuld.APIS.Extensions
 {
     public static class APIExtensions
     {
-        private static readonly Random rnd = new Random();
-
         private static readonly string[] VideoExtensions = {
             ".webm",
             ".mkv",
@@ -54,17 +53,8 @@ namespace Skuld.APIS.Extensions
             "death"
         };
 
-        public static T RandomValue<T>(this IEnumerable<T> entries) where T : class
-        {
-            var list = entries.ToList();
-
-            var index = rnd.Next(0, list.Count);
-
-            return list[index];
-        }
-
         public static StoreScreenshotModel Random(this IReadOnlyList<StoreScreenshotModel> elements)
-            => elements[rnd.Next(0, elements.Count)];
+            => elements[SkuldRandom.Next(0, elements.Count)];
 
         public static bool IsImageExtension(this string input)
         {

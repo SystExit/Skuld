@@ -182,7 +182,6 @@ namespace Skuld.Bot.Services
         {
             try
             {
-                var random = new Random();
                 var locale = new Locale();
                 locale.InitialiseLocales();
 
@@ -193,7 +192,6 @@ namespace Skuld.Bot.Services
                     .AddSingleton(Configuration)
                     .AddSingleton(locale)
                     .AddSingleton(github)
-                    .AddSingleton<Random>()
                     .AddSingleton<ISSClient>()
                     .AddSingleton<SocialAPIS>()
                     .AddSingleton<SteamStore>()

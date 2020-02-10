@@ -2,6 +2,7 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using NodaTime;
+using Skuld.Core;
 using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
@@ -26,7 +27,6 @@ namespace Skuld.Discord.Handlers
         private static SkuldConfig SkuldConfig;
         public static CommandService CommandService;
         public static MessageServiceConfig cmdConfig;
-        private static readonly Random rnd = new Random();
         private static Stopwatch watch;
 
         public static async Task<EventResult> ConfigureCommandServiceAsync(CommandServiceConfig Config,
@@ -297,7 +297,7 @@ namespace Skuld.Discord.Handlers
                 User = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
             }
 
-            var result = await User.GrantExperienceAsync((ulong)rnd.Next(1, 26), guild);
+            var result = await User.GrantExperienceAsync((ulong)SkuldRandom.Next(1, 26), guild);
 
             if (result != null)
             {

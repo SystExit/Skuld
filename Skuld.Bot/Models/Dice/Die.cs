@@ -1,32 +1,16 @@
-﻿using System;
+﻿using Skuld.Core;
 
 namespace Skuld.Bot.Models
 {
     public class Die
     {
-        private Random Random;
         public ushort Face { get; private set; }
 
-        public Die()
-        {
-            Random = new Random();
-        }
-
-        public Die(Random random)
-        {
-            Random = random;
-        }
+        public Die(){}
 
         public Die Roll()
         {
-            ushort counter = 0;
-
-            while (counter <= 10)
-            {
-                Face = (ushort)Random.Next(1, 7);
-                counter++;
-            }
-
+            Face = (ushort)SkuldRandom.Next(1, 7);
             return this;
         }
 

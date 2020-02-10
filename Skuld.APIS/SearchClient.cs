@@ -5,6 +5,7 @@ using Imgur.API.Endpoints.Impl;
 using Imgur.API.Models;
 using Imgur.API.Models.Impl;
 using Skuld.APIS.Extensions;
+using Skuld.Core.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;

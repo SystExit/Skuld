@@ -67,7 +67,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var post = posts.RandomValue(BotService.Services.GetRequiredService<Random>());
+            var post = posts.RandomValue();
 
             await post.GetMessage(post.PostUrl).QueueMessageAsync(Context).ConfigureAwait(false);
         }
@@ -92,7 +92,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var post = posts.RandomValue(BotService.Services.GetRequiredService<Random>());
+            var post = posts.RandomValue();
 
             await post.GetMessage(post.PostUrl).QueueMessageAsync(Context).ConfigureAwait(false);
         }
@@ -117,7 +117,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var post = posts.RandomValue(BotService.Services.GetRequiredService<Random>());
+            var post = posts.RandomValue();
 
             await post.GetMessage(post.PostUrl).QueueMessageAsync(Context).ConfigureAwait(false);
         }
@@ -141,7 +141,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var post = posts.RandomValue(BotService.Services.GetRequiredService<Random>());
+            var post = posts.RandomValue();
 
             await post.GetMessage(post.PostUrl).QueueMessageAsync(Context).ConfigureAwait(false);
         }
@@ -166,7 +166,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var post = posts.RandomValue(BotService.Services.GetRequiredService<Random>());
+            var post = posts.RandomValue();
 
             await post.GetMessage(post.PostUrl).QueueMessageAsync(Context).ConfigureAwait(false);
         }
@@ -190,7 +190,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var post = posts.RandomValue(BotService.Services.GetRequiredService<Random>());
+            var post = posts.RandomValue();
 
             await post.GetMessage(post.PostUrl).QueueMessageAsync(Context).ConfigureAwait(false);
         }
@@ -214,7 +214,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var post = posts.RandomValue(BotService.Services.GetRequiredService<Random>());
+            var post = posts.RandomValue();
 
             await post.GetMessage(post.PostUrl).QueueMessageAsync(Context).ConfigureAwait(false);
         }
@@ -245,7 +245,7 @@ namespace Skuld.Bot.Commands
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts != null)
             {
-                var post = posts.RandomValue(BotService.Services.GetRequiredService<Random>());
+                var post = posts.RandomValue();
                 if (post != null)
                 {
                     msg += post.GetMessage(post.PostUrl) + "\n";
@@ -256,7 +256,7 @@ namespace Skuld.Bot.Commands
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts2 != null)
             {
-                var post = posts2.RandomValue(BotService.Services.GetRequiredService<Random>());
+                var post = posts2.RandomValue();
                 if (post != null)
                 {
                     msg += post.GetMessage(post.PostUrl) + "\n";
@@ -267,7 +267,7 @@ namespace Skuld.Bot.Commands
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts3 != null)
             {
-                var post = posts3.RandomValue(BotService.Services.GetRequiredService<Random>());
+                var post = posts3.RandomValue();
                 if (post != null)
                 {
                     msg += post.GetMessage(post.PostUrl) + "\n";
@@ -278,7 +278,7 @@ namespace Skuld.Bot.Commands
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts4 != null)
             {
-                var post = posts4.RandomValue(BotService.Services.GetRequiredService<Random>());
+                var post = posts4.RandomValue();
                 if (post != null)
                 {
                     msg += post.GetMessage(post.PostUrl) + "\n";
@@ -289,7 +289,7 @@ namespace Skuld.Bot.Commands
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts5 != null)
             {
-                var post = posts5.RandomValue(BotService.Services.GetRequiredService<Random>());
+                var post = posts5.RandomValue();
                 if (post != null)
                 {
                     msg += post.GetMessage(post.PostUrl) + "\n";
@@ -300,7 +300,7 @@ namespace Skuld.Bot.Commands
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts6 != null)
             {
-                var post = posts6.RandomValue(BotService.Services.GetRequiredService<Random>());
+                var post = posts6.RandomValue();
                 if (post != null)
                 {
                     msg += post.GetMessage(post.PostUrl) + "\n";

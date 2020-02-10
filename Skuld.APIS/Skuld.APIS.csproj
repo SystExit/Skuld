@@ -3,8 +3,8 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <AssemblyVersion>2020.2.76.0</AssemblyVersion>
-    <FileVersion>2020.2.76.0</FileVersion>
+    <AssemblyVersion>2020.2.85.0</AssemblyVersion>
+    <FileVersion>2020.2.85.0</FileVersion>
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
@@ -30,6 +30,10 @@
     <PackageReference Include="SteamWebAPI2" Version="4.0.14" />
     <PackageReference Include="SysEx.Net" Version="1.0.7" />
     <PackageReference Include="YoutubeExplode" Version="4.7.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Skuld.Core\Skuld.Core.csproj" />
   </ItemGroup>
   
 </Project>

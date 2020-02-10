@@ -44,7 +44,6 @@ namespace Skuld.Bot.Commands
     [Group, Name("Fun"), RequireEnabledModule]
     public class FunModule : InteractiveBase<ShardedCommandContext>
     {
-        public Random Random { get; set; }
         public AnimalClient Animals { get; set; }
         public Locale Locale { get; set; }
         public WebComicClients ComicClients { get; set; }
@@ -201,7 +200,7 @@ namespace Skuld.Bot.Commands
             using var Database = new SkuldDbContextFactory().CreateDbContext();
             var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
-            var answer = Locale.GetLocale(user.Language).GetString(eightball[Random.Next(0, eightball.Length)]);
+            var answer = Locale.GetLocale(user.Language).GetString(eightball[SkuldRandom.Next(0, eightball.Length)]);
 
             var message = "";
 
@@ -228,7 +227,7 @@ namespace Skuld.Bot.Commands
             {
                 await
                     EmbedExtensions.FromMessage(SkuldAppContext.GetCaller(),
-                                                $"{Context.User.Mention} just rolled and got a {Random.Next(1, (upper + 1))}",
+                                                $"{Context.User.Mention} just rolled and got a {SkuldRandom.Next(1, (upper + 1))}",
                                                 Color.Teal,
                                                 Context)
                     .QueueMessageAsync(Context)
@@ -245,7 +244,7 @@ namespace Skuld.Bot.Commands
         {
             if (choices.Any())
             {
-                var choice = choices[Random.Next(0, choices.Length)];
+                var choice = choices[SkuldRandom.Next(0, choices.Length)];
 
                 int critereon = 0;
                 int maxCritereon = 3;
@@ -254,7 +253,7 @@ namespace Skuld.Bot.Commands
                     if (critereon <= maxCritereon)
                         break;
 
-                    choice = choices[Random.Next(0, choices.Length)];
+                    choice = choices[SkuldRandom.Next(0, choices.Length)];
                     critereon++;
                 }
 
@@ -1189,7 +1188,7 @@ namespace Skuld.Bot.Commands
 
         public SafebooruImage GetSafeImage(IReadOnlyList<SafebooruImage> posts, int EdgeCase = 0)
         {
-            var post = posts.RandomValue(BotService.Services.GetRequiredService<Random>());
+            var post = posts.RandomValue();
             EdgeCase++;
             if (EdgeCase <= 5)
             {

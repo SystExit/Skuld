@@ -21,7 +21,6 @@ namespace Skuld.Bot.Commands
     [Group, Name("Actions"), RequireEnabledModule]
     public class ActionsModule : ModuleBase<ShardedCommandContext>
     {
-        public Random Random { get; set; }
         public ImghoardClient Imghoard { get; set; }
 
         private EmbedBuilder DoAction(string gif, string action, string target)
@@ -65,7 +64,7 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -84,7 +83,7 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -103,7 +102,7 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -122,7 +121,7 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -141,7 +140,7 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             await
                 new EmbedBuilder()
@@ -159,7 +158,7 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -178,7 +177,7 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -197,7 +196,7 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -216,7 +215,7 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action =
                 new EmbedBuilder()
@@ -302,7 +301,7 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
