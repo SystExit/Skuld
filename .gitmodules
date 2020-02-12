@@ -4,3 +4,7 @@
 [submodule "Skuld.Models"]
 	path = Skuld.Models
 	url = https://github.com/skuldbot/Skuld.Models
+[submodule "Skuld.Services"]
+	path = Skuld.Services
+	url = https://github.com/skuldbot/Skuld.Services.git
+	branch = master
