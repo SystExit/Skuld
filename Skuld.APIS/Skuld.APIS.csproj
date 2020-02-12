@@ -3,8 +3,8 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <AssemblyVersion>2020.2.85.0</AssemblyVersion>
-    <FileVersion>2020.2.85.0</FileVersion>
+    <AssemblyVersion>2020.2.90.0</AssemblyVersion>
+    <FileVersion>2020.2.90.0</FileVersion>
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
@@ -18,7 +18,7 @@
     <PackageReference Include="Booru.Net" Version="1.0.0.4" />
     <PackageReference Include="Discord.Net" Version="2.2.0-dev-20191226.1" />
     <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.43.0.1369" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.17" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.18" />
     <PackageReference Include="Imgur.API" Version="5.0.0-beta1" />
     <PackageReference Include="Kitsu" Version="1.4.2" />
     <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="2.9.8">
@@ -29,7 +29,7 @@
     <PackageReference Include="Steam.Models" Version="3.0.10" />
     <PackageReference Include="SteamWebAPI2" Version="4.0.14" />
     <PackageReference Include="SysEx.Net" Version="1.0.7" />
-    <PackageReference Include="YoutubeExplode" Version="4.7.12" />
+    <PackageReference Include="YoutubeExplode" Version="4.7.13" />
   </ItemGroup>
 
   <ItemGroup>

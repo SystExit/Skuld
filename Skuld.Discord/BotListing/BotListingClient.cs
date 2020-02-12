@@ -44,59 +44,63 @@ namespace Skuld.Discord.BotListing
                     ShardCount = client.Shards.Count,
                     ShardID = x
                 });
-                //dbl
+                //tgg
                 {
                     using var webclient = new HttpClient();
                     using var content = new StringContent(JsonConvert.SerializeObject(botStats[x]), Encoding.UTF8, "application/json");
-                    string key = "DBL";
+                    string key = "T.GG";
 
                     webclient.DefaultRequestHeaders.Add("UserAgent", HttpWebClient.UAGENT);
                     webclient.DefaultRequestHeaders.Add("Authorization", dbltoken);
                     content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                    var _ = await webclient.PostAsync(new Uri($"https://discordbots.org/api/bots/" + client.CurrentUser.Id + "/stats"), content).ConfigureAwait(false);
+                    var _ = await webclient.PostAsync(new Uri($"https://top.gg/api/bots/{client.CurrentUser.Id}/stats"), content).ConfigureAwait(false);
 
-                    LogData("BLC", _.IsSuccessStatusCode ? $"Successfully sent data to {key}" : $"Error sending data to {key} | " + _.ReasonPhrase, _.IsSuccessStatusCode);
+                    LogData("BLC", _.IsSuccessStatusCode ? $"Successfully sent data to {key}" : $"Error sending data to {key} | " + _.ReasonPhrase, !_.IsSuccessStatusCode);
                 }
+                await Task.Delay(TimeSpan.FromSeconds(5).Milliseconds).ConfigureAwait(false);
+            }
+
+            {
+                //b4d
+                {
+                    var stat = new BotStats
+                    {
+                        ServerCount = client.Guilds.Count,
+                    };
+
+                    using var webclient = new HttpClient();
+                    using var content = new StringContent(JsonConvert.SerializeObject(stat), Encoding.UTF8, "application/json");
+                    string key = "B4D";
+
+                    webclient.DefaultRequestHeaders.Add("UserAgent", HttpWebClient.UAGENT);
+                    webclient.DefaultRequestHeaders.Add("Authorization", b4dtoken);
+                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                    var _ = await webclient.PostAsync(new Uri($"https://botsfordiscord.com/api/bot/{client.CurrentUser.Id}"), content).ConfigureAwait(false);
+
+                    LogData("BLC", _.IsSuccessStatusCode ? $"Successfully sent data to {key}" : $"Error sending data to {key} | " + _.ReasonPhrase, !_.IsSuccessStatusCode);
+                }
+
                 //dbgg
                 {
+                    var stat = new BotStats
+                    {
+                        ServerCount = client.Guilds.Count,
+                        ShardCount = client.Shards.Count,
+                        ShardID = 0
+                    };
+
                     using var webclient = new HttpClient();
-                    using var content = new StringContent(JsonConvert.SerializeObject((DBGGStats)botStats[x]), Encoding.UTF8, "application/json");
+                    using var content = new StringContent(JsonConvert.SerializeObject(stat), Encoding.UTF8, "application/json");
                     string key = "D.B.GG";
 
                     webclient.DefaultRequestHeaders.Add("UserAgent", HttpWebClient.UAGENT);
                     webclient.DefaultRequestHeaders.Add("Authorization", discordggtoken);
                     content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
-                    var _ = await webclient.PostAsync(new Uri("https://discord.bots.gg/api/v1/bots/" + client.CurrentUser.Id + "/stats"), content).ConfigureAwait(false);
+                    var _ = await webclient.PostAsync(new Uri($"https://discord.bots.gg/api/v1/bots/{client.CurrentUser.Id}/stats"), content).ConfigureAwait(false);
 
-                    LogData("BLC", _.IsSuccessStatusCode ? $"Successfully sent data to {key}" : $"Error sending data to {key} | " + _.ReasonPhrase, _.IsSuccessStatusCode);
+                    LogData("BLC", _.IsSuccessStatusCode ? $"Successfully sent data to {key}" : $"Error sending data to {key} | " + _.ReasonPhrase, !_.IsSuccessStatusCode);
                 }
-                await Task.Delay(TimeSpan.FromSeconds(5).Milliseconds).ConfigureAwait(false);
-            }
-
-            //b4d
-            {
-                int servercount = 0;
-                foreach (var shard in botStats)
-                {
-                    servercount += shard.ServerCount;
-                }
-
-                var stat = new BotStats
-                {
-                    ServerCount = servercount
-                };
-
-                using var webclient = new HttpClient();
-                using var content = new StringContent(JsonConvert.SerializeObject(stat), Encoding.UTF8, "application/json");
-                string key = "B4D";
-
-                webclient.DefaultRequestHeaders.Add("UserAgent", HttpWebClient.UAGENT);
-                webclient.DefaultRequestHeaders.Add("Authorization", b4dtoken);
-                content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                var _ = await webclient.PostAsync(new Uri("https://botsfordiscord.com/api/bot/" + client.CurrentUser.Id), content).ConfigureAwait(false);
-
-                LogData("BLC", _.IsSuccessStatusCode ? $"Successfully sent data to {key}" : $"Error sending data to {key} | " + _.ReasonPhrase, _.IsSuccessStatusCode);
             }
         }
     }

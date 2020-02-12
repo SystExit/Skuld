@@ -5,10 +5,10 @@ using Microsoft.EntityFrameworkCore.Internal;
 using NodaTime;
 using Skuld.APIS;
 using Skuld.Bot.Extensions;
-using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Conversion;
+using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
@@ -19,7 +19,6 @@ using StatsdClient;
 using System;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
@@ -27,7 +26,7 @@ namespace Skuld.Bot.Commands
     [Group, Name("Accounts"), RequireEnabledModule, RequireDatabase]
     public class AccountModule : ModuleBase<ShardedCommandContext>
     {
-        public SkuldConfig Configuration { get => HostSerivce.Configuration; }
+        public SkuldConfig Configuration { get => Program.Configuration; }
 
         [Command("money"), Summary("Gets a user's money")]
         [Alias("balance", "credits")]
@@ -217,7 +216,7 @@ namespace Skuld.Bot.Commands
             }
 
             //YLevel 1
-            var dailyText = $"Daily: {profileuser.LastDaily.FromEpoch().ToString("yyyy/MM/dd HH:mm:ss")}";
+            var dailyText = $"Daily: {profileuser.LastDaily.FromEpoch().ToDMYString()}";
             var dmetr = image.FontTypeMetrics(dailyText, true);
             var rightPos = 600 - (dmetr.TextWidth * 2);
 
@@ -309,8 +308,10 @@ namespace Skuld.Bot.Commands
 
                     if (self.Streak > 0)
                     {
-                        embed.AddField("Streak", $"You're on streak!!\n{self.Streak}/{StreakAmount}");
+                        embed.AddField("Streak", $"You're on a streak!!\n{self.Streak}/{StreakAmount}");
                     }
+
+                    self.Streak++;
 
                     await embed
                         .QueueMessageAsync(Context).ConfigureAwait(false);
@@ -331,8 +332,10 @@ namespace Skuld.Bot.Commands
 
                     if (self.Streak > 0)
                     {
-                        embed.AddField("Streak", $"You're on streak!!\n{self.Streak}/{StreakAmount}");
+                        embed.AddField("Streak", $"You're on a streak!!\n{self.Streak}/{StreakAmount}");
                     }
+
+                    self.Streak++;
 
                     await embed
                         .QueueMessageAsync(Context).ConfigureAwait(false);

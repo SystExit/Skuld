@@ -6,27 +6,28 @@
     <Version>2020.01</Version>
     <StartupObject>Skuld.Bot.Program</StartupObject>
     <ApplicationIcon />
-    <AssemblyVersion>2020.2.326.0</AssemblyVersion>
-    <FileVersion>2020.2.329.0</FileVersion>
+    <AssemblyVersion>2020.2.350.0</AssemblyVersion>
+    <FileVersion>2020.2.353.0</FileVersion>
     <LangVersion>preview</LangVersion>
+    <NeutralLanguage>en-GB</NeutralLanguage>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Akitaux.Twitch.Helix" Version="0.1.0-build-00012" />
     <PackageReference Include="CoreCLR-NCalc" Version="2.2.70" />
     <PackageReference Include="Discord.Net" Version="2.2.0-dev-20191226.1" />
-    <PackageReference Include="DogStatsD-CSharp-Client" Version="4.0.0" />
+    <PackageReference Include="DogStatsD-CSharp-Client" Version="4.0.1" />
     <PackageReference Include="FIGlet.Net" Version="1.1.1" />
     <PackageReference Include="Fleck" Version="1.1.0" />
     <PackageReference Include="IqdbApi" Version="1.4.0" />
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="7.15.0" />
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="7.15.1" />
     <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="2.9.8">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="NodaTime" Version="2.4.7" />
-    <PackageReference Include="Octokit" Version="0.36.0" />
+    <PackageReference Include="NodaTime" Version="3.0.0-beta01" />
+    <PackageReference Include="Octokit" Version="0.40.0" />
     <PackageReference Include="PokeApi.NET" Version="1.1.2" />
     <PackageReference Include="SauceNET" Version="1.0.1" />
     <PackageReference Include="System.Drawing.Common" Version="4.7.0" />
@@ -39,6 +40,7 @@
     <ProjectReference Include="..\Skuld.Core\Skuld.Core.csproj" />
     <ProjectReference Include="..\Skuld.Discord\Skuld.Discord.csproj" />
     <ProjectReference Include="..\Skuld.Models\Skuld.Core.Models.csproj" />
+    <ProjectReference Include="..\Skuld.Services\Skuld.Services.csproj" />
   </ItemGroup>
 
   <ItemGroup>

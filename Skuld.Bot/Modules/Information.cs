@@ -5,7 +5,6 @@ using NCalc;
 using NodaTime;
 using Skuld.Bot.Extensions;
 using Skuld.Bot.Globalization;
-using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
@@ -28,7 +27,7 @@ namespace Skuld.Bot.Commands
     public class InformationModule : ModuleBase<ShardedCommandContext>
     {
         public CommandService CommandService { get => BotService.CommandService; }
-        public SkuldConfig Configuration { get => HostSerivce.Configuration; }
+        public SkuldConfig Configuration { get => Program.Configuration; }
         public Locale Locale { get; set; }
 
         [Command("server"), Summary("Gets information about the server")]

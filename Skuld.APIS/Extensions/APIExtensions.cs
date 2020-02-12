@@ -4,13 +4,8 @@ using HtmlAgilityPack;
 using Kitsu.Anime;
 using Kitsu.Manga;
 using Skuld.APIS.Social.Reddit.Models;
-using Skuld.Core;
-using Steam.Models.SteamStore;
 using SteamStoreQuery;
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 
 namespace Skuld.APIS.Extensions
 {
@@ -52,9 +47,6 @@ namespace Skuld.APIS.Extensions
             "vore",
             "death"
         };
-
-        public static StoreScreenshotModel Random(this IReadOnlyList<StoreScreenshotModel> elements)
-            => elements[SkuldRandom.Next(0, elements.Count)];
 
         public static bool IsImageExtension(this string input)
         {

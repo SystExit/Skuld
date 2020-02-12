@@ -1,7 +1,6 @@
 ﻿using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
-using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Pagination;
@@ -25,7 +24,7 @@ namespace Skuld.Bot.Commands
     [Group, Name("Admin"), RequireRole(AccessLevel.ServerMod), RequireEnabledModule]
     public class AdminModule : InteractiveBase<ShardedCommandContext>
     {
-        public SkuldConfig Configuration { get => HostSerivce.Configuration; }
+        public SkuldConfig Configuration { get => Program.Configuration; }
         private CommandService CommandService { get => MessageHandler.CommandService; }
 
         [Command("say"), Summary("Say something to a channel")]

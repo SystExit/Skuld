@@ -5,7 +5,6 @@ using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Newtonsoft.Json;
 using Skuld.Bot.Extensions;
-using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Extensions.Verification;
@@ -30,7 +29,7 @@ namespace Skuld.Bot.Commands
     [RequireBotFlag(BotAccessLevel.BotAdmin)]
     public class DeveloperModule : ModuleBase<ShardedCommandContext>
     {
-        public SkuldConfig Configuration { get => HostSerivce.Configuration; }
+        public SkuldConfig Configuration { get => Program.Configuration; }
 
         #region BotAdmin
 
@@ -218,9 +217,9 @@ namespace Skuld.Bot.Commands
             await BotService.StopBotAsync("StopCmd").ConfigureAwait(false);
         }
 
-        [Command("addflag")]
+        [Command("setflag")]
         [RequireBotFlag(BotAccessLevel.BotOwner)]
-        public async Task SetFlag(BotAccessLevel level, [Remainder]IUser user = null)
+        public async Task SetFlag(BotAccessLevel level, bool give = true, [Remainder]IUser user = null)
         {
             if (user == null)
                 user = Context.User;
@@ -229,112 +228,75 @@ namespace Skuld.Bot.Commands
 
             var dbUser = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
-            bool added = false;
+            bool DidAny = false;
 
             switch (level)
             {
                 case BotAccessLevel.BotOwner:
-                    if (!dbUser.Flags.IsBitSet(DiscordUtilities.BotCreator))
+                    if (give & !dbUser.Flags.IsBitSet(DiscordUtilities.BotCreator))
                     {
                         dbUser.Flags += DiscordUtilities.BotCreator;
-                        added = true;
+                        DidAny = true;
                     }
-                    break;
-
-                case BotAccessLevel.BotAdmin:
-                    if (!dbUser.Flags.IsBitSet(DiscordUtilities.BotAdmin))
-                    {
-                        dbUser.Flags += DiscordUtilities.BotAdmin;
-                        added = true;
-                    }
-                    break;
-
-                case BotAccessLevel.BotTester:
-                    if (!dbUser.Flags.IsBitSet(DiscordUtilities.BotTester))
-                    {
-                        dbUser.Flags += DiscordUtilities.BotTester;
-                        added = true;
-                    }
-                    break;
-
-                case BotAccessLevel.BotDonator:
-                    if (!dbUser.Flags.IsBitSet(DiscordUtilities.BotDonator))
-                    {
-                        dbUser.Flags += DiscordUtilities.BotDonator;
-                        added = true;
-                    }
-                    break;
-            }
-
-            if (added)
-            {
-                await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                await $"Added flag `{level}` to {user.Mention}".QueueMessageAsync(Context).ConfigureAwait(false);
-            }
-            else
-            {
-                await $"{user.Mention} already has the flag `{level}`".QueueMessageAsync(Context).ConfigureAwait(false);
-            }
-        }
-
-        [Command("remflag")]
-        [RequireBotFlag(BotAccessLevel.BotOwner)]
-        public async Task DelFlag(BotAccessLevel level, [Remainder]IUser user = null)
-        {
-            if (user == null)
-                user = Context.User;
-
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            var dbUser = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
-
-            bool remove = false;
-
-            switch (level)
-            {
-                case BotAccessLevel.BotOwner:
-                    if (dbUser.Flags.IsBitSet(DiscordUtilities.BotCreator))
+                    else if (!give && dbUser.Flags.IsBitSet(DiscordUtilities.BotCreator))
                     {
                         dbUser.Flags -= DiscordUtilities.BotCreator;
-                        remove = true;
+                        DidAny = true;
                     }
                     break;
 
                 case BotAccessLevel.BotAdmin:
-                    if (dbUser.Flags.IsBitSet(DiscordUtilities.BotAdmin))
+                    if(give && !dbUser.Flags.IsBitSet(DiscordUtilities.BotAdmin))
+                    {
+                        dbUser.Flags += DiscordUtilities.BotAdmin;
+                        DidAny = true;
+                    }
+                    else if (!give && dbUser.Flags.IsBitSet(DiscordUtilities.BotAdmin))
                     {
                         dbUser.Flags -= DiscordUtilities.BotAdmin;
-                        remove = true;
+                        DidAny = true;
                     }
                     break;
 
                 case BotAccessLevel.BotTester:
-                    if (dbUser.Flags.IsBitSet(DiscordUtilities.BotTester))
+                    if(give && !dbUser.Flags.IsBitSet(DiscordUtilities.BotTester))
+                    {
+                        dbUser.Flags += DiscordUtilities.BotTester;
+                        DidAny = true;
+                    }
+                    else if (!give && dbUser.Flags.IsBitSet(DiscordUtilities.BotTester))
                     {
                         dbUser.Flags -= DiscordUtilities.BotTester;
-                        remove = true;
+                        DidAny = true;
                     }
                     break;
 
                 case BotAccessLevel.BotDonator:
-                    if (dbUser.Flags.IsBitSet(DiscordUtilities.BotDonator))
+                    if(give && !dbUser.Flags.IsBitSet(DiscordUtilities.BotDonator))
+                    {
+                        dbUser.Flags += DiscordUtilities.BotDonator;
+                        DidAny = true;
+                    }
+                    else if (!give && dbUser.Flags.IsBitSet(DiscordUtilities.BotDonator))
                     {
                         dbUser.Flags -= DiscordUtilities.BotDonator;
-                        remove = true;
+                        DidAny = true;
                     }
                     break;
             }
 
-            if (remove)
+            if(DidAny)
             {
                 await Database.SaveChangesAsync().ConfigureAwait(false);
+            }
 
-                await $"Removed flag `{level}` from {user.Mention}".QueueMessageAsync(Context).ConfigureAwait(false);
+            if (DidAny)
+            {
+                await $"{(give ? "Added" : "Removed")} flag `{level}` to {user.Mention}".QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                await $"{user.Mention} doesn't have the flag `{level}`".QueueMessageAsync(Context).ConfigureAwait(false);
+                await $"{user.Mention} {(give ? "already has" : "doesn't have")} the flag `{level}`".QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
@@ -742,7 +704,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        public class Globals
+        internal class Globals
         {
             public ShardedCommandContext Context { get; set; }
         }

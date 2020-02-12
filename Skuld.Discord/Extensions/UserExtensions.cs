@@ -338,15 +338,14 @@ namespace Skuld.Discord.Extensions
                 if (target.LastDaily == 0 || target.LastDaily < DateTime.UtcNow.Date.ToEpoch())
                 {
                     target.Money += target.GetDailyAmount(config);
-                    target.LastDaily = DateTime.UtcNow.ToEpoch();
-                    wasSuccessful = true;
-
-                    target.Streak += 1;
 
                     if (target.IsStreakReset(config))
                     {
                         target.Streak = 0;
                     }
+
+                    target.LastDaily = DateTime.UtcNow.ToEpoch();
+                    wasSuccessful = true;
                 }
             }
             else
@@ -354,15 +353,14 @@ namespace Skuld.Discord.Extensions
                 if (donor.LastDaily == 0 || donor.LastDaily < DateTime.UtcNow.Date.ToEpoch())
                 {
                     target.Money += donor.GetDailyAmount(config);
-                    donor.LastDaily = DateTime.UtcNow.ToEpoch();
-                    wasSuccessful = true;
-
-                    donor.Streak += 1;
 
                     if (donor.IsStreakReset(config))
                     {
                         donor.Streak = 0;
                     }
+
+                    donor.LastDaily = DateTime.UtcNow.ToEpoch();
+                    wasSuccessful = true;
                 }
             }
 

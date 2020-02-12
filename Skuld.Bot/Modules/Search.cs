@@ -8,7 +8,6 @@ using Skuld.APIS;
 using Skuld.APIS.Extensions;
 using Skuld.APIS.Pokemon.Models;
 using Skuld.Bot.Extensions;
-using Skuld.Bot.Services;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Discord.Attributes;
@@ -16,7 +15,6 @@ using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
 using SteamStoreQuery;
 using SteamWebAPI2.Interfaces;
-using System;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -33,7 +31,7 @@ namespace Skuld.Bot.Commands
         public WikipediaClient Wikipedia { get; set; }
         public GiphyClient Giphy { get; set; }
         public Stands4Client Stands4 { get; set; }
-        public SkuldConfig Configuration { get => HostSerivce.Configuration; }
+        public SkuldConfig Configuration { get => Program.Configuration; }
         public TwitchHelixClient TwitchClient { get; set; }
 
         #region SocialMedia
@@ -177,7 +175,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                await EmbedExtensions.FromError($"Ensure your parameters are correct, example: `{Configuration.Prefix}lmgtfy g How to use lmgtfy`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError($"Ensure your parameters are correct, example: `{prefix}lmgtfy g How to use lmgtfy`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new[] { "generic" });
             }
         }

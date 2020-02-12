@@ -141,98 +141,78 @@ namespace Skuld.Bot.Commands
 
             var result = SkuldRandom.Next(0, coinflip.Count);
 
-            if (!bet.HasValue)
+            var loweredGuess = guess.ToLowerInvariant();
+            switch (loweredGuess)
             {
-                var loweredGuess = guess.ToLowerInvariant();
-                switch (loweredGuess)
-                {
-                    case "heads":
-                    case "head":
-                    case "tails":
-                    case "tail":
+                case "heads":
+                case "head":
+                case "tails":
+                case "tail":
+                    if (bet.HasValue)
+                    {
+                        if (user.Money < bet.Value)
                         {
-                            bool playerguess = loweredGuess == "heads" || loweredGuess == "head";
-
-                            var res = (coinflip.Keys.ElementAt(result), coinflip.Values.ElementAt(result));
-
-                            bool didWin = false;
-
-                            if (result == 0 && playerguess)
-                                didWin = true;
-                            else if (result == 1 && !playerguess)
-                                didWin = true;
-
-                            string suffix;
-
-                            if (didWin)
-                                suffix = "You Won! <:blobsquish:350681075296501760>";
-                            else
-                                suffix = "You Lost! <:blobcrying:662304318531305492>";
-
-                            await EmbedExtensions.FromImage(res.Item2, didWin ? Color.Green : Color.Red, Context)
-                                .WithDescription($"Result are: {Locale.GetLocale(user.Language).GetString(res.Item1)} {suffix}")
-                                .QueueMessageAsync(Context).ConfigureAwait(false);
+                            return;
                         }
-                        break;
 
-                    default:
-                        await EmbedExtensions.FromError($"Incorrect guess value. Try; `{guild.Prefix}flip heads`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                        return;
-                }
+                        bool playerguess = loweredGuess == "heads" || loweredGuess == "head";
 
-                return;
-            }
-            else
-            {
-                var loweredGuess = guess.ToLowerInvariant();
-                switch (loweredGuess)
-                {
-                    case "heads":
-                    case "head":
-                    case "tails":
-                    case "tail":
-                        {
-                            if (user.Money < bet.Value)
-                            {
-                                return;
-                            }
+                        var res = (coinflip.Keys.ElementAt(result), coinflip.Values.ElementAt(result));
 
-                            bool playerguess = loweredGuess == "heads" || loweredGuess == "head";
+                        bool didWin = false;
 
-                            var res = (coinflip.Keys.ElementAt(result), coinflip.Values.ElementAt(result));
+                        if (result == 0 && playerguess)
+                            didWin = true;
+                        else if (result == 1 && !playerguess)
+                            didWin = true;
 
-                            bool didWin = false;
+                        if (didWin)
+                            user.Money += bet.Value;
+                        else
+                            user.Money -= bet.Value;
 
-                            if (result == 0 && playerguess)
-                                didWin = true;
-                            else if (result == 1 && !playerguess)
-                                didWin = true;
+                        await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                            if (didWin)
-                                user.Money += bet.Value;
-                            else
-                                user.Money -= bet.Value;
+                        string suffix;
 
-                            await Database.SaveChangesAsync().ConfigureAwait(false);
+                        if (didWin)
+                            suffix = $"You Won! <:blobsquish:350681075296501760> Your money is now {guild.MoneyIcon}`{user.Money}`";
+                        else
+                            suffix = $"You Lost! <:blobcrying:662304318531305492> Your money is now {guild.MoneyIcon}`{user.Money}`";
 
-                            string suffix;
+                        await EmbedExtensions.FromImage(res.Item2, didWin ? Color.Green : Color.Red, Context)
+                            .WithDescription($"Result are: {Locale.GetLocale(user.Language).GetString(res.Item1)} {suffix}")
+                            .QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        bool playerguess = loweredGuess == "heads" || loweredGuess == "head";
 
-                            if (didWin)
-                                suffix = $"You Won! <:blobsquish:350681075296501760> Your money is now {guild.MoneyIcon}`{user.Money}`";
-                            else
-                                suffix = $"You Lost! <:blobcrying:662304318531305492> Your money is now {guild.MoneyIcon}`{user.Money}`";
+                        var res = (coinflip.Keys.ElementAt(result), coinflip.Values.ElementAt(result));
 
-                            await EmbedExtensions.FromImage(res.Item2, didWin ? Color.Green : Color.Red, Context)
-                                .WithDescription($"Result are: {Locale.GetLocale(user.Language).GetString(res.Item1)} {suffix}")
-                                .QueueMessageAsync(Context).ConfigureAwait(false);
-                        }
-                        break;
+                        bool didWin = false;
 
-                    default:
-                        await EmbedExtensions.FromError($"Incorrect guess value. Try; `{guild.Prefix}flip heads`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                        return;
-                }
-                return;
+                        if (result == 0 && playerguess)
+                            didWin = true;
+                        else if (result == 1 && !playerguess)
+                            didWin = true;
+
+                        string suffix;
+
+                        if (didWin)
+                            suffix = "You Won! <:blobsquish:350681075296501760>";
+                        else
+                            suffix = "You Lost! <:blobcrying:662304318531305492>";
+
+                        await EmbedExtensions.FromImage(res.Item2, didWin ? Color.Green : Color.Red, Context)
+                            .WithDescription($"Result are: {Locale.GetLocale(user.Language).GetString(res.Item1)} {suffix}")
+                            .QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                    break;
+
+                default:
+                    await EmbedExtensions.FromError($"Incorrect guess value. Try; `{guild.Prefix}flip heads`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    return;
             }
         }
 
@@ -256,94 +236,104 @@ namespace Skuld.Bot.Commands
 
             var playerThrow = RockPaperScissorsHelper.FromString(shoot);
 
-            var result = DidPlayerWinRPS(playerThrow, skuldThrow);
+            if(playerThrow != RockPaperScissors.Invalid)
+            {
+                var result = DidPlayerWinRPS(playerThrow, skuldThrow);
 
-            var throwName = Locale.GetLocale(user.Language).GetString(rps.FirstOrDefault(x => x.Key == skuldThrow).Value);
+                var throwName = Locale.GetLocale(user.Language).GetString(rps.FirstOrDefault(x => x.Key == skuldThrow).Value);
 
-            if (bet.HasValue)
-            {                
-                string MoneyPrefix;
-
-                if (!Context.IsPrivate)
+                if (bet.HasValue)
                 {
-                    var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-                    MoneyPrefix = guild.MoneyIcon;
+                    string MoneyPrefix;
+
+                    if (!Context.IsPrivate)
+                    {
+                        var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+                        MoneyPrefix = guild.MoneyIcon;
+                    }
+                    else
+                    {
+                        MoneyPrefix = MessageHandler.cmdConfig.MoneyIcon;
+                    }
+
+                    if (user.Money < bet.Value)
+                    {
+                        await EmbedExtensions.FromError("Rock Paper Scissors", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        return;
+                    }
+
+                    if (user.Money - bet.Value >= 0)
+                        user.Money -= bet.Value;
+                    else
+                        user.Money = 0;
+
+                    await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                    switch (result)
+                    {
+                        case WinResult.BotWin:
+                            {
+                                await EmbedExtensions.FromError("Rock Paper Scissors", $"I draw {throwName} and... You lost, you now have {MoneyPrefix}`{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            }
+                            break;
+
+                        case WinResult.PlayerWin:
+                            {
+                                if (user.Money + bet.Value < ulong.MaxValue)
+                                    user.Money += bet.Value;
+                                else
+                                    user.Money = ulong.MaxValue;
+
+                                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                                await EmbedExtensions.FromSuccess("Rock Paper Scissors", $"I draw {throwName} and... You won, you now have {MoneyPrefix}`{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            }
+                            break;
+
+                        case WinResult.Draw:
+                            {
+                                if (user.Money + bet.Value < ulong.MaxValue)
+                                    user.Money += bet.Value;
+                                else
+                                    user.Money = ulong.MaxValue;
+
+                                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                                await EmbedExtensions.FromInfo("Rock Paper Scissors", $"I draw {throwName} and... It's a draw, your money has not been affected", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            }
+                            break;
+                    }
                 }
                 else
                 {
-                    MoneyPrefix = MessageHandler.cmdConfig.MoneyIcon;
-                }
+                    switch (result)
+                    {
+                        case WinResult.BotWin:
+                            {
+                                await EmbedExtensions.FromError("Rock Paper Scissors", $"I draw {throwName} and... You lost", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            }
+                            break;
 
-                if (user.Money < bet.Value)
-                {
-                    await EmbedExtensions.FromError("Rock Paper Scissors", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    return;
-                }
+                        case WinResult.PlayerWin:
+                            {
+                                await EmbedExtensions.FromInfo("Rock Paper Scissors", $"I draw {throwName} and... You won", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            }
+                            break;
 
-                if (user.Money - bet.Value >= 0)
-                    user.Money -= bet.Value;
-                else
-                    user.Money = 0;
-
-                await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                switch (result)
-                {
-                    case WinResult.BotWin:
-                        {
-                            await EmbedExtensions.FromError("Rock Paper Scissors", $"I draw {throwName} and... You lost, you now have {MoneyPrefix}`{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                        }
-                        break;
-
-                    case WinResult.PlayerWin:
-                        {
-                            if (user.Money + bet.Value < ulong.MaxValue)
-                                user.Money += bet.Value;
-                            else
-                                user.Money = ulong.MaxValue;
-
-                            await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                            await EmbedExtensions.FromSuccess("Rock Paper Scissors", $"I draw {throwName} and... You won, you now have {MoneyPrefix}`{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                        }
-                        break;
-
-                    case WinResult.Draw:
-                        {
-                            if (user.Money + bet.Value < ulong.MaxValue)
-                                user.Money += bet.Value;
-                            else
-                                user.Money = ulong.MaxValue;
-
-                            await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                            await EmbedExtensions.FromInfo("Rock Paper Scissors", $"I draw {throwName} and... It's a draw, your money has not been affected", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                        }
-                        break;
+                        case WinResult.Draw:
+                            {
+                                await EmbedExtensions.FromMessage("Rock Paper Scissors", $"I draw {throwName} and... It's a draw", DiscordUtilities.Warning_Color, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            }
+                            break;
+                    }
                 }
             }
             else
             {
-                switch (result)
-                {
-                    case WinResult.BotWin:
-                        {
-                            await EmbedExtensions.FromError("Rock Paper Scissors", $"I draw {throwName} and... You lost", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                        }
-                        break;
-
-                    case WinResult.PlayerWin:
-                        {
-                            await EmbedExtensions.FromInfo("Rock Paper Scissors", $"I draw {throwName} and... You won", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                        }
-                        break;
-
-                    case WinResult.Draw:
-                        {
-                            await EmbedExtensions.FromMessage("Rock Paper Scissors", $"I draw {throwName} and... It's a draw", DiscordUtilities.Warning_Color, Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                        }
-                        break;
-                }
+                await
+                    EmbedExtensions.FromError("Rock Paper Scissors", $"`{shoot}` is not a valid option", Context)
+                .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
             }
         }
 
@@ -475,7 +465,7 @@ namespace Skuld.Bot.Commands
             percentageMod = GetPercentageModifier(percentageMod, middleRow, SlotIcon.Diamond, 1.5d, 10d);
             percentageMod = GetPercentageModifier(percentageMod, middleRow, SlotIcon.Star, 2d, 12d);
 
-            await Task.Delay(250).ConfigureAwait(false);
+            await Task.Delay(SkuldRandom.Next(50, 300)).ConfigureAwait(false);
 
             if (bet.HasValue)
             {
@@ -507,6 +497,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
+        #region SlotsMachine
         private static double GetPercentageModifier(double mod, SlotIcon[] icons, SlotIcon icon, double is2, double is3)
         {
             if (icons.Count(x => x == icon) == 3)
@@ -572,6 +563,7 @@ namespace Skuld.Bot.Commands
         {
             return $"{GetStringRow(slots[0], false)}\n{GetStringRow(slots[1], true)}\n{GetStringRow(slots[2], false)}";
         }
+        #endregion SlotsMachine
 
         #endregion Slots
 
@@ -623,14 +615,14 @@ namespace Skuld.Bot.Commands
             string botRoll = "";
             string plaRoll = "";
 
-            foreach (var roll in bot.GetDies())
+            foreach (var roll in bot.GetDies().OrderByDescending(x=>x.Face))
             {
                 botRoll += $"{roll.Face}, ";
             }
 
             botRoll = botRoll[0..^2];
 
-            foreach (var roll in player.GetDies())
+            foreach (var roll in player.GetDies().OrderByDescending(x=>x.Face))
             {
                 plaRoll += $"{roll.Face}, ";
             }
@@ -638,6 +630,8 @@ namespace Skuld.Bot.Commands
             plaRoll = plaRoll[0..^2];
 
             var gameresult = DidPlayerWin(bot.GetDies(), player.GetDies());
+
+            EmbedBuilder embed = null;
 
             switch (gameresult)
             {
@@ -650,17 +644,11 @@ namespace Skuld.Bot.Commands
                             else
                                 user.Money = ulong.MaxValue;
 
-                            await EmbedExtensions.FromSuccess("Mia", $"You Win! You now have {MoneyPrefix}{user.Money.ToFormattedString()}", Context)
-                                .AddInlineField(Context.Client.CurrentUser.Username, botRoll)
-                                .AddInlineField(Context.User.Username, plaRoll)
-                                .QueueMessageAsync(Context).ConfigureAwait(false);
+                            embed = EmbedExtensions.FromSuccess("Mia", $"You Win! You now have {MoneyPrefix}{user.Money.ToFormattedString()}", Context);
                         }
                         else
                         {
-                            await EmbedExtensions.FromSuccess("Mia", "You Win!", Context)
-                                .AddInlineField(Context.Client.CurrentUser.Username, botRoll)
-                                .AddInlineField(Context.User.Username, plaRoll)
-                                .QueueMessageAsync(Context).ConfigureAwait(false);
+                            embed = EmbedExtensions.FromSuccess("Mia", "You Win!", Context);
                         }
                     }
                     break;
@@ -669,17 +657,11 @@ namespace Skuld.Bot.Commands
                     {
                         if (bet.HasValue)
                         {
-                            await EmbedExtensions.FromError("Mia", $"You Lost! You now have {MoneyPrefix}{user.Money.ToFormattedString()}", Context)
-                                .AddInlineField(Context.Client.CurrentUser.Username, botRoll)
-                                .AddInlineField(Context.User.Username, plaRoll)
-                                .QueueMessageAsync(Context).ConfigureAwait(false);
+                            embed = EmbedExtensions.FromError("Mia", $"You Lost! You now have {MoneyPrefix}{user.Money.ToFormattedString()}", Context);
                         }
                         else
                         {
-                            await EmbedExtensions.FromError("Mia", "You Lost!", Context)
-                                .AddInlineField(Context.Client.CurrentUser.Username, botRoll)
-                                .AddInlineField(Context.User.Username, plaRoll)
-                                .QueueMessageAsync(Context).ConfigureAwait(false);
+                            embed = EmbedExtensions.FromError("Mia", "You Lost!", Context);
                         }
                     }
                     break;
@@ -693,17 +675,23 @@ namespace Skuld.Bot.Commands
                             else
                                 user.Money = ulong.MaxValue;
 
-                            await Database.SaveChangesAsync().ConfigureAwait(false);
+                            embed = EmbedExtensions.FromInfo("Mia", $"It's a draw! Your money has been returned", Context);
                         }
-                        await EmbedExtensions.FromInfo("Mia", $"It's a draw!", Context)
-                                .AddInlineField(Context.Client.CurrentUser.Username, botRoll)
-                                .AddInlineField(Context.User.Username, plaRoll)
-                                .QueueMessageAsync(Context).ConfigureAwait(false);
+                        else
+                        {
+                            embed = EmbedExtensions.FromInfo("Mia", $"It's a draw!", Context);
+                        }
                     }
                     break;
             }
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
+
+            await 
+                embed.AddInlineField(Context.Client.CurrentUser.Username, botRoll)
+                     .AddInlineField(Context.User.Username, plaRoll)
+                     .QueueMessageAsync(Context)
+                     .ConfigureAwait(false);
         }
 
         private static WinResult DidPlayerWin(Die[] bot, Die[] player)

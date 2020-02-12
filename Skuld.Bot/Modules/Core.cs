@@ -1,6 +1,5 @@
 ﻿using Discord;
 using Discord.Commands;
-using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Models;
@@ -21,7 +20,7 @@ namespace Skuld.Bot.Commands
     [Group, Name("Core")]
     public class CoreModule : ModuleBase<ShardedCommandContext>
     {
-        public SkuldConfig Configuration { get => HostSerivce.Configuration; }
+        public SkuldConfig Configuration { get => Program.Configuration; }
         private CommandService CommandService { get => MessageHandler.CommandService; }
         public Octokit.GitHubClient GitClient { get; set; }
 

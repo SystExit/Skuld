@@ -200,7 +200,7 @@ namespace Skuld.Bot.Commands
             using var Database = new SkuldDbContextFactory().CreateDbContext();
             var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
-            var answer = Locale.GetLocale(user.Language).GetString(eightball[SkuldRandom.Next(0, eightball.Length)]);
+            var answer = Locale.GetLocale(user.Language).GetString(eightball[SkuldRandom.Next(eightball.Length)]);
 
             var message = "";
 
@@ -221,21 +221,15 @@ namespace Skuld.Bot.Commands
 
         [Command("roll"), Summary("Roll a die")]
         [Ratelimit(20, 1, Measure.Minutes)]
-        public async Task Roll(string roll)
+        public async Task Roll(ulong roll)
         {
-            if (int.TryParse(roll, out int upper))
-            {
-                await
-                    EmbedExtensions.FromMessage(SkuldAppContext.GetCaller(),
-                                                $"{Context.User.Mention} just rolled and got a {SkuldRandom.Next(1, (upper + 1))}",
-                                                Color.Teal,
-                                                Context)
-                    .QueueMessageAsync(Context)
-                    .ConfigureAwait(false);
-            }
-            else
-            {
-            }
+            await
+                EmbedExtensions.FromMessage(SkuldAppContext.GetCaller(),
+                                            $"{Context.User.Mention} just rolled and got a {SkuldRandom.Next(1, (roll + 1))}",
+                                            Color.Teal,
+                                            Context)
+                .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
         }
 
         [Command("choose"), Summary("Choose from things, eg: \"reading books\" \"playing games\"")]
@@ -291,6 +285,8 @@ namespace Skuld.Bot.Commands
         {
             var YNResp = await YNWTFcli.AskYNWTF().ConfigureAwait(false);
 
+            var lowered = YNResp.Answer.ToLowerInvariant();
+
             var message = "";
 
             if (!string.IsNullOrEmpty(question))
@@ -298,7 +294,7 @@ namespace Skuld.Bot.Commands
 
             message += $"I'd say {YNResp.Answer}";
 
-            if (YNResp.Answer.ToLowerInvariant() != "yes" && YNResp.Answer.ToLowerInvariant() != "no")
+            if (lowered != "yes" && lowered != "no")
                 message += "¯\\_(ツ)_/¯";
 
             await

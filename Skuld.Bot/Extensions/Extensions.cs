@@ -1,8 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Skuld.Bot.Models;
-using Skuld.Bot.Services;
+﻿using Skuld.Bot.Models;
 using Skuld.Core;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 

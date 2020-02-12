@@ -4,7 +4,6 @@ using Akitaux.Twitch.Helix.Requests;
 using Discord;
 using Kitsu.Anime;
 using Kitsu.Manga;
-using Skuld.APIS.Extensions;
 using Skuld.APIS.UrbanDictionary.Models;
 using Skuld.APIS.Utilities;
 using Skuld.Core.Extensions;
@@ -101,7 +100,7 @@ namespace Skuld.Bot.Extensions
                         .WithName(string.Join(", ", app.Developers))
                     )
                     .WithDescription(SteamUtilities.GetSteamGameDescription(game, app))
-                    .WithImageUrl(app.Screenshots.Random().PathFull)
+                    .WithImageUrl(app.Screenshots.RandomValue().PathFull)
                     .WithRandomColor()
                     .WithUrl($"https://store.steampowered.com/app/{game.AppId}/")
                     .WithTitle(game.Name)
