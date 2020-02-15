@@ -6,26 +6,20 @@ using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
-using Skuld.Discord.BotListing;
 using Skuld.Discord.Extensions;
-using Skuld.Discord.Handlers;
-using Skuld.Discord.Utilities;
+using Skuld.Services.BotListing;
 using StatsdClient;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Skuld.Discord.Services
+namespace Skuld.Bot
 {
-    public static class DiscordLogger
+    internal static class BotEvents
     {
         public const string Key = "DiscordLog";
-        private static SkuldConfig Configuration;
         private static readonly List<int> ShardsReady = new List<int>();
-
-        public static void FeedConfiguration(SkuldConfig inConfig)
-            => Configuration = inConfig;
 
         //DiscordLoging
         public static void RegisterEvents()
@@ -44,7 +38,7 @@ namespace Skuld.Discord.Services
 
             foreach (var shard in BotService.DiscordClient.Shards)
             {
-                shard.MessageReceived -= MessageHandler.HandleMessageAsync;
+                shard.MessageReceived -= BotMessaging.HandleMessageAsync;
                 shard.JoinedGuild -= Bot_JoinedGuild;
                 shard.RoleDeleted -= Bot_RoleDeleted;
                 shard.GuildMemberUpdated -= Bot_GuildMemberUpdated;
@@ -130,13 +124,13 @@ namespace Skuld.Discord.Services
                             {
                                 var dldedmsg = await arg1.GetOrDownloadAsync();
 
-                                int pinboardThreshold = Configuration.PinboardThreshold;
+                                int pinboardThreshold = BotService.Configuration.PinboardThreshold;
                                 int pinboardReactions = dldedmsg.Reactions.FirstOrDefault(x => x.Key.Name == "📌").Value.ReactionCount;
 
                                 if (pinboardReactions >= pinboardThreshold)
                                 {
                                     var now = dldedmsg.CreatedAt;
-                                    var dt = DateTime.UtcNow.AddDays(-Configuration.PinboardDateLimit);
+                                    var dt = DateTime.UtcNow.AddDays(-BotService.Configuration.PinboardDateLimit);
                                     if ((now - dt).TotalDays > 0)
                                     {
                                         if (!dldedmsg.IsPinned)
@@ -168,7 +162,7 @@ namespace Skuld.Discord.Services
                 }
             }
 
-            if (arg2.Id == Configuration.IssueChannel && user.Flags.IsBitSet(DiscordUtilities.BotCreator))
+            if (arg2.Id == BotService.Configuration.IssueChannel && user.Flags.IsBitSet(DiscordUtilities.BotCreator))
             {
                 try
                 {
@@ -195,7 +189,7 @@ namespace Skuld.Discord.Services
                                         newissue.Assignees.Add("exsersewo");
                                         newissue.Labels.Add("From Command");
 
-                                        var issue = await BotService.Services.GetRequiredService<Octokit.GitHubClient>().Issue.Create(Configuration.GithubRepository, newissue).ConfigureAwait(false);
+                                        var issue = await BotService.Services.GetRequiredService<Octokit.GitHubClient>().Issue.Create(BotService.Configuration.GithubRepository, newissue).ConfigureAwait(false);
 
                                         try
                                         {
@@ -277,10 +271,9 @@ namespace Skuld.Discord.Services
 
         private static async Task Bot_ShardReady(DiscordSocketClient arg)
         {
-            await BotService.DiscordClient.SetGameAsync($"{Configuration.Prefix}help | {arg.ShardId + 1}/{BotService.DiscordClient.Shards.Count}", type: ActivityType.Listening);
             if (!ShardsReady.Contains(arg.ShardId))
             {
-                arg.MessageReceived += MessageHandler.HandleMessageAsync;
+                arg.MessageReceived += BotMessaging.HandleMessageAsync;
                 arg.JoinedGuild += Bot_JoinedGuild;
                 arg.RoleDeleted += Bot_RoleDeleted;
                 arg.GuildMemberUpdated += Bot_GuildMemberUpdated;
@@ -295,12 +288,14 @@ namespace Skuld.Discord.Services
                 ShardsReady.Add(arg.ShardId);
             }
 
+            await arg.SetGameAsync($"{BotService.Configuration.Prefix}help | {arg.ShardId + 1}/{BotService.DiscordClient.Shards.Count}", type: ActivityType.Listening);
+
             Log.Info($"Shard #{arg.ShardId}", "Shard Ready");
         }
 
         private static async Task Bot_ShardConnected(DiscordSocketClient arg)
         {
-            await arg.SetGameAsync($"{Configuration.Prefix}help | {arg.ShardId + 1}/{BotService.DiscordClient.Shards.Count}", type: ActivityType.Listening).ConfigureAwait(false);
+            await arg.SetGameAsync($"{BotService.Configuration.Prefix}help | {arg.ShardId + 1}/{BotService.DiscordClient.Shards.Count}", type: ActivityType.Listening).ConfigureAwait(false);
             DogStatsd.Event("shards.connected", $"Shard {arg.ShardId} Connected", alertType: "info");
         }
 
@@ -413,9 +408,9 @@ namespace Skuld.Discord.Services
 
             DogStatsd.Increment("guilds.left");
 
-            await BotService.DiscordClient.SendDataAsync(Configuration.IsDevelopmentBuild, Configuration.DiscordGGKey, Configuration.DBotsOrgKey, Configuration.B4DToken).ConfigureAwait(false);
+            await BotService.DiscordClient.SendDataAsync(BotService.Configuration.IsDevelopmentBuild, BotService.Configuration.DiscordGGKey, BotService.Configuration.DBotsOrgKey, BotService.Configuration.B4DToken).ConfigureAwait(false);
 
-            MessageQueue.CheckForEmptyGuilds = true;
+            //MessageQueue.CheckForEmptyGuilds = true;
 
             Log.Verbose(Key, $"Just left {arg}");
         }
@@ -426,11 +421,11 @@ namespace Skuld.Discord.Services
 
             DogStatsd.Increment("guilds.joined");
 
-            await BotService.DiscordClient.SendDataAsync(Configuration.IsDevelopmentBuild, Configuration.DiscordGGKey, Configuration.DBotsOrgKey, Configuration.B4DToken).ConfigureAwait(false);
+            await BotService.DiscordClient.SendDataAsync(BotService.Configuration.IsDevelopmentBuild, BotService.Configuration.DiscordGGKey, BotService.Configuration.DBotsOrgKey, BotService.Configuration.B4DToken).ConfigureAwait(false);
 
-            await database.GetOrInsertGuildAsync(arg, Configuration.Prefix, MessageHandler.cmdConfig.MoneyName, MessageHandler.cmdConfig.MoneyIcon);
+            await database.GetOrInsertGuildAsync(arg, BotService.Configuration.Prefix, BotService.MessageServiceConfig.MoneyName, BotService.MessageServiceConfig.MoneyIcon);
 
-            MessageQueue.CheckForEmptyGuilds = true;
+            //MessageQueue.CheckForEmptyGuilds = true;
             Log.Verbose(Key, $"Just left {arg}");
         }
 

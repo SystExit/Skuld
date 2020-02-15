@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using Skuld.APIS.Giphy.Models;
-using Skuld.APIS.Utilities;
 using Skuld.Core;
+using Skuld.Core.Utilities;
 using System;
 using System.Threading.Tasks;
 

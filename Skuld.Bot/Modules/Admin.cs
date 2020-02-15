@@ -9,7 +9,6 @@ using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Exceptions;
 using Skuld.Discord.Extensions;
-using Skuld.Discord.Handlers;
 using Skuld.Discord.Models;
 using Skuld.Discord.Preconditions;
 using StatsdClient;
@@ -24,8 +23,7 @@ namespace Skuld.Bot.Commands
     [Group, Name("Admin"), RequireRole(AccessLevel.ServerMod), RequireEnabledModule]
     public class AdminModule : InteractiveBase<ShardedCommandContext>
     {
-        public SkuldConfig Configuration { get => Program.Configuration; }
-        private CommandService CommandService { get => MessageHandler.CommandService; }
+        public SkuldConfig Configuration { get; set; }
 
         [Command("say"), Summary("Say something to a channel")]
         public async Task Say(ITextChannel channel, [Remainder]string message)
@@ -120,7 +118,7 @@ namespace Skuld.Bot.Commands
 
                 List<string> mods = new List<string>();
 
-                foreach (var mod in CommandService.Modules.ToArray())
+                foreach (var mod in BotService.CommandService.Modules.ToArray())
                 {
                     mods.Add(mod.Name.ToLowerInvariant());
                 }
@@ -226,7 +224,7 @@ namespace Skuld.Bot.Commands
 
                     await $"I set `{channel.Name}` as the channel for the `{module}` module".QueueMessageAsync(Context).ConfigureAwait(false);
                 }
-                else await Database.GetOrInsertGuildAsync(Context.Guild, MessageHandler.cmdConfig.Prefix, MessageHandler.cmdConfig.MoneyName, MessageHandler.cmdConfig.MoneyIcon).ConfigureAwait(false);
+                else await Database.GetOrInsertGuildAsync(Context.Guild, Configuration.Prefix, BotService.MessageServiceConfig.MoneyName, BotService.MessageServiceConfig.MoneyIcon).ConfigureAwait(false);
             }
             else
             {
@@ -251,8 +249,8 @@ namespace Skuld.Bot.Commands
 
             if (icon == null && name == null)
             {
-                guild.MoneyIcon = MessageHandler.cmdConfig.MoneyIcon;
-                guild.MoneyName = MessageHandler.cmdConfig.MoneyName;
+                guild.MoneyIcon = BotService.MessageServiceConfig.MoneyIcon;
+                guild.MoneyName = BotService.MessageServiceConfig.MoneyName;
 
                 await database.SaveChangesAsync().ConfigureAwait(false);
 
@@ -924,15 +922,15 @@ namespace Skuld.Bot.Commands
 
             if (gld != null)
             {
-                gld.Prefix = MessageHandler.cmdConfig.Prefix;
+                gld.Prefix = BotService.MessageServiceConfig.Prefix;
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                await $"Reset the prefix back to `{MessageHandler.cmdConfig.Prefix}`".QueueMessageAsync(Context).ConfigureAwait(false);
+                await $"Reset the prefix back to `{BotService.MessageServiceConfig.Prefix}`".QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
-                await Database.GetOrInsertGuildAsync(Context.Guild, MessageHandler.cmdConfig.Prefix, MessageHandler.cmdConfig.MoneyName, MessageHandler.cmdConfig.MoneyIcon).ConfigureAwait(false);
+                await Database.GetOrInsertGuildAsync(Context.Guild, BotService.MessageServiceConfig.Prefix, BotService.MessageServiceConfig.MoneyName, BotService.MessageServiceConfig.MoneyIcon).ConfigureAwait(false);
             }
         }
 
@@ -1176,7 +1174,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                var cmdsearch = CommandService.Search(Context, name);
+                var cmdsearch = BotService.CommandService.Search(Context, name);
                 if (cmdsearch.Commands != null)
                 {
                     await EmbedExtensions.FromError("The bot already has this command", Context).QueueMessageAsync(Context).ConfigureAwait(false);

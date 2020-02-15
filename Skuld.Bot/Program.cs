@@ -1,34 +1,15 @@
-﻿using Akitaux.Twitch.Helix;
-using Booru.Net;
-using Discord;
-using Discord.Addons.Interactive;
+﻿using Discord;
 using Discord.WebSocket;
-using Imgur.API.Authentication.Impl;
-using IqdbApi;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Miki.API.Images;
-using Octokit;
-using Skuld.APIS;
-using Skuld.Bot.Globalization;
 using Skuld.Core;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord;
-using Skuld.Discord.Handlers;
-using Skuld.Discord.Services;
-using Skuld.Services.VoiceExperience;
-using Skuld.Services.WebSocket;
-using StatsdClient;
-using SteamWebAPI2.Interfaces;
-using SysEx.Net;
 using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using Voltaic;
-using YoutubeExplode;
 using DiscordNetCommands = Discord.Commands;
 
 namespace Skuld.Bot
@@ -38,14 +19,10 @@ namespace Skuld.Bot
         private static void Main(string[] args)
             => CreateAsync(args).GetAwaiter().GetResult();
 
-        public static SkuldConfig Configuration;
-        public static WebSocketService WebSocket;
-        public static IServiceProvider Services;
-
-        private static VoiceExpService voiceService;
-
         public static async Task CreateAsync(string[] args = null)
         {
+            SkuldConfig Configuration = null;
+
             if (!Directory.Exists(SkuldAppContext.LogDirectory))
             {
                 Directory.CreateDirectory(SkuldAppContext.LogDirectory);
@@ -77,211 +54,60 @@ namespace Skuld.Bot
                 }
             }
 
-            try
             {
+                var database = new SkuldDbContextFactory().CreateDbContext();
+
+                if (!database.Configurations.Any() || args.Contains("--newconf") || args.Contains("-nc"))
                 {
-                    var database = new SkuldDbContextFactory().CreateDbContext();
-
-                    if (!database.Configurations.Any() || args.Contains("--newconf") || args.Contains("-nc"))
-                    {
-                        var conf = new SkuldConfig();
-                        database.Configurations.Add(conf);
-                        await database.SaveChangesAsync().ConfigureAwait(false);
-                        Log.Verbose("HostService", $"Created new configuration with Id: {conf.Id}");
-                    }
-
-                    var configId = SkuldAppContext.GetEnvVar(SkuldAppContext.ConfigEnvVar);
-
-                    var c = database.Configurations.FirstOrDefault(x => x.Id == configId);
-
-                    Configuration = c ?? database.Configurations.FirstOrDefault();
-
-                    SkuldAppContext.SetConfigurationId(Configuration.Id);
-
-                    DiscordLogger.FeedConfiguration(Configuration);
+                    var conf = new SkuldConfig();
+                    database.Configurations.Add(conf);
+                    await database.SaveChangesAsync().ConfigureAwait(false);
+                    Log.Verbose("HostService", $"Created new configuration with Id: {conf.Id}");
                 }
 
-                BotService.ConfigureBot(new DiscordSocketConfig
-                {
-                    LogLevel = LogSeverity.Debug,
-                    TotalShards = Configuration.Shards,
-                    LargeThreshold = 250,
-                    AlwaysDownloadUsers = false,
-                    ExclusiveBulkDelete = true,
-                    MessageCacheSize = 1000
-                });
+                var configId = SkuldAppContext.GetEnvVar(SkuldAppContext.ConfigEnvVar);
 
-                InstallServices();
+                var c = database.Configurations.FirstOrDefault(x => x.Id == configId);
 
-                InitializeStaticClients();
+                Configuration = c ?? database.Configurations.FirstOrDefault();
 
-                InitializeServices();
-
-                BotService.AddServices(Services);
-
-                Log.Info("Framework", "Loaded Skuld v" + SkuldAppContext.Skuld.Key.Version);
-
-                var result = await MessageHandler.ConfigureCommandServiceAsync(
-                    new DiscordNetCommands.CommandServiceConfig
-                    {
-                        CaseSensitiveCommands = false,
-                        DefaultRunMode = DiscordNetCommands.RunMode.Async,
-                        LogLevel = LogSeverity.Verbose
-                    },
-                    new MessageServiceConfig
-                    {
-                        Prefix = Configuration.Prefix,
-                        AltPrefix = Configuration.AltPrefix,
-                        ArgPos = 0
-                    },
-                    Configuration,
-                    Assembly.GetExecutingAssembly(),
-                    Services
-                ).ConfigureAwait(false);
-
-                if (!result.Successful)
-                {
-                    Log.Critical("CmdServ-Configure", result.Error, result.Exception);
-                }
-                else
-                {
-                    Log.Info("CmdServ-Configure", "Configured Command Service");
-                }
-
-                await BotService.DiscordClient.LoginAsync(TokenType.Bot, Configuration.DiscordToken).ConfigureAwait(false);
-
-                await BotService.DiscordClient.StartAsync().ConfigureAwait(false);
-
-                WebSocket = new WebSocketService(Configuration);
-
-                BotService.BackgroundTasks();
-
-                await Task.Delay(-1).ConfigureAwait(false);
-
-                WebSocket.ShutdownServer();
-
-                Environment.Exit(0);
+                SkuldAppContext.SetConfigurationId(Configuration.Id);
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-                Console.ReadLine();
-                Environment.Exit(0);
-            }
-        }
 
-        private static void InitializeStaticClients()
-        {
-            BotService.ConfigureBot(new DiscordSocketConfig
-            {
-                MessageCacheSize = 1000,
-                DefaultRetryMode = RetryMode.AlwaysRetry,
-                LogLevel = LogSeverity.Verbose,
-                TotalShards = Configuration.Shards
-            });
-
-            APIS.SearchClient.Configure(Configuration.GoogleAPI, Configuration.GoogleCx, Configuration.ImgurClientID, Configuration.ImgurClientSecret);
-        }
-
-        private static void InstallServices()
-        {
-            try
-            {
-                var locale = new Locale();
-                locale.InitialiseLocales();
-
-                var localServices = new ServiceCollection()
-                    .AddSingleton(Configuration)
-                    .AddSingleton(locale)
-                    .AddSingleton<ISSClient>()
-                    .AddSingleton<SocialAPIS>()
-                    .AddSingleton<SteamStore>()
-                    .AddSingleton<IqdbClient>()
-                    .AddSingleton<BooruClient>()
-                    .AddSingleton<GiphyClient>()
-                    .AddSingleton<YNWTFClient>()
-                    .AddSingleton<SysExClient>()
-                    .AddSingleton<AnimalClient>()
-                    .AddSingleton<YoutubeClient>()
-                    .AddSingleton<ImghoardClient>()
-                    .AddSingleton<NekosLifeClient>()
-                    .AddSingleton<WikipediaClient>()
-                    .AddSingleton<WebComicClients>()
-                    .AddSingleton<UrbanDictionaryClient>();
-
-                // Github
+            await BotService.ConfigureBotAsync(
+                Configuration,
+                new DiscordSocketConfig
                 {
-                    if (!string.IsNullOrEmpty(Configuration.GithubClientUsername) && !string.IsNullOrEmpty(Configuration.GithubClientPassword) && Configuration.GithubRepository != 0)
-                    {
-                        var github = new GitHubClient(new ProductHeaderValue("Skuld", SkuldAppContext.Skuld.Key.Version.ToString()));
-                        github.Connection.Credentials = new Credentials(Configuration.GithubClientUsername, Configuration.GithubClientPassword);
-
-                        localServices.AddSingleton(github);
-                    }
-                }
-
-                // NASA
+                    MessageCacheSize = 1000,
+                    DefaultRetryMode = RetryMode.AlwaysRetry,
+                    LogLevel = LogSeverity.Verbose,
+                    TotalShards = Configuration.Shards
+                },
+                new DiscordNetCommands.CommandServiceConfig
                 {
-                    if (!string.IsNullOrEmpty(Configuration.NASAApiKey))
-                    {
-                        localServices.AddSingleton(new NASAClient(Configuration.NASAApiKey));
-                    }
-                }
-
-                //Stands4Client
+                    CaseSensitiveCommands = false,
+                    DefaultRunMode = DiscordNetCommands.RunMode.Async,
+                    LogLevel = LogSeverity.Verbose,
+                    IgnoreExtraArgs = true
+                },
+                new MessageServiceConfig
                 {
-                    if (Configuration.STANDSUid != 0 && !string.IsNullOrEmpty(Configuration.STANDSToken))
-                    {
-                        localServices.AddSingleton(new Stands4Client(Configuration.STANDSUid, Configuration.STANDSToken));
-                    }
-                }
+                    Prefix = Configuration.Prefix,
+                    AltPrefix = Configuration.AltPrefix,
+                    ArgPos = 0
+                },
+                Assembly.GetExecutingAssembly()
+            ).ConfigureAwait(false);
 
-                //ImgurClient
-                {
-                    if (!string.IsNullOrEmpty(Configuration.ImgurClientID) && !string.IsNullOrEmpty(Configuration.ImgurClientSecret))
-                    {
-                        localServices.AddSingleton(new ImgurClient(Configuration.ImgurClientID, Configuration.ImgurClientSecret));
-                    }
-                }
+            Log.Info("Framework", "Loaded Skuld v" + SkuldAppContext.Skuld.Key.Version);
 
-                //Twitch
-                {
-                    if(!string.IsNullOrEmpty(Configuration.TwitchClientID))
-                    {
-                        localServices.AddSingleton(new TwitchHelixClient
-                        {
-                            ClientId = new Utf8String(Configuration.TwitchClientID)
-                        });
-                    }
-                }
+            await BotService.StartBotAsync().ConfigureAwait(false);
 
-                localServices.AddSingleton(new InteractiveService(BotService.DiscordClient, TimeSpan.FromSeconds(60)));
+            await Task.Delay(-1).ConfigureAwait(false);
 
-                Services = localServices.BuildServiceProvider();
+            BotService.WebSocket.ShutdownServer();
 
-                Log.Info("Framework", "Successfully built service provider");
-            }
-            catch (Exception ex)
-            {
-                Log.Critical("Framework", ex.Message, ex);
-            }
-        }
-
-        private static void InitializeServices()
-        {
-            voiceService = new VoiceExpService(BotService.DiscordClient, Configuration);
-
-            ConfigureStatsCollector();
-        }
-
-        private static void ConfigureStatsCollector()
-        {
-            DogStatsd.Configure(new StatsdConfig
-            {
-                StatsdServerName = Configuration.DataDogHost,
-                StatsdPort = Configuration.DataDogPort ?? 8125,
-                Prefix = "skuld"
-            });
+            Environment.Exit(0);
         }
     }
 }

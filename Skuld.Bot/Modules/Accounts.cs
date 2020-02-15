@@ -3,7 +3,6 @@ using Discord.Commands;
 using ImageMagick;
 using Microsoft.EntityFrameworkCore.Internal;
 using NodaTime;
-using Skuld.APIS;
 using Skuld.Bot.Extensions;
 using Skuld.Core;
 using Skuld.Core.Extensions;
@@ -15,6 +14,7 @@ using Skuld.Core.Utilities;
 using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
+using Skuld.Services.Extensions;
 using StatsdClient;
 using System;
 using System.IO;
@@ -26,7 +26,7 @@ namespace Skuld.Bot.Commands
     [Group, Name("Accounts"), RequireEnabledModule, RequireDatabase]
     public class AccountModule : ModuleBase<ShardedCommandContext>
     {
-        public SkuldConfig Configuration { get => Program.Configuration; }
+        public SkuldConfig Configuration { get; set; }
 
         [Command("money"), Summary("Gets a user's money")]
         [Alias("balance", "credits")]

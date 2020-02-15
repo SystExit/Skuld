@@ -4,7 +4,6 @@ using Discord.WebSocket;
 using NCalc;
 using NodaTime;
 using Skuld.Bot.Extensions;
-using Skuld.Bot.Globalization;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
@@ -13,7 +12,8 @@ using Skuld.Core.Utilities;
 using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
-using Skuld.Discord.Services;
+using Skuld.Services.Extensions;
+using Skuld.Services.Globalization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,7 +27,7 @@ namespace Skuld.Bot.Commands
     public class InformationModule : ModuleBase<ShardedCommandContext>
     {
         public CommandService CommandService { get => BotService.CommandService; }
-        public SkuldConfig Configuration { get => Program.Configuration; }
+        public SkuldConfig Configuration { get; set; }
         public Locale Locale { get; set; }
 
         [Command("server"), Summary("Gets information about the server")]

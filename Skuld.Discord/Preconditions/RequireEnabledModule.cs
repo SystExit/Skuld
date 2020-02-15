@@ -1,6 +1,5 @@
 ﻿using Discord.Commands;
 using Skuld.Core.Models;
-using Skuld.Discord.Utilities;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,7 +14,7 @@ namespace Skuld.Discord.Preconditions
 
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            if (MessageTools.ModuleDisabled(Database.Modules.ToList().FirstOrDefault(x => x.Id == context.Guild.Id), command))
+            if (Database.Modules.ToList().FirstOrDefault(x => x.Id == context.Guild.Id).ModuleDisabled(command))
             {
                 return Task.FromResult(PreconditionResult.FromError($"The module: `{command.Module.Name}` is disabled, contact a server administrator to enable it"));
             }

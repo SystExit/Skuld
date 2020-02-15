@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Skuld.APIS.Social.Reddit.Models;
-using Skuld.APIS.Utilities;
+using Skuld.Core.Utilities;
 using System;
 using System.Threading.Tasks;
 

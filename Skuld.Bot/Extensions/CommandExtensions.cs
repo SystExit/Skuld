@@ -2,6 +2,7 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using Skuld.Core;
+using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Discord.Extensions;
 using SysEx.Net.Models;

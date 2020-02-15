@@ -1,16 +1,16 @@
 ﻿using Discord;
 using Discord.Commands;
 using Skuld.Bot.Extensions;
-using Skuld.Bot.Globalization;
 using Skuld.Bot.Models;
 using Skuld.Bot.Models.GamblingModule;
 using Skuld.Core;
+using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
-using Skuld.Discord.Handlers;
 using Skuld.Discord.Preconditions;
+using Skuld.Services.Globalization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -253,7 +253,7 @@ namespace Skuld.Bot.Commands
                     }
                     else
                     {
-                        MoneyPrefix = MessageHandler.cmdConfig.MoneyIcon;
+                        MoneyPrefix = BotService.MessageServiceConfig.MoneyIcon;
                     }
 
                     if (user.Money < bet.Value)
@@ -430,7 +430,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                MoneyPrefix = MessageHandler.cmdConfig.MoneyIcon;
+                MoneyPrefix = BotService.MessageServiceConfig.MoneyIcon;
             }
 
             if (bet.HasValue)
@@ -590,7 +590,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                MoneyPrefix = MessageHandler.cmdConfig.MoneyIcon;
+                MoneyPrefix = BotService.MessageServiceConfig.MoneyIcon;
             }
 
             var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);

@@ -4,7 +4,6 @@ using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Imgur.API.Models;
 using Imgur.API.Models.Impl;
-using Skuld.APIS.Extensions;
 using Skuld.Core.Extensions;
 using System;
 using System.Collections.Generic;
@@ -25,13 +24,23 @@ namespace Skuld.APIS
         {
             GoogleCxKey = GoogleCx;
             GoogleSearchService = new CustomsearchService();
-            ImgurClient = new ImgurClient(imgurClientID, imgurClientSecret);
+
             Youtube = new YoutubeClient();
-            GoogleSearchService = new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer { ApiKey = GoogleAPIKey, ApplicationName = "Skuld" });
+
+            if (!string.IsNullOrEmpty(imgurClientID) && !string.IsNullOrEmpty(imgurClientSecret))
+            {
+                ImgurClient = new ImgurClient(imgurClientID, imgurClientSecret);
+            }
+            
+            if(!string.IsNullOrEmpty(GoogleAPIKey))
+            {
+                GoogleSearchService = new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer { ApiKey = GoogleAPIKey, ApplicationName = "Skuld" });
+            }
         }
 
         public static async Task<string> SearchImgurAsync(string query)
         {
+            if (ImgurClient == null) return null;
             try
             {
                 var endpoint = new GalleryEndpoint(ImgurClient);
@@ -63,6 +72,7 @@ namespace Skuld.APIS
 
         public static async Task<string> SearchImgurNSFWAsync(string query)
         {
+            if (ImgurClient == null) return null;
             try
             {
                 var endpoint = new GalleryEndpoint(ImgurClient);
@@ -115,12 +125,13 @@ namespace Skuld.APIS
 
         public static async Task<IReadOnlyCollection<Result>> SearchGoogleAsync(string query)
         {
+            if (GoogleSearchService != null) return null;
             try
             {
                 var listRequest = GoogleSearchService.Cse.List(query);
                 listRequest.Cx = GoogleCxKey;
                 listRequest.Safe = CseResource.ListRequest.SafeEnum.High;
-                var search = await listRequest.ExecuteAsync();
+                var search = await listRequest.ExecuteAsync().ConfigureAwait(false);
                 var items = search.Items;
                 if (items != null)
                 {

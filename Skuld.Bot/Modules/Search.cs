@@ -31,7 +31,7 @@ namespace Skuld.Bot.Commands
         public WikipediaClient Wikipedia { get; set; }
         public GiphyClient Giphy { get; set; }
         public Stands4Client Stands4 { get; set; }
-        public SkuldConfig Configuration { get => Program.Configuration; }
+        public SkuldConfig Configuration { get; set; }
         public TwitchHelixClient TwitchClient { get; set; }
 
         #region SocialMedia

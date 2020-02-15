@@ -6,16 +6,17 @@ using Microsoft.CodeAnalysis.Scripting;
 using Newtonsoft.Json;
 using Skuld.Bot.Extensions;
 using Skuld.Core;
+using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Models.Commands;
 using Skuld.Core.Utilities;
-using Skuld.Discord.BotListing;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Models;
 using Skuld.Discord.Preconditions;
-using Skuld.Discord.Services;
+using Skuld.Services.BotListing;
+using Skuld.Services.Extensions;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -29,7 +30,7 @@ namespace Skuld.Bot.Commands
     [RequireBotFlag(BotAccessLevel.BotAdmin)]
     public class DeveloperModule : ModuleBase<ShardedCommandContext>
     {
-        public SkuldConfig Configuration { get => Program.Configuration; }
+        public SkuldConfig Configuration { get; set; }
 
         #region BotAdmin
 

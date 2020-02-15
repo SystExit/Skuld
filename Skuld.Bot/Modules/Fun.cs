@@ -6,7 +6,6 @@ using Discord.WebSocket;
 using ImageMagick;
 using IqdbApi;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Skuld.APIS;
 using Skuld.APIS.Animals.Models;
@@ -16,7 +15,6 @@ using Skuld.APIS.WebComics.CAD.Models;
 using Skuld.APIS.WebComics.Explosm.Models;
 using Skuld.APIS.WebComics.XKCD.Models;
 using Skuld.Bot.Extensions;
-using Skuld.Bot.Globalization;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
@@ -24,7 +22,7 @@ using Skuld.Core.Utilities;
 using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
-using Skuld.Discord.Services;
+using Skuld.Services.Globalization;
 using StatsdClient;
 using SysEx.Net;
 using SysEx.Net.Models;
@@ -44,6 +42,7 @@ namespace Skuld.Bot.Commands
     [Group, Name("Fun"), RequireEnabledModule]
     public class FunModule : InteractiveBase<ShardedCommandContext>
     {
+        public SkuldConfig Configuration { get; set; }
         public AnimalClient Animals { get; set; }
         public Locale Locale { get; set; }
         public WebComicClients ComicClients { get; set; }
@@ -52,7 +51,6 @@ namespace Skuld.Bot.Commands
         public BooruClient BooruClient { get; set; }
         public NekosLifeClient NekoLife { get; set; }
         public IqdbClient IqdbClient { get; set; }
-        private CommandService CommandService { get => BotService.CommandService; }
 
         private static readonly string[] eightball = {
             "SKULD_FUN_8BALL_YES1",
@@ -518,6 +516,14 @@ namespace Skuld.Bot.Commands
         public async Task Pasta(string title)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            string prefix = Configuration.Prefix;
+
+            if (Context.Guild != null)
+            {
+                prefix = (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix;
+            }
+
             var pastas = await Database.Pastas.AsQueryable().ToListAsync().ConfigureAwait(false);
 
             switch (title.ToLowerInvariant())
@@ -566,7 +572,7 @@ namespace Skuld.Bot.Commands
 
                 case "help":
                     {
-                        await (await CommandService.GetCommandHelpAsync(Context, "pasta").ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
+                        await (await BotService.CommandService.GetCommandHelpAsync(Context, "pasta", prefix).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                     break;
 

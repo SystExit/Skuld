@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Skuld.APIS.NASA.Models;
-using Skuld.APIS.Utilities;
+using Skuld.Core.Utilities;
 using System;
 using System.IO;
 using System.Net;
@@ -21,14 +21,15 @@ namespace Skuld.APIS
         private int OpportunityMaxSOL = 0;
         private int SpiritMaxSOL = 0;
 
+        private bool isInitialised = false;
+
         public NASAClient(string tok)
         {
             rateLimiter = new RateLimiter();
             token = tok;
-            FeedSOL();
         }
 
-        private async void FeedSOL()
+        private async Task FeedSOL()
         {
             if (token == null) return;
 
@@ -78,12 +79,15 @@ namespace Skuld.APIS
 
                 SpiritMaxSOL = data.Rover.MaxSOL;
             }
+
+            isInitialised = true;
         }
 
         public async Task<APOD> GetAPODAsync()
         {
             if (token == null) return null;
             if (rateLimiter.IsRatelimited()) return null;
+            if (!isInitialised) await FeedSOL().ConfigureAwait(false);
 
             var client = (HttpWebRequest)WebRequest.Create("https://api.nasa.gov/planetary/apod?api_key=" + token);
             client.Headers.Add(HttpRequestHeader.UserAgent, HttpWebClient.UAGENT);
@@ -117,6 +121,7 @@ namespace Skuld.APIS
         {
             if (token == null) return null;
             if (rateLimiter.IsRatelimited()) return null;
+            if (!isInitialised) await FeedSOL().ConfigureAwait(false);
 
             string requestbase = "";
             switch (rover)
