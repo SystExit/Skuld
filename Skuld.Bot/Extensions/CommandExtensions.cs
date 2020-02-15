@@ -3,6 +3,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Skuld.Core;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Models;
 using Skuld.Discord.Extensions;
 using SysEx.Net.Models;
@@ -39,12 +40,12 @@ namespace Skuld.Bot.Extensions
                 .AddInlineField("Shard", client?.GetShardIdFor(guild))
                 .AddInlineField("Verification Level", guild.VerificationLevel)
                 .AddInlineField("Voice Region", guild.VoiceRegionId)
-                .AddInlineField("Owner", $"{owner.Username}#{owner.DiscriminatorValue}")
+                .AddInlineField("Owner", $"{owner.Mention}")
                 .AddInlineField("Text Channels", channels.Count(x => x.GetType() == typeof(SocketTextChannel)))
                 .AddInlineField("Voice Channels", channels.Count(x => x.GetType() == typeof(SocketVoiceChannel)))
                 .AddInlineField("AFK Timeout", afktimeout + " minutes")
                 .AddInlineField("Default Notifications", guild.DefaultMessageNotifications)
-                .AddInlineField("Created", guild.CreatedAt.ToString("dd'/'MM'/'yyyy HH:mm:ss", null) + "\t(DD/MM/YYYY)")
+                .AddInlineField("Created", guild.CreatedAt.ToDMYString() + "\t(DD/MM/YYYY)")
                 .AddInlineField($"Emotes [{guild.Emotes.Count}]", $" Use `{skuldguild?.Prefix ?? config.Prefix}server-emojis` to view them")
                 .AddInlineField($"Roles [{guild.Roles.Count}]", $" Use `{skuldguild?.Prefix ?? config.Prefix}server-roles` to view them");
 

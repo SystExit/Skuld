@@ -5,6 +5,7 @@ using Skuld.Core;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord;
+using Skuld.Services.Bot;
 using System;
 using System.IO;
 using System.Linq;
@@ -93,8 +94,7 @@ namespace Skuld.Bot
                 new MessageServiceConfig
                 {
                     Prefix = Configuration.Prefix,
-                    AltPrefix = Configuration.AltPrefix,
-                    ArgPos = 0
+                    AltPrefix = Configuration.AltPrefix
                 },
                 Assembly.GetExecutingAssembly()
             ).ConfigureAwait(false);

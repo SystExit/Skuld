@@ -11,6 +11,7 @@ using Skuld.Discord.Exceptions;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Models;
 using Skuld.Discord.Preconditions;
+using Skuld.Services.Bot;
 using StatsdClient;
 using System;
 using System.Collections.Generic;

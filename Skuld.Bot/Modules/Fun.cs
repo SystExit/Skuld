@@ -22,6 +22,7 @@ using Skuld.Core.Utilities;
 using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
+using Skuld.Services.Bot;
 using Skuld.Services.Globalization;
 using StatsdClient;
 using SysEx.Net;

@@ -12,6 +12,7 @@ using Skuld.Core.Utilities;
 using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
+using Skuld.Services.Bot;
 using Skuld.Services.Extensions;
 using Skuld.Services.Globalization;
 using System;
@@ -26,7 +27,6 @@ namespace Skuld.Bot.Commands
     [Group, Name("Information"), RequireEnabledModule]
     public class InformationModule : ModuleBase<ShardedCommandContext>
     {
-        public CommandService CommandService { get => BotService.CommandService; }
         public SkuldConfig Configuration { get; set; }
         public Locale Locale { get; set; }
 
@@ -472,7 +472,7 @@ namespace Skuld.Bot.Commands
 
             if (info == null)
             {
-                var result = CommandService.Search(command);
+                var result = BotService.CommandService.Search(command);
 
                 if (result.IsSuccess)
                 {

@@ -10,6 +10,7 @@ using Skuld.Core.Utilities;
 using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
+using Skuld.Services.Bot;
 using Skuld.Services.Globalization;
 using System;
 using System.Collections.Generic;
@@ -244,16 +245,12 @@ namespace Skuld.Bot.Commands
 
                 if (bet.HasValue)
                 {
-                    string MoneyPrefix;
+                    string MoneyPrefix = BotService.MessageServiceConfig.MoneyIcon;
 
                     if (!Context.IsPrivate)
                     {
                         var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
                         MoneyPrefix = guild.MoneyIcon;
-                    }
-                    else
-                    {
-                        MoneyPrefix = BotService.MessageServiceConfig.MoneyIcon;
                     }
 
                     if (user.Money < bet.Value)
@@ -421,16 +418,12 @@ namespace Skuld.Bot.Commands
             using var Database = new SkuldDbContextFactory().CreateDbContext();
             var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
-            string MoneyPrefix;
+            string MoneyPrefix = BotService.MessageServiceConfig.MoneyIcon;
 
             if (!Context.IsPrivate)
             {
                 var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
                 MoneyPrefix = guild.MoneyIcon;
-            }
-            else
-            {
-                MoneyPrefix = BotService.MessageServiceConfig.MoneyIcon;
             }
 
             if (bet.HasValue)
@@ -581,16 +574,12 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            string MoneyPrefix;
+            string MoneyPrefix = BotService.MessageServiceConfig.MoneyIcon;
 
             if (!Context.IsPrivate)
             {
                 var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
                 MoneyPrefix = guild.MoneyIcon;
-            }
-            else
-            {
-                MoneyPrefix = BotService.MessageServiceConfig.MoneyIcon;
             }
 
             var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);

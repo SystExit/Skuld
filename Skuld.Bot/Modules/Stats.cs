@@ -11,6 +11,7 @@ using Skuld.Core.Utilities;
 using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
 using Skuld.Discord.Preconditions;
+using Skuld.Services.Bot;
 using SysEx.Net;
 using System;
 using System.Collections.Generic;

@@ -7,6 +7,7 @@ using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Discord.Attributes;
 using Skuld.Discord.Extensions;
+using Skuld.Services.Bot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
