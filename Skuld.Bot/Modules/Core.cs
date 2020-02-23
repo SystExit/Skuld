@@ -5,9 +5,9 @@ using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
-using Skuld.Discord.Attributes;
-using Skuld.Discord.Extensions;
 using Skuld.Services.Bot;
+using Skuld.Services.Discord.Attributes;
+using Skuld.Services.Messaging.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -77,7 +77,7 @@ namespace Skuld.Bot.Commands
                         }
                     }
 
-                    if(Context.Guild != null)
+                    if (Context.Guild != null)
                     {
                         if (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false) != null)
                         {
@@ -97,7 +97,7 @@ namespace Skuld.Bot.Commands
 
                     var dmchan = await Context.User.GetOrCreateDMChannelAsync().ConfigureAwait(false);
 
-                    await embed.QueueMessageAsync(Context, type: Discord.Models.MessageType.DMS).ConfigureAwait(false);
+                    await embed.QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.DMS).ConfigureAwait(false);
                 }
                 else
                 {

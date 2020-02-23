@@ -179,7 +179,7 @@ namespace Skuld.APIS.Extensions
             return Pages;
         }
 
-        #endregion
+        #endregion Pagination
 
         #region Booru
 
@@ -216,6 +216,6 @@ namespace Skuld.APIS.Extensions
             return returnvalue;
         }
 
-        #endregion
+        #endregion Booru
     }
 }

@@ -12,16 +12,18 @@ using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Models.Commands;
 using Skuld.Core.Utilities;
-using Skuld.Discord.Extensions;
-using Skuld.Discord.Models;
-using Skuld.Discord.Preconditions;
 using Skuld.Services.Bot;
 using Skuld.Services.BotListing;
+using Skuld.Services.Discord.Models;
+using Skuld.Services.Discord.Preconditions;
 using Skuld.Services.Extensions;
+using Skuld.Services.Messaging.Extensions;
+using StatsdClient;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -165,16 +167,58 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("grantxp"), Summary("Grant Exp")]
-        public async Task GrantExp(ulong amount, [Remainder]IUser user = null)
+        public async Task GrantExp(ulong amount, [Remainder]IGuildUser user = null)
         {
             if (user == null)
-                user = Context.User;
-            
+                user = Context.Guild.GetUser(Context.User.Id);
+
             using var database = new SkuldDbContextFactory().CreateDbContext();
 
             var usr = await database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
-            await usr.GrantExperienceAsync(amount, Context.Guild, true).ConfigureAwait(false);
+            await usr.GrantExperienceAsync(amount, Context.Guild, Context.Message, async (guildUser, guild, dbGuild, dMsg, level) =>
+            {
+                var msg = dbGuild.LevelUpMessage;
+                if (msg != null)
+                    msg = msg
+                        .Replace("-m", guildUser.Mention)
+                        .Replace("-u", guildUser.Username)
+                        .Replace("-l", level.ToString("N0"));
+                else
+                    msg = $"Congratulations {guildUser.Mention}!! You're now level **{level}**";
+
+                switch (dbGuild.LevelNotification)
+                {
+                    case LevelNotification.Channel:
+                        {
+                            if (dbGuild.LevelUpChannel != 0)
+                            {
+                                if (dMsg.Channel.Id != dbGuild.LevelUpChannel)
+                                {
+                                    msg += $"\nMessage that caused level Up: {dMsg.GetJumpUrl()}";
+                                }
+
+                                await (await guild.GetTextChannelAsync(dbGuild.LevelUpChannel).ConfigureAwait(false)).SendMessageAsync(msg).ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                await dMsg.Channel.SendMessageAsync(msg).ConfigureAwait(false);
+                            }
+                        }
+                        break;
+
+                    case LevelNotification.DM:
+                        {
+                            msg += $"\nMessage that caused level Up: {dMsg.GetJumpUrl()}";
+                            await guildUser.SendMessageAsync(msg).ConfigureAwait(false);
+                        }
+                        break;
+
+                    case LevelNotification.None:
+                    default:
+                        break;
+                }
+            }, true).ConfigureAwait(false);
 
             await EmbedExtensions.FromSuccess($"Gave {user.Mention} {amount.ToFormattedString()}xp", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
@@ -182,34 +226,6 @@ namespace Skuld.Bot.Commands
         #endregion BotAdmin
 
         #region BotOwner
-
-        [Command("populate")]
-        [RequireBotFlag(BotAccessLevel.BotOwner)]
-        public async Task Populate(ulong? guildId = null)
-        {
-            using var database = new SkuldDbContextFactory().CreateDbContext();
-
-            IGuild guild;
-
-            if (guildId.HasValue)
-                guild = Context.Client.GetGuild(guildId.Value);
-            else
-                guild = Context.Guild;
-
-            await guild.DownloadUsersAsync().ConfigureAwait(false);
-
-            var users = await guild.GetUsersAsync().ConfigureAwait(false);
-
-            foreach (var user in users)
-            {
-                await database.InsertOrGetUserAsync(user).ConfigureAwait(false);
-            }
-
-            await
-                EmbedExtensions.FromSuccess(SkuldAppContext.GetCaller(), $"Added all users for guild `{guild.Name}`", Context)
-                .QueueMessageAsync(Context)
-                .ConfigureAwait(false);
-        }
 
         [Command("stop")]
         [RequireBotFlag(BotAccessLevel.BotOwner)]
@@ -248,7 +264,7 @@ namespace Skuld.Bot.Commands
                     break;
 
                 case BotAccessLevel.BotAdmin:
-                    if(give && !dbUser.Flags.IsBitSet(DiscordUtilities.BotAdmin))
+                    if (give && !dbUser.Flags.IsBitSet(DiscordUtilities.BotAdmin))
                     {
                         dbUser.Flags += DiscordUtilities.BotAdmin;
                         DidAny = true;
@@ -261,7 +277,7 @@ namespace Skuld.Bot.Commands
                     break;
 
                 case BotAccessLevel.BotTester:
-                    if(give && !dbUser.Flags.IsBitSet(DiscordUtilities.BotTester))
+                    if (give && !dbUser.Flags.IsBitSet(DiscordUtilities.BotTester))
                     {
                         dbUser.Flags += DiscordUtilities.BotTester;
                         DidAny = true;
@@ -274,7 +290,7 @@ namespace Skuld.Bot.Commands
                     break;
 
                 case BotAccessLevel.BotDonator:
-                    if(give && !dbUser.Flags.IsBitSet(DiscordUtilities.BotDonator))
+                    if (give && !dbUser.Flags.IsBitSet(DiscordUtilities.BotDonator))
                     {
                         dbUser.Flags += DiscordUtilities.BotDonator;
                         DidAny = true;
@@ -287,7 +303,7 @@ namespace Skuld.Bot.Commands
                     break;
             }
 
-            if(DidAny)
+            if (DidAny)
             {
                 await Database.SaveChangesAsync().ConfigureAwait(false);
             }
@@ -527,6 +543,18 @@ namespace Skuld.Bot.Commands
                 {
                     //TODO: Add When implemented
                     using var db = new SkuldDbContextFactory().CreateDbContext();
+
+                    var pastaVotes = db.PastaVotes.AsQueryable().Where(x => x.VoterId == oldId);
+
+                    if (pastaVotes.Any())
+                    {
+                        foreach (var pasta in pastaVotes)
+                        {
+                            pasta.VoterId = newId;
+                        }
+                    }
+
+                    await db.SaveChangesAsync().ConfigureAwait(false);
                 }
 
                 //CommandUsage
@@ -576,6 +604,78 @@ namespace Skuld.Bot.Commands
             {
                 Log.Error("MergeCmd", ex.Message, ex);
                 await "Check the console log".QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+        }
+
+        [Command("generatekeys")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
+        public async Task CreateKeys(ulong amount)
+        {
+            using var db = new SkuldDbContextFactory().CreateDbContext();
+
+            StringBuilder message = new StringBuilder($"Keycodes:");
+
+            message.AppendLine();
+
+            for (ulong x = 0; x < amount; x++)
+            {
+                var key = new DonatorKey
+                {
+                    KeyCode = Guid.NewGuid()
+                };
+                db.DonatorKeys.Add(key);
+
+                message.AppendLine($"Keycode: {key.KeyCode}");
+            }
+
+            DogStatsd.Increment("donatorkeys.generated", (int)amount);
+
+            await db.SaveChangesAsync().ConfigureAwait(false);
+
+            await message.QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.DMS).ConfigureAwait(false);
+        }
+
+        [Command("donatorstatus")]
+        public async Task CheckDonatorStatus(IGuildUser user)
+        {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var keys = Database.DonatorKeys.ToList().Where(x => x.Redeemer == user.Id);
+
+            if (keys.Any())
+            {
+                var keysordered = keys.OrderBy(x => x.RedeemedWhen);
+
+                var amount = 365 * keys.Count();
+
+                var time = keysordered.LastOrDefault().RedeemedWhen.FromEpoch();
+
+                time = time.AddDays(amount);
+
+                await $"{user.Mention} is a donator til {time.ToDMYString()}".QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+            else
+            {
+                await $"{user.Mention} is not a donator 🙁".QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+        }
+
+        [Command("checkkey")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
+        [RequireContext(ContextType.DM)]
+        public async Task CheckKey(Guid key)
+        {
+            using var db = new SkuldDbContextFactory().CreateDbContext();
+
+            var donorkey = db.DonatorKeys.FirstOrDefault(x => x.KeyCode == key);
+
+            if (donorkey != null)
+            {
+                await Context.Channel.SendMessageAsync($"Key: `{key}` is{(donorkey.Redeemed ? "" : " not")} redeemed");
+            }
+            else
+            {
+                await Context.Channel.SendMessageAsync($"Key `{key}` doesn't exist").ConfigureAwait(false);
             }
         }
 
@@ -666,11 +766,11 @@ namespace Skuld.Bot.Commands
                 var globals = new Globals().Context = Context as ShardedCommandContext;
                 var soptions = ScriptOptions
                     .Default
-                    .WithReferences(typeof(SkuldDatabaseContext).Assembly)
+                    .WithReferences(typeof(SkuldDbContext).Assembly)
                     .WithReferences(typeof(ShardedCommandContext).Assembly, typeof(ShardedCommandContext).Assembly,
                     typeof(SocketGuildUser).Assembly, typeof(Task).Assembly, typeof(Queryable).Assembly,
                     typeof(BotService).Assembly)
-                    .WithImports(typeof(SkuldDatabaseContext).FullName)
+                    .WithImports(typeof(SkuldDbContext).FullName)
                     .WithImports(typeof(ShardedCommandContext).FullName, typeof(ShardedCommandContext).FullName,
                     typeof(SocketGuildUser).FullName, typeof(Task).FullName, typeof(Queryable).FullName,
                     typeof(BotService).FullName);

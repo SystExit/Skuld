@@ -31,8 +31,8 @@ namespace Skuld.APIS
             {
                 ImgurClient = new ImgurClient(imgurClientID, imgurClientSecret);
             }
-            
-            if(!string.IsNullOrEmpty(GoogleAPIKey))
+
+            if (!string.IsNullOrEmpty(GoogleAPIKey))
             {
                 GoogleSearchService = new CustomsearchService(new Google.Apis.Services.BaseClientService.Initializer { ApiKey = GoogleAPIKey, ApplicationName = "Skuld" });
             }

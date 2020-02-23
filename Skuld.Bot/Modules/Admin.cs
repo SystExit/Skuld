@@ -2,16 +2,16 @@
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using Skuld.Core;
+using Skuld.Core.Exceptions;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Pagination;
 using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
-using Skuld.Discord.Exceptions;
-using Skuld.Discord.Extensions;
-using Skuld.Discord.Models;
-using Skuld.Discord.Preconditions;
 using Skuld.Services.Bot;
+using Skuld.Services.Discord.Models;
+using Skuld.Services.Discord.Preconditions;
+using Skuld.Services.Messaging.Extensions;
 using StatsdClient;
 using System;
 using System.Collections.Generic;
@@ -666,15 +666,15 @@ namespace Skuld.Bot.Commands
         [Command("persistentrole"), Summary("Toggle a role's persistent nature"), RequireDatabase]
         public async Task PersistentRole([Remainder]IRole role)
         {
-            using SkuldDatabaseContext database = new SkuldDbContextFactory().CreateDbContext();
+            using SkuldDbContext database = new SkuldDbContextFactory().CreateDbContext();
 
             PersistentRole prole = database.PersistentRoles.ToList().FirstOrDefault(x => x.RoleId == role.Id);
 
-            if(prole == null)
+            if (prole == null)
             {
                 var usersWithRole = await Context.Guild.GetUsersWithRoleAsync(role).ConfigureAwait(false);
 
-                foreach(var userWithRole in usersWithRole)
+                foreach (var userWithRole in usersWithRole)
                 {
                     database.PersistentRoles.Add(new PersistentRole
                     {
@@ -690,7 +690,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                database.PersistentRoles.RemoveRange(database.PersistentRoles.ToList().Where(x=>x.RoleId == role.Id && x.GuildId == Context.Guild.Id));
+                database.PersistentRoles.RemoveRange(database.PersistentRoles.ToList().Where(x => x.RoleId == role.Id && x.GuildId == Context.Guild.Id));
 
                 await
                     EmbedExtensions.FromSuccess(Context)
@@ -818,7 +818,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("modifyrole"), Summary("Modify a role's settings")]
-        public async Task ModifyRole(IRole role, [Remainder]Discord.Models.RoleConfig config = null)
+        public async Task ModifyRole(IRole role, [Remainder]RoleConfig config = null)
         {
             if (config == null)
             {
@@ -1165,12 +1165,12 @@ namespace Skuld.Bot.Commands
 
             if (name.IsWebsite())
             {
-                await EmbedExtensions.FromError("Commands can't be a url/website", Context).QueueMessageAsync(Context, type: Discord.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Commands can't be a url/website", Context).QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
                 return;
             }
             if (name.Split(' ').Length > 1)
             {
-                await EmbedExtensions.FromError("Commands can't contain a space", Context).QueueMessageAsync(Context, type: Discord.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Commands can't contain a space", Context).QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
                 return;
             }
             else
@@ -1212,7 +1212,7 @@ namespace Skuld.Bot.Commands
                         }
                         else
                         {
-                            await "Reply timed out, not updating.".QueueMessageAsync(Context, type: Discord.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
+                            await "Reply timed out, not updating.".QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
                         }
                         return;
                     }
@@ -1250,7 +1250,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                await "Are you sure? Y/N".QueueMessageAsync(Context, type: Discord.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
+                await "Are you sure? Y/N".QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
 
                 var msg = await NextMessageAsync(true, true, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
                 if (msg != null)

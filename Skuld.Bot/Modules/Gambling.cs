@@ -7,11 +7,11 @@ using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
-using Skuld.Discord.Attributes;
-using Skuld.Discord.Extensions;
-using Skuld.Discord.Preconditions;
 using Skuld.Services.Bot;
+using Skuld.Services.Discord.Attributes;
+using Skuld.Services.Discord.Preconditions;
 using Skuld.Services.Globalization;
+using Skuld.Services.Messaging.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -237,7 +237,7 @@ namespace Skuld.Bot.Commands
 
             var playerThrow = RockPaperScissorsHelper.FromString(shoot);
 
-            if(playerThrow != RockPaperScissors.Invalid)
+            if (playerThrow != RockPaperScissors.Invalid)
             {
                 var result = DidPlayerWinRPS(playerThrow, skuldThrow);
 
@@ -491,6 +491,7 @@ namespace Skuld.Bot.Commands
         }
 
         #region SlotsMachine
+
         private static double GetPercentageModifier(double mod, SlotIcon[] icons, SlotIcon icon, double is2, double is3)
         {
             if (icons.Count(x => x == icon) == 3)
@@ -556,6 +557,7 @@ namespace Skuld.Bot.Commands
         {
             return $"{GetStringRow(slots[0], false)}\n{GetStringRow(slots[1], true)}\n{GetStringRow(slots[2], false)}";
         }
+
         #endregion SlotsMachine
 
         #endregion Slots
@@ -604,14 +606,14 @@ namespace Skuld.Bot.Commands
             string botRoll = "";
             string plaRoll = "";
 
-            foreach (var roll in bot.GetDies().OrderByDescending(x=>x.Face))
+            foreach (var roll in bot.GetDies().OrderByDescending(x => x.Face))
             {
                 botRoll += $"{roll.Face}, ";
             }
 
             botRoll = botRoll[0..^2];
 
-            foreach (var roll in player.GetDies().OrderByDescending(x=>x.Face))
+            foreach (var roll in player.GetDies().OrderByDescending(x => x.Face))
             {
                 plaRoll += $"{roll.Face}, ";
             }
@@ -676,7 +678,7 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            await 
+            await
                 embed.AddInlineField(Context.Client.CurrentUser.Username, botRoll)
                      .AddInlineField(Context.User.Username, plaRoll)
                      .QueueMessageAsync(Context)

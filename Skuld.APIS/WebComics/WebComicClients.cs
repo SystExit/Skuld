@@ -1,7 +1,6 @@
 ﻿using Skuld.APIS.WebComics.CAD;
 using Skuld.APIS.WebComics.Explosm;
 using Skuld.APIS.WebComics.XKCD;
-using System;
 using System.Threading.Tasks;
 
 namespace Skuld.APIS

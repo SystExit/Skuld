@@ -38,6 +38,7 @@ namespace Skuld.APIS
 
                 case AnimalType.Kitty:
                     return await GetKittyAsync().ConfigureAwait(false);
+
                 default:
                     break;
             }

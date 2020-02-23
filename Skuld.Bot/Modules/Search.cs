@@ -10,9 +10,9 @@ using Skuld.APIS.Pokemon.Models;
 using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
-using Skuld.Discord.Attributes;
-using Skuld.Discord.Extensions;
-using Skuld.Discord.Preconditions;
+using Skuld.Services.Discord.Attributes;
+using Skuld.Services.Discord.Preconditions;
+using Skuld.Services.Messaging.Extensions;
 using SteamStoreQuery;
 using SteamWebAPI2.Interfaces;
 using System.Linq;
@@ -137,33 +137,39 @@ namespace Skuld.Bot.Commands
 
             var firstPart = query.Split(" ")[0];
 
-            switch(firstPart.ToLowerInvariant())
+            switch (firstPart.ToLowerInvariant())
             {
                 case "b":
                 case "bing":
                     url = url + "?s=b&q=" + query.ReplaceFirst(firstPart, "").Replace(" ", "%20");
                     break;
+
                 case "y":
                 case "yahoo":
                     url = url + "?s=y&q=" + query.ReplaceFirst(firstPart, "").Replace(" ", "%20");
                     break;
+
                 case "a":
                 case "aol":
                     url = url + "?a=b&q=" + query.ReplaceFirst(firstPart, "").Replace(" ", "%20");
                     break;
+
                 case "k":
                 case "ask":
                     url = url + "?k=b&q=" + query.ReplaceFirst(firstPart, "").Replace(" ", "%20");
                     break;
+
                 case "d":
                 case "duckduckgo":
                 case "ddg":
                     url = url + "?s=d&q=" + query.ReplaceFirst(firstPart, "").Replace(" ", "%20");
                     break;
+
                 case "g":
                 case "google":
                     url = url + "?q=" + query.ReplaceFirst(firstPart, "").Replace(" ", "%20");
                     break;
+
                 default:
                     url = url + "?q=" + query.Replace(" ", "%20");
                     break;

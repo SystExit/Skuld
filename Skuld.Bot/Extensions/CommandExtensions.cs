@@ -5,7 +5,6 @@ using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Models;
-using Skuld.Discord.Extensions;
 using SysEx.Net.Models;
 using System;
 using System.Collections.Generic;
@@ -36,7 +35,7 @@ namespace Skuld.Bot.Extensions
                 .WithTitle(guild.Name)
                 .AddAuthor(context.Client)
                 .WithColor(EmbedExtensions.RandomEmbedColor())
-                .AddInlineField("Users", $"Users: {humanusers.ToString("N0", null)}\nBots: {botusers.ToString("N0", null)}\nRatio: {ratio}%")
+                .AddInlineField("Users", $"Users: {humanusers.ToFormattedString()}\nBots: {botusers.ToFormattedString()}\nRatio: {ratio}%")
                 .AddInlineField("Shard", client?.GetShardIdFor(guild))
                 .AddInlineField("Verification Level", guild.VerificationLevel)
                 .AddInlineField("Voice Region", guild.VoiceRegionId)

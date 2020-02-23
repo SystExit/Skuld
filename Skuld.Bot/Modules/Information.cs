@@ -9,12 +9,12 @@ using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
-using Skuld.Discord.Attributes;
-using Skuld.Discord.Extensions;
-using Skuld.Discord.Preconditions;
 using Skuld.Services.Bot;
+using Skuld.Services.Discord.Attributes;
+using Skuld.Services.Discord.Preconditions;
 using Skuld.Services.Extensions;
 using Skuld.Services.Globalization;
+using Skuld.Services.Messaging.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -71,7 +71,7 @@ namespace Skuld.Bot.Commands
         public async Task ServerRoles()
         {
             var guild = Context.Guild;
-            var roles = guild.Roles.OrderByDescending(x=>x.Position);
+            var roles = guild.Roles.OrderByDescending(x => x.Position);
             string serverroles = null;
             foreach (var item in roles)
             {
@@ -80,7 +80,7 @@ namespace Skuld.Bot.Commands
                 serverroles += thing;
 
                 if (item != roles.Last())
-                { 
+                {
                     serverroles += ", ";
                 }
             }
@@ -123,12 +123,12 @@ namespace Skuld.Bot.Commands
             var orderedRoles = Context.Guild.Roles.OrderBy(x => x.Position);
 
             IRole previousRole = null;
-            if(role != orderedRoles.FirstOrDefault())
+            if (role != orderedRoles.FirstOrDefault())
             {
                 previousRole = orderedRoles.ElementAtOrDefault(role.Position - 1);
             }
             IRole nextRole = null;
-            if(role != orderedRoles.LastOrDefault())
+            if (role != orderedRoles.LastOrDefault())
             {
                 nextRole = orderedRoles.ElementAtOrDefault(role.Position + 1);
             }
@@ -153,8 +153,6 @@ namespace Skuld.Bot.Commands
                 memberString.Append(" ");
                 memberString.Append("😝");
             }
-
-
 
             await
                 new EmbedBuilder()
@@ -182,12 +180,12 @@ namespace Skuld.Bot.Commands
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task DevDisc()
             => await $"Join the support server at: https://discord.skuldbot.uk/discord?ref=bot"
-            .QueueMessageAsync(Context, type: Discord.Models.MessageType.DMS).ConfigureAwait(false);
+            .QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.DMS).ConfigureAwait(false);
 
         [Command("invite"), Summary("OAuth2 Invite")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task BotInvite()
-            => await $"Invite me using: https://discord.skuldbot.uk/bot?ref=bot".QueueMessageAsync(Context, type: Discord.Models.MessageType.DMS).ConfigureAwait(false);
+            => await $"Invite me using: https://discord.skuldbot.uk/bot?ref=bot".QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.DMS).ConfigureAwait(false);
 
         [Command("userratio"), Summary("Gets the ratio of users to bots")]
         [Ratelimit(20, 1, Measure.Minutes)]
@@ -374,7 +372,7 @@ namespace Skuld.Bot.Commands
 
             var result = res;
 
-            if(result is string)
+            if (result is string)
             {
                 result = (result as string).Replace("everyone", "\u00A0everyone");
             }

@@ -11,10 +11,10 @@ using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
-using Skuld.Discord.Attributes;
-using Skuld.Discord.Extensions;
-using Skuld.Discord.Preconditions;
+using Skuld.Services.Discord.Attributes;
+using Skuld.Services.Discord.Preconditions;
 using Skuld.Services.Extensions;
+using Skuld.Services.Messaging.Extensions;
 using StatsdClient;
 using System;
 using System.IO;
@@ -279,7 +279,7 @@ namespace Skuld.Bot.Commands
 
             outputStream.Position = 0;
 
-            await "".QueueMessageAsync(Context, outputStream, type: Discord.Models.MessageType.File).ConfigureAwait(false);
+            await "".QueueMessageAsync(Context, outputStream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
         }
 
         [Command("daily"), Summary("Daily Money")]
@@ -302,16 +302,27 @@ namespace Skuld.Bot.Commands
 
             if (user == null)
             {
-                if(self.ProcessDaily(Configuration))
+                var previousAmount = self.Money;
+                if (self.ProcessDaily(Configuration))
                 {
                     var embed = EmbedExtensions.FromMessage("SkuldBank - Daily", $"You just got your daily of {gld.MoneyIcon}{MoneyAmount}", Context);
+
+                    if (!self.IsStreakReset(Configuration))
+                    {
+                        self.Streak++;
+                    }
+                    else
+                    {
+                        self.Streak = 0;
+                    }
+
+                    embed.AddInlineField("Previous Amount", $"{gld.MoneyIcon}{previousAmount.ToFormattedString()}");
+                    embed.AddInlineField("New Amount", $"{gld.MoneyIcon}{self.Money.ToFormattedString()}");
 
                     if (self.Streak > 0)
                     {
                         embed.AddField("Streak", $"You're on a streak!!\n{self.Streak}/{StreakAmount}");
                     }
-
-                    self.Streak++;
 
                     await embed
                         .QueueMessageAsync(Context).ConfigureAwait(false);
@@ -326,16 +337,27 @@ namespace Skuld.Bot.Commands
             else
             {
                 var target = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+                var previousAmount = target.Money;
                 if (target.ProcessDaily(Configuration, self))
                 {
-                    var embed = EmbedExtensions.FromMessage("SkuldBank - Daily", $"You just gave your daily of {gld.MoneyIcon}{MoneyAmount} to {user.Mention}", Context);
+                    var embed = EmbedExtensions.FromMessage("SkuldBank - Daily", $"You just gave your daily of {gld.MoneyIcon}{MoneyAmount.ToFormattedString()} to {user.Mention}", Context);
+
+                    if (!self.IsStreakReset(Configuration))
+                    {
+                        self.Streak++;
+                    }
+                    else
+                    {
+                        self.Streak = 0;
+                    }
+
+                    embed.AddInlineField("Previous Amount", $"{gld.MoneyIcon}{previousAmount.ToFormattedString()}");
+                    embed.AddInlineField("New Amount", $"{gld.MoneyIcon}{target.Money.ToFormattedString()}");
 
                     if (self.Streak > 0)
                     {
                         embed.AddField("Streak", $"You're on a streak!!\n{self.Streak}/{StreakAmount}");
                     }
-
-                    self.Streak++;
 
                     await embed
                         .QueueMessageAsync(Context).ConfigureAwait(false);
@@ -563,7 +585,7 @@ namespace Skuld.Bot.Commands
 
             outputStream.Position = 0;
 
-            await "".QueueMessageAsync(Context, outputStream, type: Discord.Models.MessageType.File).ConfigureAwait(false);
+            await "".QueueMessageAsync(Context, outputStream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
         }
 
         [Command("heal"), Summary("Shows you how much you can heal by")]
@@ -1054,7 +1076,7 @@ namespace Skuld.Bot.Commands
 
             outputStream.Position = 0;
 
-            await "".QueueMessageAsync(Context, outputStream, type: Discord.Models.MessageType.File).ConfigureAwait(false);
+            await "".QueueMessageAsync(Context, outputStream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
         }
 
         [Command("settimezone"), Summary("Sets your timezone")]

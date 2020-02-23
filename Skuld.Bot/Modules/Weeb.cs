@@ -7,9 +7,9 @@ using Skuld.APIS.Extensions;
 using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
-using Skuld.Discord.Attributes;
-using Skuld.Discord.Extensions;
+using Skuld.Services.Discord.Attributes;
 using Skuld.Services.Globalization;
+using Skuld.Services.Messaging.Extensions;
 using SysEx.Net;
 using System;
 using System.Linq;
@@ -79,7 +79,7 @@ namespace Skuld.Bot.Commands
             {
                 var pages = data.PaginateList(25);
 
-                IUserMessage sentmessage = await ReplyAsync(null, false, 
+                IUserMessage sentmessage = await ReplyAsync(null, false,
                     EmbedExtensions.FromMessage(loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s", pages[0], Context).WithColor(Color.Purple).Build()
                 ).ConfigureAwait(false);
 

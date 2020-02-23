@@ -3,8 +3,6 @@ using PokeAPI;
 using Skuld.APIS.Pokemon.Models;
 using Skuld.Core;
 using Skuld.Core.Extensions;
-using Skuld.Discord.Extensions;
-using System;
 using System.Linq;
 using System.Threading.Tasks;
 

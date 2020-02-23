@@ -1,16 +1,13 @@
 ﻿using Discord;
 using Discord.Commands;
-using Microsoft.Extensions.DependencyInjection;
 using Miki.API.Images;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
-using Skuld.Discord.Extensions;
-using Skuld.Discord.Preconditions;
-using Skuld.Discord.Services;
-using System;
+using Skuld.Services.Discord.Preconditions;
+using Skuld.Services.Messaging.Extensions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -28,7 +25,7 @@ namespace Skuld.Bot.Commands
             List<ulong> prune = new List<ulong>();
 
             {
-                using SkuldDatabaseContext Database = new SkuldDbContextFactory().CreateDbContext(null);
+                using SkuldDbContext Database = new SkuldDbContextFactory().CreateDbContext(null);
 
                 if (Context.Message.MentionedUsers.Any())
                 {
@@ -225,14 +222,14 @@ namespace Skuld.Bot.Commands
                 .AddAuthor(Context.Client)
                 .AddFooter(Context);
 
-            if(target != null)
+            if (target != null)
             {
                 if (Context.Message.MentionedUsers.Any())
                 {
                     List<ulong> prune = new List<ulong>();
 
                     {
-                        using SkuldDatabaseContext Database = new SkuldDbContextFactory().CreateDbContext(null);
+                        using SkuldDbContext Database = new SkuldDbContextFactory().CreateDbContext(null);
 
                         foreach (var mentionedUser in Context.Message.MentionedUsers)
                         {
@@ -244,7 +241,7 @@ namespace Skuld.Bot.Commands
                     }
 
                     {
-                        using SkuldDatabaseContext Database = new SkuldDbContextFactory().CreateDbContext(null);
+                        using SkuldDbContext Database = new SkuldDbContextFactory().CreateDbContext(null);
                         var initiator = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
                         StringBuilder message = new StringBuilder($"{Context.User.Mention} pets ");
@@ -273,7 +270,7 @@ namespace Skuld.Bot.Commands
 
                         await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                        if(message.ToString() != $"{Context.User.Mention} pets ")
+                        if (message.ToString() != $"{Context.User.Mention} pets ")
                         {
                             action.WithDescription(message.ToString());
                         }

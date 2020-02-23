@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Skuld.Core;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
-using Skuld.Discord;
 using Skuld.Services.Bot;
+using Skuld.Services.Bot.Discord;
 using System;
 using System.IO;
 using System.Linq;
@@ -37,7 +37,7 @@ namespace Skuld.Bot
                 Directory.CreateDirectory(SkuldAppContext.FontDirectory);
             }
 
-            if(args.Contains("--migrate"))
+            if (args.Contains("--migrate"))
             {
                 try
                 {
@@ -49,7 +49,7 @@ namespace Skuld.Bot
 
                     Log.Info("Framework", $"Migrated successfully, latest applied: {migrations.LastOrDefault()}");
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     Log.Critical("Framework", ex.Message, ex);
                 }

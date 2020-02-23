@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Skuld.Discord.Extensions
+namespace Skuld.Bot.Extensions
 {
     public static class GuildExtensions
     {

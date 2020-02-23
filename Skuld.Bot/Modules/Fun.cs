@@ -19,11 +19,11 @@ using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
-using Skuld.Discord.Attributes;
-using Skuld.Discord.Extensions;
-using Skuld.Discord.Preconditions;
 using Skuld.Services.Bot;
+using Skuld.Services.Discord.Attributes;
+using Skuld.Services.Discord.Preconditions;
 using Skuld.Services.Globalization;
+using Skuld.Services.Messaging.Extensions;
 using StatsdClient;
 using SysEx.Net;
 using SysEx.Net.Models;
@@ -214,7 +214,7 @@ namespace Skuld.Bot.Commands
                     .AddFooter(Context)
                     .WithDescription(message)
                     .WithRandomColor()
-                    .QueueMessageAsync(Context, type: Discord.Models.MessageType.Mention)
+                    .QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.Mention)
                 .ConfigureAwait(false);
         }
 
@@ -438,7 +438,7 @@ namespace Skuld.Bot.Commands
                             else
                                 embed.AddField("Creator", $"Unknown User ({pasta.OwnerId})");
                             embed.AddField("Created", pasta.Created.FromEpoch().ToString(new CultureInfo((await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false)).Language)), inline: true);
-                            embed.AddField("UpVotes", ":arrow_double_up: " + Database.PastaVotes.ToList().Count(x=>x.PastaId == pasta.Id && x.Upvote));
+                            embed.AddField("UpVotes", ":arrow_double_up: " + Database.PastaVotes.ToList().Count(x => x.PastaId == pasta.Id && x.Upvote));
                             embed.AddField("DownVotes", ":arrow_double_down: " + Database.PastaVotes.ToList().Count(x => x.PastaId == pasta.Id && !x.Upvote));
 
                             await embed.QueueMessageAsync(Context).ConfigureAwait(false);
@@ -561,7 +561,7 @@ namespace Skuld.Bot.Commands
                                 using var sw = new StreamWriter(stream);
                                 sw.Write(pastanames);
 
-                                await $"Here's a list".QueueMessageAsync(Context, stream, type: Discord.Models.MessageType.File).ConfigureAwait(false);
+                                await $"Here's a list".QueueMessageAsync(Context, stream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
                             }
                         }
                         else
@@ -599,7 +599,7 @@ namespace Skuld.Bot.Commands
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Pasta(string title, [Remainder]IGuildUser user)
         {
-            if(user == null)
+            if (user == null)
             {
                 await EmbedExtensions.FromError("Pasta Kitchen", "You can't give no one your pasta", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
@@ -610,7 +610,7 @@ namespace Skuld.Bot.Commands
             Pasta pasta = null;
             SocketMessage response = null;
 
-            if(Database.Pastas.ToList().Any(x=>x.Name == title))
+            if (Database.Pastas.ToList().Any(x => x.Name == title))
             {
                 pasta = Database.Pastas.ToList().FirstOrDefault(x => x.Name == title);
             }
@@ -651,7 +651,6 @@ namespace Skuld.Bot.Commands
                 {
                     Context.Client.MessageReceived -= handler;
                 }
-
             }
 
             if (response == null)
@@ -695,11 +694,11 @@ namespace Skuld.Bot.Commands
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task MyPasta()
         {
-            SkuldDatabaseContext database = new SkuldDbContextFactory().CreateDbContext();
+            SkuldDbContext database = new SkuldDbContextFactory().CreateDbContext();
 
             IReadOnlyList<Pasta> ownedPastas = database.Pastas.ToList().Where(x => x.OwnerId == Context.User.Id).ToList();
 
-            if(ownedPastas.Any())
+            if (ownedPastas.Any())
             {
                 StringBuilder pastas = new StringBuilder();
 
@@ -713,7 +712,7 @@ namespace Skuld.Bot.Commands
                     }
                 }
 
-                if(pastas.Length >= 2000)
+                if (pastas.Length >= 2000)
                 {
                     using MemoryStream stream = new MemoryStream();
                     using StreamWriter writer = new StreamWriter(stream);
@@ -958,7 +957,7 @@ namespace Skuld.Bot.Commands
 
             stream.Position = 0;
 
-            await "".QueueMessageAsync(Context, stream, type: Discord.Models.MessageType.File).ConfigureAwait(false);
+            await "".QueueMessageAsync(Context, stream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
         }
 
         [Command("magik"), Summary("Magiks an image"), Alias("magick", "magic", "liquify"), Ratelimit(5, 1, Measure.Minutes)]
@@ -1129,7 +1128,7 @@ namespace Skuld.Bot.Commands
                                 Directory.CreateDirectory(folderPath);
                             }
 
-                            await "".QueueMessageAsync(Context, resp as Stream, type: Discord.Models.MessageType.File).ConfigureAwait(false);
+                            await "".QueueMessageAsync(Context, resp as Stream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
                         }
                     }
                     else
