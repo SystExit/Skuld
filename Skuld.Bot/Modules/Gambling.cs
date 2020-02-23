@@ -336,69 +336,7 @@ namespace Skuld.Bot.Commands
 
         private static WinResult DidPlayerWinRPS(RockPaperScissors userThrow, RockPaperScissors skuldThrow)
         {
-            switch (userThrow)
-            {
-                case RockPaperScissors.Rock:
-                    {
-                        switch (skuldThrow)
-                        {
-                            case RockPaperScissors.Rock:
-                                {
-                                    return WinResult.Draw;
-                                }
-                            case RockPaperScissors.Paper:
-                                {
-                                    return WinResult.BotWin;
-                                }
-                            case RockPaperScissors.Scissors:
-                                {
-                                    return WinResult.PlayerWin;
-                                }
-                        }
-                    }
-                    break;
-
-                case RockPaperScissors.Paper:
-                    {
-                        switch (skuldThrow)
-                        {
-                            case RockPaperScissors.Rock:
-                                {
-                                    return WinResult.PlayerWin;
-                                }
-                            case RockPaperScissors.Paper:
-                                {
-                                    return WinResult.Draw;
-                                }
-                            case RockPaperScissors.Scissors:
-                                {
-                                    return WinResult.BotWin;
-                                }
-                        }
-                    }
-                    break;
-
-                case RockPaperScissors.Scissors:
-                    {
-                        switch (skuldThrow)
-                        {
-                            case RockPaperScissors.Rock:
-                                {
-                                    return WinResult.BotWin;
-                                }
-                            case RockPaperScissors.Paper:
-                                {
-                                    return WinResult.PlayerWin;
-                                }
-                            case RockPaperScissors.Scissors:
-                                {
-                                    return WinResult.Draw;
-                                }
-                        }
-                    }
-                    break;
-            }
-            return WinResult.Draw;
+            return (WinResult)( (userThrow - skuldThrow + 2) % 3 ); 
         }
 
         #endregion Rock Paper Scissors
