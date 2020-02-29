@@ -20,19 +20,10 @@ steps:
 
 - task: NuGetCommand@2
   inputs:
-    arguments: 'sources Add -Name Akitaux -Source $(akitaux)'
-
-- task: NuGetCommand@2
-  inputs:
-    arguments: 'sources Add -Name Rogue -Source $(rogue)'
-    
-- task: NuGetCommand@2
-  inputs:
-    arguments: 'sources Add -Name DiscordNet -Source $(dnet)'
-
-- task: NuGetCommand@2
-  inputs:
-    restoreSolution: '$(solution)'
+    command: 'restore'
+    restoreSolution: '**/*.sln'
+    feedsToUse: 'config'
+    nugetConfigPath: './NuGet.config'
 
 - task: VSBuild@1
   inputs:
