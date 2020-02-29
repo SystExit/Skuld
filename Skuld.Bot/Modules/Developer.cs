@@ -183,7 +183,7 @@ namespace Skuld.Bot.Commands
                     msg = msg
                         .Replace("-m", guildUser.Mention)
                         .Replace("-u", guildUser.Username)
-                        .Replace("-l", level.ToString("N0"));
+                        .Replace("-l", level.ToFormattedString());
                 else
                     msg = $"Congratulations {guildUser.Mention}!! You're now level **{level}**";
 
@@ -290,12 +290,12 @@ namespace Skuld.Bot.Commands
                     break;
 
                 case BotAccessLevel.BotDonator:
-                    if (give && !dbUser.Flags.IsBitSet(DiscordUtilities.BotDonator))
+                    if (give && !dbUser.IsDonator)
                     {
                         dbUser.Flags += DiscordUtilities.BotDonator;
                         DidAny = true;
                     }
-                    else if (!give && dbUser.Flags.IsBitSet(DiscordUtilities.BotDonator))
+                    else if (!give && dbUser.IsDonator)
                     {
                         dbUser.Flags -= DiscordUtilities.BotDonator;
                         DidAny = true;
@@ -334,7 +334,7 @@ namespace Skuld.Bot.Commands
                 flags.Add(BotAccessLevel.BotOwner);
             if (dbUser.Flags.IsBitSet(DiscordUtilities.BotAdmin))
                 flags.Add(BotAccessLevel.BotAdmin);
-            if (dbUser.Flags.IsBitSet(DiscordUtilities.BotDonator))
+            if (!dbUser.IsDonator)
                 flags.Add(BotAccessLevel.BotDonator);
             if (dbUser.Flags.IsBitSet(DiscordUtilities.BotTester))
                 flags.Add(BotAccessLevel.BotTester);
@@ -475,7 +475,7 @@ namespace Skuld.Bot.Commands
 
                     if (oldUser != null && newUser != null)
                     {
-                        newUser.Money += oldUser.Money;
+                        newUser.Money = newUser.Money.Add(oldUser.Money);
                         newUser.Title = oldUser.Title;
                         newUser.Language = oldUser.Language;
                         newUser.Patted = oldUser.Patted;
@@ -681,12 +681,20 @@ namespace Skuld.Bot.Commands
 
         [Command("moneyadd"), Summary("Gives money to people"), RequireDatabase]
         [RequireBotFlag(BotAccessLevel.BotOwner)]
-        public async Task GiveMoney(IGuildUser user, ulong amount)
+        public async Task GiveMoney(IGuildUser user, long amount)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
             var usr = Database.Users.FirstOrDefault(x => x.Id == user.Id);
-            usr.Money += amount;
+
+            if (amount < 0)
+            {
+                usr.Money = usr.Money.Subtract((ulong)Math.Abs(amount));
+            }
+            else
+            {
+                usr.Money = usr.Money.Add((ulong)amount);
+            }
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 

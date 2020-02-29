@@ -298,7 +298,7 @@ namespace Skuld.Bot.Commands
             var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
             ulong MoneyAmount = self.GetDailyAmount(Configuration);
-            ulong StreakAmount = self.Flags.IsBitSet(DiscordUtilities.BotDonator) ? Configuration.MaxStreak * 2 : Configuration.MaxStreak;
+            ulong StreakAmount = self.IsDonator ? Configuration.MaxStreak * 2 : Configuration.MaxStreak;
 
             if (user == null)
             {
@@ -307,6 +307,14 @@ namespace Skuld.Bot.Commands
                 {
                     var embed = EmbedExtensions.FromMessage("SkuldBank - Daily", $"You just got your daily of {gld.MoneyIcon}{MoneyAmount}", Context);
 
+                    embed.AddInlineField("Previous Amount", $"{gld.MoneyIcon}{previousAmount.ToFormattedString()}");
+                    embed.AddInlineField("New Amount", $"{gld.MoneyIcon}{self.Money.ToFormattedString()}");
+
+                    if (self.Streak > 0)
+                    {
+                        embed.AddField("Streak", $"You're on a streak!!\n{self.Streak}/{StreakAmount}");
+                    }
+
                     if (!self.IsStreakReset(Configuration))
                     {
                         self.Streak++;
@@ -314,14 +322,6 @@ namespace Skuld.Bot.Commands
                     else
                     {
                         self.Streak = 0;
-                    }
-
-                    embed.AddInlineField("Previous Amount", $"{gld.MoneyIcon}{previousAmount.ToFormattedString()}");
-                    embed.AddInlineField("New Amount", $"{gld.MoneyIcon}{self.Money.ToFormattedString()}");
-
-                    if (self.Streak > 0)
-                    {
-                        embed.AddField("Streak", $"You're on a streak!!\n{self.Streak}/{StreakAmount}");
                     }
 
                     await embed
@@ -396,8 +396,8 @@ namespace Skuld.Bot.Commands
             {
                 var usr2 = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
-                usr.Money -= amount;
-                usr2.Money += amount;
+                usr.Money = usr.Money.Subtract(amount);
+                usr2.Money = usr2.Money.Add(amount);
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
@@ -764,7 +764,8 @@ namespace Skuld.Bot.Commands
             {
                 if (usr.Money >= 300)
                 {
-                    usr.Money -= 300;
+                    usr.Money = usr.Money.Subtract(300);
+
                     if (int.TryParse((Hex[0] != '#' ? Hex : Hex.Remove(0, 1)), System.Globalization.NumberStyles.HexNumber, null, out _))
                     {
                         usr.Background = (Hex[0] != '#' ? "#" + Hex : Hex);
@@ -806,7 +807,7 @@ namespace Skuld.Bot.Commands
             {
                 if (usr.Money >= 40000)
                 {
-                    usr.Money -= 40000;
+                    usr.Money = usr.Money.Subtract(40000);
                     usr.UnlockedCustBG = true;
 
                     await Database.SaveChangesAsync().ConfigureAwait(false);
@@ -842,7 +843,7 @@ namespace Skuld.Bot.Commands
             {
                 if (usr.Money >= 900)
                 {
-                    usr.Money -= 900;
+                    usr.Money = usr.Money.Subtract(900);
                     usr.Background = res.OriginalString;
 
                     await Database.SaveChangesAsync().ConfigureAwait(false);

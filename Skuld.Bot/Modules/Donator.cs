@@ -99,7 +99,7 @@ namespace Skuld.Bot.Modules
 
                     var usr = await Database.GetOrInsertUserAsync(Context.User).ConfigureAwait(false);
 
-                    usr.Money += 25000;
+                    usr.Money = usr.Money.Add(25000);
 
                     await Database.SaveChangesAsync().ConfigureAwait(false);
 

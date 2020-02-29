@@ -9,7 +9,9 @@ namespace Skuld.Bot.Extensions
     {
         public static Weightable<T> GetRandomWeightedValue<T>(this IList<Weightable<T>> items)
         {
-            var randomWeight = SkuldRandom.Next(0, items.Sum(x => x.Weight));
+            if (items == null || items.Count == 0) return null;
+
+            var randomWeight = SkuldRandom.Next(items.Sum(x => x.Weight));
 
             Weightable<T> item = null;
 

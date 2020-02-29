@@ -674,7 +674,8 @@ namespace Skuld.Bot.Commands
 
                             if (r.Price > 0)
                             {
-                                (await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false)).Money -= (ulong)r.Price;
+                                var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+                                usr.Money = usr.Money.Subtract(r.Price);
 
                                 await Database.SaveChangesAsync().ConfigureAwait(false);
                             }

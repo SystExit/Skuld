@@ -78,7 +78,7 @@ namespace Skuld.Bot.Commands
 
         [Command("fuse")]
         [Summary("Fuses 2 of the 1st generation pokemon")]
-        [Usage("fuse 5 96")]
+        [Usage("fuse [5] [96]")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Fuse(int int1, int int2)
         {
@@ -172,6 +172,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("llama"), Summary("Llama"), Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("llama")]
         public async Task Llama()
         {
             var llama = await SysExClient.GetLlamaAsync().ConfigureAwait(false);
@@ -180,6 +181,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("seal"), Summary("Seal"), Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("seal")]
         public async Task Seal()
         {
             var seal = await SysExClient.GetSealAsync().ConfigureAwait(false);
@@ -193,6 +195,7 @@ namespace Skuld.Bot.Commands
 
         [Command("eightball"), Summary("Eightball")]
         [Alias("8ball")]
+        [Usage("eightball <will today be good>")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Eightball([Remainder]string question = null)
         {
@@ -219,6 +222,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("roll"), Summary("Roll a die")]
+        [Usage("roll [5]")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Roll(ulong roll)
         {
@@ -232,6 +236,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("choose"), Summary("Choose from things, eg: \"reading books\" \"playing games\"")]
+        [Usage("roll [\"reading books\" \"playing games\"]")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Choose(params string[] choices)
         {
@@ -279,6 +284,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("yn"), Summary("Yes, no, maybe. I don't know, can you repeat the question?")]
+        [Usage("yn <Will it rain today?>")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task YN([Remainder]string question = null)
         {
@@ -312,6 +318,7 @@ namespace Skuld.Bot.Commands
         #region Pasta
 
         [Command("pasta"), Summary("Pastas are nice"), RequireDatabase]
+        [Usage("pasta new naenae dab", "pasta edit naenae watch me whip")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Pasta(string cmd, string title, [Remainder]string content)
         {
@@ -382,14 +389,7 @@ namespace Skuld.Bot.Commands
 
                                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                                if (Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower()) != pasta)
-                                {
-                                    await EmbedExtensions.FromSuccess($"Changed the content of **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                                }
-                                else
-                                {
-                                    await EmbedExtensions.FromError($"Error changing content of **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                                }
+                                await EmbedExtensions.FromSuccess($"Changed the content of **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                             }
                             else
                             {
@@ -411,6 +411,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("pasta"), Summary("Pastas are nice"), RequireDatabase]
+        [Usage("pasta who naenae", "pasta upvote naenae", "pasta downvote naenae", "pasta delete naenae")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Pasta(string cmd, string title)
         {
@@ -513,6 +514,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("pasta"), Summary("Pastas are nice"), RequireDatabase]
+        [Usage("pasta naenae", "pasta help", "pasta list")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Pasta(string title)
         {
@@ -596,6 +598,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("pasta give"), Summary("Give someone your pasta"), RequireDatabase]
+        [Usage("pasta give naenae <@0>")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Pasta(string title, [Remainder]IGuildUser user)
         {
@@ -691,6 +694,7 @@ namespace Skuld.Bot.Commands
 
         [Command("mypasta"), Summary("Spaghetti Meatballs"), RequireDatabase]
         [Alias("mypastas")]
+        [Usage("mypasta")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task MyPasta()
         {

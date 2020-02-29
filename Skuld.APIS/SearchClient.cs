@@ -4,6 +4,7 @@ using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Imgur.API.Models;
 using Imgur.API.Models.Impl;
+using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
 using System;
 using System.Collections.Generic;
@@ -113,8 +114,8 @@ namespace Skuld.APIS
                 double ratiob = ((double)item.Statistics.DislikeCount / totalreactions) * 100;
 
                 return $"<:youtube:314349922885566475> | http://youtu.be/{item.Id}\n" +
-                    $"`👀: {item.Statistics.ViewCount.ToString("N0")}`\n" +
-                    $"`👍: {item.Statistics.LikeCount.ToString("N0")} ({ratiog.ToString("0.0")}%)\t👎: {item.Statistics.DislikeCount.ToString("N0")} ({ratiob.ToString("0.0")}%)`\n" +
+                    $"`👀: {item.Statistics.ViewCount.ToFormattedString()}`\n" +
+                    $"`👍: {item.Statistics.LikeCount.ToFormattedString()} ({ratiog.ToString("0.0")}%)\t👎: {item.Statistics.DislikeCount.ToString("N0")} ({ratiob.ToString("0.0")}%)`\n" +
                     $"`Duration: {item.Duration}`";
             }
             catch (Exception ex)
