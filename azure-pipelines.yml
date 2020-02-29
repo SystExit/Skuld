@@ -9,9 +9,15 @@ trigger:
 pool:
   vmImage: 'windows-latest'
 
+resources:
+  repositories:
+  - repository: self
+    checkoutOptions:
+      submodules: true
+
 variables:
   solution: '**/*.sln'
-  buildPlatform: 'x86|x64|ARM'
+  buildPlatform: 'x64'
   buildConfiguration: 'Release'
   appxPackageDir: '$(build.artifactStagingDirectory)\AppxPackages\\'
 
