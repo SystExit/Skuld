@@ -7,6 +7,8 @@ using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using Skuld.Services.Accounts.Banking.Models;
+using Skuld.Services.Banking;
 using Skuld.Services.Bot;
 using Skuld.Services.Discord.Attributes;
 using Skuld.Services.Discord.Preconditions;
@@ -158,7 +160,11 @@ namespace Skuld.Bot.Commands
                     return;
                 }
 
-                user.Money = user.Money.Subtract(bet.Value);
+                TransactionService.DoTransaction(new TransactionStruct
+                {
+                    Amount = bet.Value,
+                    Sender = user
+                });
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
             }
@@ -189,7 +195,11 @@ namespace Skuld.Bot.Commands
                         if(bet.HasValue)
                         {
                             if (didWin)
-                                user.Money = user.Money.Add(bet.Value);
+                                TransactionService.DoTransaction(new TransactionStruct
+                                {
+                                    Amount = bet.Value * 2,
+                                    Receiver = user
+                                });
 
 
                             if (didWin)
@@ -261,7 +271,11 @@ namespace Skuld.Bot.Commands
                         return;
                     }
 
-                    user.Money = user.Money.Subtract(bet.Value);
+                    TransactionService.DoTransaction(new TransactionStruct
+                    {
+                        Amount = bet.Value,
+                        Sender = user
+                    });
 
                     await Database.SaveChangesAsync().ConfigureAwait(false);
                 }
@@ -285,7 +299,11 @@ namespace Skuld.Bot.Commands
                         {
                             if (bet.HasValue)
                             {
-                                user.Money = user.Money.Add(bet.Value * 2);
+                                TransactionService.DoTransaction(new TransactionStruct
+                                {
+                                    Amount = bet.Value * 2,
+                                    Receiver = user
+                                });
 
                                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
@@ -302,7 +320,11 @@ namespace Skuld.Bot.Commands
                         {
                             if (bet.HasValue)
                             {
-                                user.Money = user.Money.Add(bet.Value);
+                                TransactionService.DoTransaction(new TransactionStruct
+                                {
+                                    Amount = bet.Value,
+                                    Receiver = user
+                                });
 
                                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
@@ -360,7 +382,12 @@ namespace Skuld.Bot.Commands
                     return;
                 }
 
-                user.Money = user.Money.Subtract(bet.Value);
+                TransactionService.DoTransaction(new TransactionStruct
+                {
+                    Amount = bet.Value,
+                    Sender = user
+                });
+
                 await Database.SaveChangesAsync().ConfigureAwait(false);
             }
 
@@ -403,7 +430,11 @@ namespace Skuld.Bot.Commands
                 {
                     var amount = (ulong)Math.Round(bet.Value * percentageMod);
 
-                    user.Money = user.Money.Add(amount);
+                    TransactionService.DoTransaction(new TransactionStruct
+                    {
+                        Amount = amount,
+                        Receiver = user
+                    });
 
                     await Database.SaveChangesAsync().ConfigureAwait(false);
 
@@ -521,7 +552,11 @@ namespace Skuld.Bot.Commands
                     return;
                 }
 
-                user.Money = user.Money.Subtract(bet.Value);
+                TransactionService.DoTransaction(new TransactionStruct
+                {
+                    Amount = bet.Value,
+                    Sender = user
+                });
             }
 
             var bot = new Dice(2);
@@ -557,7 +592,11 @@ namespace Skuld.Bot.Commands
                     {
                         if (bet.HasValue)
                         {
-                            user.Money = user.Money.Add(bet.Value * 2);
+                            TransactionService.DoTransaction(new TransactionStruct
+                            {
+                                Amount = bet.Value * 2,
+                                Receiver = user
+                            });
 
                             embed = EmbedExtensions.FromSuccess("Mia", $"You Win! You now have {MoneyPrefix}{user.Money.ToFormattedString()}", Context);
                         }
@@ -585,7 +624,11 @@ namespace Skuld.Bot.Commands
                     {
                         if (bet.HasValue)
                         {
-                            user.Money = user.Money.Add(bet.Value);
+                            TransactionService.DoTransaction(new TransactionStruct
+                            {
+                                Amount = bet.Value,
+                                Receiver = user
+                            });
 
                             embed = EmbedExtensions.FromInfo("Mia", $"It's a draw! Your money has been returned", Context);
                         }

@@ -9,6 +9,8 @@ using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using Skuld.Services.Accounts.Banking.Models;
+using Skuld.Services.Banking;
 using Skuld.Services.Bot;
 using Skuld.Services.Discord.Attributes;
 using Skuld.Services.Discord.Preconditions;
@@ -675,7 +677,12 @@ namespace Skuld.Bot.Commands
                             if (r.Price > 0)
                             {
                                 var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-                                usr.Money = usr.Money.Subtract(r.Price);
+
+                                TransactionService.DoTransaction(new TransactionStruct
+                                {
+                                    Amount = r.Price,
+                                    Sender = usr
+                                });
 
                                 await Database.SaveChangesAsync().ConfigureAwait(false);
                             }

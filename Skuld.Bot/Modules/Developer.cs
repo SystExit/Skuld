@@ -12,6 +12,8 @@ using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Models.Commands;
 using Skuld.Core.Utilities;
+using Skuld.Services.Accounts.Banking.Models;
+using Skuld.Services.Banking;
 using Skuld.Services.Bot;
 using Skuld.Services.BotListing;
 using Skuld.Services.Discord.Models;
@@ -475,7 +477,11 @@ namespace Skuld.Bot.Commands
 
                     if (oldUser != null && newUser != null)
                     {
-                        newUser.Money = newUser.Money.Add(oldUser.Money);
+                        TransactionService.DoTransaction(new TransactionStruct
+                        {
+                            Amount = oldUser.Money,
+                            Receiver = newUser
+                        });
                         newUser.Title = oldUser.Title;
                         newUser.Language = oldUser.Language;
                         newUser.Patted = oldUser.Patted;
@@ -541,7 +547,6 @@ namespace Skuld.Bot.Commands
 
                 //PastaVotes
                 {
-                    //TODO: Add When implemented
                     using var db = new SkuldDbContextFactory().CreateDbContext();
 
                     var pastaVotes = db.PastaVotes.AsQueryable().Where(x => x.VoterId == oldId);
@@ -685,15 +690,23 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = Database.Users.FirstOrDefault(x => x.Id == user.Id);
+            var usr = await Database.GetOrInsertUserAsync(user).ConfigureAwait(false);
 
             if (amount < 0)
             {
-                usr.Money = usr.Money.Subtract((ulong)Math.Abs(amount));
+                TransactionService.DoTransaction(new TransactionStruct
+                {
+                    Amount = (ulong)Math.Abs(amount),
+                    Receiver = usr
+                });
             }
             else
             {
-                usr.Money = usr.Money.Add((ulong)amount);
+                TransactionService.DoTransaction(new TransactionStruct
+                {
+                    Amount = (ulong)amount,
+                    Receiver = usr
+                });
             }
 
             await Database.SaveChangesAsync().ConfigureAwait(false);

@@ -11,6 +11,8 @@ using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using Skuld.Services.Accounts.Banking.Models;
+using Skuld.Services.Banking;
 using Skuld.Services.Discord.Attributes;
 using Skuld.Services.Discord.Preconditions;
 using Skuld.Services.Extensions;
@@ -396,8 +398,12 @@ namespace Skuld.Bot.Commands
             {
                 var usr2 = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
-                usr.Money = usr.Money.Subtract(amount);
-                usr2.Money = usr2.Money.Add(amount);
+                TransactionService.DoTransaction(new TransactionStruct
+                {
+                    Amount = amount,
+                    Sender = usr,
+                    Receiver = usr2
+                });
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
@@ -764,7 +770,11 @@ namespace Skuld.Bot.Commands
             {
                 if (usr.Money >= 300)
                 {
-                    usr.Money = usr.Money.Subtract(300);
+                    TransactionService.DoTransaction(new TransactionStruct
+                    {
+                        Amount = 300,
+                        Sender = usr
+                    });
 
                     if (int.TryParse((Hex[0] != '#' ? Hex : Hex.Remove(0, 1)), System.Globalization.NumberStyles.HexNumber, null, out _))
                     {
@@ -807,7 +817,11 @@ namespace Skuld.Bot.Commands
             {
                 if (usr.Money >= 40000)
                 {
-                    usr.Money = usr.Money.Subtract(40000);
+                    TransactionService.DoTransaction(new TransactionStruct
+                    {
+                        Amount = 40000,
+                        Sender = usr
+                    });
                     usr.UnlockedCustBG = true;
 
                     await Database.SaveChangesAsync().ConfigureAwait(false);
@@ -843,7 +857,11 @@ namespace Skuld.Bot.Commands
             {
                 if (usr.Money >= 900)
                 {
-                    usr.Money = usr.Money.Subtract(900);
+                    TransactionService.DoTransaction(new TransactionStruct
+                    {
+                        Amount = 900,
+                        Sender = usr
+                    });
                     usr.Background = res.OriginalString;
 
                     await Database.SaveChangesAsync().ConfigureAwait(false);

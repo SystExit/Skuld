@@ -4,6 +4,8 @@ using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using Skuld.Services.Accounts.Banking.Models;
+using Skuld.Services.Banking;
 using Skuld.Services.Bot;
 using Skuld.Services.Discord.Models;
 using Skuld.Services.Discord.Preconditions;
@@ -99,7 +101,11 @@ namespace Skuld.Bot.Modules
 
                     var usr = await Database.GetOrInsertUserAsync(Context.User).ConfigureAwait(false);
 
-                    usr.Money = usr.Money.Add(25000);
+                    TransactionService.DoTransaction(new TransactionStruct
+                    {
+                        Amount = 25000,
+                        Receiver = usr
+                    });
 
                     await Database.SaveChangesAsync().ConfigureAwait(false);
 
