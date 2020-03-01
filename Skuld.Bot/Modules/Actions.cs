@@ -255,7 +255,7 @@ namespace Skuld.Bot.Commands
 
                             var uzr = await Database.InsertOrGetUserAsync(usr).ConfigureAwait(false);
 
-                            if (!(uzr.RecurringBlock && uzr.Patted.IsRecurring(2)))
+                            if (!(uzr.RecurringBlock && uzr.Patted.IsRecurring(3)))
                             {
                                 uzr.Patted += 1;
                                 initiator.Pats += 1;

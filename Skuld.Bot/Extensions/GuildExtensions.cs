@@ -13,7 +13,7 @@ namespace Skuld.Bot.Extensions
             var users = new List<IGuildUser>();
             await guild.DownloadUsersAsync().ConfigureAwait(false);
 
-            var usrs = await guild.GetUsersAsync();
+            var usrs = await guild.GetUsersAsync().ConfigureAwait(false);
 
             foreach (SocketGuildUser user in usrs)
             {

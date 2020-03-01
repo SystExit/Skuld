@@ -9,6 +9,7 @@ using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Services.Bot;
+using Skuld.Services.Discord.Attributes;
 using Skuld.Services.Discord.Models;
 using Skuld.Services.Discord.Preconditions;
 using Skuld.Services.Messaging.Extensions;
@@ -664,6 +665,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("persistentrole"), Summary("Toggle a role's persistent nature"), RequireDatabase]
+        [Usage("persistentrole SuperAwesomeRole", "persistentrole Super Duper Awesome Role")]
         public async Task PersistentRole([Remainder]IRole role)
         {
             using SkuldDbContext database = new SkuldDbContextFactory().CreateDbContext();

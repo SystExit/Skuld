@@ -4,7 +4,6 @@ using Imgur.API.Authentication.Impl;
 using Imgur.API.Endpoints.Impl;
 using Imgur.API.Models;
 using Imgur.API.Models.Impl;
-using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
 using System;
 using System.Collections.Generic;
