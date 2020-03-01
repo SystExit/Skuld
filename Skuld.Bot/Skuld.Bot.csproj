@@ -6,8 +6,8 @@
     <Version>2020.01</Version>
     <StartupObject>Skuld.Bot.Program</StartupObject>
     <ApplicationIcon />
-    <AssemblyVersion>2020.2.544.0</AssemblyVersion>
-    <FileVersion>2020.2.547.0</FileVersion>
+    <AssemblyVersion>2020.3.7.0</AssemblyVersion>
+    <FileVersion>2020.3.7.0</FileVersion>
     <LangVersion>preview</LangVersion>
     <NeutralLanguage>en-GB</NeutralLanguage>
   </PropertyGroup>
@@ -37,9 +37,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Skuld.APIS\Skuld.APIS.csproj" />
-    <ProjectReference Include="..\Skuld.Core\Skuld.Core.csproj" />
-    <ProjectReference Include="..\Skuld.Models\Skuld.Core.Models.csproj" />
-    <ProjectReference Include="..\Skuld.Services\Skuld.Services.csproj" />
+    <ProjectReference Include="..\Skuld.Core\Skuld.Core\Skuld.Core.csproj" />
+    <ProjectReference Include="..\Skuld.Models\Skuld.Models\Skuld.Models.csproj" />
+    <ProjectReference Include="..\Skuld.Services\Skuld.Services\Skuld.Services.csproj" />
   </ItemGroup>
 
   <ItemGroup>
