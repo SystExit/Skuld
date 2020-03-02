@@ -26,7 +26,7 @@ namespace Skuld.Bot.Commands
         [Command("help")]
         [Summary("Gets all commands or a specific command's information")]
         [Usage("help <command>")]
-        [Ratelimit(1, 10, Measure.Minutes)]
+        [Ratelimit(5, 5, Measure.Minutes)]
         public async Task Help([Remainder]string command = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
