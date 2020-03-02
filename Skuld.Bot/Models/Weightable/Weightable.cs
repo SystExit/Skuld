@@ -2,7 +2,7 @@
 {
     public class Weightable<T>
     {
-        public int Weight { get; private set; }
-        public T Value { get; private set; }
+        public int Weight;
+        public T Value;
     }
 }
