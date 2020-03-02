@@ -95,7 +95,6 @@ namespace Skuld.Bot.Commands
                 botstats += $"Uptime: {string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}\n";
                 botstats += $"Ping: {Context.Client.GetShardFor(Context.Guild).Latency}ms\n";
                 botstats += $"Guilds: {Context.Client.Guilds.Count}\n";
-                botstats += $"Users: {BotService.Users}\n";
                 botstats += $"Shards: {Context.Client.Shards.Count}\n";
                 botstats += $"Commands: {BotService.CommandService.Commands.Count()}\n";
                 botstats += $"Commits: {commits.Count}\n";

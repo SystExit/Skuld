@@ -17,6 +17,8 @@ using Skuld.APIS.WebComics.XKCD.Models;
 using Skuld.Bot.Extensions;
 using Skuld.Core;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Formatting;
+using Skuld.Core.Helpers;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Services.Bot;
@@ -89,6 +91,159 @@ namespace Skuld.Bot.Commands
                 await EmbedExtensions.FromMessage(Context)
                     .WithImageUrl($"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png")
                     .QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+        }
+
+        [Command("reminder")]
+        [Alias("remind", "remind me")]
+        [Summary("What was that thing I needed to do again?")]
+        [Usage("reminder Get eggs in 1h 30m", "reminder Get eggs in 1h 30m --repeat")]
+        [Ratelimit(20, 1, Measure.Minutes)]
+        public async Task Reminder([Remainder]string Reminder)
+        {
+            bool doesRepeat = false;
+
+            if (Reminder.Contains("--repeat"))
+            {
+                doesRepeat = true;
+                Reminder = Reminder.Replace("--repeat", "");
+            }
+
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            try
+            {
+                _ = Reminder.Split(" in ")[1];
+            }
+            catch
+            {
+                string Prefix = Context.IsPrivate ? BotService.MessageServiceConfig.Prefix : (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix;
+                await
+                    EmbedExtensions.FromError($"Try using `{Prefix}help reminder` to learn how to format a reminder", Context)
+                    .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                return;
+            }
+            DateTime time;
+            if(StringTimeHelper.TryParse(Reminder.Split(" in ")[1], out TimeSpan? output))
+            {
+                if(output.Value.TotalSeconds < TimeSpan.FromMinutes(10).TotalSeconds)
+                {
+                    await
+                        EmbedExtensions.FromError($"Cannot queue reminders of less than 10 minutes", Context)
+                        .QueueMessageAsync(Context)
+                        .ConfigureAwait(false);
+                    return;
+                }
+                time = DateTime.Now + output.Value;
+            }
+            else
+            {
+                await
+                    EmbedExtensions.FromError("Can't process time input, try again", Context)
+                    .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                return;
+            }
+
+            if (Database.Reminders.ToList().Where(x=>x.UserId == Context.User.Id).Count() == ushort.MaxValue)
+            {
+                await
+                    EmbedExtensions.FromError("You have reached the maximum allowed reminders", Context)
+                    .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                return;
+            }
+
+            ushort localId = (ushort)SkuldRandom.Next(0, ushort.MaxValue);
+
+            while(Database.Reminders.ToList().Any(x=>x.LocalId == localId && x.UserId == Context.User.Id))
+            {
+                localId = (ushort)SkuldRandom.Next(0, ushort.MaxValue);
+            }
+
+            Database.Reminders.Add(new ReminderObject
+            {
+                ChannelId = Context.Channel.Id,
+                Created = DateTime.Now.ToEpoch(),
+                Content = Reminder.Split(" in ")[0],
+                LocalId = localId,
+                Timeout = time.ToEpoch(),
+                MessageLink = Context.Message.GetJumpUrl(),
+                UserId = Context.User.Id,
+                Repeats = doesRepeat
+            });
+
+            await Database.SaveChangesAsync().ConfigureAwait(false);
+
+            await
+                EmbedExtensions.FromSuccess($"Got it!! I'll remind you at: {time.ToDMYString()}. Your reminder is #`{localId}`", Context)
+                .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
+        }
+
+        [Command("reminders")]
+        [Summary("Gets your current reminders")]
+        [Usage("reminders")]
+        [Ratelimit(20, 1, Measure.Minutes)]
+        public async Task ReminderList()
+        {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var reminders = Database.Reminders.ToList().Where(x => x.UserId == Context.User.Id);
+
+            EmbedBuilder builder = new EmbedBuilder();
+
+            builder.AddAuthor(Context.Client);
+            builder.AddFooter(Context);
+
+            StringBuilder message = new StringBuilder();
+
+            foreach (ReminderObject reminder in reminders)
+            {
+                message.AppendLine($"`{reminder.LocalId}` | Created: {reminder.Created.FromEpoch().ToDMYString()}");
+            }
+
+            if (message.Length > 0)
+            {
+                builder.WithDescription(message.ToString());
+            }
+            else
+            {
+                builder.WithDescription("You have no reminders. <:blobcrying:662304318531305492>");
+            }
+
+            await
+                builder
+                .QueueMessageAsync(Context)
+            .ConfigureAwait(false);
+        }
+
+        [Command("delreminder")]
+        [Summary("Deletes a reminder")]
+        [Usage("delreminder 1234")]
+        [Ratelimit(20, 1, Measure.Minutes)]
+        public async Task DelReminder(ushort reminderId)
+        {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            if(Database.Reminders.Any(x=>x.LocalId == reminderId && x.UserId == Context.User.Id))
+            {
+                Database.Reminders.Remove(Database.Reminders.ToList().FirstOrDefault(x => x.LocalId == reminderId && x.UserId == Context.User.Id));
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await
+                    EmbedExtensions.FromSuccess($"Deleted your reminder `{reminderId}`", Context)
+                    .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                await
+                    EmbedExtensions.FromInfo($"You don't have a reminder with the id `{reminderId}`", Context)
+                    .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
             }
         }
 
