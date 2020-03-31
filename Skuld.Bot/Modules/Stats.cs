@@ -35,7 +35,7 @@ namespace Skuld.Bot.Commands
             new GitRepoStruct("exsersewo", "SysEx.Net"));
 
         public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Booru = new KeyValuePair<AssemblyName, GitRepoStruct>(
-            Assembly.GetAssembly(typeof(BooruClient)).GetName(),
+            Assembly.GetAssembly(typeof(DanbooruClient)).GetName(),
             new GitRepoStruct("exsersewo", "Booru.Net"));
 
         public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Weebsh = new KeyValuePair<AssemblyName, GitRepoStruct>(

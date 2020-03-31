@@ -20,7 +20,13 @@ namespace Skuld.Bot.Commands
     public class LewdModule : ModuleBase<ShardedCommandContext>
     {
         public SysExClient SysExClient { get; set; }
-        public BooruClient BooruClient { get; set; }
+        public DanbooruClient DanbooruClient { get; set; }
+        public GelbooruClient GelbooruClient { get; set; }
+        public Rule34Client Rule34Client { get; set; }
+        public E621Client E621Client { get; set; }
+        public KonaChanClient KonaChanClient { get; set; }
+        public YandereClient YandereClient { get; set; }
+        public RealbooruClient RealbooruClient { get; set; }
         public NekosLifeClient NekosLifeClient { get; set; }
 
         [Command("lewdneko"), Summary("Lewd Neko Grill"), Ratelimit(20, 1, Measure.Minutes)]
@@ -46,16 +52,21 @@ namespace Skuld.Bot.Commands
 
         [Command("danbooru"), Summary("Gets stuff from danbooru"), Ratelimit(20, 1, Measure.Minutes)]
         [Alias("dan")]
+        [Usage("wholesome")]
         public async Task Danbooru(params string[] tags)
         {
-            if (tags.ContainsBlacklistedTags())
+            var test = tags.ContainsBlacklistedTags();
+            if (test.Successful)
             {
-                await EmbedExtensions.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                if (test.Data.Count() > 1)
+                    await $"Your tags contains a banned tag, please remove it.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
+                else
+                    await $"Your tags contains {test.Data.Count()} banned tags, please remove them.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
 
-            var posts = await BooruClient.GetDanbooruImagesAsync(cleantags).ConfigureAwait(false);
+            var posts = await DanbooruClient.GetImagesAsync(cleantags).ConfigureAwait(false);
             StatsdClient.DogStatsd.Increment("web.get");
 
             if (posts == null)
@@ -66,21 +77,26 @@ namespace Skuld.Bot.Commands
 
             var post = posts.RandomValue();
 
-            await post.GetMessage(post.PostUrl).QueueMessageAsync(Context).ConfigureAwait(false);
+            await post.GetMessage(Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("gelbooru"), Summary("Gets stuff from gelbooru"), Ratelimit(20, 1, Measure.Minutes)]
         [Alias("gel")]
+        [Usage("wholesome")]
         public async Task Gelbooru(params string[] tags)
         {
-            if (tags.ContainsBlacklistedTags())
+            var test = tags.ContainsBlacklistedTags();
+            if (test.Successful)
             {
-                await EmbedExtensions.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                if (test.Data.Count() > 1)
+                    await $"Your tags contains a banned tag, please remove it.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
+                else
+                    await $"Your tags contains {test.Data.Count()} banned tags, please remove them.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
 
-            var posts = await BooruClient.GetGelbooruImagesAsync(cleantags).ConfigureAwait(false);
+            var posts = await GelbooruClient.GetImagesAsync(cleantags).ConfigureAwait(false);
             StatsdClient.DogStatsd.Increment("web.get");
 
             if (posts == null)
@@ -91,21 +107,26 @@ namespace Skuld.Bot.Commands
 
             var post = posts.RandomValue();
 
-            await post.GetMessage(post.PostUrl).QueueMessageAsync(Context).ConfigureAwait(false);
+            await post.GetMessage(Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("rule34"), Summary("Gets stuff from rule34"), Ratelimit(20, 1, Measure.Minutes)]
         [Alias("r34")]
+        [Usage("wholesome")]
         public async Task R34(params string[] tags)
         {
-            if (tags.ContainsBlacklistedTags())
+            var test = tags.ContainsBlacklistedTags();
+            if (test.Successful)
             {
-                await EmbedExtensions.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                if (test.Data.Count() > 1)
+                    await $"Your tags contains a banned tag, please remove it.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
+                else
+                    await $"Your tags contains {test.Data.Count()} banned tags, please remove them.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
 
-            var posts = await BooruClient.GetRule34ImagesAsync(cleantags).ConfigureAwait(false);
+            var posts = await Rule34Client.GetImagesAsync(cleantags).ConfigureAwait(false);
             StatsdClient.DogStatsd.Increment("web.get");
 
             if (posts == null)
@@ -116,20 +137,25 @@ namespace Skuld.Bot.Commands
 
             var post = posts.RandomValue();
 
-            await post.GetMessage(post.PostUrl).QueueMessageAsync(Context).ConfigureAwait(false);
+            await post.GetMessage(Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("e621"), Summary("Gets stuff from e621"), Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("wholesome")]
         public async Task E621(params string[] tags)
         {
-            if (tags.ContainsBlacklistedTags())
+            var test = tags.ContainsBlacklistedTags();
+            if (test.Successful)
             {
-                await EmbedExtensions.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                if (test.Data.Count() > 1)
+                    await $"Your tags contains a banned tag, please remove it.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
+                else
+                    await $"Your tags contains {test.Data.Count()} banned tags, please remove them.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
 
-            var posts = await BooruClient.GetE621ImagesAsync(cleantags).ConfigureAwait(false);
+            var posts = await E621Client.GetImagesAsync(cleantags).ConfigureAwait(false);
             StatsdClient.DogStatsd.Increment("web.get");
 
             if (posts == null)
@@ -138,23 +164,28 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var post = posts.RandomValue();
+            var post = posts.Posts.RandomValue();
 
-            await post.GetMessage(post.PostUrl).QueueMessageAsync(Context).ConfigureAwait(false);
+            await post.GetMessage(Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("konachan"), Summary("Gets stuff from konachan"), Ratelimit(20, 1, Measure.Minutes)]
         [Alias("kona", "kc")]
+        [Usage("wholesome")]
         public async Task KonaChan(params string[] tags)
         {
-            if (tags.ContainsBlacklistedTags())
+            var test = tags.ContainsBlacklistedTags();
+            if (test.Successful)
             {
-                await EmbedExtensions.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                if (test.Data.Count() > 1)
+                    await $"Your tags contains a banned tag, please remove it.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
+                else
+                    await $"Your tags contains {test.Data.Count()} banned tags, please remove them.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
 
-            var posts = await BooruClient.GetKonaChanImagesAsync(cleantags).ConfigureAwait(false);
+            var posts = await KonaChanClient.GetImagesAsync(cleantags).ConfigureAwait(false);
             StatsdClient.DogStatsd.Increment("web.get");
 
             if (posts == null)
@@ -165,20 +196,25 @@ namespace Skuld.Bot.Commands
 
             var post = posts.RandomValue();
 
-            await post.GetMessage(post.PostUrl).QueueMessageAsync(Context).ConfigureAwait(false);
+            await post.GetMessage(Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("yandere"), Summary("Gets stuff from yandere"), Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("wholesome")]
         public async Task Yandere(params string[] tags)
         {
-            if (tags.ContainsBlacklistedTags())
+            var test = tags.ContainsBlacklistedTags();
+            if (test.Successful)
             {
-                await EmbedExtensions.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                if (test.Data.Count() > 1)
+                    await $"Your tags contains a banned tag, please remove it.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
+                else
+                    await $"Your tags contains {test.Data.Count()} banned tags, please remove them.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
 
-            var posts = await BooruClient.GetYandereImagesAsync(cleantags).ConfigureAwait(false);
+            var posts = await YandereClient.GetImagesAsync(cleantags).ConfigureAwait(false);
             StatsdClient.DogStatsd.Increment("web.get");
 
             if (posts == null)
@@ -189,20 +225,25 @@ namespace Skuld.Bot.Commands
 
             var post = posts.RandomValue();
 
-            await post.GetMessage(post.PostUrl).QueueMessageAsync(Context).ConfigureAwait(false);
+            await post.GetMessage(Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("real"), Summary("Gets stuff from Realbooru"), Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("wholesome")]
         public async Task Realbooru(params string[] tags)
         {
-            if (tags.ContainsBlacklistedTags())
+            var test = tags.ContainsBlacklistedTags();
+            if (test.Successful)
             {
-                await EmbedExtensions.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                if (test.Data.Count() > 1)
+                    await $"Your tags contains a banned tag, please remove it.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
+                else
+                    await $"Your tags contains {test.Data.Count()} banned tags, please remove them.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
             var cleantags = tags.AddBlacklistedTags();
 
-            var posts = await BooruClient.GetRealBooruImagesAsync(cleantags).ConfigureAwait(false);
+            var posts = await RealbooruClient.GetImagesAsync(cleantags).ConfigureAwait(false);
             StatsdClient.DogStatsd.Increment("web.get");
 
             if (posts == null)
@@ -213,94 +254,95 @@ namespace Skuld.Bot.Commands
 
             var post = posts.RandomValue();
 
-            await post.GetMessage(post.PostUrl).QueueMessageAsync(Context).ConfigureAwait(false);
+            await post.GetMessage(Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("hentaibomb"), Summary("\"bombs\" the chat with images from all boorus"), Ratelimit(20, 1, Measure.Minutes), Priority(1)]
+        [Usage("wholesome")]
         public async Task HentaiBomb([Remainder]string tags = null)
         {
-            List<string> localTags;
+            List<string> localTags = new List<string>();
             if (tags != null)
             {
                 var splittags = tags.Split(' ');
                 localTags = splittags.ToList();
-                if (splittags.ContainsBlacklistedTags())
+                var test = localTags.ContainsBlacklistedTags();
+                if (test.Successful)
                 {
-                    await EmbedExtensions.FromError("Your tags contains a banned tag, please remove it.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    if (test.Data.Count() > 1)
+                        await $"Your tags contains a banned tag, please remove it.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
+                    else
+                        await $"Your tags contains {test.Data.Count()} banned tags, please remove them.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
-            }
-            else
-            {
-                localTags = new List<string>();
             }
             string msg = "";
 
             var cleantags = localTags.AddBlacklistedTags();
 
-            var posts = await BooruClient.GetYandereImagesAsync(cleantags).ConfigureAwait(false);
+            var posts = await YandereClient.GetImagesAsync(cleantags).ConfigureAwait(false);
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts != null)
             {
                 var post = posts.RandomValue();
                 if (post != null)
                 {
-                    msg += post.GetMessage(post.PostUrl) + "\n";
+                    msg += $"Yande.re: {post.GetMessage(Context, true)}\n";
                 }
             }
 
-            var posts2 = await BooruClient.GetKonaChanImagesAsync(cleantags).ConfigureAwait(false);
+            var posts2 = await KonaChanClient.GetImagesAsync(cleantags).ConfigureAwait(false);
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts2 != null)
             {
                 var post = posts2.RandomValue();
                 if (post != null)
                 {
-                    msg += post.GetMessage(post.PostUrl) + "\n";
+                    msg += $"Konachan {post.GetMessage(Context, true)}\n";
                 }
             }
 
-            var posts3 = await BooruClient.GetE621ImagesAsync(cleantags).ConfigureAwait(false);
+            var posts3 = await E621Client.GetImagesAsync(cleantags).ConfigureAwait(false);
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts3 != null)
             {
-                var post = posts3.RandomValue();
+                var post = posts3.Posts.RandomValue();
                 if (post != null)
                 {
-                    msg += post.GetMessage(post.PostUrl) + "\n";
+                    msg += $"E621: {post.GetMessage(Context, true)}\n";
                 }
             }
 
-            var posts4 = await BooruClient.GetRule34ImagesAsync(cleantags).ConfigureAwait(false);
+            var posts4 = await Rule34Client.GetImagesAsync(cleantags).ConfigureAwait(false);
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts4 != null)
             {
                 var post = posts4.RandomValue();
                 if (post != null)
                 {
-                    msg += post.GetMessage(post.PostUrl) + "\n";
+                    msg += $"R34: {post.GetMessage(Context, true)}\n";
                 }
             }
 
-            var posts5 = await BooruClient.GetGelbooruImagesAsync(cleantags).ConfigureAwait(false);
+            var posts5 = await GelbooruClient.GetImagesAsync(cleantags).ConfigureAwait(false);
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts5 != null)
             {
                 var post = posts5.RandomValue();
                 if (post != null)
                 {
-                    msg += post.GetMessage(post.PostUrl) + "\n";
+                    msg += $"Gelbooru: {post.GetMessage(Context, true)}\n";
                 }
             }
 
-            var posts6 = await BooruClient.GetDanbooruImagesAsync(cleantags).ConfigureAwait(false);
+            var posts6 = await DanbooruClient.GetImagesAsync(cleantags).ConfigureAwait(false);
             StatsdClient.DogStatsd.Increment("web.get");
             if (posts6 != null)
             {
                 var post = posts6.RandomValue();
                 if (post != null)
                 {
-                    msg += post.GetMessage(post.PostUrl) + "\n";
+                    msg += $"Danbooru: {post.GetMessage(Context, true)}\n";
                 }
             }
 

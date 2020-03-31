@@ -51,7 +51,7 @@ namespace Skuld.Bot.Commands
         public WebComicClients ComicClients { get; set; }
         public SysExClient SysExClient { get; set; }
         public YNWTFClient YNWTFcli { get; set; }
-        public BooruClient BooruClient { get; set; }
+        public SafebooruClient SafebooruClient { get; set; }
         public NekosLifeClient NekoLife { get; set; }
         public IqdbClient IqdbClient { get; set; }
 
@@ -1331,16 +1331,21 @@ namespace Skuld.Bot.Commands
         [Alias("safe")]
         public async Task Safebooru(params string[] tags)
         {
-            if (tags.ContainsBlacklistedTags()) await "Your tags contains a banned tag, please remove it.".QueueMessageAsync(Context).ConfigureAwait(false);
+            var test = tags.ContainsBlacklistedTags();
+            if (test.Successful)
+            {
+                await $"Your tags contains {test.Data.Count()} banned tags, please remove them.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
             else
             {
                 var cleantags = tags.AddBlacklistedTags();
-                var posts = await BooruClient.GetSafebooruImagesAsync(cleantags).ConfigureAwait(false);
+                var posts = await SafebooruClient.GetImagesAsync(cleantags).ConfigureAwait(false);
                 DogStatsd.Increment("web.get");
                 var post = GetSafeImage(posts);
                 if (post != null)
                 {
-                    await post.GetMessage(post.PostUrl).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await post.GetMessage(Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
                 await EmbedExtensions.FromError("Couldn't find an image", Context).QueueMessageAsync(Context).ConfigureAwait(false);

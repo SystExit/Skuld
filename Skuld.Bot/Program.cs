@@ -2,8 +2,8 @@
 using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using Skuld.Core;
-using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using Skuld.Models;
 using Skuld.Services.Bot;
 using Skuld.Services.Bot.Discord;
 using System;
@@ -95,8 +95,7 @@ namespace Skuld.Bot
                 {
                     Prefix = Configuration.Prefix,
                     AltPrefix = Configuration.AltPrefix
-                },
-                Assembly.GetExecutingAssembly()
+                }
             ).ConfigureAwait(false);
 
             Log.Info("Framework", "Loaded Skuld v" + SkuldAppContext.Skuld.Key.Version);
