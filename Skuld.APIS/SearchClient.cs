@@ -125,7 +125,7 @@ namespace Skuld.APIS
 
         public static async Task<IReadOnlyCollection<Result>> SearchGoogleAsync(string query)
         {
-            if (GoogleSearchService != null) return null;
+            if (GoogleSearchService == null) return null;
             try
             {
                 var listRequest = GoogleSearchService.Cse.List(query);
