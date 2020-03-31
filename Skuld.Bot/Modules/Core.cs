@@ -3,8 +3,8 @@ using Discord.Commands;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
-using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using Skuld.Models;
 using Skuld.Services.Bot;
 using Skuld.Services.Discord.Attributes;
 using Skuld.Services.Messaging.Extensions;
@@ -25,7 +25,7 @@ namespace Skuld.Bot.Commands
 
         [Command("help")]
         [Summary("Gets all commands or a specific command's information")]
-        [Usage("help <command>")]
+        [Usage("help")]
         [Ratelimit(5, 5, Measure.Minutes)]
         public async Task Help([Remainder]string command = null)
         {
@@ -48,9 +48,9 @@ namespace Skuld.Bot.Commands
 
                     var embed =
                         new EmbedBuilder()
-                        .AddAuthor(Context.Client)
-                        .WithRandomColor()
-                        .WithDescription($"The prefix of **{(Context.Guild == null ? Context.User.FullName() : Context.Guild.Name)}** is: `{(Context.Guild == null ? Configuration.Prefix : (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix)}`");
+                            .AddAuthor(Context.Client)
+                            .WithRandomColor()
+                            .WithDescription($"The prefix of **{(Context.Guild == null ? Context.User.FullName() : Context.Guild.Name)}** is: `{(Context.Guild == null ? Configuration.Prefix : (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix)}`");
 
                     foreach (var module in BotService.CommandService.Modules)
                     {
@@ -128,7 +128,7 @@ namespace Skuld.Bot.Commands
 
         [Command("issue")]
         [Summary("Create or get an issue on Github")]
-        [Usage("issue \"Command x doesn't work\" I tried to run command `x` and it threw the error `error`")]
+        [Usage("\"Command x doesn't work\" I tried to run command `x` and it threw the error `error`", "\"Command x doesn't work\"")]
         [Ratelimit(1, 10, Measure.Minutes)]
         public async Task Issue(string title, [Remainder]string content = null)
         {

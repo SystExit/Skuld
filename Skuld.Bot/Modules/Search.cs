@@ -9,7 +9,7 @@ using Skuld.APIS.Extensions;
 using Skuld.APIS.Pokemon.Models;
 using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
-using Skuld.Core.Models;
+using Skuld.Models;
 using Skuld.Services.Discord.Attributes;
 using Skuld.Services.Discord.Preconditions;
 using Skuld.Services.Messaging.Extensions;
@@ -38,6 +38,7 @@ namespace Skuld.Bot.Commands
 
         [Command("twitch"), Summary("Finds a twitch user")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("loltyler1")]
         public async Task TwitchSearch([Remainder]string twitchStreamer)
         {
             var channel = await TwitchClient.GetUsersAsync(new GetUsersParams
@@ -55,6 +56,7 @@ namespace Skuld.Bot.Commands
 
         [Command("reddit"), Summary("Gets a subreddit")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("r/cursed_images", "u/zachinoz")]
         public async Task SubReddit(string subreddit)
         {
             var channel = (ITextChannel)Context.Channel;
@@ -73,6 +75,7 @@ namespace Skuld.Bot.Commands
 
         [Command("search"), Summary("Use \"g\" as a short cut for google,\n\"yt\" for youtube,\nor search for images on imgur"), Alias("s")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("g How to use google", "yt super awesome megamix #1")]
         public async Task GetSearch(string platform, [Remainder]string query)
         {
             platform = platform.ToLowerInvariant();
@@ -127,6 +130,7 @@ namespace Skuld.Bot.Commands
 
         [Command("lmgtfy"), Summary("Creates a \"lmgtfy\"(Let me google that for you) link")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("How to use google", "b How to use bing")]
         public async Task LMGTFY([Remainder]string query)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -167,7 +171,7 @@ namespace Skuld.Bot.Commands
 
                 case "g":
                 case "google":
-                    url = url + "?q=" + query.ReplaceFirst(firstPart, "").Replace(" ", "%20");
+                    url = url + "?s=g&q=" + query.ReplaceFirst(firstPart, "").Replace(" ", "%20");
                     break;
 
                 default:
@@ -192,6 +196,7 @@ namespace Skuld.Bot.Commands
 
         [Command("urban"), Summary("Gets a thing from urban dictionary if empty, it gets a random thing"), RequireNsfw]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("naenae")]
         public async Task Urban([Remainder]string phrase = null)
         {
             if (phrase == null)
@@ -202,6 +207,7 @@ namespace Skuld.Bot.Commands
 
         [Command("wikipedia"), Summary("Gets wikipedia information, supports all languages that wikipedia offers"), Alias("wiki")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("en Star_Wars")]
         public async Task Wiki(string langcode, [Remainder]string query)
         {
             var page = await Wikipedia.GetArticleAsync(langcode, query).ConfigureAwait(false);
@@ -216,6 +222,7 @@ namespace Skuld.Bot.Commands
 
         [Command("define"), Summary("Defines a word")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("Anachronism")]
         public async Task Define([Remainder]string word)
         {
             var definedword = await Stands4.GetWordAsync(word).ConfigureAwait(false);
@@ -238,6 +245,7 @@ namespace Skuld.Bot.Commands
 
         [Command("steam"), Summary("Searches steam store")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("Noita")]
         public async Task SteamStore([Remainder]string game)
         {
             var steam = Query.Search(game);
@@ -276,6 +284,7 @@ namespace Skuld.Bot.Commands
 
         [Command("pokemon"), Summary("Gets information about a pokemon id")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("Charizard", "Pikachu stats", "Gardevoir abilities", "Haunter helditems", "Ghastly moves", "Machoke games")]
         public async Task GetPokemon(string pokemon, string group = null)
             => await SendPokemonAsync(await DataFetcher.GetNamedApiObject<PokemonSpecies>(pokemon.ToLowerInvariant()).ConfigureAwait(false), group ?? "default").ConfigureAwait(false);
 

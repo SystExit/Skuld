@@ -1,12 +1,13 @@
 ﻿using Discord.Commands;
-using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using Skuld.Models;
 using Skuld.Services.Accounts.Banking.Models;
 using Skuld.Services.Banking;
 using Skuld.Services.Bot;
+using Skuld.Services.Discord.Attributes;
 using Skuld.Services.Discord.Models;
 using Skuld.Services.Discord.Preconditions;
 using Skuld.Services.Messaging.Extensions;
@@ -22,6 +23,7 @@ namespace Skuld.Bot.Modules
     {
         [Command("redeemkey")]
         [RequireContext(ContextType.DM)]
+        [Usage("Totally a real key yes")]
         public async Task RedeemKey(Guid key)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -77,6 +79,7 @@ namespace Skuld.Bot.Modules
 
         [Command("sellkey")]
         [RequireContext(ContextType.DM)]
+        [Usage("Totally a real key yes")]
         public async Task SellKey(Guid key)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();

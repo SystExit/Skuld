@@ -6,7 +6,7 @@ using Kitsu.Manga;
 using Skuld.APIS.Extensions;
 using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
-using Skuld.Core.Models;
+using Skuld.Models;
 using Skuld.Services.Discord.Attributes;
 using Skuld.Services.Globalization;
 using Skuld.Services.Messaging.Extensions;
@@ -27,6 +27,7 @@ namespace Skuld.Bot.Commands
 
         [Command("anime"), Summary("Gets information about an anime")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("JoJo's Bizarre Adventure")]
         public async Task GetAnime([Remainder]string animetitle)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -66,6 +67,7 @@ namespace Skuld.Bot.Commands
 
         [Command("manga"), Summary("Gets information about a manga")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("JoJo's Bizarre Adventure")]
         public async Task GetMangaAsync([Remainder]string mangatitle)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -119,6 +121,7 @@ namespace Skuld.Bot.Commands
 
         [Command("whatanime"), Summary("Searches Trace.Moe")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("Screenshot of Anime")]
         public async Task WhatAnime(Uri url = null)
         {
             if (url == null)
