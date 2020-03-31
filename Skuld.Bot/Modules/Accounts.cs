@@ -648,17 +648,6 @@ namespace Skuld.Bot.Commands
             await "".QueueMessageAsync(Context, outputStream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
         }
 
-        [Command("heal"), Summary("Shows you how much you can heal by")]
-        [Ratelimit(20, 1, Measure.Minutes)]
-        public async Task HealAmount()
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-
-            var amnt = Math.Round(Math.Ceiling(usr.Money * 0.8));
-            await $"You can heal for: `{Math.Floor(amnt)}`HP".QueueMessageAsync(Context).ConfigureAwait(false);
-        }
-
         [Command("rep"), Summary("Gives someone rep or checks your rep")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task GiveRep([Remainder]IGuildUser user = null)
