@@ -70,6 +70,12 @@ namespace Skuld.Bot.Commands
                                 case "experience":
                                     features.Experience = Convert.ToBoolean(value);
                                     break;
+                                case "starboard":
+                                    features.Starboard = Convert.ToBoolean(value);
+                                    break;
+                                case "rolestack":
+                                    features.StackingRoles = Convert.ToBoolean(value);
+                                    break;
                             }
 
                             await Database.SaveChangesAsync().ConfigureAwait(false);
