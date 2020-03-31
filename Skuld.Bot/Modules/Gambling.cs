@@ -7,6 +7,7 @@ using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using Skuld.Models;
 using Skuld.Services.Accounts.Banking.Models;
 using Skuld.Services.Banking;
 using Skuld.Services.Bot;
@@ -133,9 +134,14 @@ namespace Skuld.Bot.Commands
             new ushort[] { 3, 1 }
         };
 
+        const int MinimumBet = 100;
+
+        private bool IsValidBet(ulong betAmount)
+            => betAmount >= MinimumBet;
+
         [Command("flip")]
         [Disabled(false, true)]
-        [Usage("flip [heads/tails] <bet>")]
+        [Usage("heads", "heads 250")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task HeadsOrTails(string guess, ulong? bet = null)
         {
@@ -154,9 +160,15 @@ namespace Skuld.Bot.Commands
 
             if (bet.HasValue)
             {
+                if (!IsValidBet(bet.Value))
+                {
+                    await EmbedExtensions.FromError("Heads Or Tails", $"You have not specified a valid bet, minimum is {MoneyPrefix}{MinimumBet.ToFormattedString()}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    return;
+                }
+
                 if (user.Money < bet.Value)
                 {
-                    await EmbedExtensions.FromError("Rock Paper Scissors", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError("Heads Or Tails", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
 
@@ -218,13 +230,14 @@ namespace Skuld.Bot.Commands
                         }
 
                         await EmbedExtensions.FromImage(res.Item2, didWin ? Color.Green : Color.Red, Context)
+                            .WithTitle("Heads Or Tails")
                             .WithDescription($"Result are: {Locale.GetLocale(user.Language).GetString(res.Item1)} {suffix}")
                             .QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                     break;
 
                 default:
-                    await EmbedExtensions.FromError($"Incorrect guess value. Try; `{Prefix}flip heads`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError("Heads Or Tails", $"Incorrect guess value. Try; `{Prefix}flip heads`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
             }
         }
@@ -232,7 +245,7 @@ namespace Skuld.Bot.Commands
         #region Rock Paper Scissors
 
         [Command("rps")]
-        [Usage("rps [rock/paper/scissors/r/p/s] <bet>")]
+        [Usage("rock", "rock 250")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task RPS(string shoot, ulong? bet = null)
         {
@@ -257,12 +270,18 @@ namespace Skuld.Bot.Commands
 
                 string MoneyPrefix = BotService.MessageServiceConfig.MoneyIcon;
 
+                if (!Context.IsPrivate)
+                {
+                    var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+                    MoneyPrefix = guild.MoneyIcon;
+                }
+
                 if (bet.HasValue)
                 {
-                    if (!Context.IsPrivate)
+                    if (!IsValidBet(bet.Value))
                     {
-                        var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-                        MoneyPrefix = guild.MoneyIcon;
+                        await EmbedExtensions.FromError("Rock Paper Scissors", $"You have not specified a valid bet, minimum is {MoneyPrefix}{MinimumBet.ToFormattedString()}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        return;
                     }
 
                     if (user.Money < bet.Value)
@@ -271,7 +290,7 @@ namespace Skuld.Bot.Commands
                         return;
                     }
 
-                    TransactionService.DoTransaction(new TransactionStruct
+                    EventResult<bool> transactionResult = TransactionService.DoTransaction(new TransactionStruct
                     {
                         Amount = bet.Value,
                         Sender = user
@@ -299,7 +318,7 @@ namespace Skuld.Bot.Commands
                         {
                             if (bet.HasValue)
                             {
-                                TransactionService.DoTransaction(new TransactionStruct
+                                EventResult<bool> transactionResult = TransactionService.DoTransaction(new TransactionStruct
                                 {
                                     Amount = bet.Value * 2,
                                     Receiver = user
@@ -320,7 +339,7 @@ namespace Skuld.Bot.Commands
                         {
                             if (bet.HasValue)
                             {
-                                TransactionService.DoTransaction(new TransactionStruct
+                                EventResult<bool> transactionResult = TransactionService.DoTransaction(new TransactionStruct
                                 {
                                     Amount = bet.Value,
                                     Receiver = user
@@ -376,13 +395,19 @@ namespace Skuld.Bot.Commands
 
             if (bet.HasValue)
             {
+                if (!IsValidBet(bet.Value))
+                {
+                    await EmbedExtensions.FromError("Slots", $"You have not specified a valid bet, minimum is {MoneyPrefix}{MinimumBet.ToFormattedString()}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    return;
+                }
+
                 if (user.Money < bet.Value)
                 {
                     await EmbedExtensions.FromError("Slots", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
 
-                TransactionService.DoTransaction(new TransactionStruct
+                EventResult<bool> result = TransactionService.DoTransaction(new TransactionStruct
                 {
                     Amount = bet.Value,
                     Sender = user
@@ -430,7 +455,7 @@ namespace Skuld.Bot.Commands
                 {
                     var amount = (ulong)Math.Round(bet.Value * percentageMod);
 
-                    TransactionService.DoTransaction(new TransactionStruct
+                    EventResult<bool> result = TransactionService.DoTransaction(new TransactionStruct
                     {
                         Amount = amount,
                         Receiver = user
@@ -522,7 +547,7 @@ namespace Skuld.Bot.Commands
         #region Mia
 
         [Command("mia"), Summary("Play a game of mia")]
-        [Usage("mia <bet>")]
+        [Usage("250")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Mia(ulong? bet = null)
         {
@@ -546,13 +571,19 @@ namespace Skuld.Bot.Commands
 
             if (bet.HasValue)
             {
+                if (!IsValidBet(bet.Value))
+                {
+                    await EmbedExtensions.FromError("Mia", $"You have not specified a valid bet, minimum is {MoneyPrefix}{MinimumBet.ToFormattedString()}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    return;
+                }
+
                 if (user.Money < bet.Value)
                 {
                     await EmbedExtensions.FromError("Mia", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
 
-                TransactionService.DoTransaction(new TransactionStruct
+                EventResult<bool> result = TransactionService.DoTransaction(new TransactionStruct
                 {
                     Amount = bet.Value,
                     Sender = user
@@ -592,7 +623,7 @@ namespace Skuld.Bot.Commands
                     {
                         if (bet.HasValue)
                         {
-                            TransactionService.DoTransaction(new TransactionStruct
+                            EventResult<bool> result = TransactionService.DoTransaction(new TransactionStruct
                             {
                                 Amount = bet.Value * 2,
                                 Receiver = user
@@ -624,7 +655,7 @@ namespace Skuld.Bot.Commands
                     {
                         if (bet.HasValue)
                         {
-                            TransactionService.DoTransaction(new TransactionStruct
+                            EventResult<bool> result = TransactionService.DoTransaction(new TransactionStruct
                             {
                                 Amount = bet.Value,
                                 Receiver = user
