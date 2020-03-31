@@ -5,7 +5,8 @@ using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Extensions.Verification;
-using Skuld.Core.Models;
+using Skuld.Models;
+using Skuld.Services.Discord.Attributes;
 using Skuld.Services.Discord.Preconditions;
 using Skuld.Services.Messaging.Extensions;
 using System.Collections.Generic;
@@ -57,6 +58,7 @@ namespace Skuld.Bot.Commands
             => target == null ? isnull : notnull;
 
         [Command("slap"), Summary("Slap a user")]
+        [Usage("@person", "you")]
         public async Task Slap([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
@@ -76,6 +78,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("stab"), Summary("Stabs a user")]
+        [Usage("@person", "you")]
         public async Task Stab([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
@@ -86,7 +89,7 @@ namespace Skuld.Bot.Commands
                 image,
                 SkuldAppContext.GetCaller(),
                 GetMessage(target,
-                    $"URUSAI!! {Context.Client.CurrentUser.Mention} stabs {target}",
+                    $"{Context.Client.CurrentUser.Mention} stabs {target}",
                     $"{Context.User.Mention} stabs {target}"
                 )
             );
@@ -95,6 +98,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("hug"), Summary("hugs a user")]
+        [Usage("@person", "you")]
         public async Task Hug([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
@@ -114,6 +118,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("punch"), Summary("Punch a user")]
+        [Usage("@person", "you")]
         public async Task Punch([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
@@ -143,7 +148,7 @@ namespace Skuld.Bot.Commands
                 new EmbedBuilder()
                 .WithImageUrl(image)
                 .WithTitle(SkuldAppContext.GetCaller())
-                .WithDescription($"{Context.User.Mention} shrugs.")
+                .WithDescription($"{Context.User.Mention} shrugs")
                 .WithRandomColor()
                 .AddAuthor(Context.Client)
                 .AddFooter(Context)
@@ -151,6 +156,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("adore"), Summary("Adore a user")]
+        [Usage("@person", "you")]
         public async Task Adore([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
@@ -170,6 +176,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("kiss"), Summary("Kiss a user")]
+        [Usage("@person", "you")]
         public async Task Kiss([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
@@ -189,6 +196,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("grope"), Summary("Grope a user")]
+        [Usage("@person", "you")]
         public async Task Grope([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
@@ -208,6 +216,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("pet"), Summary("Pat a user"), Alias("pat", "headpat")]
+        [Usage("@person", "you")]
         public async Task Pet([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
@@ -276,7 +285,7 @@ namespace Skuld.Bot.Commands
                         }
                         else
                         {
-                            action.WithDescription($"{Context.User.Mention} pets the air 😢😢");
+                            action.WithDescription($"{Context.Client.CurrentUser.Mention} pets {Context.User.Mention}");
                         }
                     }
                 }
@@ -294,6 +303,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("glare"), Summary("Glares at a user"), Alias("stare")]
+        [Usage("@person", "you")]
         public async Task Stare([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
