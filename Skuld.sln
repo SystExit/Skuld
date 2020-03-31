@@ -2,14 +2,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.28606.126
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "References", "References", "{5C56A68A-D80A-4B9C-A437-D82A323BEF18}"
-	ProjectSection(SolutionItems) = preProject
-		References\Booru.Net.dll = References\Booru.Net.dll
-		References\Discord.Addons.Interactive.dll = References\Discord.Addons.Interactive.dll
-		GCop.json = GCop.json
-		References\SteamStoreQuery.dll = References\SteamStoreQuery.dll
-	EndProjectSection
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Skuld.Bot", "Skuld.Bot\Skuld.Bot.csproj", "{47236AF0-1276-4AF2-846D-9EA5B88820AC}"
 	ProjectSection(ProjectDependencies) = postProject
 		{FCD57353-422A-4F46-959A-3513366C4B02} = {FCD57353-422A-4F46-959A-3513366C4B02}
@@ -111,9 +103,6 @@ Global
 		{DF50735B-57FE-4C1F-B99A-71FF05EC11E1}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DF50735B-57FE-4C1F-B99A-71FF05EC11E1}.Release|x64.ActiveCfg = Release|Any CPU
 		{DF50735B-57FE-4C1F-B99A-71FF05EC11E1}.Release|x64.Build.0 = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{47236AF0-1276-4AF2-846D-9EA5B88820AC} = {5BE23983-91FA-4F13-83C5-8CD71B7C2FAE}
