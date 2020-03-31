@@ -14,13 +14,15 @@ using Skuld.APIS.NekoLife.Models;
 using Skuld.APIS.WebComics.CAD.Models;
 using Skuld.APIS.WebComics.Explosm.Models;
 using Skuld.APIS.WebComics.XKCD.Models;
+using Skuld.APIS.Wikipedia.Models;
 using Skuld.Bot.Extensions;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
+using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Helpers;
-using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using Skuld.Models;
 using Skuld.Services.Bot;
 using Skuld.Services.Discord.Attributes;
 using Skuld.Services.Discord.Preconditions;
@@ -54,6 +56,7 @@ namespace Skuld.Bot.Commands
         public SafebooruClient SafebooruClient { get; set; }
         public NekosLifeClient NekoLife { get; set; }
         public IqdbClient IqdbClient { get; set; }
+        public WikipediaClient WikiClient { get; set; }
 
         private static readonly string[] eightball = {
             "SKULD_FUN_8BALL_YES1",
@@ -80,7 +83,7 @@ namespace Skuld.Bot.Commands
 
         [Command("fuse")]
         [Summary("Fuses 2 of the 1st generation pokemon")]
-        [Usage("fuse [5] [96]")]
+        [Usage("5 96")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Fuse(int int1, int int2)
         {
@@ -94,13 +97,25 @@ namespace Skuld.Bot.Commands
             }
         }
 
+        #region Reminders
+
         [Command("reminder")]
-        [Alias("remind", "remind me")]
+        [Alias("remind")]
         [Summary("What was that thing I needed to do again?")]
-        [Usage("reminder Get eggs in 1h 30m", "reminder Get eggs in 1h 30m --repeat")]
+        [Usage("Get eggs in 1h 30m", "Get eggs in 1h 30m --repeat", "dab on the haters in 2d 1h 30m 5s", "dab on the haters in 2d 1h 30m 5s --repeat")]
+        [RequireDatabase]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Reminder([Remainder]string Reminder)
         {
+            if (Reminder.StartsWith("me to"))
+            {
+                Reminder = Reminder.Replace("me to", "");
+            }
+            if (Reminder.StartsWith("me"))
+            {
+                Reminder = Reminder.Replace("me", "");
+            }
+
             bool doesRepeat = false;
 
             if (Reminder.Contains("--repeat"))
@@ -111,11 +126,7 @@ namespace Skuld.Bot.Commands
 
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            try
-            {
-                _ = Reminder.Split(" in ")[1];
-            }
-            catch
+            if(Reminder.Split(" in ").Count() < 2)
             {
                 string Prefix = Context.IsPrivate ? BotService.MessageServiceConfig.Prefix : (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix;
                 await
@@ -124,6 +135,7 @@ namespace Skuld.Bot.Commands
                     .ConfigureAwait(false);
                 return;
             }
+
             DateTime time;
             if(StringTimeHelper.TryParse(Reminder.Split(" in ")[1], out TimeSpan? output))
             {
@@ -135,7 +147,7 @@ namespace Skuld.Bot.Commands
                         .ConfigureAwait(false);
                     return;
                 }
-                time = DateTime.Now + output.Value;
+                time = DateTime.UtcNow + output.Value;
             }
             else
             {
@@ -164,7 +176,6 @@ namespace Skuld.Bot.Commands
 
             Database.Reminders.Add(new ReminderObject
             {
-                ChannelId = Context.Channel.Id,
                 Created = DateTime.Now.ToEpoch(),
                 Content = Reminder.Split(" in ")[0],
                 LocalId = localId,
@@ -184,7 +195,7 @@ namespace Skuld.Bot.Commands
 
         [Command("reminders")]
         [Summary("Gets your current reminders")]
-        [Usage("reminders")]
+        [RequireDatabase]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task ReminderList()
         {
@@ -201,7 +212,7 @@ namespace Skuld.Bot.Commands
 
             foreach (ReminderObject reminder in reminders)
             {
-                message.AppendLine($"`{reminder.LocalId}` | Created: {reminder.Created.FromEpoch().ToDMYString()}");
+                message.AppendLine($"`{reminder.LocalId}` | Created: {reminder.Created.FromEpoch().ToDMYString()} | Expires in: `{(reminder.Timeout.FromEpoch() - DateTime.UtcNow).ToDifferenceString()}`");
             }
 
             if (message.Length > 0)
@@ -221,7 +232,8 @@ namespace Skuld.Bot.Commands
 
         [Command("delreminder")]
         [Summary("Deletes a reminder")]
-        [Usage("delreminder 1234")]
+        [Usage("1234")]
+        [RequireDatabase]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task DelReminder(ushort reminderId)
         {
@@ -247,12 +259,13 @@ namespace Skuld.Bot.Commands
             }
         }
 
+        #endregion Reminders
+
         #region WeebAnimals
 
         [Command("neko")]
         [Summary("neko grill")]
         [Ratelimit(20, 1, Measure.Minutes)]
-        [Usage("neko")]
         public async Task Neko()
         {
             var neko = await NekoLife.GetAsync(NekoImageType.Neko).ConfigureAwait(false);
@@ -264,7 +277,6 @@ namespace Skuld.Bot.Commands
         [Command("kitsune")]
         [Summary("Kitsunemimi Grill")]
         [Ratelimit(20, 1, Measure.Minutes)]
-        [Usage("kitsune")]
         public async Task Kitsune()
         {
             var kitsu = await SysExClient.GetKitsuneAsync().ConfigureAwait(false);
@@ -280,7 +292,6 @@ namespace Skuld.Bot.Commands
         [Summary("kitty")]
         [Ratelimit(20, 1, Measure.Minutes)]
         [Alias("cat", "cats", "kittycat", "kitty cat", "meow", "kitties", "kittys")]
-        [Usage("kitty")]
         public async Task Kitty()
         {
             var kitty = await Animals.GetAnimalAsync(AnimalType.Kitty).ConfigureAwait(false);
@@ -296,7 +307,6 @@ namespace Skuld.Bot.Commands
 
         [Command("doggo")]
         [Summary("doggo")]
-        [Usage("doggo")]
         [Alias("dog", "dogs", "doggy")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Doggo()
@@ -314,7 +324,6 @@ namespace Skuld.Bot.Commands
         [Command("bird")]
         [Summary("birb")]
         [Alias("birb")]
-        [Usage("bird")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Birb()
         {
@@ -327,7 +336,6 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("llama"), Summary("Llama"), Ratelimit(20, 1, Measure.Minutes)]
-        [Usage("llama")]
         public async Task Llama()
         {
             var llama = await SysExClient.GetLlamaAsync().ConfigureAwait(false);
@@ -336,7 +344,6 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("seal"), Summary("Seal"), Ratelimit(20, 1, Measure.Minutes)]
-        [Usage("seal")]
         public async Task Seal()
         {
             var seal = await SysExClient.GetSealAsync().ConfigureAwait(false);
@@ -350,7 +357,7 @@ namespace Skuld.Bot.Commands
 
         [Command("eightball"), Summary("Eightball")]
         [Alias("8ball")]
-        [Usage("eightball <will today be good>")]
+        [Usage("will today be good")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Eightball([Remainder]string question = null)
         {
@@ -377,7 +384,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("roll"), Summary("Roll a die")]
-        [Usage("roll [5]")]
+        [Usage("5")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Roll(ulong roll)
         {
@@ -390,8 +397,8 @@ namespace Skuld.Bot.Commands
                 .ConfigureAwait(false);
         }
 
-        [Command("choose"), Summary("Choose from things, eg: \"reading books\" \"playing games\"")]
-        [Usage("roll [\"reading books\" \"playing games\"]")]
+        [Command("choose"), Summary("Choose from things")]
+        [Usage("\"reading books\" \"playing games\"")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Choose(params string[] choices)
         {
@@ -439,7 +446,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("yn"), Summary("Yes, no, maybe. I don't know, can you repeat the question?")]
-        [Usage("yn <Will it rain today?>")]
+        [Usage("Will it rain today?")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task YN([Remainder]string question = null)
         {
@@ -473,12 +480,29 @@ namespace Skuld.Bot.Commands
         #region Pasta
 
         [Command("pasta"), Summary("Pastas are nice"), RequireDatabase]
-        [Usage("pasta new naenae dab", "pasta edit naenae watch me whip")]
+        [Usage("new naenae dab", "edit naenae watch me whip", "who naenae", "upvote naenae", "downvote naenae", "delete naenae", "naenae", "help", "list")]
         [Ratelimit(20, 1, Measure.Minutes)]
-        public async Task Pasta(string cmd, string title, [Remainder]string content)
+        public async Task Pasta(string cmd, string title = null, [Remainder]string content = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
+
             var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+
+            Pasta pasta = null;
+            if(cmd != null)
+            {
+                pasta = Database.Pastas.ToList().FirstOrDefault(x => x.Name.ToLowerInvariant() == cmd.ToLowerInvariant());
+            }
+            if(title != null)
+            {
+                pasta = Database.Pastas.ToList().FirstOrDefault(x => x.Name.ToLowerInvariant() == title.ToLowerInvariant());
+            }
+
+            string prefix = Configuration.Prefix;
+            if (Context.Guild != null)
+            {
+                prefix = (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix;
+            }
 
             switch (cmd.ToLowerInvariant())
             {
@@ -498,7 +522,6 @@ namespace Skuld.Bot.Commands
 
                             default:
                                 {
-                                    var pasta = Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower());
                                     if (pasta != null)
                                     {
                                         await EmbedExtensions.FromError($"Pasta already exists with name: **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
@@ -531,8 +554,6 @@ namespace Skuld.Bot.Commands
                 case "change":
                 case "modify":
                     {
-                        var pasta = Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower());
-
                         if (pasta != null)
                         {
                             if (pasta.IsOwner(user))
@@ -560,27 +581,10 @@ namespace Skuld.Bot.Commands
                     }
                     break;
 
-                default:
-                    break;
-            }
-        }
-
-        [Command("pasta"), Summary("Pastas are nice"), RequireDatabase]
-        [Usage("pasta who naenae", "pasta upvote naenae", "pasta downvote naenae", "pasta delete naenae")]
-        [Ratelimit(20, 1, Measure.Minutes)]
-        public async Task Pasta(string cmd, string title)
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            var pasta = Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower());
-            var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-
-            if (pasta != null)
-            {
-                switch (cmd.ToLowerInvariant())
-                {
-                    case "who":
-                    case "?":
+                case "who":
+                case "?":
+                    {
+                        if (pasta != null)
                         {
                             var embed = new EmbedBuilder
                             {
@@ -589,19 +593,33 @@ namespace Skuld.Bot.Commands
                             };
 
                             var usr = Context.Client.GetUser(pasta.OwnerId);
+
                             if (usr != null)
+                            {
                                 embed.AddField("Creator", usr.Mention, inline: true);
+                            }
                             else
+                            {
                                 embed.AddField("Creator", $"Unknown User ({pasta.OwnerId})");
+                            }
+
                             embed.AddField("Created", pasta.Created.FromEpoch().ToString(new CultureInfo((await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false)).Language)), inline: true);
                             embed.AddField("UpVotes", ":arrow_double_up: " + Database.PastaVotes.ToList().Count(x => x.PastaId == pasta.Id && x.Upvote));
                             embed.AddField("DownVotes", ":arrow_double_down: " + Database.PastaVotes.ToList().Count(x => x.PastaId == pasta.Id && !x.Upvote));
 
                             await embed.QueueMessageAsync(Context).ConfigureAwait(false);
                         }
-                        break;
+                        else
+                        {
+                            DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+                            await EmbedExtensions.FromError($"Pasta `{title}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        }
+                    }
+                    break;
 
-                    case "upvote":
+                case "upvote":
+                    {
+                        if (pasta != null)
                         {
                             var vote = Database.PastaVotes.ToList().FirstOrDefault(x => x.VoterId == Context.User.Id && x.PastaId == pasta.Id);
                             if (vote == null)
@@ -621,9 +639,17 @@ namespace Skuld.Bot.Commands
                                 await EmbedExtensions.FromError("Pasta Kitchen", $"You have already voted for \"{pasta.Name}\"", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                             }
                         }
-                        break;
+                        else
+                        {
+                            DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+                            await EmbedExtensions.FromError($"Pasta `{title}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        }
+                    }
+                    break;
 
-                    case "downvote":
+                case "downvote":
+                    {
+                        if (pasta != null)
                         {
                             var vote = Database.PastaVotes.ToList().FirstOrDefault(x => x.VoterId == Context.User.Id && x.PastaId == pasta.Id);
                             if (vote == null)
@@ -643,9 +669,17 @@ namespace Skuld.Bot.Commands
                                 await EmbedExtensions.FromError("Pasta Kitchen", $"You have already voted for \"{pasta.Name}\"", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                             }
                         }
-                        break;
+                        else
+                        {
+                            DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+                            await EmbedExtensions.FromError($"Pasta `{title}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        }
+                    }
+                    break;
 
-                    case "delete":
+                case "delete":
+                    {
+                        if (pasta != null)
                         {
                             if (pasta.IsOwner(user))
                             {
@@ -658,51 +692,32 @@ namespace Skuld.Bot.Commands
                                 }
                             }
                         }
-                        break;
-                }
-            }
-            else
-            {
-                DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-                await EmbedExtensions.FromError($"Pasta `{title}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-            }
-        }
+                        else
+                        {
+                            DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+                            await EmbedExtensions.FromError($"Pasta `{title}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        }
+                    }
+                    break;
 
-        [Command("pasta"), Summary("Pastas are nice"), RequireDatabase]
-        [Usage("pasta naenae", "pasta help", "pasta list")]
-        [Ratelimit(20, 1, Measure.Minutes)]
-        public async Task Pasta(string title)
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            string prefix = Configuration.Prefix;
-
-            if (Context.Guild != null)
-            {
-                prefix = (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix;
-            }
-
-            var pastas = await Database.Pastas.AsQueryable().ToListAsync().ConfigureAwait(false);
-
-            switch (title.ToLowerInvariant())
-            {
                 case "list":
                     {
+                        var pastas = Database.Pastas.ToList();
                         if (pastas.Any())
                         {
                             string top = "```\n";
 
                             string pastanames = "";
 
-                            foreach (var pasta in pastas)
+                            foreach (var p in pastas)
                             {
-                                if (pasta == pastas.LastOrDefault())
+                                if (p == pastas.LastOrDefault())
                                 {
-                                    pastanames += pasta.Name;
+                                    pastanames += p.Name;
                                 }
                                 else
                                 {
-                                    pastanames += pasta.Name + ", ";
+                                    pastanames += p.Name + ", ";
                                 }
                             }
 
@@ -718,7 +733,7 @@ namespace Skuld.Bot.Commands
                                 using var sw = new StreamWriter(stream);
                                 sw.Write(pastanames);
 
-                                await $"Here's a list".QueueMessageAsync(Context, stream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
+                                await $"Here's a list".QueueMessageAsync(Context, stream, fileName: "pastas.txt", type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
                             }
                         }
                         else
@@ -736,8 +751,6 @@ namespace Skuld.Bot.Commands
 
                 default:
                     {
-                        var pasta = pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower());
-
                         if (pasta != null)
                         {
                             await pasta.Content.QueueMessageAsync(Context).ConfigureAwait(false);
@@ -745,7 +758,7 @@ namespace Skuld.Bot.Commands
                         else
                         {
                             DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-                            await $"Whoops, `{title}` doesn't exist".QueueMessageAsync(Context).ConfigureAwait(false);
+                            await EmbedExtensions.FromError($"Pasta `{title}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                     }
                     break;
@@ -753,7 +766,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("pasta give"), Summary("Give someone your pasta"), RequireDatabase]
-        [Usage("pasta give naenae <@0>")]
+        [Usage("give naenae <@0>")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Pasta(string title, [Remainder]IGuildUser user)
         {
@@ -849,7 +862,6 @@ namespace Skuld.Bot.Commands
 
         [Command("mypasta"), Summary("Spaghetti Meatballs"), RequireDatabase]
         [Alias("mypastas")]
-        [Usage("mypasta")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task MyPasta()
         {
@@ -1127,7 +1139,7 @@ namespace Skuld.Bot.Commands
 
         #region Jokes
 
-        [Command("roast"), Summary("\"Roasts\" a user, these are all taken as jokes, and aren't actually meant to cause harm.")]
+        [Command("roast"), Summary("Yo momma so big fat thaht she didn\'t was was a McDonald\'s Big Mac")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task RoastCmd(IUser user = null)
         {
@@ -1139,7 +1151,7 @@ namespace Skuld.Bot.Commands
             await $"{user.Mention} {roast}".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
-        [Command("dadjoke"), Summary("Gives you a bad dad joke to facepalm at.")]
+        [Command("dadjoke"), Summary("Gives you a bad dad joke to facepalm at")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task DadJoke()
         {
@@ -1374,5 +1386,138 @@ namespace Skuld.Bot.Commands
         }
 
         #endregion Images
+
+        [Command("wikismash"), Summary("Smash the image of the first article, with the content of the second"), Usage("Joker_(character) Insanity")]
+        public async Task WikiSmash(string firstArticle, string secondArticle)
+        {
+            if(string.IsNullOrEmpty(firstArticle))
+            {
+                await
+                    EmbedExtensions.FromError("Incorrect Argument for firstArticle", Context)
+                    .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
+                return;
+            }
+            if (string.IsNullOrEmpty(secondArticle))
+            { 
+                await
+                    EmbedExtensions.FromError("Incorrect Argument for secondArticle", Context)
+                    .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
+                return;
+            }
+
+            WikipediaArticle first;
+
+            try
+            {
+                first = await WikiClient.GetArticleAsync("en", firstArticle).ConfigureAwait(false);
+
+                if (first != null)
+                {
+                    if (first.Original == null)
+                    {
+                        await
+                            EmbedExtensions.FromError("firstArticle doesn't have an image", Context)
+                            .QueueMessageAsync(Context)
+                        .ConfigureAwait(false);
+
+                        return;
+                    }
+                }
+                else
+                {
+                    await
+                        EmbedExtensions.FromError("firstArticle doesn't exist", Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                await
+                    EmbedExtensions.FromError("firstArticle doesn't exist", Context)
+                    .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
+                Log.Error("WikiSmash", ex.Message, ex);
+
+                return;
+            }
+
+            WikipediaArticle second;
+
+            try
+            {
+                second = await WikiClient.GetArticleAsync("en", secondArticle).ConfigureAwait(false);
+
+                if (second == null)
+                {
+                    await
+                        EmbedExtensions.FromError("secondArticle doesn't exist", Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                await
+                    EmbedExtensions.FromError("secondArticle doesn't exist", Context)
+                    .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
+                Log.Error("WikiSmash", ex.Message, ex);
+
+                return;
+            }
+
+            await
+                EmbedExtensions.FromImage(first.Original.Source, Color.Default, Context)
+                    .WithTitle(second.Name)
+                    .WithDescription(second.Description.ReplaceLast("Read more at the article.", ""))
+                .QueueMessageAsync(Context)
+            .ConfigureAwait(false);
+        }
+
+        [Command("yandev"), Summary("I, EvaX humbly submit a toast"), Usage("@Skuld instability be a discord bot")]
+        public async Task YanDev(IGuildUser target, string finish, [Remainder]string action)
+        {
+            ITextChannel channel = Context.Channel as ITextChannel;
+            if(Context.Message.MentionedChannels.Any())
+            {
+                channel = Context.Message.MentionedChannels.FirstOrDefault() as ITextChannel;
+                Context.Message.MentionedChannels.ToList().ForEach(x =>
+                {
+                    action = action.Replace($"<#{x.Id}>", "");
+                    finish = finish.Replace($"<#{x.Id}>", "");
+                });
+            }
+            if(finish.Length <= 0)
+            {
+                await
+                    EmbedExtensions.FromError($"{nameof(finish)} is empty, check your input and try again", Context)
+                    .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                return;
+            }
+            if (action.Length <= 0)
+            {
+                await
+                    EmbedExtensions.FromError($"{nameof(action)} is empty, check your input and try again", Context)
+                    .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                return;
+            }
+
+            if (action.LastOrDefault() == ' ')
+                action = action[0..^1];
+
+            await
+                channel
+                    .SendMessageAsync($"I, {Context.User.Mention}, humbly submit a toast, to {target.Mention}, for successfully managing to {action}, congratulations {target.Mention}, enjoy your {finish}.")
+            .ConfigureAwait(false);
+        }
     }
 }
