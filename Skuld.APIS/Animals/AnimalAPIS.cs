@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Skuld.APIS.Animals.Models;
-using Skuld.APIS.Utilities;
+using Skuld.Core.Utilities;
 using System;
 using System.Net;
 using System.Threading.Tasks;
@@ -38,6 +38,7 @@ namespace Skuld.APIS
 
                 case AnimalType.Kitty:
                     return await GetKittyAsync().ConfigureAwait(false);
+
                 default:
                     break;
             }

@@ -1,16 +1,14 @@
 ﻿using Discord;
 using Discord.Commands;
-using Microsoft.Extensions.DependencyInjection;
 using Miki.API.Images;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Extensions.Verification;
-using Skuld.Core.Models;
-using Skuld.Discord.Extensions;
-using Skuld.Discord.Preconditions;
-using Skuld.Discord.Services;
-using System;
+using Skuld.Models;
+using Skuld.Services.Discord.Attributes;
+using Skuld.Services.Discord.Preconditions;
+using Skuld.Services.Messaging.Extensions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -21,7 +19,6 @@ namespace Skuld.Bot.Commands
     [Group, Name("Actions"), RequireEnabledModule]
     public class ActionsModule : ModuleBase<ShardedCommandContext>
     {
-        public Random Random { get; set; }
         public ImghoardClient Imghoard { get; set; }
 
         private EmbedBuilder DoAction(string gif, string action, string target)
@@ -29,7 +26,7 @@ namespace Skuld.Bot.Commands
             List<ulong> prune = new List<ulong>();
 
             {
-                using SkuldDatabaseContext Database = new SkuldDbContextFactory().CreateDbContext(null);
+                using SkuldDbContext Database = new SkuldDbContextFactory().CreateDbContext(null);
 
                 if (Context.Message.MentionedUsers.Any())
                 {
@@ -61,11 +58,12 @@ namespace Skuld.Bot.Commands
             => target == null ? isnull : notnull;
 
         [Command("slap"), Summary("Slap a user")]
+        [Usage("@person", "you")]
         public async Task Slap([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -80,17 +78,18 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("stab"), Summary("Stabs a user")]
+        [Usage("@person", "you")]
         public async Task Stab([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
                 SkuldAppContext.GetCaller(),
                 GetMessage(target,
-                    $"URUSAI!! {Context.Client.CurrentUser.Mention} stabs {target}",
+                    $"{Context.Client.CurrentUser.Mention} stabs {target}",
                     $"{Context.User.Mention} stabs {target}"
                 )
             );
@@ -99,11 +98,12 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("hug"), Summary("hugs a user")]
+        [Usage("@person", "you")]
         public async Task Hug([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -118,11 +118,12 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("punch"), Summary("Punch a user")]
+        [Usage("@person", "you")]
         public async Task Punch([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -141,13 +142,13 @@ namespace Skuld.Bot.Commands
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             await
                 new EmbedBuilder()
                 .WithImageUrl(image)
                 .WithTitle(SkuldAppContext.GetCaller())
-                .WithDescription($"{Context.User.Mention} shrugs.")
+                .WithDescription($"{Context.User.Mention} shrugs")
                 .WithRandomColor()
                 .AddAuthor(Context.Client)
                 .AddFooter(Context)
@@ -155,11 +156,12 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("adore"), Summary("Adore a user")]
+        [Usage("@person", "you")]
         public async Task Adore([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -174,11 +176,12 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("kiss"), Summary("Kiss a user")]
+        [Usage("@person", "you")]
         public async Task Kiss([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -193,11 +196,12 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("grope"), Summary("Grope a user")]
+        [Usage("@person", "you")]
         public async Task Grope([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,
@@ -212,11 +216,12 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("pet"), Summary("Pat a user"), Alias("pat", "headpat")]
+        [Usage("@person", "you")]
         public async Task Pet([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action =
                 new EmbedBuilder()
@@ -226,14 +231,14 @@ namespace Skuld.Bot.Commands
                 .AddAuthor(Context.Client)
                 .AddFooter(Context);
 
-            if(target != null)
+            if (target != null)
             {
                 if (Context.Message.MentionedUsers.Any())
                 {
                     List<ulong> prune = new List<ulong>();
 
                     {
-                        using SkuldDatabaseContext Database = new SkuldDbContextFactory().CreateDbContext(null);
+                        using SkuldDbContext Database = new SkuldDbContextFactory().CreateDbContext(null);
 
                         foreach (var mentionedUser in Context.Message.MentionedUsers)
                         {
@@ -245,7 +250,7 @@ namespace Skuld.Bot.Commands
                     }
 
                     {
-                        using SkuldDatabaseContext Database = new SkuldDbContextFactory().CreateDbContext(null);
+                        using SkuldDbContext Database = new SkuldDbContextFactory().CreateDbContext(null);
                         var initiator = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
                         StringBuilder message = new StringBuilder($"{Context.User.Mention} pets ");
@@ -259,7 +264,7 @@ namespace Skuld.Bot.Commands
 
                             var uzr = await Database.InsertOrGetUserAsync(usr).ConfigureAwait(false);
 
-                            if (!(uzr.RecurringBlock && uzr.Patted.IsRecurring(2)))
+                            if (!(uzr.RecurringBlock && uzr.Patted.IsRecurring(3)))
                             {
                                 uzr.Patted += 1;
                                 initiator.Pats += 1;
@@ -274,13 +279,13 @@ namespace Skuld.Bot.Commands
 
                         await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                        if(message.ToString() != $"{Context.User.Mention} pets ")
+                        if (message.ToString() != $"{Context.User.Mention} pets ")
                         {
                             action.WithDescription(message.ToString());
                         }
                         else
                         {
-                            action.WithDescription($"{Context.User.Mention} pets the air 😢😢");
+                            action.WithDescription($"{Context.Client.CurrentUser.Mention} pets {Context.User.Mention}");
                         }
                     }
                 }
@@ -298,11 +303,12 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("glare"), Summary("Glares at a user"), Alias("stare")]
+        [Usage("@person", "you")]
         public async Task Stare([Remainder]string target = null)
         {
             var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-            var image = images.Images.RandomValue(BotService.Services.GetRequiredService<Random>()).Url;
+            var image = images.Images.RandomValue().Url;
 
             var action = DoAction(
                 image,

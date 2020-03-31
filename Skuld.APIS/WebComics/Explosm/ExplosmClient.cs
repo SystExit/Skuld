@@ -1,5 +1,5 @@
-﻿using Skuld.APIS.Utilities;
-using Skuld.APIS.WebComics.Explosm.Models;
+﻿using Skuld.APIS.WebComics.Explosm.Models;
+using Skuld.Core.Utilities;
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;

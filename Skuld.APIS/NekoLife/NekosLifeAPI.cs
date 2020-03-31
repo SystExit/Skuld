@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 using Skuld.APIS.NekoLife.Models;
-using Skuld.APIS.Utilities;
+using Skuld.Core.Utilities;
 using System;
 using System.Threading.Tasks;
 

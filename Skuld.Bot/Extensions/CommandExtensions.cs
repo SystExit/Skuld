@@ -1,9 +1,11 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using NodaTime;
 using Skuld.Core;
-using Skuld.Core.Models;
-using Skuld.Discord.Extensions;
+using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Formatting;
+using Skuld.Models;
 using SysEx.Net.Models;
 using System;
 using System.Collections.Generic;
@@ -34,16 +36,16 @@ namespace Skuld.Bot.Extensions
                 .WithTitle(guild.Name)
                 .AddAuthor(context.Client)
                 .WithColor(EmbedExtensions.RandomEmbedColor())
-                .AddInlineField("Users", $"Users: {humanusers.ToString("N0", null)}\nBots: {botusers.ToString("N0", null)}\nRatio: {ratio}%")
+                .AddInlineField("Users", $"Users: {humanusers.ToFormattedString()}\nBots: {botusers.ToFormattedString()}\nRatio: {ratio}%")
                 .AddInlineField("Shard", client?.GetShardIdFor(guild))
                 .AddInlineField("Verification Level", guild.VerificationLevel)
                 .AddInlineField("Voice Region", guild.VoiceRegionId)
-                .AddInlineField("Owner", $"{owner.Username}#{owner.DiscriminatorValue}")
+                .AddInlineField("Owner", $"{owner.Mention}")
                 .AddInlineField("Text Channels", channels.Count(x => x.GetType() == typeof(SocketTextChannel)))
                 .AddInlineField("Voice Channels", channels.Count(x => x.GetType() == typeof(SocketVoiceChannel)))
                 .AddInlineField("AFK Timeout", afktimeout + " minutes")
                 .AddInlineField("Default Notifications", guild.DefaultMessageNotifications)
-                .AddInlineField("Created", guild.CreatedAt.ToString("dd'/'MM'/'yyyy HH:mm:ss", null) + "\t(DD/MM/YYYY)")
+                .AddInlineField("Created", guild.CreatedAt.ToDMYString() + "\t(DD/MM/YYYY)")
                 .AddInlineField($"Emotes [{guild.Emotes.Count}]", $" Use `{skuldguild?.Prefix ?? config.Prefix}server-emojis` to view them")
                 .AddInlineField($"Roles [{guild.Roles.Count}]", $" Use `{skuldguild?.Prefix ?? config.Prefix}server-roles` to view them");
 
@@ -52,6 +54,16 @@ namespace Skuld.Bot.Extensions
             if (!string.IsNullOrEmpty(guild.IconUrl)) embed.WithThumbnailUrl(guild.IconUrl);
 
             return embed.Build();
+        }
+
+        //https://stackoverflow.com/a/58497143
+        public static bool IsDaylightSavingsTime(this ZonedDateTime timeInZone)
+        {
+            var instant = timeInZone.ToInstant();
+            
+            var zoneInterval = timeInZone.Zone.GetZoneInterval(instant);
+
+            return zoneInterval.Savings != Offset.Zero;
         }
 
         #region Pagination

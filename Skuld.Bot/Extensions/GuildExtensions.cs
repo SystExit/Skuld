@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Skuld.Discord.Extensions
+namespace Skuld.Bot.Extensions
 {
     public static class GuildExtensions
     {
@@ -13,7 +13,7 @@ namespace Skuld.Discord.Extensions
             var users = new List<IGuildUser>();
             await guild.DownloadUsersAsync().ConfigureAwait(false);
 
-            var usrs = await guild.GetUsersAsync();
+            var usrs = await guild.GetUsersAsync().ConfigureAwait(false);
 
             foreach (SocketGuildUser user in usrs)
             {

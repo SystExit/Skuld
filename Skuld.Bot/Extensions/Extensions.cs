@@ -1,7 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Skuld.Bot.Models;
-using Skuld.Bot.Services;
-using System;
+﻿using Skuld.Bot.Models;
+using Skuld.Core;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -11,7 +9,9 @@ namespace Skuld.Bot.Extensions
     {
         public static Weightable<T> GetRandomWeightedValue<T>(this IList<Weightable<T>> items)
         {
-            var randomWeight = HostSerivce.Services.GetRequiredService<Random>().Next(0, items.Sum(x => x.Weight));
+            if (items == null || items.Count == 0) return null;
+
+            var randomWeight = SkuldRandom.Next(items.Sum(x => x.Weight));
 
             Weightable<T> item = null;
 

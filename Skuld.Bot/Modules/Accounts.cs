@@ -1,19 +1,21 @@
 ﻿using Discord;
+using Discord.Addons.Interactive;
 using Discord.Commands;
 using ImageMagick;
 using Microsoft.EntityFrameworkCore.Internal;
 using NodaTime;
-using Skuld.APIS;
-using Skuld.Bot.Extensions;
-using Skuld.Bot.Services;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Conversion;
-using Skuld.Core.Models;
+using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Utilities;
-using Skuld.Discord.Attributes;
-using Skuld.Discord.Extensions;
-using Skuld.Discord.Preconditions;
+using Skuld.Models;
+using Skuld.Services.Accounts.Banking.Models;
+using Skuld.Services.Banking;
+using Skuld.Services.Discord.Attributes;
+using Skuld.Services.Discord.Preconditions;
+using Skuld.Services.Extensions;
+using Skuld.Services.Messaging.Extensions;
 using StatsdClient;
 using System;
 using System.IO;
@@ -23,12 +25,67 @@ using System.Threading.Tasks;
 namespace Skuld.Bot.Commands
 {
     [Group, Name("Accounts"), RequireEnabledModule, RequireDatabase]
-    public class AccountModule : ModuleBase<ShardedCommandContext>
+    public class AccountModule : InteractiveBase<ShardedCommandContext>
     {
-        public SkuldConfig Configuration { get => HostSerivce.Configuration; }
+        public SkuldConfig Configuration { get; set; }
+        const int PrestigeRequirement = 100;
+
+        [Command("prestige"), Summary("Prestiges")]
+        public async Task Prestige()
+        {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+
+            var nextPrestige = usr.PrestigeLevel + 1;
+
+            var xp = Database.UserXp.ToList().Where(x => x.UserId == usr.Id);
+
+            ulong globalLevel = 0;
+
+            xp.ToList().ForEach(x =>
+            {
+                globalLevel += x.Level;
+            });
+
+            if(globalLevel > PrestigeRequirement * nextPrestige)
+            {
+                await
+                    EmbedExtensions.FromInfo("Prestige Corner", "Please respond with y/n to confirm you want to prestige\n\n**__PLEASE NOTE__**\nThis will remove **ALL** experience gotten in every server with experience enabled", Context)
+                    .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
+
+                var next = await NextMessageAsync().ConfigureAwait(false);
+
+                try
+                {
+                    if (next.Content.ToBool())
+                    {
+                        Database.UserXp.RemoveRange(Database.UserXp.ToList().Where(x => x.UserId == Context.User.Id));
+                        await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                        usr.PrestigeLevel = usr.PrestigeLevel.Add(1);
+
+                        await Database.SaveChangesAsync().ConfigureAwait(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    DogStatsd.Increment("commands.errors", 1, 1, new[] { "err:parse-fail" });
+                }
+            }
+            else
+            {
+                await
+                    EmbedExtensions.FromInfo("Prestige Corner", $"You lack the amount of levels required to prestige. For your prestige level ({usr.PrestigeLevel}), it is: {PrestigeRequirement * nextPrestige}", Context)
+                    .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
+            }
+        }
 
         [Command("money"), Summary("Gets a user's money")]
         [Alias("balance", "credits")]
+        
         public async Task Money([Remainder]IGuildUser user = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -215,7 +272,7 @@ namespace Skuld.Bot.Commands
             }
 
             //YLevel 1
-            var dailyText = $"Daily: {profileuser.LastDaily.FromEpoch().ToString("yyyy/MM/dd HH:mm:ss")}";
+            var dailyText = $"Daily: {profileuser.LastDaily.FromEpoch().ToDMYString()}";
             var dmetr = image.FontTypeMetrics(dailyText, true);
             var rightPos = 600 - (dmetr.TextWidth * 2);
 
@@ -278,7 +335,7 @@ namespace Skuld.Bot.Commands
 
             outputStream.Position = 0;
 
-            await "".QueueMessageAsync(Context, outputStream, type: Discord.Models.MessageType.File).ConfigureAwait(false);
+            await "".QueueMessageAsync(Context, outputStream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
         }
 
         [Command("daily"), Summary("Daily Money")]
@@ -291,48 +348,70 @@ namespace Skuld.Bot.Commands
             }
 
             using var Database = new SkuldDbContextFactory().CreateDbContext();
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            if (user == null)
-                user = (IGuildUser)Context.User;
-
-            bool isSelf = false;
-
-            if (user.Id == Context.User.Id)
-                isSelf = true;
 
             var self = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-            var target = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
-            if (self.LastDaily == 0)
+            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+            ulong MoneyAmount = self.GetDailyAmount(Configuration);
+            ulong StreakAmount = self.IsDonator ? Configuration.MaxStreak * 2 : Configuration.MaxStreak;
+
+            if (user == null)
             {
-                self.LastDaily = DateTime.UtcNow.ToEpoch();
-                target.Money += Configuration.DailyAmount;
-                await Database.SaveChangesAsync().ConfigureAwait(false);
+                var previousAmount = self.Money;
 
-                await $"You {(!isSelf ? $"just gave {user.Mention}" : "just got")} your daily of {gld.MoneyIcon}{Configuration.DailyAmount}".QueueMessageAsync(Context).ConfigureAwait(false);
-
-                return;
-            }
-            else
-            {
-                if (self.LastDaily < DateTime.UtcNow.Date.ToEpoch())
+                if (self.ProcessDaily(Configuration))
                 {
-                    self.LastDaily = DateTime.UtcNow.ToEpoch();
-                    target.Money += Configuration.DailyAmount;
-                    await Database.SaveChangesAsync().ConfigureAwait(false);
+                    var embed = EmbedExtensions.FromMessage("SkuldBank - Daily", $"You just got your daily of {gld.MoneyIcon}{MoneyAmount}", Context);
 
-                    await $"You {(!isSelf ? $"just gave {user.Mention}" : "just got")} your daily of {gld.MoneyIcon}{Configuration.DailyAmount}".QueueMessageAsync(Context).ConfigureAwait(false);
+                    embed.AddInlineField("Previous Amount", $"{gld.MoneyIcon}{previousAmount.ToFormattedString()}");
+                    embed.AddInlineField("New Amount", $"{gld.MoneyIcon}{self.Money.ToFormattedString()}");
 
-                    return;
+                    if (self.Streak > 0)
+                    {
+                        embed.AddField("Streak", $"You're on a streak!!\n{self.Streak}/{StreakAmount}");
+                    }
+
+                    await embed
+                        .QueueMessageAsync(Context).ConfigureAwait(false);
                 }
                 else
                 {
-                    TimeSpan remain = TimeSpan.FromTicks((DateTime.Today.AddDays(1).ToEpoch() - DateTime.UtcNow.ToEpoch()).FromEpoch().Ticks);
+                    TimeSpan remain = DateTime.Today.Date.AddDays(1) - DateTime.UtcNow;
                     string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
-                    await $"You must wait `{remaining}`".QueueMessageAsync(Context).ConfigureAwait(false);
+
+                    await EmbedExtensions.FromError("SkuldBank - Daily", $"You must wait `{remaining}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
+            else
+            {
+                var target = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+                var previousAmount = target.Money;
+                if (target.ProcessDaily(Configuration, self))
+                {
+                    var embed = EmbedExtensions.FromMessage("SkuldBank - Daily", $"You just gave your daily of {gld.MoneyIcon}{MoneyAmount.ToFormattedString()} to {user.Mention}", Context);
+
+                    embed.AddInlineField("Previous Amount", $"{gld.MoneyIcon}{previousAmount.ToFormattedString()}");
+                    embed.AddInlineField("New Amount", $"{gld.MoneyIcon}{target.Money.ToFormattedString()}");
+
+                    if (self.Streak > 0)
+                    {
+                        embed.AddField("Streak", $"You're on a streak!!\n{self.Streak}/{StreakAmount}");
+                    }
+
+                    await embed
+                        .QueueMessageAsync(Context).ConfigureAwait(false);
+                }
+                else
+                {
+                    TimeSpan remain = DateTime.Today.Date.AddDays(1) - DateTime.UtcNow;
+                    string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
+
+                    await EmbedExtensions.FromError("SkuldBank - Daily", $"You must wait `{remaining}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                }
+            }
+
+            await Database.SaveChangesAsync().ConfigureAwait(false);
         }
 
         [Command("give"), Summary("Give your money to people")]
@@ -357,8 +436,12 @@ namespace Skuld.Bot.Commands
             {
                 var usr2 = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
-                usr.Money -= amount;
-                usr2.Money += amount;
+                TransactionService.DoTransaction(new TransactionStruct
+                {
+                    Amount = amount,
+                    Sender = usr,
+                    Receiver = usr2
+                });
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
@@ -546,22 +629,12 @@ namespace Skuld.Bot.Commands
 
             outputStream.Position = 0;
 
-            await "".QueueMessageAsync(Context, outputStream, type: Discord.Models.MessageType.File).ConfigureAwait(false);
-        }
-
-        [Command("heal"), Summary("Shows you how much you can heal by")]
-        [Ratelimit(20, 1, Measure.Minutes)]
-        public async Task HealAmount()
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-
-            var amnt = Math.Round(Math.Ceiling(usr.Money * 0.8));
-            await $"You can heal for: `{Math.Floor(amnt)}`HP".QueueMessageAsync(Context).ConfigureAwait(false);
+            await "".QueueMessageAsync(Context, outputStream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
         }
 
         [Command("rep"), Summary("Gives someone rep or checks your rep")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("@person")]
         public async Task GiveRep([Remainder]IGuildUser user = null)
         {
             if (user != null && (user.IsBot || user.IsWebhook))
@@ -615,6 +688,7 @@ namespace Skuld.Bot.Commands
 
         [Command("unrep"), Summary("Removes a rep")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("@person")]
         public async Task RemoveRep([Remainder]IGuildUser user)
         {
             if (user != null && (user.IsBot || user.IsWebhook))
@@ -648,6 +722,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("title"), Summary("Sets Title"), RequireDatabase]
+        [Usage("The village thief")]
         public async Task SetTitle([Remainder]string title = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -687,6 +762,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("block-actions"), Summary("Blocks people from performing actions"), RequireDatabase]
+        [Usage("@person")]
         public async Task BlockActions([Remainder] IUser user)
         {
             using var database = new SkuldDbContextFactory().CreateDbContext();
@@ -714,6 +790,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("set-hexbg"), Summary("Sets your background to a Hex Color"), RequireDatabase]
+        [Usage("#ff0000")]
         public async Task SetHexBG(string Hex = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -725,7 +802,12 @@ namespace Skuld.Bot.Commands
             {
                 if (usr.Money >= 300)
                 {
-                    usr.Money -= 300;
+                    TransactionService.DoTransaction(new TransactionStruct
+                    {
+                        Amount = 300,
+                        Sender = usr
+                    });
+
                     if (int.TryParse((Hex[0] != '#' ? Hex : Hex.Remove(0, 1)), System.Globalization.NumberStyles.HexNumber, null, out _))
                     {
                         usr.Background = (Hex[0] != '#' ? "#" + Hex : Hex);
@@ -767,7 +849,11 @@ namespace Skuld.Bot.Commands
             {
                 if (usr.Money >= 40000)
                 {
-                    usr.Money -= 40000;
+                    TransactionService.DoTransaction(new TransactionStruct
+                    {
+                        Amount = 40000,
+                        Sender = usr
+                    });
                     usr.UnlockedCustBG = true;
 
                     await Database.SaveChangesAsync().ConfigureAwait(false);
@@ -786,6 +872,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("set-custombg"), Summary("Sets your custom background Image"), RequireDatabase]
+        [Usage("https://example.com/SuperAwesomeImage.png")]
         public async Task SetCBG(string link = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -803,7 +890,11 @@ namespace Skuld.Bot.Commands
             {
                 if (usr.Money >= 900)
                 {
-                    usr.Money -= 900;
+                    TransactionService.DoTransaction(new TransactionStruct
+                    {
+                        Amount = 900,
+                        Sender = usr
+                    });
                     usr.Background = res.OriginalString;
 
                     await Database.SaveChangesAsync().ConfigureAwait(false);
@@ -831,6 +922,7 @@ namespace Skuld.Bot.Commands
 
         [Command("custom-bg preview"), Summary("Previews a custom bg")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("https://example.com/SuperAwesomeImage.png")]
         public async Task PreviewCustomBG(Uri link)
         {
             var fontsFolder = SkuldAppContext.FontDirectory;
@@ -1037,10 +1129,11 @@ namespace Skuld.Bot.Commands
 
             outputStream.Position = 0;
 
-            await "".QueueMessageAsync(Context, outputStream, type: Discord.Models.MessageType.File).ConfigureAwait(false);
+            await "".QueueMessageAsync(Context, outputStream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
         }
 
         [Command("settimezone"), Summary("Sets your timezone")]
+        [Usage("UTC")]
         public async Task SetTimeZone([Remainder]DateTimeZone timezone)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();

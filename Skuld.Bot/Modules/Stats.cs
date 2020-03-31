@@ -6,11 +6,12 @@ using Discord.WebSocket;
 using Miki.API.Images;
 using Octokit;
 using Skuld.Core;
+using Skuld.Core.Extensions;
 using Skuld.Core.Utilities;
-using Skuld.Discord.Attributes;
-using Skuld.Discord.Extensions;
-using Skuld.Discord.Preconditions;
-using Skuld.Discord.Services;
+using Skuld.Services.Bot;
+using Skuld.Services.Discord.Attributes;
+using Skuld.Services.Discord.Preconditions;
+using Skuld.Services.Messaging.Extensions;
 using SysEx.Net;
 using System;
 using System.Collections.Generic;
@@ -34,7 +35,7 @@ namespace Skuld.Bot.Commands
             new GitRepoStruct("exsersewo", "SysEx.Net"));
 
         public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Booru = new KeyValuePair<AssemblyName, GitRepoStruct>(
-            Assembly.GetAssembly(typeof(BooruClient)).GetName(),
+            Assembly.GetAssembly(typeof(DanbooruClient)).GetName(),
             new GitRepoStruct("exsersewo", "Booru.Net"));
 
         public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Weebsh = new KeyValuePair<AssemblyName, GitRepoStruct>(
@@ -94,7 +95,6 @@ namespace Skuld.Bot.Commands
                 botstats += $"Uptime: {string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}\n";
                 botstats += $"Ping: {Context.Client.GetShardFor(Context.Guild).Latency}ms\n";
                 botstats += $"Guilds: {Context.Client.Guilds.Count}\n";
-                botstats += $"Users: {BotService.Users}\n";
                 botstats += $"Shards: {Context.Client.Shards.Count}\n";
                 botstats += $"Commands: {BotService.CommandService.Commands.Count()}\n";
                 botstats += $"Commits: {commits.Count}\n";

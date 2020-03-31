@@ -1,5 +1,5 @@
-﻿using Skuld.APIS.Utilities;
-using Skuld.APIS.WebComics.CAD.Models;
+﻿using Skuld.APIS.WebComics.CAD.Models;
+using Skuld.Core.Utilities;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -18,6 +18,7 @@ namespace Skuld.APIS.WebComics.CAD
         public async Task<CADComic> GetComicAsync()
         {
             if (rateLimiter.IsRatelimited()) return null;
+
             (var doc, var redirect) = await HttpWebClient.ScrapeUrlAsync(new Uri("https://cad-comic.com/random")).ConfigureAwait(false);
 
             var html = doc.DocumentNode.ChildNodes.FirstOrDefault(x => x.Name == "html");

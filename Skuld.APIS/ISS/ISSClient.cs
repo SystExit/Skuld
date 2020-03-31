@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Skuld.APIS.ISS.Models;
-using Skuld.APIS.Utilities;
+using Skuld.Core.Utilities;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
@@ -28,7 +28,7 @@ namespace Skuld.APIS
             var response = (HttpWebResponse)await client.GetResponseAsync();
 
             var streamresp = response.GetResponseStream();
-            var sr = new StreamReader(streamresp);
+            using var sr = new StreamReader(streamresp);
             var stringifiedresp = await sr.ReadToEndAsync().ConfigureAwait(false);
             return JsonConvert.DeserializeObject<Astros>(stringifiedresp);
         }
@@ -43,7 +43,7 @@ namespace Skuld.APIS
             var response = (HttpWebResponse)await client.GetResponseAsync();
 
             var streamresp = response.GetResponseStream();
-            var sr = new StreamReader(streamresp);
+            using var sr = new StreamReader(streamresp);
             var stringifiedresp = await sr.ReadToEndAsync().ConfigureAwait(false);
             return JsonConvert.DeserializeObject<ISSPosition>(stringifiedresp);
         }

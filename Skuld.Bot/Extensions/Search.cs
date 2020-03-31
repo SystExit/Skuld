@@ -1,8 +1,8 @@
 ﻿using Discord;
 using PokeAPI;
 using Skuld.APIS.Pokemon.Models;
-using Skuld.Discord.Extensions;
-using System;
+using Skuld.Core;
+using Skuld.Core.Extensions;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -10,8 +10,6 @@ namespace Skuld.Bot.Extensions
 {
     public static class Search
     {
-        private static readonly Random rnd = new Random(DateTime.UtcNow.Millisecond);
-
         public static async Task<Embed> GetEmbedAsync(this PokemonSpecies pokemon, PokemonDataGroup group)
         {
             if (pokemon == null) return null;
@@ -27,7 +25,7 @@ namespace Skuld.Bot.Extensions
                 Color = Color.Blue
             };
 
-            var result = rnd.Next(0, 8193);
+            var result = SkuldRandom.Next(0, 8193);
             string sprite = null;
             //if it equals 8 out of a random integer between 1 and 8192 then give shiny
             if (result == 8)

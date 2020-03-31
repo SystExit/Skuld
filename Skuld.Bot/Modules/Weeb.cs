@@ -5,11 +5,11 @@ using Kitsu.Anime;
 using Kitsu.Manga;
 using Skuld.APIS.Extensions;
 using Skuld.Bot.Extensions;
-using Skuld.Bot.Globalization;
 using Skuld.Core.Extensions;
-using Skuld.Core.Models;
-using Skuld.Discord.Attributes;
-using Skuld.Discord.Extensions;
+using Skuld.Models;
+using Skuld.Services.Discord.Attributes;
+using Skuld.Services.Globalization;
+using Skuld.Services.Messaging.Extensions;
 using SysEx.Net;
 using System;
 using System.Linq;
@@ -27,6 +27,7 @@ namespace Skuld.Bot.Commands
 
         [Command("anime"), Summary("Gets information about an anime")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("JoJo's Bizarre Adventure")]
         public async Task GetAnime([Remainder]string animetitle)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -66,6 +67,7 @@ namespace Skuld.Bot.Commands
 
         [Command("manga"), Summary("Gets information about a manga")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("JoJo's Bizarre Adventure")]
         public async Task GetMangaAsync([Remainder]string mangatitle)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -79,7 +81,7 @@ namespace Skuld.Bot.Commands
             {
                 var pages = data.PaginateList(25);
 
-                IUserMessage sentmessage = await ReplyAsync(null, false, 
+                IUserMessage sentmessage = await ReplyAsync(null, false,
                     EmbedExtensions.FromMessage(loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s", pages[0], Context).WithColor(Color.Purple).Build()
                 ).ConfigureAwait(false);
 
@@ -119,6 +121,7 @@ namespace Skuld.Bot.Commands
 
         [Command("whatanime"), Summary("Searches Trace.Moe")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("Screenshot of Anime")]
         public async Task WhatAnime(Uri url = null)
         {
             if (url == null)

@@ -1,7 +1,6 @@
 ﻿using Skuld.APIS.WebComics.CAD;
 using Skuld.APIS.WebComics.Explosm;
 using Skuld.APIS.WebComics.XKCD;
-using System;
 using System.Threading.Tasks;
 
 namespace Skuld.APIS
@@ -12,10 +11,10 @@ namespace Skuld.APIS
         private readonly XKCDClient XKCDClient;
         private readonly CADClient CADClient;
 
-        public WebComicClients(Random ran)
+        public WebComicClients()
         {
             explosmClient = new ExplosmClient();
-            XKCDClient = new XKCDClient(ran);
+            XKCDClient = new XKCDClient();
             CADClient = new CADClient();
         }
 

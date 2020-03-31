@@ -1,7 +1,8 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Skuld.APIS.Utilities;
 using Skuld.APIS.WebComics.XKCD.Models;
+using Skuld.Core;
+using Skuld.Core.Utilities;
 using System;
 using System.Threading.Tasks;
 
@@ -9,13 +10,11 @@ namespace Skuld.APIS.WebComics.XKCD
 {
     public class XKCDClient
     {
-        private readonly Random random;
         private readonly RateLimiter rateLimiter;
         private int? XKCDLastPage;
 
-        public XKCDClient(Random ran)
+        public XKCDClient()
         {
-            random = ran;
             rateLimiter = new RateLimiter();
             GetLastPageAsync().GetAwaiter().GetResult();
         }
@@ -43,13 +42,13 @@ namespace Skuld.APIS.WebComics.XKCD
 
             if (!XKCDLastPage.HasValue)
             {
-                XKCDLastPage = await GetLastPageAsync();
+                XKCDLastPage = await GetLastPageAsync().ConfigureAwait(false);
 
-                return await GetComicAsync(random.Next(0, XKCDLastPage.Value)).ConfigureAwait(false);
+                return await GetComicAsync(SkuldRandom.Next(0, XKCDLastPage.Value)).ConfigureAwait(false);
             }
             else
             {
-                return await GetComicAsync(random.Next(0, XKCDLastPage.Value)).ConfigureAwait(false);
+                return await GetComicAsync(SkuldRandom.Next(0, XKCDLastPage.Value)).ConfigureAwait(false);
             }
         }
 

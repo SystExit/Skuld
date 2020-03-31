@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Skuld.APIS.UrbanDictionary.Models;
-using Skuld.APIS.Utilities;
+using Skuld.Core.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
