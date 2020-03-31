@@ -1,16 +1,15 @@
 ﻿using Discord;
+using Discord.Addons.Interactive;
 using Discord.Commands;
 using ImageMagick;
 using Microsoft.EntityFrameworkCore.Internal;
 using NodaTime;
-using Skuld.Bot.Extensions;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Conversion;
 using Skuld.Core.Extensions.Formatting;
-using Skuld.Core.Extensions.Verification;
-using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using Skuld.Models;
 using Skuld.Services.Accounts.Banking.Models;
 using Skuld.Services.Banking;
 using Skuld.Services.Discord.Attributes;
@@ -27,8 +26,63 @@ namespace Skuld.Bot.Commands
 {
     [Group, Name("Accounts"), RequireEnabledModule, RequireDatabase]
     public class AccountModule : ModuleBase<ShardedCommandContext>
+    public class AccountModule : InteractiveBase<ShardedCommandContext>
     {
         public SkuldConfig Configuration { get; set; }
+        const int PrestigeRequirement = 100;
+
+        [Command("prestige"), Summary("Prestiges")]
+        public async Task Prestige()
+        {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+
+            var nextPrestige = usr.PrestigeLevel + 1;
+
+            var xp = Database.UserXp.ToList().Where(x => x.UserId == usr.Id);
+
+            ulong globalLevel = 0;
+
+            xp.ToList().ForEach(x =>
+            {
+                globalLevel += x.Level;
+            });
+
+            if(globalLevel > PrestigeRequirement * nextPrestige)
+            {
+                await
+                    EmbedExtensions.FromInfo("Prestige Corner", "Please respond with y/n to confirm you want to prestige\n\n**__PLEASE NOTE__**\nThis will remove **ALL** experience gotten in every server with experience enabled", Context)
+                    .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
+
+                var next = await NextMessageAsync().ConfigureAwait(false);
+
+                try
+                {
+                    if (next.Content.ToBool())
+                    {
+                        Database.UserXp.RemoveRange(Database.UserXp.ToList().Where(x => x.UserId == Context.User.Id));
+                        await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                        usr.PrestigeLevel = usr.PrestigeLevel.Add(1);
+
+                        await Database.SaveChangesAsync().ConfigureAwait(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    DogStatsd.Increment("commands.errors", 1, 1, new[] { "err:parse-fail" });
+                }
+            }
+            else
+            {
+                await
+                    EmbedExtensions.FromInfo("Prestige Corner", $"You lack the amount of levels required to prestige. For your prestige level ({usr.PrestigeLevel}), it is: {PrestigeRequirement * nextPrestige}", Context)
+                    .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
+            }
+        }
 
         [Command("money"), Summary("Gets a user's money")]
         [Alias("balance", "credits")]
