@@ -1,42 +1,21 @@
 ﻿using Booru.Net;
 using Discord;
+using Discord.Commands;
 using HtmlAgilityPack;
 using Kitsu.Anime;
 using Kitsu.Manga;
 using Skuld.APIS.Social.Reddit.Models;
+using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Verification;
+using Skuld.Core.Models;
 using SteamStoreQuery;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Skuld.APIS.Extensions
 {
     public static class APIExtensions
     {
-        private static readonly string[] VideoExtensions = {
-            ".webm",
-            ".mkv",
-            ".flv",
-            ".vob",
-            ".ogv",
-            ".ogg",
-            ".avi",
-            ".mov",
-            ".qt",
-            ".wmv",
-            ".mp4",
-            ".m4v",
-            ".mpg",
-            ".mpeg"
-        };
-
-        private static readonly string[] ImageExtensions =
-        {
-            ".jpg",
-            ".bmp",
-            ".gif",
-            ".png",
-            ".apng"
-        };
-
         public static List<string> BlacklistedTags { get; } = new List<string>
         {
             "loli",
@@ -44,32 +23,22 @@ namespace Skuld.APIS.Extensions
             "cub",
             "gore",
             "guro",
-            "vore",
-            "death"
+            "death",
+            "decapitation",
+            "murder",
+            "necrophilia",
+            "gutted",
+            "disemboweled",
+            "disembowelment",
+            "wound_fucking",
+            "dead",
+            "corpse",
+            "cub",
+            "child",
+            "baby",
+            "kid",
+            "kiddo"
         };
-
-        public static bool IsImageExtension(this string input)
-        {
-            foreach (var ext in ImageExtensions)
-            {
-                if (input.Contains(ext))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        public static bool IsVideoFile(this string input)
-        {
-            foreach (var x in VideoExtensions)
-            {
-                if (input.Contains(x) || input.EndsWith(x))
-                    return true;
-            }
-            return false;
-        }
 
         //https://gist.github.com/starquake/8d72f1e55c0176d8240ed336f92116e3
         public static string StripHtml(this string value)
@@ -179,21 +148,9 @@ namespace Skuld.APIS.Extensions
             return Pages;
         }
 
-        #endregion Pagination
+        #endregion
 
         #region Booru
-
-        public static string GetMessage(this BooruImage image, string postUrl)
-        {
-            string message = $"`Score: {image.Score}` <{postUrl}>\n{image.ImageUrl}";
-
-            if (image.ImageUrl.IsVideoFile())
-            {
-                message += " (Video)";
-            }
-
-            return message;
-        }
 
         public static IList<string> AddBlacklistedTags(this IList<string> tags)
         {
@@ -203,17 +160,120 @@ namespace Skuld.APIS.Extensions
             return newtags;
         }
 
-        public static bool ContainsBlacklistedTags(this string[] tags)
+        public static EventResult<IEnumerable<string>> ContainsBlacklistedTags(this IEnumerable<string> tags)
         {
-            bool returnvalue = false;
+            List<string> bannedTags = new List<string>();
             foreach (var tag in tags)
             {
                 if (BlacklistedTags.Contains(tag.ToLowerInvariant()))
                 {
-                    returnvalue = true;
+                    bannedTags.Add(tag);
                 }
             }
-            return returnvalue;
+            if (bannedTags.Any())
+                return EventResult<IEnumerable<string>>.FromSuccess(bannedTags.AsEnumerable());
+            
+            return EventResult<IEnumerable<string>>.FromFailure("Banned Tags found");
+        }
+
+        public static object GetMessage(this DanbooruImage image, ICommandContext context, bool forceString = false)
+        {
+            string message = $"`Score: {image.Score}` <{image.PostUrl}>";
+            if (!image.ImageUrl.IsVideoFile())
+            {
+                if (forceString)
+                    message += $"\n{image.ImageUrl}";
+            }
+            else
+            {
+                message += $"\n{image.ImageUrl} (Video)";
+            }
+
+            if (!image.ImageUrl.IsVideoFile() && !forceString)
+            {
+                return
+                    EmbedExtensions.FromImage(image.ImageUrl, EmbedExtensions.RandomEmbedColor(), context)
+                .WithDescription(message);
+            }
+            else
+            {
+                return message;
+            }
+        }
+
+        public static object GetMessage(this GelbooruImage image, ICommandContext context, bool forceString = false)
+        {
+            string message = $"`Score: {image.Score}` <{image.PostUrl}>";
+            if (!image.ImageUrl.IsVideoFile())
+            {
+                if (forceString)
+                    message += $"\n{image.ImageUrl}";
+            }
+            else
+            {
+                message += $"\n{image.ImageUrl} (Video)";
+            }
+
+            if (!image.ImageUrl.IsVideoFile() && !forceString)
+            {
+                return
+                    EmbedExtensions.FromImage(image.ImageUrl, EmbedExtensions.RandomEmbedColor(), context)
+                .WithDescription(message);
+            }
+            else
+            {
+                return message;
+            }
+        }
+
+        public static object GetMessage(this SafebooruImage image, ICommandContext context, bool forceString = false)
+        {
+            string message = $"`Score: {image.Score}` <{image.PostUrl}>";
+            if (!image.ImageUrl.IsVideoFile())
+            {
+                if (forceString)
+                    message += $"\n{image.ImageUrl}";
+            }
+            else
+            {
+                message += $"\n{image.ImageUrl} (Video)";
+            }
+
+            if (!image.ImageUrl.IsVideoFile() && !forceString)
+            {
+                return
+                    EmbedExtensions.FromImage(image.ImageUrl, EmbedExtensions.RandomEmbedColor(), context)
+                .WithDescription(message);
+            }
+            else
+            {
+                return message;
+            }
+        }
+
+        public static object GetMessage(this E621Image image, ICommandContext context, bool forceString = false)
+        {
+            string message = $"`Score: 👍 {image.Score.Up} 👎 {image.Score.Down}` <{image.PostUrl}>";
+            if (!image.ImageUrl.IsVideoFile())
+            {
+                if (forceString)
+                    message += $"\n{image.ImageUrl}";
+            }
+            else
+            {
+                message += $"\n{image.ImageUrl} (Video)";
+            }
+
+            if (!image.ImageUrl.IsVideoFile() && !forceString)
+            {
+                return
+                    EmbedExtensions.FromImage(image.ImageUrl, EmbedExtensions.RandomEmbedColor(), context)
+                .WithDescription(message);
+            }
+            else
+            {
+                return message;
+            }
         }
 
         #endregion Booru

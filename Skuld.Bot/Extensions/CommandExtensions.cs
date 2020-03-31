@@ -1,10 +1,11 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using NodaTime;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
-using Skuld.Core.Models;
+using Skuld.Models;
 using SysEx.Net.Models;
 using System;
 using System.Collections.Generic;
@@ -53,6 +54,16 @@ namespace Skuld.Bot.Extensions
             if (!string.IsNullOrEmpty(guild.IconUrl)) embed.WithThumbnailUrl(guild.IconUrl);
 
             return embed.Build();
+        }
+
+        //https://stackoverflow.com/a/58497143
+        public static bool IsDaylightSavingsTime(this ZonedDateTime timeInZone)
+        {
+            var instant = timeInZone.ToInstant();
+            
+            var zoneInterval = timeInZone.Zone.GetZoneInterval(instant);
+
+            return zoneInterval.Savings != Offset.Zero;
         }
 
         #region Pagination

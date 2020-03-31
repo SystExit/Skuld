@@ -25,14 +25,15 @@ namespace Skuld.Bot.Extensions
         {
             var attr = model.Attributes;
 
-            var embed = new EmbedBuilder
-            {
-                Title = attr.CanonicalTitle.CheckEmptyWithLocale(loc),
-                ImageUrl = attr.PosterImage.Large
-            };
+            var embed = new EmbedBuilder()
+                .WithColor(Color.Purple)
+                .WithImageUrl(attr.PosterImage.Large)
+                .WithTitle(attr.CanonicalTitle.CheckEmptyWithLocale(loc));
 
             if (attr.AbbreviatedTitles != null && attr.AbbreviatedTitles.Any())
+            {
                 embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNON"), attr.AbbreviatedTitles.CheckEmptyWithLocale(", ", loc));
+            }
 
             embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_EPS"), attr.EpisodeCount.CheckEmptyWithLocale(loc));
             embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SDATE"), attr.StartDate.CheckEmptyWithLocale(loc));
@@ -42,13 +43,16 @@ namespace Skuld.Bot.Extensions
             if (attr.Synopsis.CheckEmptyWithLocale(loc) != loc.GetString("SKULD_GENERIC_EMPTY"))
             {
                 var syno = attr.Synopsis;
-                if (syno.Length > 1024)
-                    embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), attr.Synopsis.Substring(0, 1021) + "...");
-                else
-                    embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), attr.Synopsis);
-            }
 
-            embed.WithColor(Color.Purple);
+                if (syno.Length > 1024)
+                {
+                    embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), attr.Synopsis.Substring(0, 1021) + "...");
+                }
+                else
+                {
+                    embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), attr.Synopsis);
+                }
+            }
 
             return embed;
         }
