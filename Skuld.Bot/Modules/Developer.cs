@@ -4,15 +4,15 @@ using Discord.WebSocket;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Newtonsoft.Json;
-using Skuld.Bot.Extensions;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Extensions.Verification;
-using Skuld.Core.Models;
-using Skuld.Core.Models.Commands;
 using Skuld.Core.Utilities;
+using Skuld.Models;
+using Skuld.Models.Commands;
 using Skuld.Services.Accounts.Banking.Models;
+using Skuld.Services.Accounts.Experience;
 using Skuld.Services.Banking;
 using Skuld.Services.Bot;
 using Skuld.Services.BotListing;
@@ -174,53 +174,11 @@ namespace Skuld.Bot.Commands
             if (user == null)
                 user = Context.Guild.GetUser(Context.User.Id);
 
-            using var database = new SkuldDbContextFactory().CreateDbContext();
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
-            await usr.GrantExperienceAsync(amount, Context.Guild, Context.Message, async (guildUser, guild, dbGuild, dMsg, level) =>
-            {
-                var msg = dbGuild.LevelUpMessage;
-                if (msg != null)
-                    msg = msg
-                        .Replace("-m", guildUser.Mention)
-                        .Replace("-u", guildUser.Username)
-                        .Replace("-l", level.ToFormattedString());
-                else
-                    msg = $"Congratulations {guildUser.Mention}!! You're now level **{level}**";
-
-                switch (dbGuild.LevelNotification)
-                {
-                    case LevelNotification.Channel:
-                        {
-                            if (dbGuild.LevelUpChannel != 0)
-                            {
-                                if (dMsg.Channel.Id != dbGuild.LevelUpChannel)
-                                {
-                                    msg += $"\nMessage that caused level Up: {dMsg.GetJumpUrl()}";
-                                }
-
-                                await (await guild.GetTextChannelAsync(dbGuild.LevelUpChannel).ConfigureAwait(false)).SendMessageAsync(msg).ConfigureAwait(false);
-                            }
-                            else
-                            {
-                                await dMsg.Channel.SendMessageAsync(msg).ConfigureAwait(false);
-                            }
-                        }
-                        break;
-
-                    case LevelNotification.DM:
-                        {
-                            msg += $"\nMessage that caused level Up: {dMsg.GetJumpUrl()}";
-                            await guildUser.SendMessageAsync(msg).ConfigureAwait(false);
-                        }
-                        break;
-
-                    case LevelNotification.None:
-                    default:
-                        break;
-                }
-            }, true).ConfigureAwait(false);
+            await usr.GrantExperienceAsync(amount, Context.Guild, Context.Message, ExperienceService.DefaultAction, true).ConfigureAwait(false);
 
             await EmbedExtensions.FromSuccess($"Gave {user.Mention} {amount.ToFormattedString()}xp", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
@@ -354,33 +312,39 @@ namespace Skuld.Bot.Commands
 
             BotService.CommandService.Modules.ToList().ForEach(module =>
             {
-                ModuleSkuld mod = new ModuleSkuld
+                if (!module.Attributes.Any(x => x.GetType() == typeof(DisabledAttribute)))
                 {
-                    Name = module.Name,
-                    Commands = new List<CommandSkuld>()
-                };
-                module.Commands.ToList().ForEach(cmd =>
-                {
-                    var parameters = new List<ParameterSkuld>();
-
-                    cmd.Parameters.ToList().ForEach(paras =>
+                    ModuleSkuld mod = new ModuleSkuld
                     {
-                        parameters.Add(new ParameterSkuld
+                        Name = module.Name,
+                        Commands = new List<CommandSkuld>()
+                    };
+                    module.Commands.ToList().ForEach(cmd =>
+                    {
+                        if (!cmd.Attributes.Any(x => x.GetType() == typeof(DisabledAttribute)))
                         {
-                            Name = paras.Name,
-                            Optional = paras.IsOptional
-                        });
-                    });
+                            var parameters = new List<ParameterSkuld>();
 
-                    mod.Commands.Add(new CommandSkuld
-                    {
-                        Name = cmd.Name,
-                        Description = cmd.Summary,
-                        Aliases = cmd.Aliases.ToArray(),
-                        Parameters = parameters.ToArray()
+                            cmd.Parameters.ToList().ForEach(paras =>
+                            {
+                                parameters.Add(new ParameterSkuld
+                                {
+                                    Name = paras.Name,
+                                    Optional = paras.IsOptional
+                                });
+                            });
+
+                            mod.Commands.Add(new CommandSkuld
+                            {
+                                Name = cmd.Name,
+                                Description = cmd.Summary,
+                                Aliases = cmd.Aliases.ToArray(),
+                                Parameters = parameters.Any() ? parameters.ToArray() : null
+                            });
+                        }
                     });
-                });
-                Modules.Add(mod);
+                    Modules.Add(mod);
+                }
             });
 
             var filename = Path.Combine(SkuldAppContext.StorageDirectory, "commands.json");
@@ -614,6 +578,7 @@ namespace Skuld.Bot.Commands
 
         [Command("generatekeys")]
         [RequireBotFlag(BotAccessLevel.BotOwner)]
+        [RequireContext(ContextType.DM)]
         public async Task CreateKeys(ulong amount)
         {
             using var db = new SkuldDbContextFactory().CreateDbContext();
@@ -638,6 +603,48 @@ namespace Skuld.Bot.Commands
             await db.SaveChangesAsync().ConfigureAwait(false);
 
             await message.QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.DMS).ConfigureAwait(false);
+        }
+
+        [Command("resetdaily")]
+        [RequireBotFlag(BotAccessLevel.BotOwner)]
+        public async Task ResetDaily([Remainder]IUser user = null)
+        {
+            if (user == null)
+                user = Context.User;
+
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var usr = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+
+            usr.LastDaily = 0;
+
+            await Database.SaveChangesAsync().ConfigureAwait(false);
+
+            await
+                EmbedExtensions.FromSuccess(Context).QueueMessageAsync(Context)
+            .ConfigureAwait(false);
+        }
+
+        [Command("setstreak")]
+        public async Task SetStreak(ushort streak, [Remainder]IUser user = null)
+        {
+            if (user == null)
+                user = Context.User;
+
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+            var usr = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+
+            if (streak > usr.GetUserStreakLength(Configuration))
+                streak = usr.GetUserStreakLength(Configuration);
+
+            usr.Streak = streak;
+
+            await Database.SaveChangesAsync().ConfigureAwait(false);
+
+            await
+                EmbedExtensions.FromSuccess(Context).QueueMessageAsync(Context)
+            .ConfigureAwait(false);
         }
 
         [Command("donatorstatus")]
