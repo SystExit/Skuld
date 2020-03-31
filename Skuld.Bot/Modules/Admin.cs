@@ -6,8 +6,8 @@ using Skuld.Core.Exceptions;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Pagination;
 using Skuld.Core.Extensions.Verification;
-using Skuld.Core.Models;
 using Skuld.Core.Utilities;
+using Skuld.Models;
 using Skuld.Services.Bot;
 using Skuld.Services.Discord.Attributes;
 using Skuld.Services.Discord.Models;
@@ -22,257 +22,759 @@ using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
-    [Group, Name("Admin"), RequireRole(AccessLevel.ServerMod), RequireEnabledModule]
+    [Group, Name("Admin"), RequireRole(AccessLevel.ServerMod), RequireContext(ContextType.Guild), RequireEnabledModule]
     public class AdminModule : InteractiveBase<ShardedCommandContext>
     {
         public SkuldConfig Configuration { get; set; }
 
         [Command("say"), Summary("Say something to a channel")]
+        [Usage("#general haha yes")]
         public async Task Say(ITextChannel channel, [Remainder]string message)
             => await channel.SendMessageAsync(message).ConfigureAwait(false);
 
         #region GeneralManagement
 
-        [Command("guild-feature"), Summary("Configures guild features"), RequireDatabase]
-        [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task ConfigureGuildFeatures(string module = null, int? value = null)
+        [Group("guild")]
+        public class GuildManagement : ModuleBase<ShardedCommandContext>
         {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-            var features = Database.Features.FirstOrDefault(x => x.Id == Context.Guild.Id);
+            public SkuldConfig Configuration { get; set; }
 
-            if (!string.IsNullOrEmpty(module) && value.HasValue)
+            [Command("money"), Summary("Set's the guilds money name or money icon"), RequireDatabase]
+            [Usage("🅱 bucks")]
+            public async Task GuildMoney(Emoji icon = null, [Remainder]string name = null)
             {
+                using var database = new SkuldDbContextFactory().CreateDbContext();
+                var guild = await database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                if (icon == null && name == null)
+                {
+                    guild.MoneyIcon = BotService.MessageServiceConfig.MoneyIcon;
+                    guild.MoneyName = BotService.MessageServiceConfig.MoneyName;
+
+                    await database.SaveChangesAsync().ConfigureAwait(false);
+
+                    await EmbedExtensions.FromSuccess($"Reset the icon to: `{guild.MoneyIcon}` & the name to: `{guild.MoneyName}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+
+                    return;
+                }
+
+                if (icon != null && name == null)
+                {
+                    await EmbedExtensions.FromError($"Parameter \"{nameof(name)}\" needs a value", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    return;
+                }
+
+                guild.MoneyIcon = icon.ToString();
+                guild.MoneyName = name;
+
+                await database.SaveChangesAsync().ConfigureAwait(false);
+
+                await EmbedExtensions.FromSuccess($"Set the icon to: `{guild.MoneyIcon}` & the name to: `{guild.MoneyName}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+
+            [Command("feature"), Summary("Configures guild features"), RequireDatabase]
+            [RequireUserPermission(GuildPermission.Administrator)]
+            [Usage("levels 1", "pinning 0")]
+            public async Task ConfigureGuildFeatures(string module = null, int? value = null)
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+                var features = Database.Features.FirstOrDefault(x => x.Id == Context.Guild.Id);
+
+                if (!string.IsNullOrEmpty(module) && value.HasValue)
+                {
+                    if (value > 1) await EmbedExtensions.FromError("Value over max limit: `1`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    if (value < 0) await EmbedExtensions.FromError("Value under min limit: `0`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    else
+                    {
+                        module = module.ToLowerInvariant();
+                        var settings = new Dictionary<string, string>()
+                    {
+                        {"pinning", "pinning" },
+                        {"levels", "experience" }
+                    };
+                        if (settings.ContainsKey(module) || settings.ContainsValue(module))
+                        {
+                            var prev = features;
+
+                            if (features != null)
+                            {
+                                var setting = settings.FirstOrDefault(x => x.Key == module || x.Value == module);
+
+                                switch (setting.Value)
+                                {
+                                    case "pinning":
+                                        features.Pinning = Convert.ToBoolean(value);
+                                        break;
+
+                                    case "experience":
+                                        features.Experience = Convert.ToBoolean(value);
+                                        break;
+                                }
+
+                                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                                if (value == 0) await $"I disabled the `{module}` feature".QueueMessageAsync(Context).ConfigureAwait(false);
+                                else await $"I enabled the `{module}` feature".QueueMessageAsync(Context).ConfigureAwait(false);
+                            }
+                        }
+                        else
+                        {
+                            string modulelist = "";
+                            foreach (var mod in settings) modulelist += mod.Key + " (" + mod.Value + ")" + ", ";
+
+                            modulelist = modulelist.Remove(modulelist.Length - 2);
+
+                            await EmbedExtensions.FromError($"Cannot find module: `{module}` in a list of all available modules (raw name in brackets). \nList of available modules: \n{modulelist}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        }
+                    }
+                }
+                else if (string.IsNullOrEmpty(module) && !value.HasValue)
+                {
+                    await EmbedExtensions.FromMessage("Guild Features", "Here's the current status of features", Context)
+                                  .AddInlineField("Levels", features.Experience ? "✅" : "❎")
+                                  .AddInlineField("Pinning", features.Pinning ? "✅" : "❎")
+                                  .QueueMessageAsync(Context)
+                                  .ConfigureAwait(false);
+                }
+                else
+                {
+                    throw new CommandExecutionException($"Parameter \"{nameof(value)}\" is empty, please provide a value");
+                }
+            }
+
+            [Command("module"), Summary("Configures guild modules"), RequireDatabase]
+            [RequireUserPermission(GuildPermission.Administrator)]
+            [Usage("fun 0")]
+            public async Task ConfigureGuildModules(string module, int value)
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
                 if (value > 1) await EmbedExtensions.FromError("Value over max limit: `1`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 if (value < 0) await EmbedExtensions.FromError("Value under min limit: `0`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 else
                 {
                     module = module.ToLowerInvariant();
-                    var settings = new Dictionary<string, string>()
-                    {
-                        {"pinning", "pinning" },
-                        {"levels", "experience" }
-                    };
-                    if (settings.ContainsKey(module) || settings.ContainsValue(module))
-                    {
-                        var prev = features;
 
-                        if (features != null)
+                    var gldmods = Database.Modules.FirstOrDefault(x => x.Id == Context.Guild.Id);
+
+                    string[] modules = null;
+
+                    List<string> mods = new List<string>();
+
+                    foreach (var mod in BotService.CommandService.Modules.ToArray())
+                    {
+                        mods.Add(mod.Name.ToLowerInvariant());
+                    }
+
+                    modules = mods.ToArray();
+
+                    if (modules.Contains(module))
+                    {
+                        if (gldmods != null)
                         {
-                            var setting = settings.FirstOrDefault(x => x.Key == module || x.Value == module);
-
-                            switch (setting.Value)
+                            switch (module)
                             {
-                                case "pinning":
-                                    features.Pinning = Convert.ToBoolean(value);
+                                case "accounts":
+                                    gldmods.Accounts = Convert.ToBoolean(value);
                                     break;
 
-                                case "experience":
-                                    features.Experience = Convert.ToBoolean(value);
+                                case "actions":
+                                    gldmods.Actions = Convert.ToBoolean(value);
+                                    break;
+
+                                case "admin":
+                                    gldmods.Admin = Convert.ToBoolean(value);
+                                    break;
+
+                                case "fun":
+                                    gldmods.Fun = Convert.ToBoolean(value);
+                                    break;
+
+                                case "gambling":
+                                    gldmods.Gambling = Convert.ToBoolean(value);
+                                    break;
+
+                                case "information":
+                                    gldmods.Information = Convert.ToBoolean(value);
+                                    break;
+
+                                case "lewd":
+                                    gldmods.Lewd = Convert.ToBoolean(value);
+                                    break;
+
+                                case "search":
+                                    gldmods.Search = Convert.ToBoolean(value);
+                                    break;
+
+                                case "space":
+                                    gldmods.Space = Convert.ToBoolean(value);
+                                    break;
+
+                                case "stats":
+                                    gldmods.Stats = Convert.ToBoolean(value);
+                                    break;
+
+                                case "weeb":
+                                    gldmods.Weeb = Convert.ToBoolean(value);
                                     break;
                             }
 
                             await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                            if (value == 0) await $"I disabled the `{module}` feature".QueueMessageAsync(Context).ConfigureAwait(false);
-                            else await $"I enabled the `{module}` feature".QueueMessageAsync(Context).ConfigureAwait(false);
+                            if (value == 0) await EmbedExtensions.FromSuccess($"I disabled the `{module}` module", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            else await EmbedExtensions.FromSuccess($"I enabled the `{module}` module", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                     }
                     else
                     {
-                        string modulelist = "";
-                        foreach (var mod in settings) modulelist += mod.Key + " (" + mod.Value + ")" + ", ";
-
-                        modulelist = modulelist.Remove(modulelist.Length - 2);
-
-                        await EmbedExtensions.FromError($"Cannot find module: `{module}` in a list of all available modules (raw name in brackets). \nList of available modules: \n{modulelist}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        string modulelist = string.Join(", ", modules);
+                        await EmbedExtensions.FromError($"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                 }
             }
-            else if (string.IsNullOrEmpty(module) && !value.HasValue)
-            {
-                await EmbedExtensions.FromMessage("Guild Features", "Here's the current status of features", Context)
-                              .AddInlineField("Levels", features.Experience ? "✅" : "❎")
-                              .AddInlineField("Pinning", features.Pinning ? "✅" : "❎")
-                              .QueueMessageAsync(Context)
-                              .ConfigureAwait(false);
-            }
-            else
-            {
-                throw new CommandExecutionException($"Parameter \"{nameof(value)}\" is empty, please provide a value");
-            }
-        }
 
-        [Command("guild-module"), Summary("Configures guild modules"), RequireDatabase]
-        [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task ConfigureGuildModules(string module, int value)
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            if (value > 1) await EmbedExtensions.FromError("Value over max limit: `1`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-            if (value < 0) await EmbedExtensions.FromError("Value under min limit: `0`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-            else
+            [Command("channel"), Summary("Some features require channels to be set"), RequireDatabase]
+            [RequireUserPermission(GuildPermission.Administrator)]
+            [Usage("join #userlog", "leave #userlog")]
+            public async Task ConfigureChannel(string module, IChannel channel)
             {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
                 module = module.ToLowerInvariant();
-
-                var gldmods = Database.Modules.FirstOrDefault(x => x.Id == Context.Guild.Id);
-
-                string[] modules = null;
-
-                List<string> mods = new List<string>();
-
-                foreach (var mod in BotService.CommandService.Modules.ToArray())
+                var modules = new Dictionary<string, string>()
                 {
-                    mods.Add(mod.Name.ToLowerInvariant());
-                }
-
-                modules = mods.ToArray();
-
-                if (modules.Contains(module))
+                    {"join", "userjoinchan" },
+                    {"userjoin","userjoinchan" },
+                    {"userjoined","userjoinchan" },
+                    {"leave", "userleavechan" },
+                    {"userleave","userleavechan" },
+                    {"userleft","userleavechan" }
+                };
+                if (modules.ContainsKey(module) || modules.ContainsValue(module))
                 {
-                    if (gldmods != null)
+                    var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                    if (guild != null)
                     {
-                        switch (module)
+                        modules.TryGetValue(module, out string key);
+                        switch (key)
                         {
-                            case "accounts":
-                                gldmods.Accounts = Convert.ToBoolean(value);
+                            case "userjoinchan":
+                                guild.JoinChannel = channel.Id;
                                 break;
 
-                            case "actions":
-                                gldmods.Actions = Convert.ToBoolean(value);
-                                break;
-
-                            case "admin":
-                                gldmods.Admin = Convert.ToBoolean(value);
-                                break;
-
-                            case "fun":
-                                gldmods.Fun = Convert.ToBoolean(value);
-                                break;
-
-                            case "gambling":
-                                gldmods.Gambling = Convert.ToBoolean(value);
-                                break;
-
-                            case "information":
-                                gldmods.Information = Convert.ToBoolean(value);
-                                break;
-
-                            case "lewd":
-                                gldmods.Lewd = Convert.ToBoolean(value);
-                                break;
-
-                            case "search":
-                                gldmods.Search = Convert.ToBoolean(value);
-                                break;
-
-                            case "space":
-                                gldmods.Space = Convert.ToBoolean(value);
-                                break;
-
-                            case "stats":
-                                gldmods.Stats = Convert.ToBoolean(value);
-                                break;
-
-                            case "weeb":
-                                gldmods.Weeb = Convert.ToBoolean(value);
+                            case "userleavechan":
+                                guild.LeaveChannel = channel.Id;
                                 break;
                         }
-
                         await Database.SaveChangesAsync().ConfigureAwait(false);
-                        if (value == 0) await EmbedExtensions.FromSuccess($"I disabled the `{module}` module", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                        else await EmbedExtensions.FromSuccess($"I enabled the `{module}` module", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+
+                        await $"I set `{channel.Name}` as the channel for the `{module}` module".QueueMessageAsync(Context).ConfigureAwait(false);
                     }
+                    else await Database.GetOrInsertGuildAsync(Context.Guild, Configuration.Prefix, BotService.MessageServiceConfig.MoneyName, BotService.MessageServiceConfig.MoneyIcon).ConfigureAwait(false);
                 }
                 else
                 {
                     string modulelist = string.Join(", ", modules);
-                    await EmbedExtensions.FromError($"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    modulelist = modulelist.Remove(modulelist.Length - 2);
+
+                    await new EmbedBuilder
+                    {
+                        Title = "Error with command",
+                        Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}",
+                        Color = new Color(255, 0, 0)
+                    }
+                    .Build().QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
         }
 
-        [Command("configurechannel"), Summary("Some features require channels to be set"), RequireDatabase]
-        [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task ConfigureChannel(string module, IChannel channel)
+        [Group("starboard"), RequireDatabase, RequireRole(AccessLevel.ServerAdmin)]
+        public class StarboardManagement : ModuleBase<ShardedCommandContext>
         {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
+            const string Key = "Starboard";
 
-            module = module.ToLowerInvariant();
-            var modules = new Dictionary<string, string>()
+            [Command("toggle")]
+            public async Task ToggleStarboard()
             {
-                {"userjoin","userjoinchan" },
-                {"userjoined","userjoinchan" },
-                {"userleave","userleavechan" },
-                {"userleft","userleavechan" }
-            };
-            if (modules.ContainsKey(module) || modules.ContainsValue(module))
-            {
-                var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-                if (guild != null)
+                var feats = Database.Features.FirstOrDefault(x => x.Id == Context.Guild.Id);
+
+                feats.Starboard = !feats.Starboard;
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                if(feats.Starboard)
                 {
-                    modules.TryGetValue(module, out string key);
-                    switch (key)
-                    {
-                        case "userjoinchan":
-                            guild.JoinChannel = channel.Id;
-                            break;
+                    await
+                        EmbedExtensions.FromSuccess(Key,
+                            "Enabled the starboard feature",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                }
+                else
+                {
+                    await
+                        EmbedExtensions.FromSuccess(Key,
+                            "Disabled the starboard feature",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                }
+            }
 
-                        case "userleavechan":
-                            guild.LeaveChannel = channel.Id;
-                            break;
+            [Command("nsfw")]
+            public async Task ToggleNSFW()
+            {
+                var guild = Context.Guild as IGuild;
+                var botUser = await guild.GetCurrentUserAsync().ConfigureAwait(false);
+
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+                var chan = await guild.GetTextChannelAsync(gld.StarboardChannel).ConfigureAwait(false);
+                var overwrites = chan.GetPermissionOverwrite(Context.Client.CurrentUser);
+
+                if (chan.IsNsfw)
+                {
+                    if (botUser.GetPermissions(chan).ManageChannel || (overwrites.HasValue && overwrites.Value.ManageChannel == PermValue.Allow))
+                    {
+                        await chan.ModifyAsync(x => x.IsNsfw = true).ConfigureAwait(false);
+                        await EmbedExtensions.FromInfo(Key, $"I have changed {chan.Mention} into a NSFW Channel", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
+                    else
+                    {
+                        await EmbedExtensions.FromInfo(Key, $"Turn {chan.Mention} into a NSFW Channel", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                }
+                else
+                {
+                    if (botUser.GetPermissions(chan).ManageChannel || (overwrites.HasValue && overwrites.Value.ManageChannel == PermValue.Allow))
+                    {
+                        await chan.ModifyAsync(x => x.IsNsfw = false).ConfigureAwait(false);
+                        await EmbedExtensions.FromInfo(Key, $"I have changed {chan.Mention} into an NSFW Channel", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await EmbedExtensions.FromInfo(Key, $"Turn {chan.Mention} into an NSFW Channel", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                }
+            }
+
+            [Command("channel"), RequireFeature(GuildFeature.Starboard)]
+            public async Task StarboardChannel([Remainder]ITextChannel channel = null)
+            {
+                var guild = (Context.Guild as IGuild);
+                var botUser = await guild.GetCurrentUserAsync().ConfigureAwait(false);
+
+                if (channel == null) channel = Context.Channel as ITextChannel;
+
+                if(botUser.GetPermissions(channel).RawValue < DiscordUtilities.RequiredForStarboard.RawValue)
+                {
+                    await
+                        EmbedExtensions.FromError(Key, 
+                            $"Cannot use {channel.Mention} as the starboard channel, I need the permissions `READ_MESSAGES, EMBED_LINKS, ADD_REACTIONS`", 
+                            Context)
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
+                    return;
+                }
+
+                await channel.SendMessageAsync($"{Context.User.Mention} This channel will be used for the starboard").ConfigureAwait(false);
+
+                {
+                    using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                    var gld = await Database.GetOrInsertGuildAsync(guild).ConfigureAwait(false);
+                    gld.StarboardChannel = channel.Id;
+
+                    await Database.SaveChangesAsync().ConfigureAwait(false);
+                }
+            }
+
+            [Group("emote"), RequireFeature(GuildFeature.Starboard)]
+            public class StarboardEmote : ModuleBase<ShardedCommandContext>
+            {
+                [Command("")]
+                public async Task StarboardEmoji()
+                    => await StarboardEmoji("⭐").ConfigureAwait(false);
+
+                [Command("")]
+                public async Task StarboardEmoji(Emote emote)
+                    => await StarboardEmoji(emote.ToString()).ConfigureAwait(false);
+
+                [Command("")]
+                public async Task StarboardEmoji(Emoji emote)
+                    => await StarboardEmoji(emote.ToString()).ConfigureAwait(false);
+
+                public async Task StarboardEmoji(string emote)
+                {
+                    using var Database = new SkuldDbContextFactory().CreateDbContext();
+                    var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                    gld.StarEmote = emote;
+
                     await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                    await $"I set `{channel.Name}` as the channel for the `{module}` module".QueueMessageAsync(Context).ConfigureAwait(false);
+                    await
+                        EmbedExtensions.FromSuccess(
+                            Key,
+                            $"Successfully set {emote} as the server's starboard emote",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
                 }
-                else await Database.GetOrInsertGuildAsync(Context.Guild, Configuration.Prefix, BotService.MessageServiceConfig.MoneyName, BotService.MessageServiceConfig.MoneyIcon).ConfigureAwait(false);
             }
-            else
-            {
-                string modulelist = string.Join(", ", modules);
-                modulelist = modulelist.Remove(modulelist.Length - 2);
 
-                await new EmbedBuilder
+            [Group("range"), RequireFeature(GuildFeature.Starboard)]
+            public class StarboardRange : ModuleBase<ShardedCommandContext>
+            {
+                #region Range 10 -> 19
+                [Command("1")]
+                public async Task StarboardRange1()
+                    => await StarboardRange1("🌟").ConfigureAwait(false);
+
+                [Command("1")]
+                public async Task StarboardRange1(Emote emote)
+                    => await StarboardRange1(emote.ToString()).ConfigureAwait(false);
+
+                [Command("1")]
+                public async Task StarboardRange1(Emoji emote)
+                    => await StarboardRange1(emote.ToString()).ConfigureAwait(false);
+
+                public async Task StarboardRange1(string emote)
                 {
-                    Title = "Error with command",
-                    Description = $"Cannot find module: `{module}` in a list of all available modules. \nList of available modules: \n{modulelist}",
-                    Color = new Color(255, 0, 0)
+                    using var Database = new SkuldDbContextFactory().CreateDbContext();
+                    var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                    gld.StarRange1 = emote;
+
+                    await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                    await
+                        EmbedExtensions.FromSuccess(
+                            Key,
+                            $"Successfully set {emote} as the server's starboard emote for the range range 10-19",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
                 }
-                .Build().QueueMessageAsync(Context).ConfigureAwait(false);
+                #endregion
+                #region Range 20 -> 29
+                [Command("2")]
+                public async Task StarboardRange2()
+                    => await StarboardRange2("🌠").ConfigureAwait(false);
+
+                [Command("2")]
+                public async Task StarboardRange2(Emote emote)
+                    => await StarboardRange2(emote.ToString()).ConfigureAwait(false);
+
+                [Command("2")]
+                public async Task StarboardRange2(Emoji emote)
+                    => await StarboardRange2(emote.ToString()).ConfigureAwait(false);
+
+                public async Task StarboardRange2(string emote)
+                {
+                    using var Database = new SkuldDbContextFactory().CreateDbContext();
+                    var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                    gld.StarRange2 = emote;
+
+                    await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                    await
+                        EmbedExtensions.FromSuccess(
+                            Key,
+                            $"Successfully set {emote} as the server's starboard emote for the range 20-29",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                }
+                #endregion
+                #region Range 30+
+                [Command("3")]
+                public async Task StarboardRange3()
+                    => await StarboardRange3("✨").ConfigureAwait(false);
+
+                [Command("3")]
+                public async Task StarboardRange3(Emote emote)
+                    => await StarboardRange3(emote.ToString()).ConfigureAwait(false);
+
+                [Command("3")]
+                public async Task StarboardRange3(Emoji emote)
+                    => await StarboardRange3(emote.ToString()).ConfigureAwait(false);
+
+                public async Task StarboardRange3(string emote)
+                {
+                    using var Database = new SkuldDbContextFactory().CreateDbContext();
+                    var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                    gld.StarRange3 = emote;
+
+                    await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                    await
+                        EmbedExtensions.FromSuccess(
+                            Key,
+                            $"Successfully set {emote} as the server's starboard emote for range 30+",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                }
+                #endregion
             }
-        }
 
-        [Command("guild-money"), Summary("Set's the guilds money name or money icon"), RequireDatabase]
-        public async Task GuildMoney(Emoji icon = null, [Remainder]string name = null)
-        {
-            using var database = new SkuldDbContextFactory().CreateDbContext();
-            var guild = await database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            if (icon == null && name == null)
+            [Command("selfstar"), RequireFeature(GuildFeature.Starboard)]
+            public async Task SelfStar(bool value)
             {
-                guild.MoneyIcon = BotService.MessageServiceConfig.MoneyIcon;
-                guild.MoneyName = BotService.MessageServiceConfig.MoneyName;
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+                var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
-                await database.SaveChangesAsync().ConfigureAwait(false);
+                gld.SelfStarring = value;
 
-                await EmbedExtensions.FromSuccess($"Reset the icon to: `{guild.MoneyIcon}` & the name to: `{guild.MoneyName}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                if(value)
+                {
+                    await
+                        EmbedExtensions.FromSuccess(Key,
+                            "Users can self star",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                }
+                else
+                {
+                    await
+                        EmbedExtensions.FromSuccess(Key,
+                            "Users can not self star",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                }
 
-                return;
+                await Database.SaveChangesAsync().ConfigureAwait(false);
             }
 
-            if (icon != null && name == null)
+            [Command("starsrequired"), RequireFeature(GuildFeature.Starboard)]
+            public async Task StarsRequired(ushort requiredStars)
             {
-                await EmbedExtensions.FromError($"Parameter \"{nameof(name)}\" needs a value", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                return;
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+                var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                gld.StarReactAmount = requiredStars;
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await
+                    EmbedExtensions.FromSuccess(Key,
+                        $"{requiredStars.ToFormattedString()} is required to get onto the starboard",
+                        Context)
+                    .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
             }
 
-            guild.MoneyIcon = icon.ToString();
-            guild.MoneyName = name;
+            [Command("blacklist"), RequireFeature(GuildFeature.Starboard)]
+            public async Task BlacklistUser([Remainder] IGuildUser user)
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            await database.SaveChangesAsync().ConfigureAwait(false);
+                if(Database.StarboardBlacklist.Any(x=>x.TargetId == user.Id))
+                {
+                    await
+                        EmbedExtensions.FromError(Key,
+                            $"{user.Mention} is already blacklisted",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                    return;
+                }
+                else
+                {
+                    Database.StarboardBlacklist.Add(new StarboardConfigurable
+                    {
+                        TargetId = user.Id,
+                        GuildId = Context.Guild.Id
+                    });
 
-            await EmbedExtensions.FromSuccess($"Set the icon to: `{guild.MoneyIcon}` & the name to: `{guild.MoneyName}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await
+                        EmbedExtensions.FromSuccess(Key,
+                            $"{user.Mention} is now blacklisted",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                }
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+            }
+
+            [Command("blacklist"), RequireFeature(GuildFeature.Starboard)]
+            public async Task BlacklistChannel([Remainder] ITextChannel channel)
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                if (Database.StarboardBlacklist.Any(x => x.TargetId == channel.Id))
+                {
+                    await
+                        EmbedExtensions.FromError(Key,
+                            $"{channel.Mention} is already blacklisted",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                    return;
+                }
+                else
+                {
+                    Database.StarboardBlacklist.Add(new StarboardConfigurable
+                    {
+                        TargetId = channel.Id,
+                        GuildId = Context.Guild.Id
+                    });
+
+                    await
+                        EmbedExtensions.FromSuccess(Key,
+                            $"{channel.Mention} is now blacklisted",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                }
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+            }
+
+            [Command("blacklist"), RequireFeature(GuildFeature.Starboard)]
+            public async Task BlacklistCategory([Remainder] ICategoryChannel category)
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                if (Database.StarboardBlacklist.Any(x => x.TargetId == category.Id))
+                {
+                    await
+                        EmbedExtensions.FromError(Key,
+                            $"Category {category.Name} is already blacklisted",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                    return;
+                }
+                else
+                {
+                    Database.StarboardBlacklist.Add(new StarboardConfigurable
+                    {
+                        TargetId = category.Id,
+                        GuildId = Context.Guild.Id
+                    });
+
+                    await
+                        EmbedExtensions.FromSuccess(Key,
+                            $"Category {category.Name} is now blacklisted",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                }
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+            }
+
+            [Command("whitelist"), RequireFeature(GuildFeature.Starboard)]
+            public async Task WhitelistUser([Remainder] IGuildUser user)
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                if (Database.StarboardWhitelist.Any(x => x.TargetId == user.Id))
+                {
+                    await
+                        EmbedExtensions.FromError(Key,
+                            $"{user.Mention} is already whitelisted",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                    return;
+                }
+                else
+                {
+                    Database.StarboardWhitelist.Add(new StarboardConfigurable
+                    {
+                        TargetId = user.Id,
+                        GuildId = Context.Guild.Id
+                    });
+
+                    await
+                        EmbedExtensions.FromSuccess(Key,
+                            $"{user.Mention} is now whitelisted",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                }
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+            }
+
+            [Command("whitelist"), RequireFeature(GuildFeature.Starboard)]
+            public async Task WhitelistChannel([Remainder] ITextChannel channel)
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                if (Database.StarboardWhitelist.Any(x => x.TargetId == channel.Id))
+                {
+                    await
+                        EmbedExtensions.FromError(Key,
+                            $"{channel.Mention} is already whitelisted",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                    return;
+                }
+                else
+                {
+                    Database.StarboardWhitelist.Add(new StarboardConfigurable
+                    {
+                        TargetId = channel.Id,
+                        GuildId = Context.Guild.Id
+                    });
+
+                    await
+                        EmbedExtensions.FromSuccess(Key,
+                            $"{channel.Mention} is now whitelisted",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                }
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+            }
+
+            [Command("whitelist"), RequireFeature(GuildFeature.Starboard)]
+            public async Task WhitelistCategory([Remainder] ICategoryChannel category)
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                if (Database.StarboardWhitelist.Any(x => x.TargetId == category.Id))
+                {
+                    await
+                        EmbedExtensions.FromError(Key,
+                            $"Category {category.Name} is already whitelisted",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                    return;
+                }
+                else
+                {
+                    Database.StarboardWhitelist.Add(new StarboardConfigurable
+                    {
+                        TargetId = category.Id,
+                        GuildId = Context.Guild.Id
+                    });
+
+                    await
+                        EmbedExtensions.FromSuccess(Key,
+                            $"Category {category.Name} is now whitelisted",
+                            Context)
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                }
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+            }
         }
 
         #endregion GeneralManagement
@@ -281,6 +783,7 @@ namespace Skuld.Bot.Commands
 
         [Command("mute"), Summary("Mutes a user")]
         [RequireBotAndUserPermission(GuildPermission.ManageRoles)]
+        [Usage("@Person")]
         public async Task Mute(IUser usertomute)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -324,6 +827,7 @@ namespace Skuld.Bot.Commands
 
         [Command("unmute"), Summary("Unmutes a user")]
         [RequireBotAndUserPermission(GuildPermission.ManageRoles)]
+        [Usage("@Person")]
         public async Task Unmute(IUser usertounmute)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -354,8 +858,9 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("prune"), Summary("Cleans set amount of EmbedExtensions.")]
+        [Command("prune"), Summary("Clean up your chat")]
         [RequireBotAndUserPermission(GuildPermission.ManageMessages)]
+        [Usage("50", "50 @person")]
         public async Task Prune(short amount, IUser user = null)
         {
             if (amount < 0)
@@ -374,12 +879,17 @@ namespace Skuld.Bot.Commands
                 {
                     if (x.IsCompleted)
                     {
-                        await EmbedExtensions.FromSuccess(":ok_hand: Done!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        await EmbedExtensions.FromSuccess(":ok_hand: Done!", Context).QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.Timed, timeout: 10).ConfigureAwait(false);
                     }
                 }).ConfigureAwait(false);
             }
             else
             {
+                if (amount >= 100)
+                {
+                    amount = Convert.ToInt16(100 * (100 % amount));
+                }
+
                 var messages = await Context.Channel.GetMessagesAsync(100).FlattenAsync().ConfigureAwait(false);
                 var usermessages = messages.Where(x => x.Author.Id == user.Id);
                 usermessages = usermessages.Take(amount);
@@ -388,7 +898,7 @@ namespace Skuld.Bot.Commands
                 {
                     if (x.IsCompleted)
                     {
-                        await EmbedExtensions.FromSuccess(":ok_hand: Done!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        await EmbedExtensions.FromSuccess(":ok_hand: Done!", Context).QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.Timed, timeout: 10).ConfigureAwait(false);
                     }
                 }).ConfigureAwait(false);
             }
@@ -400,6 +910,7 @@ namespace Skuld.Bot.Commands
 
         [Command("kick"), Summary("Kicks a user"), Alias("dab", "dabon")]
         [RequireBotAndUserPermission(GuildPermission.KickMembers)]
+        [Usage("@Person not following rules warning 2")]
         public async Task Kick(IGuildUser user, [Remainder]string reason = null)
         {
             try
@@ -446,50 +957,13 @@ namespace Skuld.Bot.Commands
 
         [Command("ban"), Summary("Bans a user"), Alias("naenae")]
         [RequireBotAndUserPermission(GuildPermission.BanMembers)]
+        [Usage("@Person not following rules on multiple accounts")]
         public async Task Ban(IGuildUser user, [Remainder]string reason = null)
-        {
-            try
-            {
-                var msg = $"You have been banned from **{Context.Guild}** by: {Context.User.Username}#{Context.User.Discriminator}";
-                var guild = Context.Guild as IGuild;
-                if (reason == null)
-                {
-                    await Context.Guild.AddBanAsync(user, 7, $"Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}").ConfigureAwait(false);
-                    if (await guild.GetUserAsync(user.Id).ConfigureAwait(false) == null)
-                    {
-                        await EmbedExtensions.FromSuccess($"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                        try
-                        {
-                            var dmchan = await user.GetOrCreateDMChannelAsync().ConfigureAwait(false);
-                            await dmchan.SendMessageAsync(msg).ConfigureAwait(false);
-                        }
-                        catch { }
-                    }
-                }
-                else
-                {
-                    msg += $" with reason:```\n{reason}```";
-                    await Context.Guild.AddBanAsync(user, 7, reason + $" Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}").ConfigureAwait(false);
-                    if (await guild.GetUserAsync(user.Id).ConfigureAwait(false) == null)
-                    {
-                        await EmbedExtensions.FromSuccess($"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}\nReason given: {reason}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                        try
-                        {
-                            var dmchan = await user.GetOrCreateDMChannelAsync().ConfigureAwait(false);
-                            await dmchan.SendMessageAsync(msg).ConfigureAwait(false);
-                        }
-                        catch { }
-                    }
-                }
-            }
-            catch
-            {
-                await EmbedExtensions.FromError($"Couldn't ban {user.Username}#{user.DiscriminatorValue}! Do they exist in the server or is their highest role higher than mine?", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-            }
-        }
+            => await Ban(user, 7, reason).ConfigureAwait(false);
 
         [Command("ban"), Summary("Bans a user"), Alias("naenae")]
         [RequireBotAndUserPermission(GuildPermission.BanMembers)]
+        [Usage("@Person 7 not following rules on multiple accounts")]
         public async Task Ban(IGuildUser user, int daystoprune = 7, [Remainder]string reason = null)
         {
             try
@@ -534,6 +1008,7 @@ namespace Skuld.Bot.Commands
 
         [Command("hackban"), Summary("Hackbans a set of userids Must be in this format hackban [id1] [id2] [id3]")]
         [RequireBotAndUserPermission(GuildPermission.BanMembers)]
+        [Usage("1 2 3 4 5")]
         public async Task HackBan(params string[] ids)
         {
             if (ids.Any())
@@ -552,6 +1027,7 @@ namespace Skuld.Bot.Commands
 
         [Command("softban"), Summary("Softbans a user")]
         [RequireBotAndUserPermission(GuildPermission.BanMembers)]
+        [Usage("@Person Controversial posts")]
         public async Task SoftBan(IUser user, [Remainder]string reason = null)
         {
             var newreason = $"Softban - Responsible Moderator: {Context.User.Username}#{Context.User.DiscriminatorValue}";
@@ -604,6 +1080,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("setjrole"), Summary("Allows a role to be auto assigned on userjoin"), RequireDatabase]
+        [Usage("@Member Role")]
         public async Task AutoRole(IRole role = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -665,7 +1142,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("persistentrole"), Summary("Toggle a role's persistent nature"), RequireDatabase]
-        [Usage("persistentrole SuperAwesomeRole", "persistentrole Super Duper Awesome Role")]
+        [Usage("SuperAwesomeRole", "Super Duper Awesome Role")]
         public async Task PersistentRole([Remainder]IRole role)
         {
             using SkuldDbContext database = new SkuldDbContextFactory().CreateDbContext();
@@ -704,6 +1181,7 @@ namespace Skuld.Bot.Commands
 
         [Command("addassignablerole"), Summary("Adds a new self assignable role. Supported:cost=[cost] require-level=[level] require-role=[rolename/roleid/mention]")]
         [Alias("asar")]
+        [Usage("\"Super Duper Role\"", "\"Super Duper Role\" require-level=25", "\"Super Duper Role\" require-level=25 cost=50")]
         public async Task AddSARole(IRole role, [Remainder]GuildRoleConfig config = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -742,13 +1220,15 @@ namespace Skuld.Bot.Commands
 
         [Command("addlevelrole"), Summary("Adds a new self assignable role. Supported:automatic=[true/false] require-level=[level] require-role=[rolename/roleid/mention]")]
         [Alias("alr")]
+        [Usage("\"Super Duper Role\"", "\"Super Duper Role\" require-level=25", "\"Super Duper Role\" require-level=25 automatic=true")]
         public async Task AddLRole(IRole role, [Remainder]GuildRoleConfig config)
         {
             var levelReward = new LevelRewards
             {
                 GuildId = Context.Guild.Id,
                 LevelRequired = config.RequireLevel,
-                RoleId = role.Id
+                RoleId = role.Id,
+                Automatic = config.Automatic
             };
 
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -776,6 +1256,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("deletesr"), Summary("Removes a Self Assignable Role from the list")]
+        [Usage("\"Super Duper Role\"")]
         public async Task DeleteSelfRole([Remainder]IRole role)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -798,6 +1279,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("deletelr"), Summary("Removes a Level Grant Role from the list")]
+        [Usage("\"Super Duper Role\"")]
         public async Task DeleteLevelRole([Remainder]IRole role)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -820,6 +1302,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("modifyrole"), Summary("Modify a role's settings")]
+        [Usage("\"Super Duper Role\" hoisted=true", "\"Super Duper Role\" hoisted=true color=#ff0000")]
         public async Task ModifyRole(IRole role, [Remainder]RoleConfig config = null)
         {
             if (config == null)
@@ -884,6 +1367,7 @@ namespace Skuld.Bot.Commands
 
         [Command("setprefix"), Summary("Sets the prefix, or resets on empty prefix"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
+        [Usage(">>")]
         public async Task SetPrefix(string prefix = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -939,338 +1423,353 @@ namespace Skuld.Bot.Commands
 
         #endregion Prefix
 
-        #region Welcome
-
-        //Set Channel
-        [Command("setwelcome"), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
-        [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task SetWelcome([Remainder]string welcome)
+        [Group("welcome")]
+        public class Welcome : ModuleBase<ShardedCommandContext>
         {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            var oldmessage = gld.JoinMessage;
-
-            gld.JoinChannel = Context.Channel.Id;
-            gld.JoinMessage = welcome;
-
-            await Database.SaveChangesAsync().ConfigureAwait(false);
-
-            if ((await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).JoinMessage != oldmessage)
-                await EmbedExtensions.FromSuccess($"Set Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-        }
-
-        //Current Channel
-        [Command("setwelcome"), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
-        [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task SetWelcome(ITextChannel channel, [Remainder]string welcome)
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            var oldmessage = gld.JoinMessage;
-            var oldchannel = gld.JoinChannel;
-
-            gld.JoinChannel = channel.Id;
-            gld.JoinMessage = welcome;
-
-            await Database.SaveChangesAsync().ConfigureAwait(false);
-
-            var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            if (ngld.JoinChannel != oldchannel && ngld.JoinMessage != oldmessage)
-                await EmbedExtensions.FromSuccess("Set Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-        }
-
-        //Deletes
-        [Command("unsetwelcome"), Summary("Clears the welcome message"), Alias("clearwelcome"), RequireDatabase]
-        [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task SetWelcome()
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            gld.JoinChannel = 0;
-            gld.JoinMessage = "";
-
-            await Database.SaveChangesAsync().ConfigureAwait(false);
-
-            var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            if (ngld.JoinChannel == 0 && ngld.JoinMessage == "")
-                await EmbedExtensions.FromSuccess("Cleared Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-        }
-
-        #endregion Welcome
-
-        #region Leave
-
-        //Set Channel
-        [Command("setleave"), RequireDatabase]
-        [Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
-        [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task SetLeave(ITextChannel channel, [Remainder]string leave)
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            var oldleave = gld.LeaveChannel;
-            var oldmessg = gld.LeaveMessage;
-
-            gld.LeaveChannel = channel.Id;
-            gld.LeaveMessage = leave;
-
-            await Database.SaveChangesAsync().ConfigureAwait(false);
-
-            var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            if (ngld.LeaveMessage != oldmessg && ngld.LeaveChannel != oldleave)
+            //Current Channel
+            [Command("set"), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
+            [RequireUserPermission(GuildPermission.Administrator)]
+            [Usage("Welcome to the server -m! We hope you enjoy your stay!!!")]
+            public async Task SetWelcome([Remainder]string welcome)
             {
-                await EmbedExtensions.FromSuccess("Set Leave message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                var oldmessage = gld.JoinMessage;
+
+                gld.JoinChannel = Context.Channel.Id;
+                gld.JoinMessage = welcome;
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                if ((await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).JoinMessage != oldmessage)
+                    await EmbedExtensions.FromSuccess($"Set Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+
+            //Set Channel
+            [Command("set"), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
+            [RequireUserPermission(GuildPermission.Administrator)]
+            [Usage("#userlog Welcome to the server -m! We hope you enjoy your stay!!!")]
+            public async Task SetWelcome(ITextChannel channel, [Remainder]string welcome)
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                var oldmessage = gld.JoinMessage;
+                var oldchannel = gld.JoinChannel;
+
+                gld.JoinChannel = channel.Id;
+                gld.JoinMessage = welcome;
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                if (ngld.JoinChannel != oldchannel && ngld.JoinMessage != oldmessage)
+                    await EmbedExtensions.FromSuccess("Set Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+
+            //Deletes
+            [Command("unset"), Summary("Clears the welcome message")]
+            [Alias("clearwelcome", "unsetjoin", "delete", "remove", "clear")]
+            [RequireDatabase]
+            [RequireUserPermission(GuildPermission.Administrator)]
+            public async Task SetWelcome()
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                gld.JoinChannel = 0;
+                gld.JoinMessage = "";
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                if (ngld.JoinChannel == 0 && ngld.JoinMessage == "")
+                    await EmbedExtensions.FromSuccess("Cleared Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
-        //Current Channel
-        [Command("setleave"), Alias("clearleave"), RequireDatabase]
-        [Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
-        [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task SetLeave([Remainder]string leave)
+        [Group("leave")]
+        public class Leave : ModuleBase<ShardedCommandContext>
         {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            var oldleave = gld.LeaveChannel;
-            var oldmessg = gld.LeaveMessage;
-
-            gld.LeaveChannel = Context.Channel.Id;
-            gld.LeaveMessage = leave;
-
-            await Database.SaveChangesAsync().ConfigureAwait(false);
-
-            var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            if (ngld.LeaveMessage != oldmessg && ngld.LeaveChannel != oldleave)
+            //Set Channel
+            [Command("set"), RequireDatabase]
+            [Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
+            [RequireUserPermission(GuildPermission.Administrator)]
+            [Usage("#userlog Welcome to the server -m! We hope you enjoy your stay!!!")]
+            public async Task SetLeave(ITextChannel channel, [Remainder]string leave)
             {
-                await EmbedExtensions.FromSuccess("Set Leave message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-            }
-        }
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-        //Deletes
-        [Command("unsetleave"), Summary("Clears the leave message"), RequireDatabase]
-        [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task SetLeave()
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
+                var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+                var oldleave = gld.LeaveChannel;
+                var oldmessg = gld.LeaveMessage;
 
-            var oldleave = gld.LeaveChannel;
-            var oldmessg = gld.LeaveMessage;
+                gld.LeaveChannel = channel.Id;
+                gld.LeaveMessage = leave;
 
-            gld.LeaveChannel = 0;
-            gld.LeaveMessage = "";
+                await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            await Database.SaveChangesAsync().ConfigureAwait(false);
+                var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
 
-            var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            if (ngld.LeaveMessage != oldmessg && ngld.LeaveChannel != oldleave)
-            {
-                await EmbedExtensions.FromSuccess("Set Leave message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-            }
-        }
-
-        #endregion Leave
-
-        #region Levels
-
-        [Command("setlevelupmessage"), Summary("Sets the level up message, -u says the users name, -m mentions the user, -l shows the level they achieved"), RequireDatabase]
-        [RequireRole(AccessLevel.ServerMod)]
-        public async Task SetLevelUp([Remainder]string message)
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            var oldmessg = gld.LeaveMessage;
-
-            gld.LevelUpMessage = message;
-
-            await Database.SaveChangesAsync().ConfigureAwait(false);
-
-            var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            if (ngld.LevelUpMessage != oldmessg)
-            {
-                await EmbedExtensions.FromSuccess(Context).QueueMessageAsync(Context).ConfigureAwait(false);
-            }
-        }
-
-        [Command("levelchannel"), Summary("Sets the levelup channel")]
-        [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task ConfigureLevelChannel(IGuildChannel channel = null)
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            if (channel != null)
-            {
-                gld.LevelUpChannel = channel.Id;
-            }
-            else
-            {
-                gld.LevelUpChannel = 0;
-            }
-
-            await Database.SaveChangesAsync().ConfigureAwait(false);
-
-            await EmbedExtensions.FromSuccess(Context).QueueMessageAsync(Context).ConfigureAwait(false);
-        }
-
-        [Command("levelnotification"), Summary("Sets the levelup notification")]
-        [Alias("levelnotif")]
-        public async Task ConfigureLevelNotif(LevelNotification level)
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            var old = gld.LevelNotification;
-
-            gld.LevelNotification = level;
-
-            await Database.SaveChangesAsync().ConfigureAwait(false);
-
-            var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            if (ngld.LevelNotification != old)
-            {
-                await EmbedExtensions.FromSuccess(Context).QueueMessageAsync(Context).ConfigureAwait(false);
-            }
-        }
-
-        #endregion Levels
-
-        #region CustomCommands
-
-        [Command("addcommand"), Summary("Adds a custom command"), RequireDatabase]
-        [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task AddCustomCommand(string name, [Remainder]string content)
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            if (name.IsWebsite())
-            {
-                await EmbedExtensions.FromError("Commands can't be a url/website", Context).QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
-                return;
-            }
-            if (name.Split(' ').Length > 1)
-            {
-                await EmbedExtensions.FromError("Commands can't contain a space", Context).QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
-                return;
-            }
-            else
-            {
-                var cmdsearch = BotService.CommandService.Search(Context, name);
-                if (cmdsearch.Commands != null)
+                if (ngld.LeaveMessage != oldmessg && ngld.LeaveChannel != oldleave)
                 {
-                    await EmbedExtensions.FromError("The bot already has this command", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromSuccess("Set Leave message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                }
+            }
+
+            //Current Channel
+            [Command("set"), RequireDatabase]
+            [Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
+            [RequireUserPermission(GuildPermission.Administrator)]
+            [Usage("Awww, how sad, -u just departed from the server.")]
+            public async Task SetLeave([Remainder]string leave)
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                var oldleave = gld.LeaveChannel;
+                var oldmessg = gld.LeaveMessage;
+
+                gld.LeaveChannel = Context.Channel.Id;
+                gld.LeaveMessage = leave;
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                if (ngld.LeaveMessage != oldmessg && ngld.LeaveChannel != oldleave)
+                {
+                    await EmbedExtensions.FromSuccess("Set Leave message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                }
+            }
+
+            //Deletes
+            [Command("unset"), Summary("Clears the leave message")]
+            [Alias("unsetleave", "clear", "delete", "remove", "clearleave")]
+            [RequireDatabase]
+            [RequireUserPermission(GuildPermission.Administrator)]
+            public async Task SetLeave()
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                var oldleave = gld.LeaveChannel;
+                var oldmessg = gld.LeaveMessage;
+
+                gld.LeaveChannel = 0;
+                gld.LeaveMessage = "";
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                if (ngld.LeaveMessage != oldmessg && ngld.LeaveChannel != oldleave)
+                {
+                    await EmbedExtensions.FromSuccess("Set Leave message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                }
+            }
+        }
+
+        [Group("levels")]
+        public class Levels : ModuleBase<ShardedCommandContext>
+        {
+            [Command("message"), Summary("Sets the level up message, -u says the users name, -m mentions the user, -l shows the level they achieved"), RequireDatabase]
+            [RequireRole(AccessLevel.ServerMod)]
+            [Usage("WOW! -m is now level -l!!!")]
+            public async Task SetLevelUp([Remainder]string message)
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                var oldmessg = gld.LeaveMessage;
+
+                gld.LevelUpMessage = message;
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                if (ngld.LevelUpMessage != oldmessg)
+                {
+                    await EmbedExtensions.FromSuccess(Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                }
+            }
+
+            [Command("channel"), Summary("Sets the levelup channel")]
+            [RequireUserPermission(GuildPermission.Administrator)]
+            [Usage("#userlog")]
+            public async Task ConfigureLevelChannel(IGuildChannel channel = null)
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                if (channel != null)
+                {
+                    gld.LevelUpChannel = channel.Id;
                 }
                 else
                 {
-                    var cmd = Database.CustomCommands.FirstOrDefault(x => x.Name.ToLower() == name.ToLower() && x.GuildId == Context.Guild.Id);
+                    gld.LevelUpChannel = 0;
+                }
 
-                    if (cmd != null)
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await EmbedExtensions.FromSuccess(Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+
+            [Command("notification"), Summary("Sets the levelup notification")]
+            [Alias("levelnotif")]
+            [Usage("channel")]
+            public async Task ConfigureLevelNotif(LevelNotification level)
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                var old = gld.LevelNotification;
+
+                gld.LevelNotification = level;
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                var ngld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                if (ngld.LevelNotification != old)
+                {
+                    await EmbedExtensions.FromSuccess(Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                }
+            }
+        }
+
+        [Group("customcommands")]
+        public class CustomCommands : InteractiveBase<ShardedCommandContext>
+        {
+            [Command("add"), Summary("Adds a custom command"), RequireDatabase]
+            [Alias("addcommand")]
+            [RequireUserPermission(GuildPermission.Administrator)]
+            [Usage("beep", "boop")]
+            public async Task AddCustomCommand(string name, [Remainder]string content)
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                if (name.IsWebsite())
+                {
+                    await EmbedExtensions.FromError("Commands can't be a url/website", Context).QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
+                    return;
+                }
+                if (name.Split(' ').Length > 1)
+                {
+                    await EmbedExtensions.FromError("Commands can't contain a space", Context).QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
+                    return;
+                }
+                else
+                {
+                    var cmdsearch = BotService.CommandService.Search(Context, name);
+                    if (cmdsearch.Commands != null)
                     {
-                        await EmbedExtensions.FromInfo($"Custom command named `{name}` already exists, overwrite with new content? Y/N", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                        var msg = await NextMessageAsync(true, true, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-                        if (msg != null)
-                        {
-                            if (msg.Content.ToLower() == "y")
-                            {
-                                var c = content;
-
-                                cmd.Content = content;
-
-                                await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                                var cmd2 = Database.CustomCommands.FirstOrDefault(x => x.Name.ToLower() == name.ToLower() && x.GuildId == Context.Guild.Id);
-
-                                if (cmd2.Content != c)
-                                {
-                                    await EmbedExtensions.FromInfo("Updated the command.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                                }
-                                else
-                                {
-                                    await EmbedExtensions.FromError("Couldn't update the command", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            await "Reply timed out, not updating.".QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
-                        }
-                        return;
+                        await EmbedExtensions.FromError("The bot already has this command", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                     else
                     {
-                        Database.CustomCommands.Add(new CustomCommand
-                        {
-                            GuildId = Context.Guild.Id,
-                            Name = name,
-                            Content = content
-                        });
-                        await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                        cmd = Database.CustomCommands.FirstOrDefault(x => x.Name.ToLower() == name.ToLower() && x.GuildId == Context.Guild.Id);
+                        var cmd = Database.CustomCommands.FirstOrDefault(x => x.Name.ToLower() == name.ToLower() && x.GuildId == Context.Guild.Id);
 
                         if (cmd != null)
-                            await EmbedExtensions.FromInfo("Added the command.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        {
+                            await EmbedExtensions.FromInfo($"Custom command named `{name}` already exists, overwrite with new content? Y/N", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            var msg = await NextMessageAsync(true, true, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                            if (msg != null)
+                            {
+                                if (msg.Content.ToLower() == "y")
+                                {
+                                    var c = content;
+
+                                    cmd.Content = content;
+
+                                    await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                                    var cmd2 = Database.CustomCommands.FirstOrDefault(x => x.Name.ToLower() == name.ToLower() && x.GuildId == Context.Guild.Id);
+
+                                    if (cmd2.Content != c)
+                                    {
+                                        await EmbedExtensions.FromInfo("Updated the command.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                                    }
+                                    else
+                                    {
+                                        await EmbedExtensions.FromError("Couldn't update the command", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                await "Reply timed out, not updating.".QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
+                            }
+                            return;
+                        }
                         else
-                            await EmbedExtensions.FromError("Couldn't insert the command", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        {
+                            Database.CustomCommands.Add(new CustomCommand
+                            {
+                                GuildId = Context.Guild.Id,
+                                Name = name,
+                                Content = content
+                            });
+                            await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                            cmd = Database.CustomCommands.FirstOrDefault(x => x.Name.ToLower() == name.ToLower() && x.GuildId == Context.Guild.Id);
+
+                            if (cmd != null)
+                                await EmbedExtensions.FromInfo("Added the command.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            else
+                                await EmbedExtensions.FromError("Couldn't insert the command", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        }
                     }
                 }
             }
-        }
 
-        [Command("deletecommand"), Summary("Deletes a custom command"), RequireDatabase]
-        [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task DeleteCustomCommand(string name)
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            if (name.Split(' ').Length > 1)
+            [Command("delete"), Summary("Deletes a custom command"), RequireDatabase]
+            [Alias("deletecommand")]
+            [RequireUserPermission(GuildPermission.Administrator)]
+            [Usage("beep")]
+            public async Task DeleteCustomCommand(string name)
             {
-                await "Commands can't contain a space".QueueMessageAsync(Context).ConfigureAwait(false);
-                return;
-            }
-            else
-            {
-                await "Are you sure? Y/N".QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-                var msg = await NextMessageAsync(true, true, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-                if (msg != null)
+                if (name.Split(' ').Length > 1)
                 {
-                    if (msg.Content.ToLower() == "y")
-                    {
-                        Database.CustomCommands.Remove(Database.CustomCommands.FirstOrDefault(x => x.GuildId == Context.Guild.Id && x.Name.ToLower() == name.ToLower()));
-                        await Database.SaveChangesAsync().ConfigureAwait(false);
+                    await "Commands can't contain a space".QueueMessageAsync(Context).ConfigureAwait(false);
+                    return;
+                }
+                else
+                {
+                    await "Are you sure? Y/N".QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.Timed, timeout: 5).ConfigureAwait(false);
 
-                        if (Database.CustomCommands.FirstOrDefault(x => x.GuildId == Context.Guild.Id && x.Name.ToLower() == name.ToLower()) == null)
-                            await EmbedExtensions.FromInfo("Deleted the command.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                        else
-                            await EmbedExtensions.FromError("Failed removing the command, try again", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    var msg = await NextMessageAsync(true, true, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                    if (msg != null)
+                    {
+                        if (msg.Content.ToLower() == "y")
+                        {
+                            Database.CustomCommands.Remove(Database.CustomCommands.FirstOrDefault(x => x.GuildId == Context.Guild.Id && x.Name.ToLower() == name.ToLower()));
+                            await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                            if (Database.CustomCommands.FirstOrDefault(x => x.GuildId == Context.Guild.Id && x.Name.ToLower() == name.ToLower()) == null)
+                                await EmbedExtensions.FromInfo("Deleted the command.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            else
+                                await EmbedExtensions.FromError("Failed removing the command, try again", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        }
                     }
                 }
             }
         }
-
-        #endregion CustomCommands
     }
 }
