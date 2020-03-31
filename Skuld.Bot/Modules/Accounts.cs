@@ -25,7 +25,6 @@ using System.Threading.Tasks;
 namespace Skuld.Bot.Commands
 {
     [Group, Name("Accounts"), RequireEnabledModule, RequireDatabase]
-    public class AccountModule : ModuleBase<ShardedCommandContext>
     public class AccountModule : InteractiveBase<ShardedCommandContext>
     {
         public SkuldConfig Configuration { get; set; }
@@ -86,6 +85,7 @@ namespace Skuld.Bot.Commands
 
         [Command("money"), Summary("Gets a user's money")]
         [Alias("balance", "credits")]
+        
         public async Task Money([Remainder]IGuildUser user = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -359,6 +359,7 @@ namespace Skuld.Bot.Commands
             if (user == null)
             {
                 var previousAmount = self.Money;
+
                 if (self.ProcessDaily(Configuration))
                 {
                     var embed = EmbedExtensions.FromMessage("SkuldBank - Daily", $"You just got your daily of {gld.MoneyIcon}{MoneyAmount}", Context);
@@ -371,22 +372,14 @@ namespace Skuld.Bot.Commands
                         embed.AddField("Streak", $"You're on a streak!!\n{self.Streak}/{StreakAmount}");
                     }
 
-                    if (!self.IsStreakReset(Configuration))
-                    {
-                        self.Streak++;
-                    }
-                    else
-                    {
-                        self.Streak = 0;
-                    }
-
                     await embed
                         .QueueMessageAsync(Context).ConfigureAwait(false);
                 }
                 else
                 {
-                    TimeSpan remain = TimeSpan.FromTicks((DateTime.Today.AddDays(1).ToEpoch() - DateTime.UtcNow.ToEpoch()).FromEpoch().Ticks);
+                    TimeSpan remain = DateTime.Today.Date.AddDays(1) - DateTime.UtcNow;
                     string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
+
                     await EmbedExtensions.FromError("SkuldBank - Daily", $"You must wait `{remaining}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
             }
@@ -397,15 +390,6 @@ namespace Skuld.Bot.Commands
                 if (target.ProcessDaily(Configuration, self))
                 {
                     var embed = EmbedExtensions.FromMessage("SkuldBank - Daily", $"You just gave your daily of {gld.MoneyIcon}{MoneyAmount.ToFormattedString()} to {user.Mention}", Context);
-
-                    if (!self.IsStreakReset(Configuration))
-                    {
-                        self.Streak++;
-                    }
-                    else
-                    {
-                        self.Streak = 0;
-                    }
 
                     embed.AddInlineField("Previous Amount", $"{gld.MoneyIcon}{previousAmount.ToFormattedString()}");
                     embed.AddInlineField("New Amount", $"{gld.MoneyIcon}{target.Money.ToFormattedString()}");
@@ -420,7 +404,7 @@ namespace Skuld.Bot.Commands
                 }
                 else
                 {
-                    TimeSpan remain = TimeSpan.FromTicks((DateTime.Today.AddDays(1).ToEpoch() - DateTime.UtcNow.ToEpoch()).FromEpoch().Ticks);
+                    TimeSpan remain = DateTime.Today.Date.AddDays(1) - DateTime.UtcNow;
                     string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
 
                     await EmbedExtensions.FromError("SkuldBank - Daily", $"You must wait `{remaining}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
@@ -650,6 +634,7 @@ namespace Skuld.Bot.Commands
 
         [Command("rep"), Summary("Gives someone rep or checks your rep")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("@person")]
         public async Task GiveRep([Remainder]IGuildUser user = null)
         {
             if (user != null && (user.IsBot || user.IsWebhook))
@@ -703,6 +688,7 @@ namespace Skuld.Bot.Commands
 
         [Command("unrep"), Summary("Removes a rep")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("@person")]
         public async Task RemoveRep([Remainder]IGuildUser user)
         {
             if (user != null && (user.IsBot || user.IsWebhook))
@@ -736,6 +722,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("title"), Summary("Sets Title"), RequireDatabase]
+        [Usage("The village thief")]
         public async Task SetTitle([Remainder]string title = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -775,6 +762,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("block-actions"), Summary("Blocks people from performing actions"), RequireDatabase]
+        [Usage("@person")]
         public async Task BlockActions([Remainder] IUser user)
         {
             using var database = new SkuldDbContextFactory().CreateDbContext();
@@ -802,6 +790,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("set-hexbg"), Summary("Sets your background to a Hex Color"), RequireDatabase]
+        [Usage("#ff0000")]
         public async Task SetHexBG(string Hex = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -883,6 +872,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("set-custombg"), Summary("Sets your custom background Image"), RequireDatabase]
+        [Usage("https://example.com/SuperAwesomeImage.png")]
         public async Task SetCBG(string link = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -932,6 +922,7 @@ namespace Skuld.Bot.Commands
 
         [Command("custom-bg preview"), Summary("Previews a custom bg")]
         [Ratelimit(20, 1, Measure.Minutes)]
+        [Usage("https://example.com/SuperAwesomeImage.png")]
         public async Task PreviewCustomBG(Uri link)
         {
             var fontsFolder = SkuldAppContext.FontDirectory;
@@ -1142,6 +1133,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("settimezone"), Summary("Sets your timezone")]
+        [Usage("UTC")]
         public async Task SetTimeZone([Remainder]DateTimeZone timezone)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
