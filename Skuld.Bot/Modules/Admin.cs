@@ -245,7 +245,7 @@ namespace Skuld.Bot.Commands
             [Command("channel"), Summary("Some features require channels to be set"), RequireDatabase]
             [RequireUserPermission(GuildPermission.Administrator)]
             [Usage("join #userlog", "leave #userlog")]
-            public async Task ConfigureChannel(string module, IChannel channel)
+            public async Task ConfigureChannel(string module, IChannel channel = null)
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
 
@@ -257,7 +257,10 @@ namespace Skuld.Bot.Commands
                     {"userjoined","userjoinchan" },
                     {"leave", "userleavechan" },
                     {"userleave","userleavechan" },
-                    {"userleft","userleavechan" }
+                    {"userleft","userleavechan" },
+                    {"level", "levels" },
+                    {"experience", "levels" },
+                    {"levels", "levels" }
                 };
                 if (modules.ContainsKey(module) || modules.ContainsValue(module))
                 {
@@ -269,11 +272,35 @@ namespace Skuld.Bot.Commands
                         switch (key)
                         {
                             case "userjoinchan":
-                                guild.JoinChannel = channel.Id;
+                                if(channel != null)
+                                {
+                                    guild.JoinChannel = channel.Id;
+                                }
+                                else
+                                {
+                                    guild.JoinChannel = 0;
+                                }
                                 break;
 
                             case "userleavechan":
-                                guild.LeaveChannel = channel.Id;
+                                if (channel != null)
+                                {
+                                    guild.LeaveChannel = channel.Id;
+                                }
+                                else
+                                {
+                                    guild.LeaveChannel = 0;
+                                }
+                                break;
+                            case "levels":
+                                if (channel != null)
+                                {
+                                    guild.LevelUpChannel = channel.Id;
+                                }
+                                else
+                                {
+                                    guild.LevelUpChannel = 0;
+                                }
                                 break;
                         }
                         await Database.SaveChangesAsync().ConfigureAwait(false);
@@ -1631,29 +1658,6 @@ namespace Skuld.Bot.Commands
                 {
                     await EmbedExtensions.FromSuccess(Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 }
-            }
-
-            [Command("channel"), Summary("Sets the levelup channel")]
-            [RequireUserPermission(GuildPermission.Administrator)]
-            [Usage("#userlog")]
-            public async Task ConfigureLevelChannel(IGuildChannel channel = null)
-            {
-                using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-                var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-                if (channel != null)
-                {
-                    gld.LevelUpChannel = channel.Id;
-                }
-                else
-                {
-                    gld.LevelUpChannel = 0;
-                }
-
-                await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                await EmbedExtensions.FromSuccess(Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
 
             [Command("notification"), Summary("Sets the levelup notification")]
