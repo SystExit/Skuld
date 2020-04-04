@@ -33,7 +33,6 @@ namespace Skuld.APIS.Extensions
             "wound_fucking",
             "dead",
             "corpse",
-            "cub",
             "child",
             "baby",
             "kid",
