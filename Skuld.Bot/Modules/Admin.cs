@@ -373,6 +373,7 @@ namespace Skuld.Bot.Commands
             }
 
             [Command("channel"), RequireFeature(GuildFeature.Starboard)]
+            [Usage("#superawesomestarboard")]
             public async Task StarboardChannel([Remainder]ITextChannel channel = null)
             {
                 var guild = (Context.Guild as IGuild);
@@ -410,10 +411,12 @@ namespace Skuld.Bot.Commands
                     => await StarboardEmoji("⭐").ConfigureAwait(false);
 
                 [Command("")]
+                [Usage("⭐")]
                 public async Task StarboardEmoji(Emote emote)
                     => await StarboardEmoji(emote.ToString()).ConfigureAwait(false);
 
                 [Command("")]
+                [Usage(":superawesomestar:")]
                 public async Task StarboardEmoji(Emoji emote)
                     => await StarboardEmoji(emote.ToString()).ConfigureAwait(false);
 
@@ -445,10 +448,12 @@ namespace Skuld.Bot.Commands
                     => await StarboardRange1("🌟").ConfigureAwait(false);
 
                 [Command("1")]
+                [Usage("🌟")]
                 public async Task StarboardRange1(Emote emote)
                     => await StarboardRange1(emote.ToString()).ConfigureAwait(false);
 
                 [Command("1")]
+                [Usage(":superawesomeemote:")]
                 public async Task StarboardRange1(Emoji emote)
                     => await StarboardRange1(emote.ToString()).ConfigureAwait(false);
 
@@ -476,10 +481,12 @@ namespace Skuld.Bot.Commands
                     => await StarboardRange2("🌠").ConfigureAwait(false);
 
                 [Command("2")]
+                [Usage("🌠")]
                 public async Task StarboardRange2(Emote emote)
                     => await StarboardRange2(emote.ToString()).ConfigureAwait(false);
 
                 [Command("2")]
+                [Usage(":superawesomeemote2:")]
                 public async Task StarboardRange2(Emoji emote)
                     => await StarboardRange2(emote.ToString()).ConfigureAwait(false);
 
@@ -503,14 +510,17 @@ namespace Skuld.Bot.Commands
                 #endregion
                 #region Range 30+
                 [Command("3")]
+                [Usage("")]
                 public async Task StarboardRange3()
                     => await StarboardRange3("✨").ConfigureAwait(false);
 
                 [Command("3")]
+                [Usage("✨")]
                 public async Task StarboardRange3(Emote emote)
                     => await StarboardRange3(emote.ToString()).ConfigureAwait(false);
 
                 [Command("3")]
+                [Usage(":superawesomeemote3:")]
                 public async Task StarboardRange3(Emoji emote)
                     => await StarboardRange3(emote.ToString()).ConfigureAwait(false);
 
@@ -535,6 +545,7 @@ namespace Skuld.Bot.Commands
             }
 
             [Command("selfstar"), RequireFeature(GuildFeature.Starboard)]
+            [Usage("true")]
             public async Task SelfStar(bool value)
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -565,6 +576,7 @@ namespace Skuld.Bot.Commands
             }
 
             [Command("starsrequired"), RequireFeature(GuildFeature.Starboard)]
+            [Usage("5")]
             public async Task StarsRequired(ushort requiredStars)
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -583,6 +595,7 @@ namespace Skuld.Bot.Commands
             }
 
             [Command("blacklist"), RequireFeature(GuildFeature.Starboard)]
+            [Usage("@person1")]
             public async Task BlacklistUser([Remainder] IGuildUser user)
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -617,6 +630,7 @@ namespace Skuld.Bot.Commands
             }
 
             [Command("blacklist"), RequireFeature(GuildFeature.Starboard)]
+            [Usage("userlog")]
             public async Task BlacklistChannel([Remainder] ITextChannel channel)
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -651,6 +665,7 @@ namespace Skuld.Bot.Commands
             }
 
             [Command("blacklist"), RequireFeature(GuildFeature.Starboard)]
+            [Usage("Information")]
             public async Task BlacklistCategory([Remainder] ICategoryChannel category)
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -685,6 +700,7 @@ namespace Skuld.Bot.Commands
             }
 
             [Command("whitelist"), RequireFeature(GuildFeature.Starboard)]
+            [Usage("@person1")]
             public async Task WhitelistUser([Remainder] IGuildUser user)
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -719,6 +735,7 @@ namespace Skuld.Bot.Commands
             }
 
             [Command("whitelist"), RequireFeature(GuildFeature.Starboard)]
+            [Usage("userlog")]
             public async Task WhitelistChannel([Remainder] ITextChannel channel)
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -753,6 +770,7 @@ namespace Skuld.Bot.Commands
             }
 
             [Command("whitelist"), RequireFeature(GuildFeature.Starboard)]
+            [Usage("Information")]
             public async Task WhitelistCategory([Remainder] ICategoryChannel category)
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
