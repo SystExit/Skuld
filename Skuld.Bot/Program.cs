@@ -53,6 +53,7 @@ namespace Skuld.Bot
                 {
                     Log.Critical("Framework", ex.Message, ex);
                 }
+                return;
             }
 
             {

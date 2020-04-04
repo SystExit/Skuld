@@ -106,6 +106,41 @@ namespace Skuld.Bot.Commands
                     if (Context.Guild != null)
                     {
                         prefix = (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix;
+
+                        var ccs = Database.CustomCommands.ToList().Where(x => x.GuildId == Context.Guild.Id);
+                        if (ccs.Any())
+                        {
+                            if(ccs.Any(x=>x.Name.ToUpperInvariant() == command.ToUpperInvariant()))
+                            {
+                                var comd = ccs.FirstOrDefault(x => x.Name.ToUpperInvariant() == command.ToUpperInvariant());
+
+                                StringBuilder desc = new StringBuilder();
+
+                                desc.AppendLine("**Summary:**")
+                                    .Append("Custom Command")
+                                    .AppendLine()
+                                    .AppendLine()
+                                    .AppendLine("**Can Execute:**")
+                                    .Append("True")
+                                    .AppendLine()
+                                    .AppendLine()
+                                    .AppendLine("**Usage**")
+                                    .Append(prefix)
+                                    .Append(comd.Name)
+                                    .AppendLine();
+
+
+                                await
+                                    EmbedExtensions
+                                        .FromMessage(Context)
+                                        .WithTitle(comd.Name)
+                                        .WithDescription(desc.ToString())
+                                        .QueueMessageAsync(Context)
+                                    .ConfigureAwait(false);
+
+                                return;
+                            }
+                        }
                     }
 
                     var cmd = await BotService.CommandService.GetCommandHelpAsync(Context, command, prefix).ConfigureAwait(false);

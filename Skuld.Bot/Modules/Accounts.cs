@@ -372,6 +372,15 @@ namespace Skuld.Bot.Commands
                         embed.AddField("Streak", $"You're on a streak!!\n{self.Streak}/{StreakAmount}");
                     }
 
+                    if (!self.IsStreakReset(Configuration))
+                    {
+                        self.Streak = self.Streak.Add(1);
+                    }
+                    else
+                    {
+                        self.Streak = 0;
+                    }
+
                     await embed
                         .QueueMessageAsync(Context).ConfigureAwait(false);
                 }
@@ -397,6 +406,15 @@ namespace Skuld.Bot.Commands
                     if (self.Streak > 0)
                     {
                         embed.AddField("Streak", $"You're on a streak!!\n{self.Streak}/{StreakAmount}");
+                    }
+
+                    if (!self.IsStreakReset(Configuration))
+                    {
+                        self.Streak = self.Streak.Add(1);
+                    }
+                    else
+                    {
+                        self.Streak = 0;
                     }
 
                     await embed
