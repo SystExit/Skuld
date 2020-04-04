@@ -85,7 +85,6 @@ namespace Skuld.Bot.Commands
 
         [Command("money"), Summary("Gets a user's money")]
         [Alias("balance", "credits")]
-        
         public async Task Money([Remainder]IGuildUser user = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -807,28 +806,64 @@ namespace Skuld.Bot.Commands
             await database.SaveChangesAsync().ConfigureAwait(false);
         }
 
-        [Command("set-hexbg"), Summary("Sets your background to a Hex Color"), RequireDatabase]
-        [Usage("#ff0000")]
-        public async Task SetHexBG(string Hex = null)
+        [Group("background")]
+        public class CustomBG : InteractiveBase<ShardedCommandContext>
         {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
+            public SkuldConfig Configuration { get; set; }
 
-            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            if (Hex != null)
+            [Command("buy"), Summary("Buy permanent custom backgrounds"), RequireDatabase]
+            public async Task BuyCBG()
             {
-                if (usr.Money >= 300)
-                {
-                    TransactionService.DoTransaction(new TransactionStruct
-                    {
-                        Amount = 300,
-                        Sender = usr
-                    });
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-                    if (int.TryParse((Hex[0] != '#' ? Hex : Hex.Remove(0, 1)), System.Globalization.NumberStyles.HexNumber, null, out _))
+                var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+                var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                if (!usr.UnlockedCustBG)
+                {
+                    if (usr.Money >= 40000)
                     {
-                        usr.Background = (Hex[0] != '#' ? "#" + Hex : Hex);
+                        TransactionService.DoTransaction(new TransactionStruct
+                        {
+                            Amount = 40000,
+                            Sender = usr
+                        });
+                        usr.UnlockedCustBG = true;
+
+                        await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                        await EmbedExtensions.FromSuccess($"You've successfully unlocked custom backgrounds, use: {gld.Prefix ?? Configuration.Prefix}set-custombg [URL] to set your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}40,000 to unlock custom backgrounds", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                }
+                else
+                {
+                    await EmbedExtensions.FromInfo($"You already unlocked custom backgrounds, use: {gld.Prefix ?? Configuration.Prefix}set-custombg [URL] to set your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                }
+            }
+
+            [Command("set"), Summary("Sets your custom background Image"), RequireDatabase]
+            [Usage("https://example.com/SuperAwesomeImage.png", "#ff0000")]
+            public async Task SetCBG(string link = null)
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+                var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+                var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                if (Uri.TryCreate(link, UriKind.Absolute, out var res))
+                {
+                    if (usr.Money >= 900)
+                    {
+                        TransactionService.DoTransaction(new TransactionStruct
+                        {
+                            Amount = 900,
+                            Sender = usr
+                        });
+                        usr.Background = res.OriginalString;
 
                         await Database.SaveChangesAsync().ConfigureAwait(false);
 
@@ -836,318 +871,274 @@ namespace Skuld.Bot.Commands
                     }
                     else
                     {
-                        await EmbedExtensions.FromError($"Malformed Entry", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                        return;
+                        await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}900 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                    return;
+                }
+                else if (link.ToLowerInvariant() == "reset")
+                {
+                    usr.Background = "#3F51B5";
+
+                    await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                    await EmbedExtensions.FromSuccess($"Reset your background to: {usr.Background}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    return;
+                }
+                else if (int.TryParse(link[0] != '#' ? link : link.Remove(0, 1), System.Globalization.NumberStyles.HexNumber, null, out _))
+                {
+                    if (usr.Money >= 300)
+                    {
+                        TransactionService.DoTransaction(new TransactionStruct
+                        {
+                            Amount = 300,
+                            Sender = usr
+                        });
+
+                        usr.Background = link[0] != '#' ? "#" + link : link;
+
+                        await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                        await EmbedExtensions.FromSuccess("Set your Background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}300 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                 }
                 else
                 {
-                    await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}300 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError($"Malformed Entry", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    return;
                 }
             }
-            else
+
+            [Command("preview"), Summary("Previews a custom bg")]
+            [Ratelimit(20, 1, Measure.Minutes)]
+            [Usage("https://example.com/SuperAwesomeImage.png", "#445566")]
+            public async Task PreviewCustomBG(string link)
             {
-                usr.Background = "#3F51B5";
+                var fontsFolder = SkuldAppContext.FontDirectory;
+                var fontFile = Path.Combine(fontsFolder, "NotoSans-Regular.ttf");
 
-                await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                await EmbedExtensions.FromSuccess($"Reset your background to: {usr.Background}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-            }
-        }
-
-        [Command("buy-custombg"), Summary("Buy permanent custom backgrounds"), RequireDatabase]
-        public async Task BuyCBG()
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            if (!usr.UnlockedCustBG)
-            {
-                if (usr.Money >= 40000)
+                if (!Directory.Exists(fontsFolder))
                 {
-                    TransactionService.DoTransaction(new TransactionStruct
-                    {
-                        Amount = 40000,
-                        Sender = usr
-                    });
-                    usr.UnlockedCustBG = true;
-
-                    await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                    await EmbedExtensions.FromSuccess($"You've successfully unlocked custom backgrounds, use: {gld.Prefix ?? Configuration.Prefix}set-custombg [URL] to set your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    Directory.CreateDirectory(fontsFolder);
+                    await HttpWebClient.DownloadFileAsync(new Uri("https://static.skuldbot.uk/fonts/NotoSans-Regular.ttf"), fontFile).ConfigureAwait(false);
                 }
-                else
+
+                using MagickImage image = new MagickImage(new MagickColor("#212121"), 600, 510)
                 {
-                    await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}40,000 to unlock custom backgrounds", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    Format = MagickFormat.Png
+                };
+
+                if (string.IsNullOrEmpty(link))
+                {
+                    image.Draw(new DrawableFillColor(new MagickColor("#3F51B5")), new DrawableRectangle(0, 0, 600, 228));
                 }
-            }
-            else
-            {
-                await EmbedExtensions.FromInfo($"You already unlocked custom backgrounds, use: {gld.Prefix ?? Configuration.Prefix}set-custombg [URL] to set your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-            }
-        }
-
-        [Command("set-custombg"), Summary("Sets your custom background Image"), RequireDatabase]
-        [Usage("https://example.com/SuperAwesomeImage.png")]
-        public async Task SetCBG(string link = null)
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
-
-            if (usr.Money < 900 || string.IsNullOrEmpty(link))
-            {
-                await $"You need at least {gld.MoneyIcon}900 to change your background".QueueMessageAsync(Context).ConfigureAwait(false);
-                return;
-            }
-
-            if (Uri.TryCreate(link, UriKind.Absolute, out var res))
-            {
-                if (usr.Money >= 900)
+                else if (int.TryParse(link[0] != '#' ? link : link.Remove(0, 1), System.Globalization.NumberStyles.HexNumber, null, out _))
                 {
-                    TransactionService.DoTransaction(new TransactionStruct
-                    {
-                        Amount = 900,
-                        Sender = usr
-                    });
-                    usr.Background = res.OriginalString;
+                    string hex = link;
 
-                    await Database.SaveChangesAsync().ConfigureAwait(false);
+                    if (link[0] != '#')
+                        hex = $"#{hex}";
 
-                    await EmbedExtensions.FromSuccess("Set your Background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    image.Draw(new DrawableFillColor(new MagickColor(hex)), new DrawableRectangle(0, 0, 600, 228));
                 }
                 else
                 {
-                    await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}300 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                }
-                return;
-            }
-            else if (link.ToLowerInvariant() == "reset")
-            {
-                usr.Background = "#3F51B5";
-
-                await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                await EmbedExtensions.FromSuccess($"Reset your background to: {usr.Background}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                return;
-            }
-
-            await EmbedExtensions.FromInfo($"It costs at least {gld.MoneyIcon}300 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-        }
-
-        [Command("custom-bg preview"), Summary("Previews a custom bg")]
-        [Ratelimit(20, 1, Measure.Minutes)]
-        [Usage("https://example.com/SuperAwesomeImage.png")]
-        public async Task PreviewCustomBG(Uri link)
-        {
-            var fontsFolder = SkuldAppContext.FontDirectory;
-            var fontFile = Path.Combine(fontsFolder, "NotoSans-Regular.ttf");
-
-            if (!Directory.Exists(fontsFolder))
-            {
-                Directory.CreateDirectory(fontsFolder);
-                await HttpWebClient.DownloadFileAsync(new Uri("https://static.skuldbot.uk/fonts/NotoSans-Regular.ttf"), fontFile).ConfigureAwait(false);
-            }
-
-            using MagickImage image = new MagickImage(new MagickColor("#212121"), 600, 510)
-            {
-                Format = MagickFormat.Png
-            };
-
-            using MagickImage img2 = new MagickImage(await HttpWebClient.ReturnStreamAsync(link).ConfigureAwait(false))
-            {
-                FilterType = FilterType.Quadratic
-            };
-            img2.Resize(600, 0);
-            img2.Crop(600, 228, Gravity.Center);
-            image.Composite(img2);
-
-            var avatar = Context.User.GetAvatarUrl(ImageFormat.Png) ?? Context.User.GetDefaultAvatarUrl();
-
-            using (MagickImage profileBackground = new MagickImage(await HttpWebClient.ReturnStreamAsync(new Uri(avatar)).ConfigureAwait(false), new MagickReadSettings
-            {
-                Format = MagickFormat.Png,
-                BackgroundColor = MagickColors.None,
-                Width = 128,
-                Height = 128
-            }))
-            {
-                using (var mask = new MagickImage("xc:none", 128, 128))
-                {
-                    mask.Draw(new DrawableFillColor(MagickColors.White), new DrawableCircle(64, 64, 62, 126));
-
-                    profileBackground.Composite(mask, CompositeOperator.CopyAlpha);
-                }
-
-                using (MagickImage statusBackground = new MagickImage($"xc:{Context.User.Status.HexFromStatus()}", 32, 32))
-                {
-                    statusBackground.BackgroundColor = MagickColors.None;
-
-                    using (var mask = new MagickImage("xc:none", 32, 32))
+                    using MagickImage img2 = new MagickImage(await HttpWebClient.ReturnStreamAsync(new Uri(link)).ConfigureAwait(false))
                     {
-                        mask.Draw(new DrawableFillColor(MagickColors.White), new DrawableCircle(16, 16, 14, 30));
+                        FilterType = FilterType.Quadratic
+                    };
+                    img2.Resize(600, 0);
+                    img2.Crop(600, 228, Gravity.Center);
+                    image.Composite(img2);
+                }
 
-                        statusBackground.Composite(mask, CompositeOperator.CopyAlpha);
+                var avatar = Context.User.GetAvatarUrl(ImageFormat.Png) ?? Context.User.GetDefaultAvatarUrl();
+
+                using (MagickImage profileBackground = new MagickImage(await HttpWebClient.ReturnStreamAsync(new Uri(avatar)).ConfigureAwait(false), new MagickReadSettings
+                {
+                    Format = MagickFormat.Png,
+                    BackgroundColor = MagickColors.None,
+                    Width = 128,
+                    Height = 128
+                }))
+                {
+                    using (var mask = new MagickImage("xc:none", 128, 128))
+                    {
+                        mask.Draw(new DrawableFillColor(MagickColors.White), new DrawableCircle(64, 64, 62, 126));
+
+                        profileBackground.Composite(mask, CompositeOperator.CopyAlpha);
                     }
 
-                    profileBackground.Composite(statusBackground, 96, 96, CompositeOperator.Over);
+                    using (MagickImage statusBackground = new MagickImage($"xc:{Context.User.Status.HexFromStatus()}", 32, 32))
+                    {
+                        statusBackground.BackgroundColor = MagickColors.None;
+
+                        using (var mask = new MagickImage("xc:none", 32, 32))
+                        {
+                            mask.Draw(new DrawableFillColor(MagickColors.White), new DrawableCircle(16, 16, 14, 30));
+
+                            statusBackground.Composite(mask, CompositeOperator.CopyAlpha);
+                        }
+
+                        profileBackground.Composite(statusBackground, 96, 96, CompositeOperator.Over);
+                    }
+
+                    image.Composite(profileBackground, 236, 32, CompositeOperator.Over);
                 }
 
-                image.Composite(profileBackground, 236, 32, CompositeOperator.Over);
-            }
+                var font = new DrawableFont(fontFile);
+                var encoding = new DrawableTextEncoding(System.Text.Encoding.Unicode);
+                var fontsize = new DrawableFontPointSize(20);
+                var white = new DrawableFillColor(new MagickColor(65535, 65535, 65535));
 
-            var font = new DrawableFont(fontFile);
-            var encoding = new DrawableTextEncoding(System.Text.Encoding.Unicode);
-            var fontsize = new DrawableFontPointSize(20);
-            var white = new DrawableFillColor(new MagickColor(65535, 65535, 65535));
+                var exp = new UserExperience
+                {
+                    TotalXP = 1234567890
+                };
 
-            var exp = new UserExperience
-            {
-                TotalXP = 1234567890
-            };
+                exp.Level = DatabaseUtilities.GetLevelFromTotalXP(exp.TotalXP, DiscordUtilities.PHI);
 
-            exp.Level = DatabaseUtilities.GetLevelFromTotalXP(exp.TotalXP, DiscordUtilities.PHI);
+                exp.XP = DatabaseUtilities.GetXPLevelRequirement(exp.Level, DiscordUtilities.PHI) / 2;
 
-            exp.XP = DatabaseUtilities.GetXPLevelRequirement(exp.Level, DiscordUtilities.PHI) / 2;
+                int ylevel1 = 365, ylevel2 = 405, ylevel3 = 445;
 
-            int ylevel1 = 365, ylevel2 = 405, ylevel3 = 445;
+                //Bar
+                image.Draw(new DrawableFillColor(new MagickColor(0, 0, 0, 52428)), new DrawableRectangle(0, 188, 600, 228));
 
-            //Bar
-            image.Draw(new DrawableFillColor(new MagickColor(0, 0, 0, 52428)), new DrawableRectangle(0, 188, 600, 228));
-
-            //Rep
-            using (MagickImage label = new MagickImage($"label:1,234 Rep", new MagickReadSettings
-            {
-                BackgroundColor = MagickColors.Transparent,
-                FillColor = MagickColors.White,
-                Width = 580,
-                Height = 30,
-                TextGravity = Gravity.West,
-                FontPointsize = 30,
-                Font = fontFile
-            }))
-            {
-                image.Composite(label, 20, 193, CompositeOperator.Over);
-            }
-
-            //Money
-            using (MagickImage label2 = new MagickImage($"label:₩123,456,789", new MagickReadSettings
-            {
-                BackgroundColor = MagickColors.Transparent,
-                FillColor = MagickColors.White,
-                Width = 580,
-                Height = 30,
-                TextGravity = Gravity.East,
-                FontPointsize = 30,
-                Font = fontFile
-            }))
-            {
-                image.Composite(label2, 0, 193, CompositeOperator.Over);
-            }
-
-            //Username
-            using (MagickImage label3 = new MagickImage($"label:{Context.User.FullName()}", new MagickReadSettings
-            {
-                BackgroundColor = MagickColors.Transparent,
-                FillColor = MagickColors.White,
-                Width = 600,
-                Height = 40,
-                TextGravity = Gravity.Center,
-                Font = fontFile
-            }))
-            {
-                image.Composite(label3, 0, 230, CompositeOperator.Over);
-            }
-
-            //Title
-            using MagickImage label4 = new MagickImage($"label:Preview Card", new MagickReadSettings
-            {
-                BackgroundColor = MagickColors.Transparent,
-                FillColor = MagickColors.White,
-                Width = 600,
-                Height = 40,
-                TextGravity = Gravity.Center,
-                Font = fontFile
-            });
-            image.Composite(label4, 0, 270, CompositeOperator.Over);
-
-            //YLevel 1
-            var dailyText = $"Daily: {((ulong)0).FromEpoch().ToString("yyyy/MM/dd HH:mm:ss")}";
-            var dmetr = image.FontTypeMetrics(dailyText, true);
-            var rightPos = 600 - (dmetr.TextWidth * 2);
-
-            image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: 420/-420"));
-
-            image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel1, dailyText));
-
-            //YLevel 2
-            image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel2, $"Pasta Karma: 123,456,789"));
-            image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel2, $"Fav. Cmd: profile (123,456,789)"));
-
-            //YLevel 3
-            image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToFormattedString()} ({exp.TotalXP.ToFormattedString()})"));
-            image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: 7,777/Patted: 7,777"));
-
-            ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(exp.Level + 1, DiscordUtilities.PHI);
-
-            //Progressbar
-            image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, 471, 580, 500));
-            image.Draw(new DrawableFillColor(new MagickColor("#dfdfdf")), new DrawableRectangle(22, 473, 578, 498));
-
-            var percentage = (double)exp.XP / xpToNextLevel * 100;
-            var mapped = percentage.Remap(0, 100, 22, 578);
-
-            image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, 473, mapped, 498));
-
-            //Current XP
-            image.Draw(font, fontsize, encoding, new DrawableText(25, 493, (exp.XP).ToFormattedString() + "XP"));
-
-            //XP To Next
-            using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToFormattedString()}XP", new MagickReadSettings
-            {
-                BackgroundColor = MagickColors.Transparent,
-                FillColor = MagickColors.Black,
-                Width = 575,
-                Height = 20,
-                TextGravity = Gravity.East,
-                FontPointsize = 20,
-                Font = fontFile
-            }))
-            {
-                image.Composite(label5, 0, 475, CompositeOperator.Over);
-            }
-
-            {
-                var col = MagickColors.Red;
-                col.A = ushort.MaxValue / 2;
-
-                using MagickImage watermark = new MagickImage($"label:PREVIEW", new MagickReadSettings
+                //Rep
+                using (MagickImage label = new MagickImage($"label:1,234 Rep", new MagickReadSettings
                 {
                     BackgroundColor = MagickColors.Transparent,
-                    FillColor = col,
+                    FillColor = MagickColors.White,
+                    Width = 580,
+                    Height = 30,
+                    TextGravity = Gravity.West,
+                    FontPointsize = 30,
+                    Font = fontFile
+                }))
+                {
+                    image.Composite(label, 20, 193, CompositeOperator.Over);
+                }
+
+                //Money
+                using (MagickImage label2 = new MagickImage($"label:₩123,456,789", new MagickReadSettings
+                {
+                    BackgroundColor = MagickColors.Transparent,
+                    FillColor = MagickColors.White,
+                    Width = 580,
+                    Height = 30,
+                    TextGravity = Gravity.East,
+                    FontPointsize = 30,
+                    Font = fontFile
+                }))
+                {
+                    image.Composite(label2, 0, 193, CompositeOperator.Over);
+                }
+
+                //Username
+                using (MagickImage label3 = new MagickImage($"label:{Context.User.FullName()}", new MagickReadSettings
+                {
+                    BackgroundColor = MagickColors.Transparent,
+                    FillColor = MagickColors.White,
                     Width = 600,
-                    Height = 300,
+                    Height = 40,
                     TextGravity = Gravity.Center,
-                    FontPointsize = 100,
-                    FontWeight = FontWeight.ExtraBold,
+                    Font = fontFile
+                }))
+                {
+                    image.Composite(label3, 0, 230, CompositeOperator.Over);
+                }
+
+                //Title
+                using MagickImage label4 = new MagickImage($"label:Preview Card", new MagickReadSettings
+                {
+                    BackgroundColor = MagickColors.Transparent,
+                    FillColor = MagickColors.White,
+                    Width = 600,
+                    Height = 40,
+                    TextGravity = Gravity.Center,
                     Font = fontFile
                 });
+                image.Composite(label4, 0, 270, CompositeOperator.Over);
 
-                watermark.Rotate(-45);
+                //YLevel 1
+                var dailyText = $"Daily: {((ulong)0).FromEpoch().ToString("yyyy/MM/dd HH:mm:ss")}";
+                var dmetr = image.FontTypeMetrics(dailyText, true);
+                var rightPos = 600 - (dmetr.TextWidth * 2);
 
-                image.Composite(watermark, Gravity.Center, 0, 0, CompositeOperator.Over);
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: 420/-420"));
+
+                image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel1, dailyText));
+
+                //YLevel 2
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel2, $"Pasta Karma: 123,456,789"));
+                image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel2, $"Fav. Cmd: profile (123,456,789)"));
+
+                //YLevel 3
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToFormattedString()} ({exp.TotalXP.ToFormattedString()})"));
+                image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: 7,777/Patted: 7,777"));
+
+                ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(exp.Level + 1, DiscordUtilities.PHI);
+
+                //Progressbar
+                image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, 471, 580, 500));
+                image.Draw(new DrawableFillColor(new MagickColor("#dfdfdf")), new DrawableRectangle(22, 473, 578, 498));
+
+                var percentage = (double)exp.XP / xpToNextLevel * 100;
+                var mapped = percentage.Remap(0, 100, 22, 578);
+
+                image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, 473, mapped, 498));
+
+                //Current XP
+                image.Draw(font, fontsize, encoding, new DrawableText(25, 493, (exp.XP).ToFormattedString() + "XP"));
+
+                //XP To Next
+                using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToFormattedString()}XP", new MagickReadSettings
+                {
+                    BackgroundColor = MagickColors.Transparent,
+                    FillColor = MagickColors.Black,
+                    Width = 575,
+                    Height = 20,
+                    TextGravity = Gravity.East,
+                    FontPointsize = 20,
+                    Font = fontFile
+                }))
+                {
+                    image.Composite(label5, 0, 475, CompositeOperator.Over);
+                }
+
+                {
+                    var col = MagickColors.Red;
+                    col.A = ushort.MaxValue / 2;
+
+                    using MagickImage watermark = new MagickImage($"label:PREVIEW", new MagickReadSettings
+                    {
+                        BackgroundColor = MagickColors.Transparent,
+                        FillColor = col,
+                        Width = 600,
+                        Height = 300,
+                        TextGravity = Gravity.Center,
+                        FontPointsize = 100,
+                        FontWeight = FontWeight.ExtraBold,
+                        Font = fontFile
+                    });
+
+                    watermark.Rotate(-45);
+
+                    image.Composite(watermark, Gravity.Center, 0, 0, CompositeOperator.Over);
+                }
+
+                MemoryStream outputStream = new MemoryStream();
+
+                image.Write(outputStream);
+
+                outputStream.Position = 0;
+
+                await "".QueueMessageAsync(Context, outputStream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
             }
-
-            MemoryStream outputStream = new MemoryStream();
-
-            image.Write(outputStream);
-
-            outputStream.Position = 0;
-
-            await "".QueueMessageAsync(Context, outputStream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
         }
 
         [Command("settimezone"), Summary("Sets your timezone")]

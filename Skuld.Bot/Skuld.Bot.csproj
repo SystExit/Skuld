@@ -3,11 +3,11 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <Version>2020.01</Version>
+    <Version>2020.04</Version>
     <StartupObject>Skuld.Bot.Program</StartupObject>
     <ApplicationIcon />
-    <AssemblyVersion>2020.4.17.0</AssemblyVersion>
-    <FileVersion>2020.4.17.0</FileVersion>
+    <AssemblyVersion>2020.4.28.0</AssemblyVersion>
+    <FileVersion>2020.4.28.0</FileVersion>
     <LangVersion>preview</LangVersion>
     <NeutralLanguage>en-GB</NeutralLanguage>
   </PropertyGroup>
