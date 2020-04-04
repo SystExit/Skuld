@@ -40,6 +40,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using TimeZoneConverter;
 using WenceyWang.FIGlet;
 
 namespace Skuld.Bot.Commands
@@ -187,10 +188,14 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
+            var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+
+            var timeLocalised = TimeZoneInfo.ConvertTimeFromUtc(time, TZConvert.GetTimeZoneInfo(user.TimeZone ?? "UTC"));
+
             await
-                EmbedExtensions.FromSuccess($"Got it!! I'll remind you at: {time.ToDMYString()}. Your reminder is #`{localId}`", Context)
+                EmbedExtensions.FromSuccess($"Got it!! I'll remind you at: {timeLocalised.ToDMYString()}. Your reminder is #`{localId}`", Context)
                 .QueueMessageAsync(Context)
-                .ConfigureAwait(false);
+            .ConfigureAwait(false);
         }
 
         [Command("reminders")]
@@ -758,7 +763,7 @@ namespace Skuld.Bot.Commands
                         else
                         {
                             DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-                            await EmbedExtensions.FromError($"Pasta `{title}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            await EmbedExtensions.FromError($"Pasta `{cmd}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                     }
                     break;
@@ -1351,8 +1356,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                var cleantags = tags.AddBlacklistedTags();
-                var posts = await SafebooruClient.GetImagesAsync(cleantags).ConfigureAwait(false);
+                var posts = await SafebooruClient.GetImagesAsync(tags).ConfigureAwait(false);
                 DogStatsd.Increment("web.get");
                 var post = GetSafeImage(posts);
                 if (post != null)
@@ -1366,7 +1370,7 @@ namespace Skuld.Bot.Commands
 
         public SafebooruImage GetSafeImage(IReadOnlyList<SafebooruImage> posts, int EdgeCase = 0)
         {
-            var post = posts.RandomValue();
+            var post = posts.Where(x => !x.Tags.ContainsBlacklistedTags().Successful).RandomValue();
             EdgeCase++;
             if (EdgeCase <= 5)
             {
