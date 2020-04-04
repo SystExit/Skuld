@@ -3,8 +3,8 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <AssemblyVersion>2020.3.57.0</AssemblyVersion>
-    <FileVersion>2020.3.57.0</FileVersion>
+    <AssemblyVersion>2020.4.3.0</AssemblyVersion>
+    <FileVersion>2020.4.3.0</FileVersion>
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
@@ -19,9 +19,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Booru.Net" Version="2.0.3" />
+    <PackageReference Include="Booru.Net" Version="2.0.5" />
     <PackageReference Include="Discord.Net" Version="2.2.0-dev-20191226.1" />
-    <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.44.1.1369" />
+    <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.45.0.1369" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.23" />
     <PackageReference Include="Imgur.API" Version="5.0.0-beta1" />
     <PackageReference Include="Kitsu" Version="1.4.2" />
