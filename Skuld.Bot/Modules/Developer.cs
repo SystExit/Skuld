@@ -697,7 +697,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database.GetOrInsertUserAsync(user).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
             if (amount < 0)
             {
@@ -727,7 +727,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database.GetOrInsertUserAsync(user).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
             usr.Money = amount;
 

@@ -52,28 +52,75 @@ namespace Skuld.Bot.Commands
                             .WithRandomColor()
                             .WithDescription($"The prefix of **{(Context.Guild == null ? Context.User.FullName() : Context.Guild.Name)}** is: `{(Context.Guild == null ? Configuration.Prefix : (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix)}`");
 
+                    Dictionary<ModuleInfo, string> helpBuilder = new Dictionary<ModuleInfo, string>();
+
                     foreach (var module in BotService.CommandService.Modules)
                     {
-                        if (Context.IsPrivate) if (module.Name.ToLowerInvariant() == "Admin") continue;
+                        var commands = await module.GetExecutableCommandsAsync(Context, BotService.Services).ConfigureAwait(false);
 
-                        string desc = "";
-                        foreach (var cmd in module.Commands)
+                        if(commands.Any())
                         {
-                            var result = await cmd.CheckPreconditionsAsync(Context).ConfigureAwait(false);
-                            if (result.IsSuccess)
+                            if (module.IsSubmodule)
                             {
-                                desc += $"{cmd.Aliases[0]}, ";
+                                var topParent = module.GetTopLevelParent();
+                                if (helpBuilder.ContainsKey(topParent))
+                                {
+                                    var value = helpBuilder.GetValueOrDefault(topParent);
+
+                                    List<string> desc = new List<string>();
+                                    foreach (var cmd in commands)
+                                    {
+                                        if (cmd.Module == module)
+                                        {
+                                            desc.Add(cmd.Aliases[0]);
+                                        }
+                                    }
+
+                                    string description = $"\n\nSubmodule: **{module.Name}**\n`";
+                                    foreach (var str in desc.Distinct())
+                                    {
+                                        description += str + ", ";
+                                    }
+                                    description += "`";
+
+                                    value += description.ReplaceLast(", ", "");
+
+                                    helpBuilder.Remove(topParent);
+
+                                    helpBuilder.Add(topParent, value);
+                                }
                             }
-                            else continue;
+                            else
+                            {
+                                string desc = "";
+                                foreach (var cmd in commands)
+                                {
+                                    if (cmd.Module == module)
+                                    {
+                                        desc += $"{cmd.Aliases[0]}, ";
+                                    }
+                                }
+
+                                string description = "`";
+                                foreach (var str in desc.Split(' ').Distinct())
+                                {
+                                    description += str + " ";
+                                }
+                                description += "`";
+
+                                description = description.ReplaceLast(",  ", "");
+
+                                helpBuilder.Add(module, description);
+                            }
                         }
-                        string description = "";
-                        foreach (var str in desc.Split(' ').Distinct())
+                    }
+
+                    foreach(var helpSection in helpBuilder)
+                    {
+                        if (!string.IsNullOrWhiteSpace(helpSection.Value))
                         {
-                            description += str + " ";
-                        }
-                        if (!string.IsNullOrWhiteSpace(description))
-                        {
-                            embed.AddField(module.Name, $"`{description.Remove(description.Length - 3)}`");
+                            var section = helpSection.Value.ReplaceLast(",  ", "");
+                            embed.AddField(helpSection.Key.Name, section);
                         }
                     }
 

@@ -178,7 +178,7 @@ namespace Skuld.Bot.Commands
                     .AddInlineField("Mentionable", role.IsMentionable)
                     .AddInlineField("Position", $"{role.Position}{(previousRole != null ? $"\nBelow {previousRole.Mention}({previousRole.Position})" : "")}{(nextRole != null ? $"\nAbove {nextRole.Mention}({nextRole.Position})" : "")}")
                     .AddInlineField("Color", role.Color.ToHex())
-                    .AddField("Members", roleMembers)
+                    .AddField($"Members [{members.Count.ToFormattedString()}]", roleMembers)
                     .AddField("Created", role.CreatedAt)
             .QueueMessageAsync(Context).ConfigureAwait(false);
         }
@@ -568,8 +568,8 @@ namespace Skuld.Bot.Commands
                 .AddAuthor(Context.Client)
                 .AddFooter(Context)
                 .AddInlineField("Command", info.Name)
-                .AddInlineField("Usage", info.Usage)
-                .AddInlineField("Rank", $"{info.Rank}/{info.Total}")
+                .AddInlineField("Usage", info.Usage.ToFormattedString())
+                .AddInlineField("Rank", $"{info.Rank.ToFormattedString()}/{info.Total.ToFormattedString()}")
             .QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
@@ -620,6 +620,7 @@ namespace Skuld.Bot.Commands
             {
                 try
                 {
+                    if (user.IsBot || user.IsWebhook || user.Discriminator == "0000" || user.DiscriminatorValue == 0) continue;
                     var sUser = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
                     if (sUser.TimeZone != null)
@@ -712,11 +713,14 @@ namespace Skuld.Bot.Commands
 
                 if (r != null)
                 {
-                    var didpass = CheckIAmValidAsync(await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false), Context.User as IGuildUser, await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild, r);
+                    var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+                    var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                    var didpass = CheckIAmValidAsync(usr, Context.User as IGuildUser, gld, Context.Guild, r);
 
                     if (didpass != IAmFail.Success)
                     {
-                        await EmbedExtensions.FromError(GetErrorIAmFail(didpass, r, await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild), Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        await EmbedExtensions.FromError(GetErrorIAmFail(didpass, r, gld, Context.Guild), Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                     else
                     {
@@ -734,8 +738,6 @@ namespace Skuld.Bot.Commands
 
                             if (r.Price > 0)
                             {
-                                var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-
                                 TransactionService.DoTransaction(new TransactionStruct
                                 {
                                     Amount = r.Price,
