@@ -359,6 +359,11 @@ namespace Skuld.Bot.Commands
             {
                 var previousAmount = self.Money;
 
+                if (self.IsStreakReset(Configuration))
+                {
+                    self.Streak = 0;
+                }
+
                 if (self.ProcessDaily(Configuration))
                 {
                     var embed = EmbedExtensions.FromMessage("SkuldBank - Daily", $"You just got your daily of {gld.MoneyIcon}{MoneyAmount}", Context);
@@ -371,14 +376,7 @@ namespace Skuld.Bot.Commands
                         embed.AddField("Streak", $"You're on a streak!!\n{self.Streak}/{StreakAmount}");
                     }
 
-                    if (!self.IsStreakReset(Configuration))
-                    {
-                        self.Streak = self.Streak.Add(1);
-                    }
-                    else
-                    {
-                        self.Streak = 0;
-                    }
+                    self.Streak = self.Streak.Add(1);
 
                     await embed
                         .QueueMessageAsync(Context).ConfigureAwait(false);
@@ -395,6 +393,12 @@ namespace Skuld.Bot.Commands
             {
                 var target = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
                 var previousAmount = target.Money;
+
+                if (self.IsStreakReset(Configuration))
+                {
+                    self.Streak = 0;
+                }
+
                 if (target.ProcessDaily(Configuration, self))
                 {
                     var embed = EmbedExtensions.FromMessage("SkuldBank - Daily", $"You just gave your daily of {gld.MoneyIcon}{MoneyAmount.ToFormattedString()} to {user.Mention}", Context);
@@ -407,14 +411,7 @@ namespace Skuld.Bot.Commands
                         embed.AddField("Streak", $"You're on a streak!!\n{self.Streak}/{StreakAmount}");
                     }
 
-                    if (!self.IsStreakReset(Configuration))
-                    {
-                        self.Streak = self.Streak.Add(1);
-                    }
-                    else
-                    {
-                        self.Streak = 0;
-                    }
+                    self.Streak = self.Streak.Add(1);
 
                     await embed
                         .QueueMessageAsync(Context).ConfigureAwait(false);
@@ -764,49 +761,53 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("recurring-block"), Summary("Blocks people from patting you on recurring digits"), RequireDatabase]
-        public async Task BlockRecurring()
+        [Name("Blocking"), Group("block")]
+        public class Block : InteractiveBase<ShardedCommandContext>
         {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-            var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-
-            usr.RecurringBlock = !usr.RecurringBlock;
-
-            await Database.SaveChangesAsync().ConfigureAwait(false);
-
-            await EmbedExtensions.FromSuccess($"Set RecurringBlock to: {usr.RecurringBlock}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-        }
-
-        [Command("block-actions"), Summary("Blocks people from performing actions"), RequireDatabase]
-        [Usage("@person")]
-        public async Task BlockActions([Remainder] IUser user)
-        {
-            using var database = new SkuldDbContextFactory().CreateDbContext();
-
-            var res = database.BlockedActions.ToList().FirstOrDefault(x => x.Blocker == Context.User.Id && x.Blockee == user.Id);
-
-            if (res != null)
+            [Command("recurring"), Summary("Blocks people from patting you on recurring digits"), RequireDatabase]
+            public async Task BlockRecurring()
             {
-                database.BlockedActions.Remove(res);
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-                await EmbedExtensions.FromSuccess($"Unblocked {user.Mention}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
+
+                usr.RecurringBlock = !usr.RecurringBlock;
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await EmbedExtensions.FromSuccess($"Set RecurringBlock to: {usr.RecurringBlock}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
-            else
+
+            [Command("actions"), Summary("Blocks people from performing actions"), RequireDatabase]
+            [Usage("@person")]
+            public async Task BlockActions([Remainder] IUser user)
             {
-                database.BlockedActions.Add(new BlockedAction
+                using var database = new SkuldDbContextFactory().CreateDbContext();
+
+                var res = database.BlockedActions.ToList().FirstOrDefault(x => x.Blocker == Context.User.Id && x.Blockee == user.Id);
+
+                if (res != null)
                 {
-                    Blocker = Context.User.Id,
-                    Blockee = user.Id
-                });
+                    database.BlockedActions.Remove(res);
 
-                await EmbedExtensions.FromSuccess($"Blocked {user.Mention}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromSuccess($"Unblocked {user.Mention}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                }
+                else
+                {
+                    database.BlockedActions.Add(new BlockedAction
+                    {
+                        Blocker = Context.User.Id,
+                        Blockee = user.Id
+                    });
+
+                    await EmbedExtensions.FromSuccess($"Blocked {user.Mention}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                }
+
+                await database.SaveChangesAsync().ConfigureAwait(false);
             }
-
-            await database.SaveChangesAsync().ConfigureAwait(false);
         }
 
-        [Group("background")]
+        [Name("Background"), Group("background")]
         public class CustomBG : InteractiveBase<ShardedCommandContext>
         {
             public SkuldConfig Configuration { get; set; }
@@ -1147,7 +1148,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var user = await Database.GetOrInsertUserAsync(Context.User).ConfigureAwait(false);
+            var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
             user.TimeZone = timezone.Id;
 

@@ -34,7 +34,7 @@ namespace Skuld.Bot.Commands
 
         #region GeneralManagement
 
-        [Group("guild")]
+        [Name("Server"), Group("guild"), RequireUserPermission(GuildPermission.Administrator)]
         public class GuildManagement : ModuleBase<ShardedCommandContext>
         {
             public SkuldConfig Configuration { get; set; }
@@ -73,7 +73,6 @@ namespace Skuld.Bot.Commands
             }
 
             [Command("feature"), Summary("Configures guild features"), RequireDatabase]
-            [RequireUserPermission(GuildPermission.Administrator)]
             [Usage("levels 1", "pinning 0")]
             public async Task ConfigureGuildFeatures(string module = null, int? value = null)
             {
@@ -153,7 +152,6 @@ namespace Skuld.Bot.Commands
             }
 
             [Command("module"), Summary("Configures guild modules"), RequireDatabase]
-            [RequireUserPermission(GuildPermission.Administrator)]
             [Usage("fun 0")]
             public async Task ConfigureGuildModules(string module, int value)
             {
@@ -243,7 +241,6 @@ namespace Skuld.Bot.Commands
             }
 
             [Command("channel"), Summary("Some features require channels to be set"), RequireDatabase]
-            [RequireUserPermission(GuildPermission.Administrator)]
             [Usage("join #userlog", "leave #userlog")]
             public async Task ConfigureChannel(string module, IChannel channel = null)
             {
@@ -325,7 +322,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Group("starboard"), RequireDatabase, RequireRole(AccessLevel.ServerAdmin)]
+        [Name("Starboard"), Group("starboard"), RequireDatabase, RequireRole(AccessLevel.ServerAdmin)]
         public class StarboardManagement : ModuleBase<ShardedCommandContext>
         {
             const string Key = "Starboard";
@@ -430,7 +427,7 @@ namespace Skuld.Bot.Commands
                 }
             }
 
-            [Group("emote"), RequireFeature(GuildFeature.Starboard)]
+            [Name("Starboard Emotes"), Group("emote"), RequireFeature(GuildFeature.Starboard)]
             public class StarboardEmote : ModuleBase<ShardedCommandContext>
             {
                 [Command("")]
@@ -466,7 +463,7 @@ namespace Skuld.Bot.Commands
                 }
             }
 
-            [Group("range"), RequireFeature(GuildFeature.Starboard)]
+            [Name("Starboard Ranges"), Group("range"), RequireFeature(GuildFeature.Starboard)]
             public class StarboardRange : ModuleBase<ShardedCommandContext>
             {
                 #region Range 10 -> 19
@@ -837,7 +834,6 @@ namespace Skuld.Bot.Commands
         #region Mute/Prune
 
         [Command("mute"), Summary("Mutes a user")]
-        [RequireBotAndUserPermission(GuildPermission.ManageRoles)]
         [Usage("@Person")]
         public async Task Mute(IUser usertomute)
         {
@@ -881,7 +877,6 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("unmute"), Summary("Unmutes a user")]
-        [RequireBotAndUserPermission(GuildPermission.ManageRoles)]
         [Usage("@Person")]
         public async Task Unmute(IUser usertounmute)
         {
@@ -914,7 +909,6 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("prune"), Summary("Clean up your chat")]
-        [RequireBotAndUserPermission(GuildPermission.ManageMessages)]
         [Usage("50", "50 @person")]
         public async Task Prune(short amount, IUser user = null)
         {
@@ -1106,6 +1100,7 @@ namespace Skuld.Bot.Commands
         #region RoleManagement
 
         [Command("roleids"), Summary("Gets all role ids")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         public async Task GetRoleIds()
         {
             string lines = "";
@@ -1136,6 +1131,7 @@ namespace Skuld.Bot.Commands
 
         [Command("setjrole"), Summary("Allows a role to be auto assigned on userjoin"), RequireDatabase]
         [Usage("@Member Role")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         public async Task AutoRole(IRole role = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -1180,6 +1176,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("autorole"), Summary("Get's guilds current autorole"), RequireDatabase]
+        [RequireUserPermission(GuildPermission.Administrator)]
         public async Task AutoRole()
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -1197,6 +1194,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("persistentrole"), Summary("Toggle a role's persistent nature"), RequireDatabase]
+        [RequireUserPermission(GuildPermission.Administrator)]
         [Usage("SuperAwesomeRole", "Super Duper Awesome Role")]
         public async Task PersistentRole([Remainder]IRole role)
         {
@@ -1237,6 +1235,7 @@ namespace Skuld.Bot.Commands
         [Command("addassignablerole"), Summary("Adds a new self assignable role. Supported:cost=[cost] require-level=[level] require-role=[rolename/roleid/mention]")]
         [Alias("asar")]
         [Usage("\"Super Duper Role\"", "\"Super Duper Role\" require-level=25", "\"Super Duper Role\" require-level=25 cost=50")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         public async Task AddSARole(IRole role, [Remainder]GuildRoleConfig config = null)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -1276,6 +1275,7 @@ namespace Skuld.Bot.Commands
         [Command("addlevelrole"), Summary("Adds a new self assignable role. Supported:automatic=[true/false] require-level=[level] require-role=[rolename/roleid/mention]")]
         [Alias("alr")]
         [Usage("\"Super Duper Role\"", "\"Super Duper Role\" require-level=25", "\"Super Duper Role\" require-level=25 automatic=true")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         public async Task AddLRole(IRole role, [Remainder]GuildRoleConfig config)
         {
             var levelReward = new LevelRewards
@@ -1312,6 +1312,7 @@ namespace Skuld.Bot.Commands
 
         [Command("deletesr"), Summary("Removes a Self Assignable Role from the list")]
         [Usage("\"Super Duper Role\"")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         public async Task DeleteSelfRole([Remainder]IRole role)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -1335,6 +1336,7 @@ namespace Skuld.Bot.Commands
 
         [Command("deletelr"), Summary("Removes a Level Grant Role from the list")]
         [Usage("\"Super Duper Role\"")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         public async Task DeleteLevelRole([Remainder]IRole role)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -1358,6 +1360,7 @@ namespace Skuld.Bot.Commands
 
         [Command("modifyrole"), Summary("Modify a role's settings")]
         [Usage("\"Super Duper Role\" hoisted=true", "\"Super Duper Role\" hoisted=true color=#ff0000")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         public async Task ModifyRole(IRole role, [Remainder]RoleConfig config = null)
         {
             if (config == null)
@@ -1478,12 +1481,12 @@ namespace Skuld.Bot.Commands
 
         #endregion Prefix
 
-        [Group("welcome")]
+        [Name("Welcome"), Group("welcome")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         public class Welcome : ModuleBase<ShardedCommandContext>
         {
             //Current Channel
             [Command("set"), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
-            [RequireUserPermission(GuildPermission.Administrator)]
             [Usage("Welcome to the server -m! We hope you enjoy your stay!!!")]
             public async Task SetWelcome([Remainder]string welcome)
             {
@@ -1504,7 +1507,6 @@ namespace Skuld.Bot.Commands
 
             //Set Channel
             [Command("set"), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
-            [RequireUserPermission(GuildPermission.Administrator)]
             [Usage("#userlog Welcome to the server -m! We hope you enjoy your stay!!!")]
             public async Task SetWelcome(ITextChannel channel, [Remainder]string welcome)
             {
@@ -1530,7 +1532,6 @@ namespace Skuld.Bot.Commands
             [Command("unset"), Summary("Clears the welcome message")]
             [Alias("clearwelcome", "unsetjoin", "delete", "remove", "clear")]
             [RequireDatabase]
-            [RequireUserPermission(GuildPermission.Administrator)]
             public async Task SetWelcome()
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -1549,13 +1550,13 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Group("leave")]
+        [Name("Leave"), Group("leave")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         public class Leave : ModuleBase<ShardedCommandContext>
         {
             //Set Channel
             [Command("set"), RequireDatabase]
             [Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
-            [RequireUserPermission(GuildPermission.Administrator)]
             [Usage("#userlog Welcome to the server -m! We hope you enjoy your stay!!!")]
             public async Task SetLeave(ITextChannel channel, [Remainder]string leave)
             {
@@ -1582,7 +1583,6 @@ namespace Skuld.Bot.Commands
             //Current Channel
             [Command("set"), RequireDatabase]
             [Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
-            [RequireUserPermission(GuildPermission.Administrator)]
             [Usage("Awww, how sad, -u just departed from the server.")]
             public async Task SetLeave([Remainder]string leave)
             {
@@ -1610,7 +1610,6 @@ namespace Skuld.Bot.Commands
             [Command("unset"), Summary("Clears the leave message")]
             [Alias("unsetleave", "clear", "delete", "remove", "clearleave")]
             [RequireDatabase]
-            [RequireUserPermission(GuildPermission.Administrator)]
             public async Task SetLeave()
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -1634,11 +1633,11 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Group("levels")]
+        [Name("Experience"), Group("levels")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         public class Levels : ModuleBase<ShardedCommandContext>
         {
             [Command("message"), Summary("Sets the level up message, -u says the users name, -m mentions the user, -l shows the level they achieved"), RequireDatabase]
-            [RequireRole(AccessLevel.ServerMod)]
             [Usage("WOW! -m is now level -l!!!")]
             public async Task SetLevelUp([Remainder]string message)
             {
@@ -1660,9 +1659,9 @@ namespace Skuld.Bot.Commands
                 }
             }
 
-            [Command("notification"), Summary("Sets the levelup notification")]
+            [Command("notification"), Summary("Sets the levelup notification"), RequireDatabase]
             [Alias("levelnotif")]
-            [Usage("channel")]
+            [Usage("#channel")]
             public async Task ConfigureLevelNotif(LevelNotification level)
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -1684,13 +1683,13 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Group("customcommands")]
+        [Name("Custom Commands"), Group("customcommands")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         public class CustomCommands : InteractiveBase<ShardedCommandContext>
         {
             [Command("add"), Summary("Adds a custom command"), RequireDatabase]
             [Alias("addcommand")]
-            [RequireUserPermission(GuildPermission.Administrator)]
-            [Usage("beep", "boop")]
+            [Usage("beep boop")]
             public async Task AddCustomCommand(string name, [Remainder]string content)
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -1771,7 +1770,6 @@ namespace Skuld.Bot.Commands
 
             [Command("delete"), Summary("Deletes a custom command"), RequireDatabase]
             [Alias("deletecommand")]
-            [RequireUserPermission(GuildPermission.Administrator)]
             [Usage("beep")]
             public async Task DeleteCustomCommand(string name)
             {

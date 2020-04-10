@@ -49,7 +49,7 @@ namespace Skuld.Bot.Modules
 
                     await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                    var usr = await Database.GetOrInsertUserAsync(Context.User).ConfigureAwait(false);
+                    var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
                     usr.Flags += DiscordUtilities.BotDonator;
 
@@ -102,7 +102,7 @@ namespace Skuld.Bot.Modules
                     Database.DonatorKeys.Remove(dbKey);
                     await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                    var usr = await Database.GetOrInsertUserAsync(Context.User).ConfigureAwait(false);
+                    var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
                     TransactionService.DoTransaction(new TransactionStruct
                     {

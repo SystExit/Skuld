@@ -3,8 +3,8 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <AssemblyVersion>2020.4.9.0</AssemblyVersion>
-    <FileVersion>2020.4.9.0</FileVersion>
+    <AssemblyVersion>2020.4.27.0</AssemblyVersion>
+    <FileVersion>2020.4.27.0</FileVersion>
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
 

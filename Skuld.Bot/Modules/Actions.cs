@@ -259,8 +259,7 @@ namespace Skuld.Bot.Commands
 
                         foreach (var usr in Context.Message.MentionedUsers)
                         {
-                            if (usr.IsBot || usr.IsWebhook || usr.Discriminator == "0000" || prune.Contains(usr.Id))
-                                continue;
+                            if (usr.IsBot || usr.IsWebhook || usr.Discriminator == "0000" || usr.DiscriminatorValue == 0 || prune.Contains(usr.Id)) continue;
 
                             var uzr = await Database.InsertOrGetUserAsync(usr).ConfigureAwait(false);
 
