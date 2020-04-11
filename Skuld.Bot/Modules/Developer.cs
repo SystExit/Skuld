@@ -200,7 +200,9 @@ namespace Skuld.Bot.Commands
         public async Task SetFlag(BotAccessLevel level, bool give = true, [Remainder]IUser user = null)
         {
             if (user == null)
+            {
                 user = Context.User;
+            }
 
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
@@ -282,7 +284,9 @@ namespace Skuld.Bot.Commands
         public async Task GetFlags([Remainder]IUser user = null)
         {
             if (user == null)
+            {
                 user = Context.User;
+            }
 
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
@@ -291,13 +295,21 @@ namespace Skuld.Bot.Commands
             List<BotAccessLevel> flags = new List<BotAccessLevel>();
 
             if (dbUser.Flags.IsBitSet(DiscordUtilities.BotCreator))
+            {
                 flags.Add(BotAccessLevel.BotOwner);
+            }
             if (dbUser.Flags.IsBitSet(DiscordUtilities.BotAdmin))
+            {
                 flags.Add(BotAccessLevel.BotAdmin);
+            }
             if (!dbUser.IsDonator)
+            {
                 flags.Add(BotAccessLevel.BotDonator);
+            }
             if (dbUser.Flags.IsBitSet(DiscordUtilities.BotTester))
+            {
                 flags.Add(BotAccessLevel.BotTester);
+            }
 
             flags.Add(BotAccessLevel.Normal);
 
@@ -316,7 +328,8 @@ namespace Skuld.Bot.Commands
                 {
                     ModuleSkuld mod = new ModuleSkuld
                     {
-                        Name = module.Name,
+                        Name = module.GetTopLevelParent().Name,
+                        ModulePath = module.GetModulePath(),
                         Commands = new List<CommandSkuld>()
                     };
                     module.Commands.ToList().ForEach(cmd =>
@@ -361,41 +374,9 @@ namespace Skuld.Bot.Commands
 
         [Command("status"), Summary("Status")]
         [RequireBotFlag(BotAccessLevel.BotOwner)]
-        public async Task Status(string status)
+        public async Task Status(UserStatus status)
         {
-            switch (status.ToLowerInvariant())
-            {
-                case "online":
-                    await Context.Client.SetStatusAsync(UserStatus.Online).ConfigureAwait(false);
-                    break;
-
-                case "afk":
-                    await Context.Client.SetStatusAsync(UserStatus.AFK).ConfigureAwait(false);
-                    break;
-
-                case "dnd":
-                case "do not disturb":
-                case "donotdisturb":
-                case "busy":
-                    await Context.Client.SetStatusAsync(UserStatus.DoNotDisturb).ConfigureAwait(false);
-                    break;
-
-                case "idle":
-                case "away":
-                    await Context.Client.SetStatusAsync(UserStatus.Idle).ConfigureAwait(false);
-                    break;
-
-                case "offline":
-                    await Context.Client.SetStatusAsync(UserStatus.Offline).ConfigureAwait(false);
-                    break;
-
-                case "invisible":
-                    await Context.Client.SetStatusAsync(UserStatus.Invisible).ConfigureAwait(false);
-                    break;
-
-                default:
-                    break;
-            }
+            await Context.Client.SetStatusAsync(status).ConfigureAwait(false);
         }
 
         [Command("dropuser")]
@@ -405,6 +386,8 @@ namespace Skuld.Bot.Commands
             using var database = new SkuldDbContextFactory().CreateDbContext();
 
             await database.DropUserAsync(userId).ConfigureAwait(false);
+
+            await database.SaveChangesAsync().ConfigureAwait(false);
         }
 
         [Command("dropguild")]
@@ -414,6 +397,8 @@ namespace Skuld.Bot.Commands
             using var database = new SkuldDbContextFactory().CreateDbContext();
 
             await database.DropGuildAsync(guildId).ConfigureAwait(false);
+
+            await database.SaveChangesAsync().ConfigureAwait(false);
         }
 
         [Command("merge")]
@@ -635,9 +620,6 @@ namespace Skuld.Bot.Commands
 
             var usr = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
-            if (streak > usr.GetUserStreakLength(Configuration))
-                streak = usr.GetUserStreakLength(Configuration);
-
             usr.Streak = streak;
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
@@ -648,7 +630,7 @@ namespace Skuld.Bot.Commands
         }
 
         [Command("donatorstatus")]
-        public async Task CheckDonatorStatus(IGuildUser user)
+        public async Task CheckDonatorStatus(IUser user)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
@@ -718,7 +700,7 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            await $"User {user.Username} now has: {(await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{usr.Money.ToFormattedString()}".QueueMessageAsync(Context).ConfigureAwait(false);
+            await $"User {user.Username} now has: {(await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{usr.Money.ToFormattedString()}".QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("setmoney")]
@@ -780,48 +762,66 @@ namespace Skuld.Bot.Commands
                     await EmbedExtensions.FromError("Nope.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
+
+                if((code.StartsWith("```cs", StringComparison.Ordinal) || code.StartsWith("```", StringComparison.Ordinal)) && !code.EndsWith("```", StringComparison.Ordinal))
+                {
+                    await 
+                        EmbedExtensions.FromError(
+                            "Starting Codeblock tags does not finish with closing Codeblock tags",
+                            Context
+                        ).QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+                    return;
+                }
+
                 if (code.StartsWith("```cs", StringComparison.Ordinal))
                 {
-                    code = code.Replace("`", "");
-                    code = code.Remove(0, 2);
+                    code = code.ReplaceFirst("```cs", "");
+                    code = code.ReplaceLast("```", "");
                 }
                 else if (code.StartsWith("```", StringComparison.Ordinal))
                 {
-                    code = code.Replace("`", "");
+                    code = code.Replace("```", "");
                 }
 
-                var embed = new EmbedBuilder();
                 var globals = new Globals().Context = Context as ShardedCommandContext;
                 var soptions = ScriptOptions
                     .Default
                     .WithReferences(typeof(SkuldDbContext).Assembly)
-                    .WithReferences(typeof(ShardedCommandContext).Assembly, typeof(ShardedCommandContext).Assembly,
-                    typeof(SocketGuildUser).Assembly, typeof(Task).Assembly, typeof(Queryable).Assembly,
-                    typeof(BotService).Assembly)
+                    .WithReferences(
+                                 typeof(ShardedCommandContext).Assembly,
+                                 typeof(ShardedCommandContext).Assembly,
+                                 typeof(SocketGuildUser).Assembly,
+                                 typeof(Task).Assembly,
+                                 typeof(Queryable).Assembly,
+                                 typeof(BotService).Assembly
+                    )
                     .WithImports(typeof(SkuldDbContext).FullName)
-                    .WithImports(typeof(ShardedCommandContext).FullName, typeof(ShardedCommandContext).FullName,
-                    typeof(SocketGuildUser).FullName, typeof(Task).FullName, typeof(Queryable).FullName,
-                    typeof(BotService).FullName);
+                    .WithImports(typeof(ShardedCommandContext).FullName, 
+                                 typeof(ShardedCommandContext).FullName,
+                                 typeof(SocketGuildUser).FullName, 
+                                 typeof(Task).FullName,
+                                 typeof(Queryable).FullName,
+                                 typeof(BotService).FullName
+                    );
 
                 var script = CSharpScript.Create(code, soptions, globalsType: typeof(ShardedCommandContext));
                 script.Compile();
 
-                var result = (await script.RunAsync(globals: globals).ConfigureAwait(false)).ReturnValue;
+                var execution = await script.RunAsync(globals: globals).ConfigureAwait(false);
 
-                embed.Author = new EmbedAuthorBuilder
+                var result = execution.ReturnValue;
+
+                string type = "N/A";
+
+                if(result != null)
                 {
-                    Name = result.GetType().ToString()
-                };
-                embed.Color = EmbedExtensions.RandomEmbedColor();
-                embed.Description = $"{result}";
-                if (result != null)
-                {
-                    await embed.Build().QueueMessageAsync(Context).ConfigureAwait(false);
+                    type = result.GetType().ToString();
                 }
-                else
-                {
-                    await "Result is empty or null".QueueMessageAsync(Context).ConfigureAwait(false);
-                }
+
+                var embed = EmbedExtensions.FromMessage("Script Evaluation", $"Execution Result:\nReturned Type: {type})\nValue: {result}", Context);
+
+                await embed.QueueMessageAsync(Context).ConfigureAwait(false);
             }
 #pragma warning disable CS0168 // Variable is declared but never used
             catch (NullReferenceException ex) { /*Do nothing here*/ }
@@ -830,7 +830,7 @@ namespace Skuld.Bot.Commands
             {
                 Log.Error("EvalCMD", "Error with eval command " + ex.Message, ex);
 
-                await EmbedExtensions.FromError($"Error with eval command\n\n{ex.Message}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError("Script Evaluation", $"Error with eval command\n\n{ex.Message}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 

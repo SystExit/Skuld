@@ -153,7 +153,7 @@ namespace Skuld.Bot.Commands
 
             if (!Context.IsPrivate)
             {
-                var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+                var guild = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
                 MoneyPrefix = guild.MoneyIcon;
                 Prefix = guild.Prefix;
             }
@@ -188,8 +188,10 @@ namespace Skuld.Bot.Commands
             {
                 case "heads":
                 case "head":
+                case "h":
                 case "tails":
                 case "tail":
+                case "t":
                     {
                         bool playerguess = loweredGuess == "heads" || loweredGuess == "head";
 
@@ -198,41 +200,57 @@ namespace Skuld.Bot.Commands
                         bool didWin = false;
 
                         if (result == 0 && playerguess)
+                        {
                             didWin = true;
+                        }
                         else if (result == 1 && !playerguess)
+                        {
                             didWin = true;
+                        }
 
                         string suffix;
 
-                        if(bet.HasValue)
+                        if (bet.HasValue)
                         {
                             if (didWin)
+                            {
                                 TransactionService.DoTransaction(new TransactionStruct
                                 {
                                     Amount = bet.Value * 2,
                                     Receiver = user
                                 });
-
+                            }
 
                             if (didWin)
+                            {
                                 suffix = $"You Won! <:blobsquish:350681075296501760> Your money is now {MoneyPrefix}`{user.Money.ToFormattedString()}`";
+                            }
                             else
+                            {
                                 suffix = $"You Lost! <:blobcrying:662304318531305492> Your money is now {MoneyPrefix}`{user.Money.ToFormattedString()}`";
+                            }
 
                             await Database.SaveChangesAsync().ConfigureAwait(false);
                         }
                         else
                         {
                             if (didWin)
+                            {
                                 suffix = "You Won! <:blobsquish:350681075296501760>";
+                            }
                             else
+                            {
                                 suffix = "You Lost! <:blobcrying:662304318531305492>";
+                            }
                         }
 
-                        await EmbedExtensions.FromImage(res.Item2, didWin ? Color.Green : Color.Red, Context)
+                        await 
+                            EmbedExtensions
+                            .FromImage(res.Item2, didWin ? Color.Green : Color.Red, Context)
                             .WithTitle("Heads Or Tails")
                             .WithDescription($"Result are: {Locale.GetLocale(user.Language).GetString(res.Item1)} {suffix}")
-                            .QueueMessageAsync(Context).ConfigureAwait(false);
+                            .QueueMessageAsync(Context)
+                        .ConfigureAwait(false);
                     }
                     break;
 
@@ -272,7 +290,7 @@ namespace Skuld.Bot.Commands
 
                 if (!Context.IsPrivate)
                 {
-                    var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+                    var guild = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
                     MoneyPrefix = guild.MoneyIcon;
                 }
 
@@ -353,7 +371,6 @@ namespace Skuld.Bot.Commands
                             {
                                 await EmbedExtensions.FromMessage("Rock Paper Scissors", $"I draw {throwName} and... It's a draw", DiscordUtilities.Warning_Color, Context).QueueMessageAsync(Context).ConfigureAwait(false);
                             }
-
                         }
                         break;
                 }
@@ -363,7 +380,7 @@ namespace Skuld.Bot.Commands
                 await
                     EmbedExtensions.FromError("Rock Paper Scissors", $"`{shoot}` is not a valid option", Context)
                     .QueueMessageAsync(Context)
-                    .ConfigureAwait(false);
+                .ConfigureAwait(false);
             }
         }
 
@@ -389,7 +406,7 @@ namespace Skuld.Bot.Commands
 
             if (!Context.IsPrivate)
             {
-                var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+                var guild = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
                 MoneyPrefix = guild.MoneyIcon;
             }
 
@@ -477,11 +494,17 @@ namespace Skuld.Bot.Commands
         private static double GetPercentageModifier(double mod, SlotIcon[] icons, SlotIcon icon, double is2, double is3)
         {
             if (icons.Count(x => x == icon) == 3)
+            {
                 return is3;
+            }
             else if (icons.Count(x => x == icon) == 2)
+            {
                 return is2;
+            }
             else
+            {
                 return mod;
+            }
         }
 
         private static SlotIcon[] GetSlotsRow()
@@ -502,13 +525,19 @@ namespace Skuld.Bot.Commands
             for (int x = 0; x < middleRow.Length; x++)
             {
                 if (middleRow[x] == slotRow1[x])
+                {
                     slotRow1[x] = slotsWeights.GetRandomWeightedValue().Value;
+                }
 
                 if (middleRow[x] == slotRow3[x])
+                {
                     slotRow3[x] = slotsWeights.GetRandomWeightedValue().Value;
+                }
 
                 if (slotRow3[x] == slotRow1[x])
+                {
                     slotRow3[x] = slotsWeights.GetRandomWeightedValue().Value;
+                }
             }
 
             return new SlotIcon[][]
@@ -520,25 +549,13 @@ namespace Skuld.Bot.Commands
         }
 
         private static string GetStringRow(SlotIcon[] row, bool isMiddle)
-        {
-            if (!isMiddle)
-            {
-                return $"{DiscordUtilities.Empty_Emote}" +
-                    $"{slotIcons.GetValueOrDefault(row[0])} {slotIcons.GetValueOrDefault(row[1])} {slotIcons.GetValueOrDefault(row[2])}" +
-                    $"{DiscordUtilities.Empty_Emote}";
-            }
-            else
-            {
-                return $">> " +
-                    $"{slotIcons.GetValueOrDefault(row[0])} {slotIcons.GetValueOrDefault(row[1])} {slotIcons.GetValueOrDefault(row[2])}" +
-                    $" <<";
-            }
-        }
+            => !isMiddle ? $">> {slotIcons.GetValueOrDefault(row[0])} {slotIcons.GetValueOrDefault(row[1])} {slotIcons.GetValueOrDefault(row[2])} <<"
+                         : $"{DiscordUtilities.Empty_Emote}" +
+                           $"{slotIcons.GetValueOrDefault(row[0])} {slotIcons.GetValueOrDefault(row[1])} {slotIcons.GetValueOrDefault(row[2])}" +
+                           $"{DiscordUtilities.Empty_Emote}";
 
         private static string GetStringRows(SlotIcon[][] slots)
-        {
-            return $"{GetStringRow(slots[0], false)}\n{GetStringRow(slots[1], true)}\n{GetStringRow(slots[2], false)}";
-        }
+            => $"{GetStringRow(slots[0], false)}\n{GetStringRow(slots[1], true)}\n{GetStringRow(slots[2], false)}";
 
         #endregion SlotsMachine
 
@@ -563,7 +580,7 @@ namespace Skuld.Bot.Commands
 
             if (!Context.IsPrivate)
             {
-                var guild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+                var guild = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
                 MoneyPrefix = guild.MoneyIcon;
             }
 
@@ -676,8 +693,8 @@ namespace Skuld.Bot.Commands
             await
                 embed.AddInlineField(Context.Client.CurrentUser.Username, botRoll)
                      .AddInlineField(Context.User.Username, plaRoll)
-                     .QueueMessageAsync(Context)
-                     .ConfigureAwait(false);
+                .QueueMessageAsync(Context)
+            .ConfigureAwait(false);
         }
 
         private static WinResult DidPlayerWin(Die[] bot, Die[] player)

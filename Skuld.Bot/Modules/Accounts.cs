@@ -98,7 +98,7 @@ namespace Skuld.Bot.Commands
             if (user == null)
                 user = (IGuildUser)Context.User;
 
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+            var gld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
             var dbusr = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
             await
@@ -227,7 +227,7 @@ namespace Skuld.Bot.Commands
             }
 
             //Money
-            using (MagickImage label2 = new MagickImage($"label:{(await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{profileuser.Money.ToFormattedString()}", new MagickReadSettings
+            using (MagickImage label2 = new MagickImage($"label:{(await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{profileuser.Money.ToFormattedString()}", new MagickReadSettings
             {
                 BackgroundColor = MagickColors.Transparent,
                 FillColor = MagickColors.White,
@@ -350,10 +350,9 @@ namespace Skuld.Bot.Commands
 
             var self = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+            var gld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
 
             ulong MoneyAmount = self.GetDailyAmount(Configuration);
-            ulong StreakAmount = self.IsDonator ? Configuration.MaxStreak * 2 : Configuration.MaxStreak;
 
             if (user == null)
             {
@@ -364,29 +363,50 @@ namespace Skuld.Bot.Commands
                     self.Streak = 0;
                 }
 
-                if (self.ProcessDaily(Configuration))
+                if (self.ProcessDaily(MoneyAmount))
                 {
-                    var embed = EmbedExtensions.FromMessage("SkuldBank - Daily", $"You just got your daily of {gld.MoneyIcon}{MoneyAmount}", Context);
-
-                    embed.AddInlineField("Previous Amount", $"{gld.MoneyIcon}{previousAmount.ToFormattedString()}");
-                    embed.AddInlineField("New Amount", $"{gld.MoneyIcon}{self.Money.ToFormattedString()}");
+                    var embed = 
+                        EmbedExtensions
+                        .FromMessage("SkuldBank - Daily", 
+                            $"You just got your daily of {gld.MoneyIcon}{MoneyAmount}", 
+                            Context
+                        )
+                        .AddInlineField(
+                            "Previous Amount", 
+                            $"{gld.MoneyIcon}{previousAmount.ToFormattedString()}"
+                        )
+                        .AddInlineField(
+                            "New Amount", 
+                            $"{gld.MoneyIcon}{self.Money.ToFormattedString()}"
+                        );
 
                     if (self.Streak > 0)
                     {
-                        embed.AddField("Streak", $"You're on a streak!!\n{self.Streak}/{StreakAmount}");
+                        embed.AddField("Streak", $"You're on a streak!!\n{self.Streak}");
                     }
 
                     self.Streak = self.Streak.Add(1);
 
-                    await embed
-                        .QueueMessageAsync(Context).ConfigureAwait(false);
+                    if (self.MaxStreak < self.Streak)
+                    {
+                        self.MaxStreak = self.Streak;
+                    }
+
+                    await 
+                        embed.QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
                 }
                 else
                 {
                     TimeSpan remain = DateTime.Today.Date.AddDays(1) - DateTime.UtcNow;
-                    string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
 
-                    await EmbedExtensions.FromError("SkuldBank - Daily", $"You must wait `{remaining}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await
+                        EmbedExtensions.FromError(
+                            "SkuldBank - Daily",
+                            $"You must wait `{remain.ToDifferenceString()}`",
+                            Context
+                        ).QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
                 }
             }
             else
@@ -399,29 +419,51 @@ namespace Skuld.Bot.Commands
                     self.Streak = 0;
                 }
 
-                if (target.ProcessDaily(Configuration, self))
+                if (target.ProcessDaily(MoneyAmount, self))
                 {
-                    var embed = EmbedExtensions.FromMessage("SkuldBank - Daily", $"You just gave your daily of {gld.MoneyIcon}{MoneyAmount.ToFormattedString()} to {user.Mention}", Context);
-
-                    embed.AddInlineField("Previous Amount", $"{gld.MoneyIcon}{previousAmount.ToFormattedString()}");
-                    embed.AddInlineField("New Amount", $"{gld.MoneyIcon}{target.Money.ToFormattedString()}");
+                    var embed = 
+                        EmbedExtensions
+                        .FromMessage(
+                            "SkuldBank - Daily", 
+                            $"You just gave your daily of {gld.MoneyIcon}{MoneyAmount.ToFormattedString()} to {user.Mention}", 
+                            Context
+                        )
+                        .AddInlineField(
+                            "Previous Amount", 
+                            $"{gld.MoneyIcon}{previousAmount.ToFormattedString()}"
+                        )
+                        .AddInlineField(
+                            "New Amount", 
+                            $"{gld.MoneyIcon}{target.Money.ToFormattedString()}"
+                        );
 
                     if (self.Streak > 0)
                     {
-                        embed.AddField("Streak", $"You're on a streak!!\n{self.Streak}/{StreakAmount}");
+                        embed.AddField("Streak", $"You're on a streak!!\n{self.Streak}");
                     }
 
                     self.Streak = self.Streak.Add(1);
 
-                    await embed
-                        .QueueMessageAsync(Context).ConfigureAwait(false);
+                    if (self.MaxStreak < self.Streak)
+                    {
+                        self.MaxStreak = self.Streak;
+                    }
+
+                    await 
+                        embed.QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
                 }
                 else
                 {
                     TimeSpan remain = DateTime.Today.Date.AddDays(1) - DateTime.UtcNow;
-                    string remaining = remain.Hours + " Hours " + remain.Minutes + " Minutes " + remain.Seconds + " Seconds";
 
-                    await EmbedExtensions.FromError("SkuldBank - Daily", $"You must wait `{remaining}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await 
+                        EmbedExtensions.FromError(
+                            "SkuldBank - Daily",
+                            $"You must wait `{remain.ToDifferenceString()}`",
+                            Context
+                        ).QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
                 }
             }
 
@@ -459,7 +501,7 @@ namespace Skuld.Bot.Commands
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                var dbGuild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+                var dbGuild = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
 
                 await
                     EmbedExtensions.FromMessage("Skuld Bank - Transaction", $"{Context.User.Mention} just gave {user.Mention} {dbGuild.MoneyIcon}{amount.ToFormattedString()}", Context)
@@ -678,7 +720,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+            var gld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
             var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
             var repee = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
@@ -719,7 +761,7 @@ namespace Skuld.Bot.Commands
                 return;
             }
 
-            var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+            var gld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
             var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
             if (Database.Reputations.Any(x => x.Repee == user.Id && x.Reper == Context.User.Id))
@@ -818,7 +860,7 @@ namespace Skuld.Bot.Commands
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
 
                 var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-                var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+                var gld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
 
                 if (!usr.UnlockedCustBG)
                 {
@@ -853,7 +895,7 @@ namespace Skuld.Bot.Commands
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
 
                 var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-                var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+                var gld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
 
                 if (Uri.TryCreate(link, UriKind.Absolute, out var res))
                 {

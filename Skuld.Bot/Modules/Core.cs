@@ -50,7 +50,7 @@ namespace Skuld.Bot.Commands
                         new EmbedBuilder()
                             .AddAuthor(Context.Client)
                             .WithRandomColor()
-                            .WithDescription($"The prefix of **{(Context.Guild == null ? Context.User.FullName() : Context.Guild.Name)}** is: `{(Context.Guild == null ? Configuration.Prefix : (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix)}`");
+                            .WithDescription($"The prefix of **{(Context.Guild == null ? Context.User.FullName() : Context.Guild.Name)}** is: `{(Context.Guild == null ? Configuration.Prefix : (await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix)}`");
 
                     Dictionary<ModuleInfo, string> helpBuilder = new Dictionary<ModuleInfo, string>();
 
@@ -126,7 +126,7 @@ namespace Skuld.Bot.Commands
 
                     if (Context.Guild != null)
                     {
-                        if (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false) != null)
+                        if (await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false) != null)
                         {
                             var commands = Database.CustomCommands.ToList().Where(x => x.GuildId == Context.Guild.Id);
                             if (commands.Any())
@@ -152,7 +152,7 @@ namespace Skuld.Bot.Commands
 
                     if (Context.Guild != null)
                     {
-                        prefix = (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix;
+                        prefix = (await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix;
 
                         var ccs = Database.CustomCommands.ToList().Where(x => x.GuildId == Context.Guild.Id);
                         if (ccs.Any())

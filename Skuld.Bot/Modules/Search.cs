@@ -135,7 +135,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var prefix = (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix ?? Configuration.Prefix;
+            var prefix = (await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix ?? Configuration.Prefix;
 
             string url = "https://lmgtfy.com/";
 

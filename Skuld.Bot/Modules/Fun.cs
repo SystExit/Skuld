@@ -88,13 +88,22 @@ namespace Skuld.Bot.Commands
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Fuse(int int1, int int2)
         {
-            if (int1 > 151 || int1 < 0) await EmbedExtensions.FromError($"{int1} over/under limit. (151)", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-            else if (int2 > 151 || int2 < 0) await EmbedExtensions.FromError($"{int2} over/under limit. (151)", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            if (int1 > 151 || int1 < 0)
+            {
+                await EmbedExtensions.FromError($"{int1} over/under limit. (151)", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+            else if (int2 > 151 || int2 < 0)
+            {
+                await EmbedExtensions.FromError($"{int2} over/under limit. (151)", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            }
             else
             {
-                await EmbedExtensions.FromMessage(Context)
-                    .WithImageUrl($"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png")
-                    .QueueMessageAsync(Context).ConfigureAwait(false);
+                await
+                    EmbedExtensions
+                        .FromMessage(Context)
+                        .WithImageUrl($"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png")
+                        .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
             }
         }
 
@@ -129,7 +138,7 @@ namespace Skuld.Bot.Commands
 
             if(Reminder.Split(" in ").Count() < 2)
             {
-                string Prefix = Context.IsPrivate ? BotService.MessageServiceConfig.Prefix : (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix;
+                string Prefix = Context.IsPrivate ? BotService.MessageServiceConfig.Prefix : (await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix;
                 await
                     EmbedExtensions.FromError($"Try using `{Prefix}help reminder` to learn how to format a reminder", Context)
                     .QueueMessageAsync(Context)
@@ -303,11 +312,22 @@ namespace Skuld.Bot.Commands
             DogStatsd.Increment("web.get");
 
             if (kitty.IsVideoFile())
-                await kitty.QueueMessageAsync(Context).ConfigureAwait(false);
+            { 
+                await kitty.QueueMessageAsync(Context).ConfigureAwait(false); 
+            }
             if (kitty == "https://i.ytimg.com/vi/29AcbY5ahGo/hqdefault.jpg")
-                await EmbedExtensions.FromImage(kitty, Color.Red, Context).QueueMessageAsync(Context, content: "Both the api's are down, that makes the sad a big sad. <:blobcry:350681079415439361>").ConfigureAwait(false);
+            { 
+                await 
+                    EmbedExtensions.FromImage(kitty, Color.Red, Context)
+                    .QueueMessageAsync(Context, content: "Both the api's are down, that makes the sad a big sad. <:blobcry:350681079415439361>")
+                .ConfigureAwait(false); 
+            }
             else
-                await EmbedExtensions.FromImage(kitty, EmbedExtensions.RandomEmbedColor(), Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            { 
+                await 
+                    EmbedExtensions.FromImage(kitty, EmbedExtensions.RandomEmbedColor(), Context).QueueMessageAsync(Context)
+                .ConfigureAwait(false); 
+            }
         }
 
         [Command("doggo")]
@@ -319,11 +339,26 @@ namespace Skuld.Bot.Commands
             var doggo = await Animals.GetAnimalAsync(AnimalType.Doggo).ConfigureAwait(false);
             DogStatsd.Increment("web.get");
             if (doggo.IsVideoFile())
+            {
                 await doggo.QueueMessageAsync(Context).ConfigureAwait(false);
+            }
             if (doggo == "https://i.imgur.com/ZSMi3Zt.jpg")
-                await EmbedExtensions.FromImage(doggo, Color.Red, Context).QueueMessageAsync(Context, content: "Both the api's are down, that makes the sad a big sad. <:blobcry:350681079415439361>").ConfigureAwait(false);
+            {
+                await 
+                    EmbedExtensions.FromImage(doggo, Color.Red, Context)
+                    .QueueMessageAsync(
+                        Context, 
+                        content: "Both the api's are down, that makes the sad a big sad. <:blobcry:350681079415439361>"
+                    )
+                .ConfigureAwait(false);
+            }
             else
-                await EmbedExtensions.FromImage(doggo, EmbedExtensions.RandomEmbedColor(), Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            {
+                await 
+                    EmbedExtensions.FromImage(doggo, EmbedExtensions.RandomEmbedColor(), Context)
+                    .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
+            }
         }
 
         [Command("bird")]
@@ -335,9 +370,16 @@ namespace Skuld.Bot.Commands
             var birb = await Animals.GetAnimalAsync(AnimalType.Bird).ConfigureAwait(false);
             DogStatsd.Increment("web.get");
             if (birb.IsVideoFile())
+            {
                 await birb.QueueMessageAsync(Context).ConfigureAwait(false);
+            }
             else
-                await EmbedExtensions.FromImage(birb, EmbedExtensions.RandomEmbedColor(), Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            {
+                await 
+                    EmbedExtensions.FromImage(birb, Context)
+                    .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
+            }
         }
 
         [Command("llama"), Summary("Llama"), Ratelimit(20, 1, Measure.Minutes)]
@@ -345,7 +387,7 @@ namespace Skuld.Bot.Commands
         {
             var llama = await SysExClient.GetLlamaAsync().ConfigureAwait(false);
             DogStatsd.Increment("web.get");
-            await EmbedExtensions.FromImage(llama, EmbedExtensions.RandomEmbedColor(), Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            await EmbedExtensions.FromImage(llama, Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("seal"), Summary("Seal"), Ratelimit(20, 1, Measure.Minutes)]
@@ -353,7 +395,7 @@ namespace Skuld.Bot.Commands
         {
             var seal = await SysExClient.GetSealAsync().ConfigureAwait(false);
             DogStatsd.Increment("web.get");
-            await EmbedExtensions.FromImage(seal, EmbedExtensions.RandomEmbedColor(), Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            await EmbedExtensions.FromImage(seal, Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         #endregion Animals
@@ -379,13 +421,13 @@ namespace Skuld.Bot.Commands
             message += $"And the :8ball: says:\n{answer}";
 
             await
-                new EmbedBuilder()
-                    .AddAuthor(Context.Client)
-                    .AddFooter(Context)
-                    .WithDescription(message)
-                    .WithRandomColor()
-                    .QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.Mention)
-                .ConfigureAwait(false);
+                EmbedExtensions
+                .FromMessage(message, Context)
+                .QueueMessageAsync(
+                    Context,
+                    type: Services.Messaging.Models.MessageType.Mention
+                )
+            .ConfigureAwait(false);
         }
 
         [Command("roll"), Summary("Roll a die")]
@@ -394,12 +436,13 @@ namespace Skuld.Bot.Commands
         public async Task Roll(ulong roll)
         {
             await
-                EmbedExtensions.FromMessage(SkuldAppContext.GetCaller(),
-                                            $"{Context.User.Mention} just rolled and got a {SkuldRandom.Next(1, (roll + 1))}",
-                                            Color.Teal,
-                                            Context)
+                EmbedExtensions
+                .FromMessage(SkuldAppContext.GetCaller(),
+                             $"{Context.User.Mention} just rolled and got a {SkuldRandom.Next(1, (roll + 1))}",
+                             Color.Teal,
+                             Context)
                 .QueueMessageAsync(Context)
-                .ConfigureAwait(false);
+            .ConfigureAwait(false);
         }
 
         [Command("choose"), Summary("Choose from things")]
@@ -438,7 +481,7 @@ namespace Skuld.Bot.Commands
                             .WithDescription($"I choose: **{choice}**")
                             .WithThumbnailUrl("https://cdn.discordapp.com/emojis/350673785923567616.png")
                         .QueueMessageAsync(Context)
-                        .ConfigureAwait(false);
+                    .ConfigureAwait(false);
                 }
             }
             else
@@ -446,7 +489,7 @@ namespace Skuld.Bot.Commands
                 await
                     EmbedExtensions.FromError("Please give me a choice or two ☹☹", Context)
                     .QueueMessageAsync(Context)
-                    .ConfigureAwait(false);
+                .ConfigureAwait(false);
             }
         }
 
@@ -470,14 +513,14 @@ namespace Skuld.Bot.Commands
                 message += "¯\\_(ツ)_/¯";
 
             await
-                new EmbedBuilder()
-                    .AddAuthor(Context.Client)
-                    .AddFooter(Context)
-                    .WithDescription(message)
-                    .WithImageUrl(YNResp.Image)
-                    .WithRandomColor()
+                EmbedExtensions
+                    .FromImage(
+                        YNResp.Image,
+                        message.CapitaliseFirstLetter(),
+                        Context
+                    )
                 .QueueMessageAsync(Context)
-                .ConfigureAwait(false);
+            .ConfigureAwait(false);
         }
 
         #endregion RNG
@@ -506,7 +549,7 @@ namespace Skuld.Bot.Commands
             string prefix = Configuration.Prefix;
             if (Context.Guild != null)
             {
-                prefix = (await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix;
+                prefix = (await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix;
             }
 
             switch (cmd.ToLowerInvariant())
@@ -1249,7 +1292,7 @@ namespace Skuld.Bot.Commands
             {
                 var endpoints = JsonConvert.DeserializeObject<MemeResponse>(await HttpWebClient.ReturnStringAsync(new Uri("https://api.skuldbot.uk/fun/meme/?endpoints")).ConfigureAwait(false)).Endpoints;
 
-                var pages = endpoints.PaginateList(35);
+                var pages = endpoints.Paginate(35);
 
                 int index = 0;
                 foreach (var page in pages)

@@ -27,33 +27,28 @@ namespace Skuld.APIS
         }
 
         public async Task<string> GetAnimalAsync(AnimalType type)
-        {
-            switch (type)
+            => type switch
             {
-                case AnimalType.Bird:
-                    return await GetBirdAsync().ConfigureAwait(false);
-
-                case AnimalType.Doggo:
-                    return await GetDoggoAsync().ConfigureAwait(false);
-
-                case AnimalType.Kitty:
-                    return await GetKittyAsync().ConfigureAwait(false);
-
-                default:
-                    break;
-            }
-
-            return null;
-        }
+                AnimalType.Bird => await GetBirdAsync().ConfigureAwait(false),
+                AnimalType.Doggo => await GetDoggoAsync().ConfigureAwait(false),
+                AnimalType.Kitty => await GetKittyAsync().ConfigureAwait(false),
+                _ => null
+            };
 
         private async Task<string> GetBirdAsync()
         {
-            if (birdrateLimiter.IsRatelimited()) return null;
+            if (birdrateLimiter.IsRatelimited())
+            { 
+                return null; 
+            }
 
             var rawresp = await HttpWebClient.ReturnStringAsync(BIRDAPI).ConfigureAwait(false);
             dynamic data = JsonConvert.DeserializeObject(rawresp);
             var birb = data["file"];
-            if (birb == null) return null;
+            if (birb == null)
+            {
+                return null;
+            }
             return "https://random.birb.pw/img/" + birb;
         }
 
@@ -61,7 +56,10 @@ namespace Skuld.APIS
         {
             try
             {
-                if (cat1rateLimiter.IsRatelimited()) return null;
+                if (cat1rateLimiter.IsRatelimited())
+                {
+                    return null;
+                }
 
                 var rawresp = await HttpWebClient.ReturnStringAsync(KITTYAPI).ConfigureAwait(false);
                 dynamic item = JsonConvert.DeserializeObject(rawresp);
@@ -73,7 +71,10 @@ namespace Skuld.APIS
             {
                 try
                 {
-                    if (cat2rateLimiter.IsRatelimited()) return null;
+                    if (cat2rateLimiter.IsRatelimited())
+                    {
+                        return null;
+                    }
 
                     var webcli = (HttpWebRequest)WebRequest.Create(KITTYAPI2);
                     webcli.Headers.Add(HttpRequestHeader.UserAgent, HttpWebClient.UAGENT);
@@ -81,10 +82,19 @@ namespace Skuld.APIS
                     WebResponse resp = await webcli.GetResponseAsync().ConfigureAwait(false);
                     if (resp != null)
                     {
-                        if (resp.ResponseUri != null) return resp.ResponseUri.OriginalString;
-                        else return "https://i.ytimg.com/vi/29AcbY5ahGo/hqdefault.jpg";
+                        if (resp.ResponseUri != null)
+                        {
+                            return resp.ResponseUri.OriginalString;
+                        }
+                        else
+                        {
+                            return "https://i.ytimg.com/vi/29AcbY5ahGo/hqdefault.jpg";
+                        }
                     }
-                    else return "https://i.ytimg.com/vi/29AcbY5ahGo/hqdefault.jpg";
+                    else
+                    {
+                        return "https://i.ytimg.com/vi/29AcbY5ahGo/hqdefault.jpg";
+                    }
                 }
                 catch
                 {
@@ -97,10 +107,16 @@ namespace Skuld.APIS
         {
             try
             {
-                if (dograteLimiter.IsRatelimited()) return null;
+                if (dograteLimiter.IsRatelimited()) 
+                {
+                    return null;
+                }
 
                 var resp = await HttpWebClient.ReturnStringAsync(DOGGOAPI).ConfigureAwait(false);
-                if (resp == null) return "https://i.imgur.com/ZSMi3Zt.jpg";
+                if (resp == null)
+                {
+                    return "https://i.imgur.com/ZSMi3Zt.jpg";
+                }
                 return "https://random.dog/" + resp;
             }
             catch
