@@ -7,7 +7,6 @@ using Skuld.Bot.Extensions;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
-using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Models;
 using Skuld.Services.Accounts.Banking.Models;
@@ -24,7 +23,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using TimeZoneConverter;
 
 namespace Skuld.Bot.Commands
 {
@@ -40,7 +38,7 @@ namespace Skuld.Bot.Commands
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var dbguild = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+            var dbguild = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
 
             Embed embed = await Context.Guild.GetSummaryAsync(Context.Client, Context, dbguild).ConfigureAwait(false);
 
@@ -108,7 +106,9 @@ namespace Skuld.Bot.Commands
         public async Task GetID([Remainder]IUser user = null)
         {
             if (user == null)
+            {
                 user = Context.User;
+            }
             await $"The ID of **{user.Username + "#" + user.DiscriminatorValue}** is: `{user.Id}`"
                 .QueueMessageAsync(Context).ConfigureAwait(false);
         }
@@ -163,9 +163,13 @@ namespace Skuld.Bot.Commands
             string roleMembers = "";
 
             if (members.Count > 0)
+            {
                 roleMembers = memberString.Length <= 1024 ? memberString.ToString() : members.Count.ToFormattedString();
+            }
             else
+            {
                 roleMembers = "Role has no members";
+            }
 
             await
                 new EmbedBuilder()
@@ -209,8 +213,10 @@ namespace Skuld.Bot.Commands
             var users = await guild.HumanMembersAsync().ConfigureAwait(false);
             var ratio = await guild.GetBotUserRatioAsync().ConfigureAwait(false);
             var usercount = guild.Users.Count;
-            await $"Current Bots are: {bots}\nCurrent Users are: {users}\nTotal Guild Users: {usercount}\n{ratio}% of the Guild Users are bots"
-                .QueueMessageAsync(Context).ConfigureAwait(false);
+            await 
+                $"Current Bots are: {bots}\nCurrent Users are: {users}\nTotal Guild Users: {usercount}\n{ratio}% of the Guild Users are bots"
+                .QueueMessageAsync(Context)
+            .ConfigureAwait(false);
         }
 
         [Command("avatar"), Summary("Gets your/target's avatar")]
@@ -219,7 +225,9 @@ namespace Skuld.Bot.Commands
         public async Task Avatar([Remainder]IUser user = null)
         {
             if (user == null)
-                user = Context.Guild.GetUser(Context.User.Id);
+            {
+                user = Context.Client.GetUser(Context.User.Id);
+            }
 
             var avatar = user.GetAvatarUrl(ImageFormat.Auto, 512) ?? user.GetDefaultAvatarUrl();
 
@@ -367,13 +375,23 @@ namespace Skuld.Bot.Commands
             if (!Context.IsPrivate)
             {
                 if (whois == null)
+                {
                     whois = Context.User;
+                }
 
-                await (await whois.GetWhoisAsync((whois as IGuildUser), (whois as IGuildUser).RoleIds, Context.Client, Configuration).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
+                await 
+                    (
+                        await whois.GetWhoisAsync(whois as IGuildUser, (whois as IGuildUser).RoleIds, Context.Client, Configuration).ConfigureAwait(false)
+                    ).QueueMessageAsync(Context)
+                .ConfigureAwait(false);
             }
             else
             {
-                await (await Context.User.GetWhoisAsync(null, null, Context.Client, Configuration).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
+                await
+                    (
+                        await Context.User.GetWhoisAsync(null, null, Context.Client, Configuration).ConfigureAwait(false)
+                    ).QueueMessageAsync(Context)
+                .ConfigureAwait(false);
             }
         }
 
@@ -383,7 +401,9 @@ namespace Skuld.Bot.Commands
         public async Task GetRole(SocketGuildUser user = null)
         {
             if (user == null)
+            {
                 user = (SocketGuildUser)Context.User;
+            }
 
             var guild = Context.Guild;
             var userroles = user.Roles;
@@ -427,7 +447,7 @@ namespace Skuld.Bot.Commands
         public async Task GetLeaderboard(string type, bool global = false)
         {
             using var database = new SkuldDbContextFactory().CreateDbContext();
-            var dbguild = await database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+            var dbguild = await database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
             switch (type.ToLowerInvariant())
             {
                 case "money":
@@ -454,11 +474,6 @@ namespace Skuld.Bot.Commands
                 case "experience":
                 case "levels":
                     {
-                        if(global)
-                        {
-
-                        }
-
                         if (global)
                         {
                             await EmbedExtensions.FromInfo($"View the global experience leaderboard at: {SkuldAppContext.LeaderboardExperience}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
@@ -473,7 +488,7 @@ namespace Skuld.Bot.Commands
                             {
                                 if (!database.Features.FirstOrDefault(x => x.Id == dbguild.Id).Experience && !global)
                                 {
-                                    await EmbedExtensions.FromError($"Guild not opted into Experience module. Use: `{dbguild.Prefix}guild-feature levels 1`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                                    await EmbedExtensions.FromError($"Guild not opted into Experience module. Use: `{dbguild.Prefix}guild feature levels 1`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                                     return;
                                 }
 
@@ -675,7 +690,7 @@ namespace Skuld.Bot.Commands
 
             if (iamlist.Any())
             {
-                var paged = iamlist.Paginate(await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild, Context.Guild.GetUser(Context.User.Id));
+                var paged = iamlist.Paginate(await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false), Context.Guild, Context.Guild.GetUser(Context.User.Id));
 
                 if (page >= paged.Count)
                 {
@@ -714,7 +729,7 @@ namespace Skuld.Bot.Commands
                 if (r != null)
                 {
                     var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-                    var gld = await Database.GetOrInsertGuildAsync(Context.Guild).ConfigureAwait(false);
+                    var gld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
 
                     var didpass = CheckIAmValidAsync(usr, Context.User as IGuildUser, gld, Context.Guild, r);
 

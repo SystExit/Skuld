@@ -11,6 +11,7 @@ using Skuld.Core.Models;
 using SteamStoreQuery;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace Skuld.APIS.Extensions
 {
@@ -46,7 +47,9 @@ namespace Skuld.APIS.Extensions
             htmlDoc.LoadHtml(value);
 
             if (htmlDoc == null)
+            {
                 return value;
+            }
 
             return htmlDoc.DocumentNode.InnerText;
         }
@@ -120,28 +123,28 @@ namespace Skuld.APIS.Extensions
         {
             var Pages = new List<string>();
 
-            string pagetext = "";
+            StringBuilder pagetext = new StringBuilder();
 
             for (int x = 0; x < posts.Length; x++)
             {
                 var post = posts[x];
 
-                string txt = $"[{post.Data.Title}](https://reddit.com{post.Data.Permalink})\n";
+                string text = $"[{post.Data.Title}](https://reddit.com{post.Data.Permalink})\n";
 
                 if (post.Data.Over18 && channel.IsNsfw)
                 {
-                    pagetext += "**NSFW** " + txt;
+                    pagetext.Append("**NSFW** " + text);
                 }
                 else
                 {
-                    pagetext += txt;
+                    pagetext.Append(text);
                 }
-                pagetext += "\n";
+                pagetext.Append("\n");
 
                 if ((x + 1) % maxrows == 0 || (x + 1) == posts.Length)
                 {
-                    Pages.Add(pagetext);
-                    pagetext = "";
+                    Pages.Add(pagetext.ToString());
+                    pagetext.Clear();
                 }
             }
             return Pages;

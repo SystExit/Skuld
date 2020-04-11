@@ -6,11 +6,15 @@
     <Version>2020.04</Version>
     <StartupObject>Skuld.Bot.Program</StartupObject>
     <ApplicationIcon />
-    <AssemblyVersion>2020.4.67.0</AssemblyVersion>
-    <FileVersion>2020.4.67.0</FileVersion>
+    <AssemblyVersion>2020.4.76.0</AssemblyVersion>
+    <FileVersion>2020.4.76.0</FileVersion>
     <LangVersion>preview</LangVersion>
     <NeutralLanguage>en-GB</NeutralLanguage>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Modules\ve-2B1A.tmp" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Akitaux.Twitch.Helix" Version="0.1.0-build-00012" />

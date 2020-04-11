@@ -31,27 +31,34 @@ namespace Skuld.Bot.Extensions
             var channels = await guild.GetChannelsAsync().ConfigureAwait(false);
             var afktimeout = guild.AFKTimeout % 3600 / 60;
 
-            var embed = new EmbedBuilder()
-                .AddFooter(context)
-                .WithTitle(guild.Name)
-                .AddAuthor(context.Client)
-                .WithColor(EmbedExtensions.RandomEmbedColor())
-                .AddInlineField("Users", $"Users: {humanusers.ToFormattedString()}\nBots: {botusers.ToFormattedString()}\nRatio: {ratio}%")
-                .AddInlineField("Shard", client?.GetShardIdFor(guild))
-                .AddInlineField("Verification Level", guild.VerificationLevel)
-                .AddInlineField("Voice Region", guild.VoiceRegionId)
-                .AddInlineField("Owner", $"{owner.Mention}")
-                .AddInlineField("Text Channels", channels.Count(x => x.GetType() == typeof(SocketTextChannel)))
-                .AddInlineField("Voice Channels", channels.Count(x => x.GetType() == typeof(SocketVoiceChannel)))
-                .AddInlineField("AFK Timeout", afktimeout + " minutes")
-                .AddInlineField("Default Notifications", guild.DefaultMessageNotifications)
-                .AddInlineField("Created", guild.CreatedAt.ToDMYString() + "\t(DD/MM/YYYY)")
-                .AddInlineField($"Emotes [{guild.Emotes.Count}]", $" Use `{skuldguild?.Prefix ?? config.Prefix}server-emojis` to view them")
-                .AddInlineField($"Roles [{guild.Roles.Count}]", $" Use `{skuldguild?.Prefix ?? config.Prefix}server-roles` to view them");
+            var embed = 
+                new EmbedBuilder()
+                    .AddFooter(context)
+                    .WithTitle(guild.Name)
+                    .AddAuthor(context.Client)
+                    .WithColor(EmbedExtensions.RandomEmbedColor())
+                    .AddInlineField("Users", $"Users: {humanusers.ToFormattedString()}\nBots: {botusers.ToFormattedString()}\nRatio: {ratio}%")
+                    .AddInlineField("Shard", client?.GetShardIdFor(guild))
+                    .AddInlineField("Verification Level", guild.VerificationLevel)
+                    .AddInlineField("Voice Region", guild.VoiceRegionId)
+                    .AddInlineField("Owner", $"{owner.Mention}")
+                    .AddInlineField("Text Channels", channels.Count(x => x.GetType() == typeof(SocketTextChannel)))
+                    .AddInlineField("Voice Channels", channels.Count(x => x.GetType() == typeof(SocketVoiceChannel)))
+                    .AddInlineField("AFK Timeout", afktimeout + " minutes")
+                    .AddInlineField("Default Notifications", guild.DefaultMessageNotifications)
+                    .AddInlineField("Created", guild.CreatedAt.ToDMYString() + "\t(DD/MM/YYYY)")
+                    .AddInlineField($"Emotes [{guild.Emotes.Count}]", $" Use `{skuldguild?.Prefix ?? config.Prefix}server-emojis` to view them")
+                    .AddInlineField($"Roles [{guild.Roles.Count}]", $" Use `{skuldguild?.Prefix ?? config.Prefix}server-roles` to view them");
 
-            if (!string.IsNullOrEmpty(afkchan?.Name)) embed.AddInlineField("AFK Channel", $"[#{afkchan.Name}]({afkchan.JumpLink()})");
+            if (!string.IsNullOrEmpty(afkchan?.Name))
+            {
+                embed.AddInlineField("AFK Channel", $"[#{afkchan.Name}]({afkchan.JumpLink()})");
+            }
 
-            if (!string.IsNullOrEmpty(guild.IconUrl)) embed.WithThumbnailUrl(guild.IconUrl);
+            if (!string.IsNullOrEmpty(guild.IconUrl))
+            {
+                embed.WithThumbnailUrl(guild.IconUrl);
+            }
 
             return embed.Build();
         }
@@ -68,7 +75,7 @@ namespace Skuld.Bot.Extensions
 
         #region Pagination
 
-        public static IList<string> PaginateList(this IReadOnlyList<MemeEndpoints> list, int pagehoist = 10)
+        public static IList<string> Paginate(this IReadOnlyList<MemeEndpoints> list, int pagehoist = 10)
         {
             var pages = new List<string>();
             string pagetext = "";
@@ -91,7 +98,10 @@ namespace Skuld.Bot.Extensions
 
         public static IList<string> Paginate(this IReadOnlyList<IAmRole> roles, Guild sguild, IGuild guild, IGuildUser user, int pagehoist = 10)
         {
-            if (sguild == null || guild == null) return null;
+            if (sguild == null || guild == null)
+            {
+                return null;
+            }
 
             var pages = new List<string>();
 
