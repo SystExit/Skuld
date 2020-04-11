@@ -638,6 +638,25 @@ namespace Skuld.Bot.Commands
                 .ConfigureAwait(false);
             }
 
+            [Command("removeminimum"), RequireFeature(GuildFeature.Starboard)]
+            [Usage("3")]
+            public async Task RemoveMinimum(ushort minimumStars)
+            {
+                using var Database = new SkuldDbContextFactory().CreateDbContext();
+                var gld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
+
+                gld.StarRemoveAmount = minimumStars;
+
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await
+                    EmbedExtensions.FromSuccess(Key,
+                        $"{minimumStars.ToFormattedString()} is required to removed from the starboard",
+                        Context)
+                    .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
+            }
+
             [Command("blacklist"), RequireFeature(GuildFeature.Starboard)]
             [Usage("@person1")]
             public async Task BlacklistUser([Remainder] IGuildUser user)
