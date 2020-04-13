@@ -1520,12 +1520,12 @@ namespace Skuld.Bot.Commands
 
         #endregion Prefix
 
-        [Name("Welcome"), Group("welcome")]
+        [Name("Welcome"), Group("welcome"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
         public class Welcome : ModuleBase<ShardedCommandContext>
         {
             //Current Channel
-            [Command("set"), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
+            [Command("set"), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots) -ud shows Username With Discriminator")]
             [Usage("Welcome to the server -m! We hope you enjoy your stay!!!")]
             public async Task SetWelcome([Remainder]string welcome)
             {
@@ -1540,12 +1540,11 @@ namespace Skuld.Bot.Commands
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                if ((await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false)).JoinMessage != oldmessage)
-                    await EmbedExtensions.FromSuccess($"Set Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromSuccess("Set Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
 
             //Set Channel
-            [Command("set"), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)"), RequireDatabase]
+            [Command("set"), Summary("Sets the welcome message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots) -ud shows Username With Discriminator")]
             [Usage("#userlog Welcome to the server -m! We hope you enjoy your stay!!!")]
             public async Task SetWelcome(ITextChannel channel, [Remainder]string welcome)
             {
@@ -1563,14 +1562,12 @@ namespace Skuld.Bot.Commands
 
                 var ngld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
 
-                if (ngld.JoinChannel != oldchannel && ngld.JoinMessage != oldmessage)
-                    await EmbedExtensions.FromSuccess("Set Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromSuccess("Set Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
 
             //Deletes
             [Command("unset"), Summary("Clears the welcome message")]
             [Alias("clearwelcome", "unsetjoin", "delete", "remove", "clear")]
-            [RequireDatabase]
             public async Task SetWelcome()
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -1584,44 +1581,35 @@ namespace Skuld.Bot.Commands
 
                 var ngld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
 
-                if (ngld.JoinChannel == 0 && ngld.JoinMessage == "")
-                    await EmbedExtensions.FromSuccess("Cleared Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromSuccess("Cleared Welcome message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
-        [Name("Leave"), Group("leave")]
+        [Name("Leave"), Group("leave"), RequireDatabase]
         [RequireUserPermission(GuildPermission.Administrator)]
         public class Leave : ModuleBase<ShardedCommandContext>
         {
             //Set Channel
-            [Command("set"), RequireDatabase]
-            [Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
-            [Usage("#userlog Welcome to the server -m! We hope you enjoy your stay!!!")]
+            [Command("set")]
+            [Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots) -ud shows Username With Discriminator")]
+            [Usage("#userlog Awww, how sad, -u just departed from the server.")]
             public async Task SetLeave(ITextChannel channel, [Remainder]string leave)
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
 
                 var gld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
 
-                var oldleave = gld.LeaveChannel;
-                var oldmessg = gld.LeaveMessage;
-
                 gld.LeaveChannel = channel.Id;
                 gld.LeaveMessage = leave;
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                var ngld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
-
-                if (ngld.LeaveMessage != oldmessg && ngld.LeaveChannel != oldleave)
-                {
-                    await EmbedExtensions.FromSuccess("Set Leave message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                }
+                await EmbedExtensions.FromSuccess("Set Leave message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
 
             //Current Channel
-            [Command("set"), RequireDatabase]
-            [Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots)")]
+            [Command("set")]
+            [Summary("Sets the leave message, -u shows username, -m mentions user, -s shows server name, -uc shows usercount (excluding bots) -ud shows Username With Discriminator")]
             [Usage("Awww, how sad, -u just departed from the server.")]
             public async Task SetLeave([Remainder]string leave)
             {
@@ -1629,46 +1617,29 @@ namespace Skuld.Bot.Commands
 
                 var gld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
 
-                var oldleave = gld.LeaveChannel;
-                var oldmessg = gld.LeaveMessage;
-
                 gld.LeaveChannel = Context.Channel.Id;
                 gld.LeaveMessage = leave;
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                var ngld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
-
-                if (ngld.LeaveMessage != oldmessg && ngld.LeaveChannel != oldleave)
-                {
-                    await EmbedExtensions.FromSuccess("Set Leave message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                }
+                await EmbedExtensions.FromSuccess("Set Leave message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
 
             //Deletes
             [Command("unset"), Summary("Clears the leave message")]
             [Alias("unsetleave", "clear", "delete", "remove", "clearleave")]
-            [RequireDatabase]
             public async Task SetLeave()
             {
                 using var Database = new SkuldDbContextFactory().CreateDbContext();
 
                 var gld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
 
-                var oldleave = gld.LeaveChannel;
-                var oldmessg = gld.LeaveMessage;
-
                 gld.LeaveChannel = 0;
                 gld.LeaveMessage = "";
 
                 await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                var ngld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
-
-                if (ngld.LeaveMessage != oldmessg && ngld.LeaveChannel != oldleave)
-                {
-                    await EmbedExtensions.FromSuccess("Set Leave message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                }
+                await EmbedExtensions.FromSuccess("Set Leave message!", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
