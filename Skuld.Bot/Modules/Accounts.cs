@@ -197,17 +197,6 @@ namespace Skuld.Bot.Commands
             var fontsize = new DrawableFontPointSize(20);
             var white = new DrawableFillColor(new MagickColor(65535, 65535, 65535));
 
-            var experiences = await Database.UserXp.ToAsyncEnumerable().Where(x => x.UserId == profileuser.Id).ToListAsync();
-
-            var exp = new UserExperience();
-
-            foreach (var experience in experiences)
-            {
-                exp.TotalXP += experience.TotalXP;
-                exp.XP += experience.XP;
-                exp.Level += experience.Level;
-            }
-
             int ylevel1 = 365, ylevel2 = 405, ylevel3 = 445;
 
             //Bar
@@ -298,12 +287,11 @@ namespace Skuld.Bot.Commands
             var rightPos = 600 - (dmetr.TextWidth * 2);
 
             var rankraw = Database.GetOrderedGlobalExperienceLeaderboard();
+            var exp = rankraw.FirstOrDefault(x => x.UserId == profileuser.Id);
 
             if (rankraw != null && rankraw.Any(x => x.UserId == profileuser.Id))
             {
-                (ulong, ulong) rank = ((ulong)rankraw.IndexOf(rankraw.FirstOrDefault(x => x.UserId == profileuser.Id)) + 1, (ulong)rankraw.Count());
-
-                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: {rank.Item1.ToFormattedString()}/{rank.Item2.ToFormattedString()}"));
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: {(rankraw.IndexOf(exp)+1).ToFormattedString()}/{rankraw.Count().ToFormattedString()}"));
             }
             else
             {
@@ -501,7 +489,9 @@ namespace Skuld.Bot.Commands
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
             if (user == null)
+            {
                 user = (IGuildUser)Context.User;
+            }
 
             var usr = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
@@ -592,13 +582,15 @@ namespace Skuld.Bot.Commands
             var fontmedd = new DrawableFontPointSize(26);
             var white = new DrawableFillColor(new MagickColor(65535, 65535, 65535));
 
-            var experiences = await Database.UserXp.ToAsyncEnumerable().Where(x => x.GuildId == Context.Guild.Id).ToListAsync();
+            var experiences = await Database.UserXp.ToListAsync().ConfigureAwait(false);
+                
+            var xps = experiences.Where(x => x.GuildId == Context.Guild.Id && x.IsVoiceExperience == false);
 
-            experiences = experiences.OrderByDescending(x => x.TotalXP).ToList();
+            xps = xps.OrderByDescending(x => x.TotalXP).ToList();
 
             ulong index = 0;
 
-            foreach (var x in experiences)
+            foreach (var x in xps)
             {
                 if (x.UserId == usr.Id)
                     break;
@@ -606,7 +598,8 @@ namespace Skuld.Bot.Commands
                     index++;
             }
 
-            var xp = experiences.FirstOrDefault(x => x.UserId == usr.Id);
+            var xp = experiences.GetJoinedExperience(user.Id,
+                Context.IsPrivate ? null : Context.Guild);
 
             //Username
             using (MagickImage label3 = new MagickImage($"label:{user.FullName()}", new MagickReadSettings
