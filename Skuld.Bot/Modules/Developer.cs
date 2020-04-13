@@ -178,7 +178,7 @@ namespace Skuld.Bot.Commands
 
             var usr = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
-            await usr.GrantExperienceAsync(amount, Context.Guild, Context.Message, ExperienceService.DefaultAction, true).ConfigureAwait(false);
+            await usr.GrantExperienceAsync(amount, Context.Guild, Context.Message, false, ExperienceService.DefaultAction, true).ConfigureAwait(false);
 
             await EmbedExtensions.FromSuccess($"Gave {user.Mention} {amount.ToFormattedString()}xp", Context).QueueMessageAsync(Context).ConfigureAwait(false);
         }

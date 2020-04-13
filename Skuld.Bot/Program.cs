@@ -1,6 +1,5 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using Microsoft.EntityFrameworkCore;
 using Skuld.Core;
 using Skuld.Core.Utilities;
 using Skuld.Models;
@@ -9,7 +8,6 @@ using Skuld.Services.Bot.Discord;
 using System;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using DiscordNetCommands = Discord.Commands;
 
@@ -37,29 +35,15 @@ namespace Skuld.Bot
                 Directory.CreateDirectory(SkuldAppContext.FontDirectory);
             }
 
-            if (args.Contains("--migrate"))
-            {
-                try
-                {
-                    var database = new SkuldDbContextFactory().CreateDbContext();
-
-                    database.Database.Migrate();
-
-                    var migrations = await database.Database.GetAppliedMigrationsAsync().ConfigureAwait(false);
-
-                    Log.Info("Framework", $"Migrated successfully, latest applied: {migrations.LastOrDefault()}");
-                }
-                catch (Exception ex)
-                {
-                    Log.Critical("Framework", ex.Message, ex);
-                }
-                return;
-            }
-
+            try
             {
                 var database = new SkuldDbContextFactory().CreateDbContext();
 
-                if (!database.Configurations.Any() || args.Contains("--newconf") || args.Contains("-nc"))
+                await database.ApplyPendingMigrations().ConfigureAwait(false);
+
+                if (!database.Configurations.Any() ||
+                    args.Contains("--newconf") ||
+                    args.Contains("-nc"))
                 {
                     var conf = new SkuldConfig();
                     database.Configurations.Add(conf);
@@ -74,6 +58,10 @@ namespace Skuld.Bot
                 Configuration = c ?? database.Configurations.FirstOrDefault();
 
                 SkuldAppContext.SetConfigurationId(Configuration.Id);
+            }
+            catch (Exception ex)
+            {
+                Log.Critical("HostService", ex.Message, ex);
             }
 
             await BotService.ConfigureBotAsync(
@@ -99,7 +87,7 @@ namespace Skuld.Bot
                 }
             ).ConfigureAwait(false);
 
-            Log.Info("Framework", "Loaded Skuld v" + SkuldAppContext.Skuld.Key.Version);
+            Log.Info("HostService", "Loaded Skuld v" + SkuldAppContext.Skuld.Key.Version);
 
             await BotService.StartBotAsync().ConfigureAwait(false);
 
