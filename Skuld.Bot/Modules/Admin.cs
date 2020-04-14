@@ -1647,7 +1647,7 @@ namespace Skuld.Bot.Commands
         [RequireUserPermission(GuildPermission.Administrator)]
         public class Levels : ModuleBase<ShardedCommandContext>
         {
-            [Command("message"), Summary("Sets the level up message, -u says the users name, -m mentions the user, -l shows the level they achieved"), RequireDatabase]
+            [Command("message"), Summary("Sets the level up message, -u says the users name, -m mentions the user, -l shows the level they achieved -ud shows Username With Discriminator -jl shows the jumplink of the message if from text"), RequireDatabase]
             [Usage("WOW! -m is now level -l!!!")]
             public async Task SetLevelUp([Remainder]string message)
             {
