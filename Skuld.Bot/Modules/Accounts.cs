@@ -289,54 +289,57 @@ namespace Skuld.Bot.Commands
             var rankraw = Database.GetOrderedGlobalExperienceLeaderboard();
             var exp = rankraw.FirstOrDefault(x => x.UserId == profileuser.Id);
 
-            if (rankraw != null && rankraw.Any(x => x.UserId == profileuser.Id))
+            if(exp != null)
             {
-                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: {(rankraw.IndexOf(exp)+1).ToFormattedString()}/{rankraw.Count().ToFormattedString()}"));
-            }
-            else
-            {
-                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: -1/{(rankraw == null ? -1 : rankraw.Count())}"));
-            }
+                if (rankraw != null && rankraw.Any(x => x.UserId == profileuser.Id))
+                {
+                    image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: {(rankraw.IndexOf(exp) + 1).ToFormattedString()}/{rankraw.Count().ToFormattedString()}"));
+                }
+                else
+                {
+                    image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: -1/{(rankraw == null ? -1 : rankraw.Count())}"));
+                }
 
-            image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel1, dailyText));
+                image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel1, dailyText));
 
-            //YLevel 2
-            image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel2, $"Pasta Karma: {Database.GetPastaKarma(profileuser.Id).ToFormattedString()}"));
-            var favcommand = (await Database.UserCommandUsage.AsAsyncEnumerable().Where(x => x.UserId == profileuser.Id).OrderByDescending(x => x.Usage).ToListAsync()).FirstOrDefault();
-            image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel2, $"Fav. Cmd: {(favcommand == null ? "N/A" : favcommand.Command)} ({(favcommand == null ? "0" : favcommand.Usage.ToFormattedString())})"));
+                //YLevel 2
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel2, $"Pasta Karma: {Database.GetPastaKarma(profileuser.Id).ToFormattedString()}"));
+                var favcommand = (await Database.UserCommandUsage.AsAsyncEnumerable().Where(x => x.UserId == profileuser.Id).OrderByDescending(x => x.Usage).ToListAsync()).FirstOrDefault();
+                image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel2, $"Fav. Cmd: {(favcommand == null ? "N/A" : favcommand.Command)} ({(favcommand == null ? "0" : favcommand.Usage.ToFormattedString())})"));
 
-            //YLevel 3
-            image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToFormattedString()} ({exp.TotalXP.ToFormattedString()})"));
-            image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: {profileuser.Pats.ToFormattedString()}/Patted: {profileuser.Patted.ToFormattedString()}"));
+                //YLevel 3
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToFormattedString()} ({exp.TotalXP.ToFormattedString()})"));
+                image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: {profileuser.Pats.ToFormattedString()}/Patted: {profileuser.Patted.ToFormattedString()}"));
 
-            ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(exp.Level + 1, 2.5);
+                ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(exp.Level + 1, 2.5);
 
-            //Progressbar
-            image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, 471, 580, 500));
-            image.Draw(new DrawableFillColor(new MagickColor("#dfdfdf")), new DrawableRectangle(22, 473, 578, 498));
+                //Progressbar
+                image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, 471, 580, 500));
+                image.Draw(new DrawableFillColor(new MagickColor("#dfdfdf")), new DrawableRectangle(22, 473, 578, 498));
 
-            var percentage = (double)exp.XP / xpToNextLevel * 100;
-            var mapped = percentage.Remap(0, 100, 22, 578);
+                var percentage = (double)exp.XP / xpToNextLevel * 100;
+                var mapped = percentage.Remap(0, 100, 22, 578);
 
-            image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, 473, mapped, 498));
+                image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, 473, mapped, 498));
 
-            //Current XP
-            image.Draw(font, fontsize, encoding, new DrawableText(25, 493, (exp.XP).ToFormattedString() + "XP"));
+                //Current XP
+                image.Draw(font, fontsize, encoding, new DrawableText(25, 493, (exp.XP).ToFormattedString() + "XP"));
 
-            //XP To Next
-            using (MagickImage label5 = new MagickImage($"label:{xpToNextLevel.ToFormattedString()}XP", 
-                new MagickReadSettings
-            {
-                BackgroundColor = MagickColors.Transparent,
-                FillColor = MagickColors.Black,
-                Width = 575,
-                Height = 20,
-                TextGravity = Gravity.East,
-                FontPointsize = 20,
-                Font = fontFile
-            }))
-            {
-                image.Composite(label5, 0, 475, CompositeOperator.Over);
+                //XP To Next
+                using (MagickImage label5 = new MagickImage($"label:{xpToNextLevel.ToFormattedString()}XP",
+                    new MagickReadSettings
+                    {
+                        BackgroundColor = MagickColors.Transparent,
+                        FillColor = MagickColors.Black,
+                        Width = 575,
+                        Height = 20,
+                        TextGravity = Gravity.East,
+                        FontPointsize = 20,
+                        Font = fontFile
+                    }))
+                {
+                    image.Composite(label5, 0, 475, CompositeOperator.Over);
+                }
             }
 
             MemoryStream outputStream = new MemoryStream();
@@ -423,7 +426,7 @@ namespace Skuld.Bot.Commands
             }
             else
             {
-                TimeSpan remain = DateTime.Today.Date.AddDays(1) - DateTime.UtcNow;
+                TimeSpan remain = DateTime.UtcNow.Date.AddDays(1) - DateTime.UtcNow;
 
                 await
                     EmbedExtensions.FromError(
@@ -603,61 +606,71 @@ namespace Skuld.Bot.Commands
             var xp = experiences.GetJoinedExperience(user.Id,
                 Context.IsPrivate ? null : Context.Guild);
 
-            //Username
-            using (MagickImage label3 = new MagickImage($"label:{user.FullName()}", new MagickReadSettings
+            if(xp != null)
             {
-                BackgroundColor = MagickColors.Transparent,
-                FillColor = MagickColors.White,
-                Width = 510,
-                Height = 60,
-                TextGravity = Gravity.West,
-                Font = fontFile
-            }))
-            {
-                image.Composite(label3, 220, 80, CompositeOperator.Over);
+                //Username
+                using (MagickImage label3 = new MagickImage($"label:{user.FullName()}", new MagickReadSettings
+                {
+                    BackgroundColor = MagickColors.Transparent,
+                    FillColor = MagickColors.White,
+                    Width = 510,
+                    Height = 60,
+                    TextGravity = Gravity.West,
+                    Font = fontFile
+                }))
+                {
+                    image.Composite(label3, 220, 80, CompositeOperator.Over);
+                }
+
+                image.Draw(font, fontmed, encoding, white, new DrawableText(220, 170, $"Rank {index + 1}/{xps.Count()}"));
+                image.Draw(font, fontmed, encoding, white, new DrawableText(220, 210, $"Level: {xp.Level} ({xp.TotalXP.ToFormattedString()})"));
+
+                ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(xp.Level + 1, 2.5);
+
+                int innerHeight = 256;
+
+                //Progressbar
+                image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, innerHeight - 2, 730, 280));
+                image.Draw(new DrawableFillColor(new MagickColor("#dfdfdf")), new DrawableRectangle(22, innerHeight, 728, 278));
+
+                var percentage = (double)xp.XP / xpToNextLevel * 100;
+                var mapped = percentage.Remap(0, 100, 22, 728);
+
+                image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, innerHeight, mapped, 278));
+
+                //Current XP
+                image.Draw(font, fontmedd, encoding, new DrawableText(25, 277, xp.XP.ToFormattedString() + "XP"));
+
+                //XP To Next
+                using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToFormattedString()}XP", new MagickReadSettings
+                {
+                    BackgroundColor = MagickColors.Transparent,
+                    FillColor = MagickColors.Black,
+                    Width = 725,
+                    Height = 30,
+                    TextGravity = Gravity.East,
+                    FontPointsize = 26,
+                    Font = fontFile
+                }))
+                {
+                    image.Composite(label5, 0, 252, CompositeOperator.Over);
+                }
+
+                MemoryStream outputStream = new MemoryStream();
+
+                image.Write(outputStream);
+
+                outputStream.Position = 0;
+
+                await "".QueueMessageAsync(Context, outputStream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
             }
-
-            image.Draw(font, fontmed, encoding, white, new DrawableText(220, 170, $"Rank {index + 1}/{xps.Count()}"));
-            image.Draw(font, fontmed, encoding, white, new DrawableText(220, 210, $"Level: {xp.Level} ({xp.TotalXP.ToFormattedString()})"));
-
-            ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(xp.Level + 1, 2.5);
-
-            int innerHeight = 256;
-
-            //Progressbar
-            image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, innerHeight - 2, 730, 280));
-            image.Draw(new DrawableFillColor(new MagickColor("#dfdfdf")), new DrawableRectangle(22, innerHeight, 728, 278));
-
-            var percentage = (double)xp.XP / xpToNextLevel * 100;
-            var mapped = percentage.Remap(0, 100, 22, 728);
-
-            image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, innerHeight, mapped, 278));
-
-            //Current XP
-            image.Draw(font, fontmedd, encoding, new DrawableText(25, 277, xp.XP.ToFormattedString() + "XP"));
-
-            //XP To Next
-            using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToFormattedString()}XP", new MagickReadSettings
+            else
             {
-                BackgroundColor = MagickColors.Transparent,
-                FillColor = MagickColors.Black,
-                Width = 725,
-                Height = 30,
-                TextGravity = Gravity.East,
-                FontPointsize = 26,
-                Font = fontFile
-            }))
-            {
-                image.Composite(label5, 0, 252, CompositeOperator.Over);
+                await 
+                    EmbedExtensions.FromError("User hasn't spoken yet", Context)
+                    .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
             }
-
-            MemoryStream outputStream = new MemoryStream();
-
-            image.Write(outputStream);
-
-            outputStream.Position = 0;
-
-            await "".QueueMessageAsync(Context, outputStream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
         }
 
         [Command("rep"), Summary("Gives someone rep or checks your rep")]
