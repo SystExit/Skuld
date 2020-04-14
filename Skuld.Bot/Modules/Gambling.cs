@@ -549,7 +549,7 @@ namespace Skuld.Bot.Commands
         }
 
         private static string GetStringRow(SlotIcon[] row, bool isMiddle)
-            => !isMiddle ? $">> {slotIcons.GetValueOrDefault(row[0])} {slotIcons.GetValueOrDefault(row[1])} {slotIcons.GetValueOrDefault(row[2])} <<"
+            => isMiddle ? $">> {slotIcons.GetValueOrDefault(row[0])} {slotIcons.GetValueOrDefault(row[1])} {slotIcons.GetValueOrDefault(row[2])} <<"
                          : $"{DiscordUtilities.Empty_Emote}" +
                            $"{slotIcons.GetValueOrDefault(row[0])} {slotIcons.GetValueOrDefault(row[1])} {slotIcons.GetValueOrDefault(row[2])}" +
                            $"{DiscordUtilities.Empty_Emote}";
