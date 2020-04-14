@@ -388,6 +388,8 @@ namespace Skuld.Bot.Commands
                     desc = $"You just gave your daily of {gld.MoneyIcon}{MoneyAmount.ToFormattedString()} to {user.Mention}";
                 }
 
+                var newAmount = user == null ? self.Money : target.Money;
+
                 var embed =
                     EmbedExtensions
                     .FromMessage("SkuldBank - Daily",
@@ -400,7 +402,7 @@ namespace Skuld.Bot.Commands
                     )
                     .AddInlineField(
                         "New Amount",
-                        $"{gld.MoneyIcon}{self.Money.ToFormattedString()}"
+                        $"{gld.MoneyIcon}{newAmount.ToFormattedString()}"
                     );
 
                 if (self.Streak > 0)
@@ -615,7 +617,7 @@ namespace Skuld.Bot.Commands
                 image.Composite(label3, 220, 80, CompositeOperator.Over);
             }
 
-            image.Draw(font, fontmed, encoding, white, new DrawableText(220, 170, $"Rank {index + 1}/{experiences.Count}"));
+            image.Draw(font, fontmed, encoding, white, new DrawableText(220, 170, $"Rank {index + 1}/{xps.Count()}"));
             image.Draw(font, fontmed, encoding, white, new DrawableText(220, 210, $"Level: {xp.Level} ({xp.TotalXP.ToFormattedString()})"));
 
             ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(xp.Level + 1, DiscordUtilities.PHI);
@@ -632,7 +634,7 @@ namespace Skuld.Bot.Commands
             image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, innerHeight, mapped, 278));
 
             //Current XP
-            image.Draw(font, fontmedd, encoding, new DrawableText(25, 277, (xp.XP).ToFormattedString() + "XP"));
+            image.Draw(font, fontmedd, encoding, new DrawableText(25, 277, xp.XP.ToFormattedString() + "XP"));
 
             //XP To Next
             using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToFormattedString()}XP", new MagickReadSettings
