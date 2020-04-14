@@ -309,7 +309,7 @@ namespace Skuld.Bot.Commands
             image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToFormattedString()} ({exp.TotalXP.ToFormattedString()})"));
             image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: {profileuser.Pats.ToFormattedString()}/Patted: {profileuser.Patted.ToFormattedString()}"));
 
-            ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(exp.Level + 1, DiscordUtilities.PHI);
+            ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(exp.Level + 1, 2.5);
 
             //Progressbar
             image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, 471, 580, 500));
@@ -620,7 +620,7 @@ namespace Skuld.Bot.Commands
             image.Draw(font, fontmed, encoding, white, new DrawableText(220, 170, $"Rank {index + 1}/{xps.Count()}"));
             image.Draw(font, fontmed, encoding, white, new DrawableText(220, 210, $"Level: {xp.Level} ({xp.TotalXP.ToFormattedString()})"));
 
-            ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(xp.Level + 1, DiscordUtilities.PHI);
+            ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(xp.Level + 1, 2.5);
 
             int innerHeight = 256;
 
@@ -1016,7 +1016,7 @@ namespace Skuld.Bot.Commands
 
                 exp.Level = DatabaseUtilities.GetLevelFromTotalXP(exp.TotalXP, DiscordUtilities.PHI);
 
-                exp.XP = DatabaseUtilities.GetXPLevelRequirement(exp.Level, DiscordUtilities.PHI) / 2;
+                exp.XP = DatabaseUtilities.GetXPLevelRequirement(exp.Level, 2.5) / 2;
 
                 int ylevel1 = 365, ylevel2 = 405, ylevel3 = 445;
 
@@ -1096,7 +1096,7 @@ namespace Skuld.Bot.Commands
                 image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToFormattedString()} ({exp.TotalXP.ToFormattedString()})"));
                 image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: 7,777/Patted: 7,777"));
 
-                ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(exp.Level + 1, DiscordUtilities.PHI);
+                ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(exp.Level + 1, 2.5);
 
                 //Progressbar
                 image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, 471, 580, 500));
