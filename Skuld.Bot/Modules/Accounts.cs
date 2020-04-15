@@ -486,7 +486,7 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("rank"), Summary("Gets your or someone's current level")]
+        [Command("rank"), Summary("Gets yours or someone's current text level")]
         [Alias("exp")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Level(IGuildUser user = null)
@@ -589,7 +589,7 @@ namespace Skuld.Bot.Commands
 
             var experiences = await Database.UserXp.ToListAsync().ConfigureAwait(false);
                 
-            var xps = experiences.Where(x => x.GuildId == Context.Guild.Id && x.IsVoiceExperience == false);
+            var xps = experiences.Where(x => x.GuildId == Context.Guild.Id);
 
             xps = xps.OrderByDescending(x => x.TotalXP).ToList();
 
@@ -603,8 +603,7 @@ namespace Skuld.Bot.Commands
                     index++;
             }
 
-            var xp = experiences.GetJoinedExperience(user.Id,
-                Context.IsPrivate ? null : Context.Guild);
+            var xp = xps.FirstOrDefault(x=>x.UserId == user.Id);
 
             if(xp != null)
             {
@@ -1027,7 +1026,7 @@ namespace Skuld.Bot.Commands
                     TotalXP = 1234567890
                 };
 
-                exp.Level = DatabaseUtilities.GetLevelFromTotalXP(exp.TotalXP, DiscordUtilities.PHI);
+                exp.Level = DatabaseUtilities.GetLevelFromTotalXP(exp.TotalXP, 2.5);
 
                 exp.XP = DatabaseUtilities.GetXPLevelRequirement(exp.Level, 2.5) / 2;
 
