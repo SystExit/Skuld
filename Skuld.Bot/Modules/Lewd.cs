@@ -29,6 +29,7 @@ namespace Skuld.Bot.Commands
         public RealbooruClient RealbooruClient { get; set; }
         public NekosLifeClient NekosLifeClient { get; set; }
 
+        [Disabled(true, true)]
         [Command("lewdneko"), Summary("Lewd Neko Grill"), Ratelimit(20, 1, Measure.Minutes)]
         public async Task LewdNeko()
         {
