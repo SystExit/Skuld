@@ -499,10 +499,11 @@ namespace Skuld.Bot.Commands
             }
 
             var usr = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+            var gld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
 
             if (!Database.Features.FirstOrDefault(x => x.Id == Context.Guild.Id).Experience)
             {
-                await EmbedExtensions.FromError("Module `Experience` is disabled for this guild, ask an administrator to enable it using: `sk!guild-feature experience 1`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError($"Module `Experience` is disabled for this guild, ask an administrator to enable it using: `{gld.Prefix}guild feature experience 1`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
 
