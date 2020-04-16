@@ -279,6 +279,7 @@ namespace Skuld.Bot.Commands
 
         [Command("neko")]
         [Summary("neko grill")]
+        [Disabled(true, true)]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Neko()
         {
