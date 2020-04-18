@@ -838,6 +838,12 @@ namespace Skuld.Bot.Commands
                                 stream.Position = 0;
 
                                 await Context.Channel.SendFileAsync(stream, "pastas.txt", $"Here's all that are related to the search term: \"{title}\"").ConfigureAwait(false);
+
+                                writer.Close();
+                                stream.Close();
+
+                                await writer.DisposeAsync().ConfigureAwait(false);
+                                await stream.DisposeAsync().ConfigureAwait(false);
                             }
                             else
                             {
@@ -858,7 +864,7 @@ namespace Skuld.Bot.Commands
                             await
                                 EmbedExtensions.FromError("Pasta Kitchen", "You have no pastas", Context)
                                 .QueueMessageAsync(Context)
-                                .ConfigureAwait(false);
+                            .ConfigureAwait(false);
                         }
 
                     }
