@@ -143,7 +143,7 @@ namespace Skuld.Bot.Commands
         [Disabled(false, true, "Incomplete")]
         [Usage("heads", "heads 250")]
         [Ratelimit(20, 1, Measure.Minutes)]
-        public async Task HeadsOrTails(string guess, ulong? bet = null)
+        public async Task HeadsOrTails(string guess, ulong bet)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
             var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
@@ -158,28 +158,25 @@ namespace Skuld.Bot.Commands
                 Prefix = guild.Prefix;
             }
 
-            if (bet.HasValue)
+            if (!IsValidBet(bet))
             {
-                if (!IsValidBet(bet.Value))
-                {
-                    await EmbedExtensions.FromError("Heads Or Tails", $"You have not specified a valid bet, minimum is {MoneyPrefix}{MinimumBet.ToFormattedString()}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    return;
-                }
-
-                if (user.Money < bet.Value)
-                {
-                    await EmbedExtensions.FromError("Heads Or Tails", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    return;
-                }
-
-                TransactionService.DoTransaction(new TransactionStruct
-                {
-                    Amount = bet.Value,
-                    Sender = user
-                });
-
-                await Database.SaveChangesAsync().ConfigureAwait(false);
+                await EmbedExtensions.FromError("Heads Or Tails", $"You have not specified a valid bet, minimum is {MoneyPrefix}{MinimumBet.ToFormattedString()}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
             }
+
+            if (user.Money < bet)
+            {
+                await EmbedExtensions.FromError("Heads Or Tails", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
+            }
+
+            TransactionService.DoTransaction(new TransactionStruct
+            {
+                Amount = bet,
+                Sender = user
+            });
+
+            await Database.SaveChangesAsync().ConfigureAwait(false);
 
             var result = SkuldRandom.Next(0, coinflip.Count);
 
@@ -210,39 +207,25 @@ namespace Skuld.Bot.Commands
 
                         string suffix;
 
-                        if (bet.HasValue)
+                        if (didWin)
                         {
-                            if (didWin)
+                            TransactionService.DoTransaction(new TransactionStruct
                             {
-                                TransactionService.DoTransaction(new TransactionStruct
-                                {
-                                    Amount = bet.Value * 2,
-                                    Receiver = user
-                                });
-                            }
+                                Amount = bet * 2,
+                                Receiver = user
+                            });
+                        }
 
-                            if (didWin)
-                            {
-                                suffix = $"You Won! <:blobsquish:350681075296501760> Your money is now {MoneyPrefix}`{user.Money.ToFormattedString()}`";
-                            }
-                            else
-                            {
-                                suffix = $"You Lost! <:blobcrying:662304318531305492> Your money is now {MoneyPrefix}`{user.Money.ToFormattedString()}`";
-                            }
-
-                            await Database.SaveChangesAsync().ConfigureAwait(false);
+                        if (didWin)
+                        {
+                            suffix = $"You Won! <:blobsquish:350681075296501760> Your money is now {MoneyPrefix}`{user.Money.ToFormattedString()}`";
                         }
                         else
                         {
-                            if (didWin)
-                            {
-                                suffix = "You Won! <:blobsquish:350681075296501760>";
-                            }
-                            else
-                            {
-                                suffix = "You Lost! <:blobcrying:662304318531305492>";
-                            }
+                            suffix = $"You Lost! <:blobcrying:662304318531305492> Your money is now {MoneyPrefix}`{user.Money.ToFormattedString()}`";
                         }
+
+                        await Database.SaveChangesAsync().ConfigureAwait(false);
 
                         await 
                             EmbedExtensions
@@ -265,9 +248,9 @@ namespace Skuld.Bot.Commands
         [Command("rps")]
         [Usage("rock", "rock 250")]
         [Ratelimit(20, 1, Measure.Minutes)]
-        public async Task RPS(string shoot, ulong? bet = null)
+        public async Task RPS(string shoot, ulong bet)
         {
-            if (bet.HasValue && bet.Value <= 0)
+            if (bet <= 0)
             {
                 await EmbedExtensions.FromError("Rock Paper Scissors", $"Can't bet 0", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
@@ -294,15 +277,14 @@ namespace Skuld.Bot.Commands
                     MoneyPrefix = guild.MoneyIcon;
                 }
 
-                if (bet.HasValue)
                 {
-                    if (!IsValidBet(bet.Value))
+                    if (!IsValidBet(bet))
                     {
                         await EmbedExtensions.FromError("Rock Paper Scissors", $"You have not specified a valid bet, minimum is {MoneyPrefix}{MinimumBet.ToFormattedString()}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         return;
                     }
 
-                    if (user.Money < bet.Value)
+                    if (user.Money < bet)
                     {
                         await EmbedExtensions.FromError("Rock Paper Scissors", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         return;
@@ -310,7 +292,7 @@ namespace Skuld.Bot.Commands
 
                     EventResult<bool> transactionResult = TransactionService.DoTransaction(new TransactionStruct
                     {
-                        Amount = bet.Value,
+                        Amount = bet,
                         Sender = user
                     });
 
@@ -321,56 +303,35 @@ namespace Skuld.Bot.Commands
                 {
                     case WinResult.BotWin:
                         {
-                            if (bet.HasValue)
-                            {
-                                await EmbedExtensions.FromError("Rock Paper Scissors", $"I draw {throwName} and... You lost, you now have {MoneyPrefix}`{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                            }
-                            else
-                            {
-                                await EmbedExtensions.FromError("Rock Paper Scissors", $"I draw {throwName} and... You lost", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                            }
+                            await EmbedExtensions.FromError("Rock Paper Scissors", $"I draw {throwName} and... You lost, you now have {MoneyPrefix}`{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
 
                     case WinResult.PlayerWin:
                         {
-                            if (bet.HasValue)
+                            EventResult<bool> transactionResult = TransactionService.DoTransaction(new TransactionStruct
                             {
-                                EventResult<bool> transactionResult = TransactionService.DoTransaction(new TransactionStruct
-                                {
-                                    Amount = bet.Value * 2,
-                                    Receiver = user
-                                });
+                                Amount = bet * 2,
+                                Receiver = user
+                            });
 
-                                await Database.SaveChangesAsync().ConfigureAwait(false);
+                            await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                                await EmbedExtensions.FromSuccess("Rock Paper Scissors", $"I draw {throwName} and... You won, you now have {MoneyPrefix}`{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                            }
-                            else
-                            {
-                                await EmbedExtensions.FromInfo("Rock Paper Scissors", $"I draw {throwName} and... You won", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                            }
+                            await EmbedExtensions.FromSuccess("Rock Paper Scissors", $"I draw {throwName} and... You won, you now have {MoneyPrefix}`{user.Money}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
 
                     case WinResult.Draw:
                         {
-                            if (bet.HasValue)
+                            EventResult<bool> transactionResult = TransactionService.DoTransaction(new TransactionStruct
                             {
-                                EventResult<bool> transactionResult = TransactionService.DoTransaction(new TransactionStruct
-                                {
-                                    Amount = bet.Value,
-                                    Receiver = user
-                                });
+                                Amount = bet,
+                                Receiver = user
+                            });
 
-                                await Database.SaveChangesAsync().ConfigureAwait(false);
+                            await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                                await EmbedExtensions.FromInfo("Rock Paper Scissors", $"I draw {throwName} and... It's a draw, your money has not been affected", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                            }
-                            else
-                            {
-                                await EmbedExtensions.FromMessage("Rock Paper Scissors", $"I draw {throwName} and... It's a draw", DiscordUtilities.Warning_Color, Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                            }
+                            await EmbedExtensions.FromInfo("Rock Paper Scissors", $"I draw {throwName} and... It's a draw, your money has not been affected", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                         }
                         break;
                 }
@@ -391,9 +352,9 @@ namespace Skuld.Bot.Commands
         [Command("slots")]
         [Usage("slots <bet>")]
         [Ratelimit(20, 1, Measure.Minutes)]
-        public async Task Slots(ulong? bet = null)
+        public async Task Slots(ulong bet)
         {
-            if (bet.HasValue && bet.Value <= 0)
+            if (bet <= 0)
             {
                 await EmbedExtensions.FromError("Slots", $"Can't bet 0", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
@@ -410,15 +371,14 @@ namespace Skuld.Bot.Commands
                 MoneyPrefix = guild.MoneyIcon;
             }
 
-            if (bet.HasValue)
             {
-                if (!IsValidBet(bet.Value))
+                if (!IsValidBet(bet))
                 {
                     await EmbedExtensions.FromError("Slots", $"You have not specified a valid bet, minimum is {MoneyPrefix}{MinimumBet.ToFormattedString()}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
 
-                if (user.Money < bet.Value)
+                if (user.Money < bet)
                 {
                     await EmbedExtensions.FromError("Slots", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
@@ -426,7 +386,7 @@ namespace Skuld.Bot.Commands
 
                 EventResult<bool> result = TransactionService.DoTransaction(new TransactionStruct
                 {
-                    Amount = bet.Value,
+                    Amount = bet,
                     Sender = user
                 });
 
@@ -457,35 +417,21 @@ namespace Skuld.Bot.Commands
 
             if (percentageMod == 0.0d)
             {
-                if (bet.HasValue)
-                {
-                    await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou lost {bet.Value.ToFormattedString()}! You now have {MoneyPrefix}`{user.Money}`", Color.Red, Context).Build()).ConfigureAwait(false);
-                }
-                else
-                {
-                    await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou lost!", Color.Red, Context).Build()).ConfigureAwait(false);
-                }
+                await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou lost {bet.ToFormattedString()}! You now have {MoneyPrefix}`{user.Money}`", Color.Red, Context).Build()).ConfigureAwait(false);
             }
             else
             {
-                if(bet.HasValue)
+                var amount = (ulong)Math.Round(bet * percentageMod);
+
+                EventResult<bool> result = TransactionService.DoTransaction(new TransactionStruct
                 {
-                    var amount = (ulong)Math.Round(bet.Value * percentageMod);
+                    Amount = amount,
+                    Receiver = user
+                });
 
-                    EventResult<bool> result = TransactionService.DoTransaction(new TransactionStruct
-                    {
-                        Amount = amount,
-                        Receiver = user
-                    });
+                await Database.SaveChangesAsync().ConfigureAwait(false);
 
-                    await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                    await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou won {amount.ToFormattedString()}! You now have {MoneyPrefix}`{user.Money}`", Color.Green, Context).Build()).ConfigureAwait(false);
-                }
-                else
-                {
-                    await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou won!", Color.Green, Context).Build()).ConfigureAwait(false);
-                }
+                await message.ModifyAsync(x => x.Embed = EmbedExtensions.FromMessage("Slots", $"{stringRow}\n\nYou won {amount.ToFormattedString()}! You now have {MoneyPrefix}`{user.Money}`", Color.Green, Context).Build()).ConfigureAwait(false);
             }
         }
 
@@ -566,11 +512,11 @@ namespace Skuld.Bot.Commands
         [Command("mia"), Summary("Play a game of mia")]
         [Usage("250")]
         [Ratelimit(20, 1, Measure.Minutes)]
-        public async Task Mia(ulong? bet = null)
+        public async Task Mia(ulong bet)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            if (bet.HasValue && bet.Value <= 0)
+            if (bet <= 0)
             {
                 await EmbedExtensions.FromError("Mia", $"Can't bet 0", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
@@ -586,15 +532,14 @@ namespace Skuld.Bot.Commands
 
             var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
-            if (bet.HasValue)
             {
-                if (!IsValidBet(bet.Value))
+                if (!IsValidBet(bet))
                 {
                     await EmbedExtensions.FromError("Mia", $"You have not specified a valid bet, minimum is {MoneyPrefix}{MinimumBet.ToFormattedString()}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
 
-                if (user.Money < bet.Value)
+                if (user.Money < bet)
                 {
                     await EmbedExtensions.FromError("Mia", $"You don't have enough money available to make that bet, you have {MoneyPrefix}{user.Money.ToFormattedString()} available", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
@@ -602,7 +547,7 @@ namespace Skuld.Bot.Commands
 
                 EventResult<bool> result = TransactionService.DoTransaction(new TransactionStruct
                 {
-                    Amount = bet.Value,
+                    Amount = bet,
                     Sender = user
                 });
             }
@@ -638,52 +583,31 @@ namespace Skuld.Bot.Commands
             {
                 case WinResult.PlayerWin:
                     {
-                        if (bet.HasValue)
+                        EventResult<bool> result = TransactionService.DoTransaction(new TransactionStruct
                         {
-                            EventResult<bool> result = TransactionService.DoTransaction(new TransactionStruct
-                            {
-                                Amount = bet.Value * 2,
-                                Receiver = user
-                            });
+                            Amount = bet * 2,
+                            Receiver = user
+                        });
 
-                            embed = EmbedExtensions.FromSuccess("Mia", $"You Win! You now have {MoneyPrefix}{user.Money.ToFormattedString()}", Context);
-                        }
-                        else
-                        {
-                            embed = EmbedExtensions.FromSuccess("Mia", "You Win!", Context);
-                        }
+                        embed = EmbedExtensions.FromSuccess("Mia", $"You Win! You now have {MoneyPrefix}{user.Money.ToFormattedString()}", Context);
                     }
                     break;
 
                 case WinResult.BotWin:
                     {
-                        if (bet.HasValue)
-                        {
-                            embed = EmbedExtensions.FromError("Mia", $"You Lost! You now have {MoneyPrefix}{user.Money.ToFormattedString()}", Context);
-                        }
-                        else
-                        {
-                            embed = EmbedExtensions.FromError("Mia", "You Lost!", Context);
-                        }
+                        embed = EmbedExtensions.FromError("Mia", $"You Lost! You now have {MoneyPrefix}{user.Money.ToFormattedString()}", Context);
                     }
                     break;
 
                 case WinResult.Draw:
                     {
-                        if (bet.HasValue)
+                        EventResult<bool> result = TransactionService.DoTransaction(new TransactionStruct
                         {
-                            EventResult<bool> result = TransactionService.DoTransaction(new TransactionStruct
-                            {
-                                Amount = bet.Value,
-                                Receiver = user
-                            });
+                            Amount = bet,
+                            Receiver = user
+                        });
 
-                            embed = EmbedExtensions.FromInfo("Mia", $"It's a draw! Your money has been returned", Context);
-                        }
-                        else
-                        {
-                            embed = EmbedExtensions.FromInfo("Mia", $"It's a draw!", Context);
-                        }
+                        embed = EmbedExtensions.FromInfo("Mia", $"It's a draw! Your money has been returned", Context);
                     }
                     break;
             }
