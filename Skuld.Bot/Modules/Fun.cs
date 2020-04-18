@@ -279,7 +279,7 @@ namespace Skuld.Bot.Commands
 
         [Command("neko")]
         [Summary("neko grill")]
-        [Disabled(true, true)]
+        [Disabled(true, true, "TOS Concerns")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Neko()
         {
@@ -342,6 +342,7 @@ namespace Skuld.Bot.Commands
             if (doggo.IsVideoFile())
             {
                 await doggo.QueueMessageAsync(Context).ConfigureAwait(false);
+                return;
             }
             if (doggo == "https://i.imgur.com/ZSMi3Zt.jpg")
             {
@@ -802,12 +803,18 @@ namespace Skuld.Bot.Commands
                     {
                         if (pasta != null)
                         {
-                            await pasta.Content.QueueMessageAsync(Context).ConfigureAwait(false);
+                            await 
+                                EmbedExtensions.FromMessage("Pasta Kitchen", pasta.Content, Context)
+                                .QueueMessageAsync(Context)
+                            .ConfigureAwait(false);
                         }
                         else
                         {
                             DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-                            await EmbedExtensions.FromError($"Pasta `{cmd}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            await 
+                                EmbedExtensions.FromError("Pasta Kitchen", $"Pasta `{cmd}` doesn't exist. :/ Sorry.", Context)
+                                .QueueMessageAsync(Context)
+                            .ConfigureAwait(false);
                         }
                     }
                     break;
@@ -932,7 +939,7 @@ namespace Skuld.Bot.Commands
                     }
                 }
 
-                if (pastas.Length >= 2000)
+                if (pastas.Length >= 900)
                 {
                     using MemoryStream stream = new MemoryStream();
                     using StreamWriter writer = new StreamWriter(stream);
@@ -952,6 +959,73 @@ namespace Skuld.Bot.Commands
 
                     await
                         EmbedExtensions.FromMessage("Pasta Kitchen", $"Your pastas are: {response}", Context)
+                        .QueueMessageAsync(Context)
+                        .ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                await
+                    EmbedExtensions.FromError("Pasta Kitchen", "You have no pastas", Context)
+                    .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        [Command("pasta search"), Summary("Search for a pasta"), RequireDatabase]
+        [Ratelimit(20, 1, Measure.Minutes)]
+        public async Task SearchPasta([Remainder] string search)
+        {
+            SkuldDbContext database = new SkuldDbContextFactory().CreateDbContext();
+
+            var names = database.Pastas.ToList().Select(x => x.Name).ToList();
+
+            Dictionary<string, int> orderedPastas = new Dictionary<string, int>();
+
+            names.ForEach(x =>
+            {
+                var confidence = FuzzyString.ComparisonMetrics.LevenshteinDistance(search, x);
+                orderedPastas.Add(x, confidence);
+            });
+
+            var searchResults = orderedPastas.OrderByDescending(x => x.Value);
+
+            if (searchResults.Any())
+            {
+                StringBuilder pastas = new StringBuilder();
+
+                foreach (var entry in searchResults)
+                {
+                    var pasta = database.Pastas.FirstOrDefault(x => x.Name == entry.Key);
+
+                    pastas.Append(pasta.Name);
+
+                    if (pasta.Name != searchResults.LastOrDefault().Key)
+                    {
+                        pastas.Append(", ");
+                    }
+                }
+
+                if (pastas.Length >= 900)
+                {
+                    using MemoryStream stream = new MemoryStream();
+                    using StreamWriter writer = new StreamWriter(stream);
+                    writer.Write(pastas.ToString());
+
+                    stream.Position = 0;
+
+                    await Context.Channel.SendFileAsync(stream, "pastas.txt", $"Here's all that are related to the search term: \"{search}\"").ConfigureAwait(false);
+                }
+                else
+                {
+                    StringBuilder response = new StringBuilder("`");
+
+                    response.Append(pastas);
+
+                    response.Append("`");
+
+                    await
+                        EmbedExtensions.FromMessage("Pasta Kitchen", $"Here's all that are related to the search term: \"{search}\"\n{response.ToString()}", Context)
                         .QueueMessageAsync(Context)
                         .ConfigureAwait(false);
                 }

@@ -140,7 +140,7 @@ namespace Skuld.Bot.Commands
             => betAmount >= MinimumBet;
 
         [Command("flip")]
-        [Disabled(false, true)]
+        [Disabled(false, true, "Incomplete")]
         [Usage("heads", "heads 250")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task HeadsOrTails(string guess, ulong? bet = null)
