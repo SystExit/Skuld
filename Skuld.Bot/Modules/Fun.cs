@@ -874,10 +874,42 @@ namespace Skuld.Bot.Commands
                     {
                         if (pasta != null)
                         {
-                            await 
-                                EmbedExtensions.FromMessage("Pasta Kitchen", pasta.Content, Context)
-                                .QueueMessageAsync(Context)
-                            .ConfigureAwait(false);
+                            if(pasta.Content.IsImageExtension())
+                            {
+                                var links = new List<string>();
+                                MatchCollection mactches = SkuldAppContext.LinkRegex.Matches(pasta.Content);
+                                foreach (Match match in mactches)
+                                {
+                                    links.Add(match.Value);
+                                }
+
+                                string embedContent = pasta.Content;
+
+                                if(links.Any())
+                                {
+                                    embedContent = pasta.Content.Replace(links.FirstOrDefault(), "");
+                                }
+
+                                await
+                                    EmbedExtensions.FromImage(
+                                        links.FirstOrDefault(),
+                                        embedContent,
+                                        Context
+                                    ).WithTitle("Pasta Kitchen")
+                                    .QueueMessageAsync(Context)
+                                .ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                await
+                                    EmbedExtensions.FromMessage(
+                                        "Pasta Kitchen",
+                                        pasta.Content,
+                                        Context
+                                    )
+                                    .QueueMessageAsync(Context)
+                                .ConfigureAwait(false);
+                            }
                         }
                         else
                         {
