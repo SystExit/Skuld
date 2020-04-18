@@ -799,6 +799,71 @@ namespace Skuld.Bot.Commands
                     }
                     break;
 
+                case "search":
+                    {
+                        var names = Database.Pastas.ToList().Select(x => x.Name).ToList();
+
+                        Dictionary<string, int> orderedPastas = new Dictionary<string, int>();
+
+                        names.ForEach(x =>
+                        {
+                            var confidence = FuzzyString.ComparisonMetrics.LevenshteinDistance(title, x);
+                            orderedPastas.Add(x, confidence);
+                        });
+
+                        var searchResults = orderedPastas.OrderByDescending(x => x.Value);
+
+                        if (searchResults.Any())
+                        {
+                            StringBuilder pastas = new StringBuilder();
+
+                            foreach (var entry in searchResults)
+                            {
+                                var p = Database.Pastas.FirstOrDefault(x => x.Name == entry.Key);
+
+                                pastas.Append(p.Name);
+
+                                if (p.Name != searchResults.LastOrDefault().Key)
+                                {
+                                    pastas.Append(", ");
+                                }
+                            }
+
+                            if (pastas.Length >= 900)
+                            {
+                                using MemoryStream stream = new MemoryStream();
+                                using StreamWriter writer = new StreamWriter(stream);
+                                writer.Write(pastas.ToString());
+
+                                stream.Position = 0;
+
+                                await Context.Channel.SendFileAsync(stream, "pastas.txt", $"Here's all that are related to the search term: \"{title}\"").ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                StringBuilder response = new StringBuilder("`");
+
+                                response.Append(pastas);
+
+                                response.Append("`");
+
+                                await
+                                    EmbedExtensions.FromMessage("Pasta Kitchen", $"Here's all that are related to the search term: \"{title}\"\n{response.ToString()}", Context)
+                                    .QueueMessageAsync(Context)
+                                    .ConfigureAwait(false);
+                            }
+                        }
+                        else
+                        {
+                            await
+                                EmbedExtensions.FromError("Pasta Kitchen", "You have no pastas", Context)
+                                .QueueMessageAsync(Context)
+                                .ConfigureAwait(false);
+                        }
+
+                    }
+                    break;
+
                 default:
                     {
                         if (pasta != null)
@@ -959,73 +1024,6 @@ namespace Skuld.Bot.Commands
 
                     await
                         EmbedExtensions.FromMessage("Pasta Kitchen", $"Your pastas are: {response}", Context)
-                        .QueueMessageAsync(Context)
-                        .ConfigureAwait(false);
-                }
-            }
-            else
-            {
-                await
-                    EmbedExtensions.FromError("Pasta Kitchen", "You have no pastas", Context)
-                    .QueueMessageAsync(Context)
-                    .ConfigureAwait(false);
-            }
-        }
-
-        [Command("pasta search"), Summary("Search for a pasta"), RequireDatabase]
-        [Ratelimit(20, 1, Measure.Minutes)]
-        public async Task SearchPasta([Remainder] string search)
-        {
-            SkuldDbContext database = new SkuldDbContextFactory().CreateDbContext();
-
-            var names = database.Pastas.ToList().Select(x => x.Name).ToList();
-
-            Dictionary<string, int> orderedPastas = new Dictionary<string, int>();
-
-            names.ForEach(x =>
-            {
-                var confidence = FuzzyString.ComparisonMetrics.LevenshteinDistance(search, x);
-                orderedPastas.Add(x, confidence);
-            });
-
-            var searchResults = orderedPastas.OrderByDescending(x => x.Value);
-
-            if (searchResults.Any())
-            {
-                StringBuilder pastas = new StringBuilder();
-
-                foreach (var entry in searchResults)
-                {
-                    var pasta = database.Pastas.FirstOrDefault(x => x.Name == entry.Key);
-
-                    pastas.Append(pasta.Name);
-
-                    if (pasta.Name != searchResults.LastOrDefault().Key)
-                    {
-                        pastas.Append(", ");
-                    }
-                }
-
-                if (pastas.Length >= 900)
-                {
-                    using MemoryStream stream = new MemoryStream();
-                    using StreamWriter writer = new StreamWriter(stream);
-                    writer.Write(pastas.ToString());
-
-                    stream.Position = 0;
-
-                    await Context.Channel.SendFileAsync(stream, "pastas.txt", $"Here's all that are related to the search term: \"{search}\"").ConfigureAwait(false);
-                }
-                else
-                {
-                    StringBuilder response = new StringBuilder("`");
-
-                    response.Append(pastas);
-
-                    response.Append("`");
-
-                    await
-                        EmbedExtensions.FromMessage("Pasta Kitchen", $"Here's all that are related to the search term: \"{search}\"\n{response.ToString()}", Context)
                         .QueueMessageAsync(Context)
                         .ConfigureAwait(false);
                 }
