@@ -373,14 +373,14 @@ namespace Skuld.Bot.Commands
                 target = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
             }
 
-            ulong MoneyAmount = self.GetDailyAmount(Configuration);
-
             var previousAmount = user == null ? self.Money : target.Money;
 
             if (self.IsStreakReset(Configuration))
             {
                 self.Streak = 0;
             }
+
+            ulong MoneyAmount = self.GetDailyAmount(Configuration);
 
             if ((user == null ? self : target).ProcessDaily(MoneyAmount, self))
             {
@@ -410,7 +410,10 @@ namespace Skuld.Bot.Commands
 
                 if (self.Streak > 0)
                 {
-                    embed.AddField("Streak", $"You're on a streak of {self.Streak} days!!");
+                    embed.AddField(
+                        "Streak",
+                        $"You're on a streak of {self.Streak} days!!"
+                    );
                 }
 
                 self.Streak = self.Streak.Add(1);
@@ -420,9 +423,7 @@ namespace Skuld.Bot.Commands
                     self.MaxStreak = self.Streak;
                 }
 
-                await
-                    embed.QueueMessageAsync(Context)
-                .ConfigureAwait(false);
+                await embed.QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
