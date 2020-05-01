@@ -112,7 +112,7 @@ namespace Skuld.Bot.Commands
             }
             catch (Exception ex)
             {
-                Log.Error("Stats-Cmd", ex.Message, ex);
+                Log.Error("Stats-Cmd", ex.Message, Context, ex);
                 await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }

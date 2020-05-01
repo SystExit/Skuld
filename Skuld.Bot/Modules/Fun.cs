@@ -82,6 +82,12 @@ namespace Skuld.Bot.Commands
             "SKULD_FUN_8BALL_NO5"
         };
 
+        private readonly string PokemonUrl = 
+            "http://images.alexonsager.net/pokemon/fused/{1}/{1}.{2}.png";
+
+        private readonly StringComparison Comparison =
+            StringComparison.InvariantCultureIgnoreCase;
+
         [Command("fuse")]
         [Summary("Fuses 2 of the 1st generation pokemon")]
         [Usage("5 96")]
@@ -90,19 +96,30 @@ namespace Skuld.Bot.Commands
         {
             if (int1 > 151 || int1 < 0)
             {
-                await EmbedExtensions.FromError($"{int1} over/under limit. (151)", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await 
+                    EmbedExtensions
+                        .FromError($"{int1} over/under limit. (151)", Context)
+                    .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
             }
             else if (int2 > 151 || int2 < 0)
             {
-                await EmbedExtensions.FromError($"{int2} over/under limit. (151)", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await 
+                    EmbedExtensions
+                        .FromError($"{int2} over/under limit. (151)", Context)
+                    .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
             }
             else
             {
+                var url = PokemonUrl
+                    .Replace("{1}", Convert.ToString(int1, null), Comparison)
+                    .Replace("{2}", Convert.ToString(int2, null), Comparison);
                 await
                     EmbedExtensions
                         .FromMessage(Context)
-                        .WithImageUrl($"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png")
-                        .QueueMessageAsync(Context)
+                        .WithImageUrl(url)
+                    .QueueMessageAsync(Context)
                 .ConfigureAwait(false);
             }
         }
@@ -112,7 +129,11 @@ namespace Skuld.Bot.Commands
         [Command("reminder")]
         [Alias("remind")]
         [Summary("What was that thing I needed to do again?")]
-        [Usage("Get eggs in 1h 30m", "Get eggs in 1h 30m --repeat", "dab on the haters in 2d 1h 30m 5s", "dab on the haters in 2d 1h 30m 5s --repeat")]
+        [Usage(
+            "Get eggs in 1h 30m", "Get eggs in 1h 30m --repeat",
+            "dab on the haters in 2d 1h 30m 5s",
+            "dab on the haters in 2d 1h 30m 5s --repeat"
+        )]
         [RequireDatabase]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Reminder([Remainder]string Reminder)
@@ -1178,7 +1199,7 @@ namespace Skuld.Bot.Commands
             }
             catch (Exception ex)
             {
-                Log.Error("CAH-Cmd", "Error parsing website", ex);
+                Log.Error("CAH-Cmd", "Error parsing website", Context, ex);
             }
         }
 
@@ -1201,7 +1222,7 @@ namespace Skuld.Bot.Commands
             }
             catch (Exception ex)
             {
-                Log.Error("CAD-Cmd", "Error parsing website", ex);
+                Log.Error("CAD-Cmd", "Error parsing website", Context, ex);
                 await EmbedExtensions.FromError($"Error parsing website, try again later", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
@@ -1599,7 +1620,7 @@ namespace Skuld.Bot.Commands
                     EmbedExtensions.FromError("firstArticle doesn't exist", Context)
                     .QueueMessageAsync(Context)
                 .ConfigureAwait(false);
-                Log.Error("WikiSmash", ex.Message, ex);
+                Log.Error("WikiSmash", ex.Message, Context, ex);
 
                 return;
             }
@@ -1626,7 +1647,7 @@ namespace Skuld.Bot.Commands
                     EmbedExtensions.FromError("secondArticle doesn't exist", Context)
                     .QueueMessageAsync(Context)
                 .ConfigureAwait(false);
-                Log.Error("WikiSmash", ex.Message, ex);
+                Log.Error("WikiSmash", ex.Message, Context, ex);
 
                 return;
             }

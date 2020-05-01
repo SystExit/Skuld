@@ -326,7 +326,8 @@ namespace Skuld.Bot.Commands
                 image.Draw(font, fontsize, encoding, new DrawableText(25, 493, (exp.XP).ToFormattedString() + "XP"));
 
                 //XP To Next
-                using (MagickImage label5 = new MagickImage($"label:{xpToNextLevel.ToFormattedString()}XP",
+                using MagickImage label5 = new MagickImage(
+                    $"label:{xpToNextLevel.ToFormattedString()}XP",
                     new MagickReadSettings
                     {
                         BackgroundColor = MagickColors.Transparent,
@@ -336,10 +337,10 @@ namespace Skuld.Bot.Commands
                         TextGravity = Gravity.East,
                         FontPointsize = 20,
                         Font = fontFile
-                    }))
-                {
-                    image.Composite(label5, 0, 475, CompositeOperator.Over);
-                }
+                    }
+                );
+
+                image.Composite(label5, 0, 475, CompositeOperator.Over);
             }
 
             MemoryStream outputStream = new MemoryStream();

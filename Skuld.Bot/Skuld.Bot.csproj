@@ -6,8 +6,8 @@
     <Version>2020.04</Version>
     <StartupObject>Skuld.Bot.Program</StartupObject>
     <ApplicationIcon />
-    <AssemblyVersion>2020.4.103.0</AssemblyVersion>
-    <FileVersion>2020.4.103.0</FileVersion>
+    <AssemblyVersion>2020.4.120.0</AssemblyVersion>
+    <FileVersion>2020.4.120.0</FileVersion>
     <LangVersion>preview</LangVersion>
     <NeutralLanguage>en-GB</NeutralLanguage>
   </PropertyGroup>
@@ -19,7 +19,7 @@
   <ItemGroup>
     <PackageReference Include="Akitaux.Twitch.Helix" Version="0.1.0-build-00012" />
     <PackageReference Include="CoreCLR-NCalc" Version="2.2.70" />
-    <PackageReference Include="Discord.Net" Version="2.3.0-dev-20200417.1" />
+    <PackageReference Include="Discord.Net" Version="2.3.0-dev-20200425.1" />
     <PackageReference Include="DogStatsD-CSharp-Client" Version="4.0.1" />
     <PackageReference Include="FIGlet.Net" Version="1.1.1" />
     <PackageReference Include="Fleck" Version="1.1.0" />
@@ -36,13 +36,13 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="NodaTime" Version="3.0.0-beta01" />
+    <PackageReference Include="NodaTime" Version="3.0.0-beta02" />
     <PackageReference Include="Octokit" Version="0.47.0" />
     <PackageReference Include="OpenCover" Version="4.7.922" />
     <PackageReference Include="PokeApi.NET" Version="1.1.2" />
     <PackageReference Include="SauceNET" Version="1.0.1" />
     <PackageReference Include="Sentry" Version="2.1.2-beta2" />
-    <PackageReference Include="System.Drawing.Common" Version="5.0.0-preview.2.20160.6" />
+    <PackageReference Include="System.Drawing.Common" Version="5.0.0-preview.3.20214.6" />
     <PackageReference Include="TimeZoneConverter" Version="3.2.0" />
     <PackageReference Include="TraceMoe.NET" Version="1.0.5" />
     <PackageReference Include="Weeb.net" Version="1.0.7" />

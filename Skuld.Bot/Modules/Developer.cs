@@ -556,7 +556,7 @@ namespace Skuld.Bot.Commands
             }
             catch (Exception ex)
             {
-                Log.Error("MergeCmd", ex.Message, ex);
+                Log.Error("MergeCmd", ex.Message, Context, ex);
                 await "Check the console log".QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
@@ -828,7 +828,11 @@ namespace Skuld.Bot.Commands
 #pragma warning restore CS0168 // Variable is declared but never used
             catch (Exception ex)
             {
-                Log.Error("EvalCMD", "Error with eval command " + ex.Message, ex);
+                Log.Error(
+                    "EvalCMD", 
+                    "Error with eval command " + ex.Message, 
+                    Context,
+                    ex);
 
                 await EmbedExtensions.FromError("Script Evaluation", $"Error with eval command\n\n{ex.Message}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }

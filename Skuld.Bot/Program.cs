@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using Sentry;
 using Skuld.Core;
 using Skuld.Core.Utilities;
 using Skuld.Models;
@@ -48,7 +49,7 @@ namespace Skuld.Bot
                     var conf = new SkuldConfig();
                     database.Configurations.Add(conf);
                     await database.SaveChangesAsync().ConfigureAwait(false);
-                    Log.Verbose("HostService", $"Created new configuration with Id: {conf.Id}");
+                    Log.Verbose("HostService", $"Created new configuration with Id: {conf.Id}", null);
                 }
 
                 var configId = SkuldAppContext.GetEnvVar(SkuldAppContext.ConfigEnvVar);
@@ -61,7 +62,7 @@ namespace Skuld.Bot
             }
             catch (Exception ex)
             {
-                Log.Critical("HostService", ex.Message, ex);
+                Log.Critical("HostService", ex.Message, null, ex);
             }
 
             await BotService.ConfigureBotAsync(
@@ -89,9 +90,23 @@ namespace Skuld.Bot
 
             Log.Info("HostService", "Loaded Skuld v" + SkuldAppContext.Skuld.Key.Version);
 
-            await BotService.StartBotAsync().ConfigureAwait(false);
+            var sentryKey = Environment.GetEnvironmentVariable(SkuldAppContext.SentryIOEnvVar);
 
-            await Task.Delay(-1).ConfigureAwait(false);
+            if(sentryKey != null)
+            {
+                using (SentrySdk.Init(sentryKey))
+                {
+                    await BotService.StartBotAsync().ConfigureAwait(false);
+
+                    await Task.Delay(-1).ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                await BotService.StartBotAsync().ConfigureAwait(false);
+
+                await Task.Delay(-1).ConfigureAwait(false);
+            }
 
             BotService.WebSocket.ShutdownServer();
 

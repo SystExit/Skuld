@@ -1292,9 +1292,11 @@ namespace Skuld.Bot.Commands
             Database.IAmRoles.Add(new IAmRole
             {
                 GuildId = Context.Guild.Id,
-                LevelRequired = config.RequireLevel,
-                Price = config.Cost,
-                RequiredRoleId = config.RequiredRole != null ? config.RequiredRole.Id : 0,
+                LevelRequired = config.RequireLevel.GetValueOrDefault(0),
+                Price = config.Cost.GetValueOrDefault(0),
+                RequiredRoleId = config.RequiredRole != null ? 
+                                    config.RequiredRole.Id : 
+                                    0,
                 RoleId = role.Id
             });
 
@@ -1307,7 +1309,7 @@ namespace Skuld.Bot.Commands
             {
                 await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
 
-                Log.Error("ASAR-CMD", ex.Message, ex);
+                Log.Error("ASAR-CMD", ex.Message, Context, ex);
             }
         }
 
@@ -1320,9 +1322,9 @@ namespace Skuld.Bot.Commands
             var levelReward = new LevelRewards
             {
                 GuildId = Context.Guild.Id,
-                LevelRequired = config.RequireLevel,
+                LevelRequired = config.RequireLevel.GetValueOrDefault(0),
                 RoleId = role.Id,
-                Automatic = config.Automatic
+                Automatic = config.Automatic.GetValueOrDefault(false)
             };
 
             using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -1345,7 +1347,7 @@ namespace Skuld.Bot.Commands
             {
                 await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
 
-                Log.Error("ALR-CMD", ex.Message, ex);
+                Log.Error("ALR-CMD", ex.Message, Context, ex);
             }
         }
 
@@ -1369,11 +1371,11 @@ namespace Skuld.Bot.Commands
             {
                 await EmbedExtensions.FromError($"Command Error", ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
 
-                Log.Error("DA-CMD", ex.Message, ex);
+                Log.Error("DA-CMD", ex.Message, Context, ex);
             }
         }
 
-        [Command("deletelr"), Summary("Removes a Level Grant Role from the list")]
+        [Command("deletelr"), Summary("Removes a Level Grant Role from the list"), Alias("dlr")]
         [Usage("\"Super Duper Role\"")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task DeleteLevelRole([Remainder]IRole role)
@@ -1393,7 +1395,32 @@ namespace Skuld.Bot.Commands
             {
                 await EmbedExtensions.FromError($"Command Error", ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
 
-                Log.Error("DLR-CMD", ex.Message, ex);
+                Log.Error("DLR-CMD", ex.Message, Context, ex);
+            }
+        }
+
+        [Command("updatelr"), Summary("Updates a Level Grant Role"), Alias("ulr")]
+        [Usage("\"Super Duper Role\" require-level=25", "\"Super Duper Role\" require-level=25 automatic=true")]
+        [RequireUserPermission(GuildPermission.Administrator)]
+        public async Task UpdateLevelRole(IRole role, [Remainder]GuildRoleConfig config)
+        {
+            using var Database = new SkuldDbContextFactory().CreateDbContext();
+            var r = Database.LevelRewards.FirstOrDefault(x => x.RoleId == role.Id);
+
+            r.Automatic = config.Automatic.GetValueOrDefault(r.Automatic);
+            r.LevelRequired = config.RequireLevel.GetValueOrDefault(r.LevelRequired);
+
+            try
+            {
+                await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                await EmbedExtensions.FromInfo($"Added new Level Reward with configuration `{config}`", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
+
+                Log.Error("ALR-CMD", ex.Message, Context, ex);
             }
         }
 
@@ -1442,7 +1469,7 @@ namespace Skuld.Bot.Commands
             }
             catch (Exception ex)
             {
-                Log.Error(SkuldAppContext.GetCaller(), ex.Message, ex);
+                Log.Error(SkuldAppContext.GetCaller(), ex.Message, Context, ex);
                 await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }

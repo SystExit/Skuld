@@ -15,6 +15,7 @@ using Skuld.Services.Discord.Attributes;
 using Skuld.Services.Discord.Preconditions;
 using Skuld.Services.Globalization;
 using Skuld.Services.Messaging.Extensions;
+using Skuld.Services.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -614,9 +615,15 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            await
-                embed.AddInlineField(Context.Client.CurrentUser.Username, botRoll)
-                     .AddInlineField(Context.User.Username, plaRoll)
+            await embed
+                    .AddInlineField(
+                        Context.Client.CurrentUser.Username,
+                        botRoll
+                    )
+                    .AddInlineField(
+                        Context.User.Username,
+                        plaRoll
+                    )
                 .QueueMessageAsync(Context)
             .ConfigureAwait(false);
         }
