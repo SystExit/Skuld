@@ -592,6 +592,7 @@ namespace Skuld.Bot.Commands
         #region Leaderboards
 
         [
+            Name("leaderboard"),
             Group("leaderboard"),
             Summary("Get the leaderboard \"money\" or \"levels\""),
             Alias("lb"),
