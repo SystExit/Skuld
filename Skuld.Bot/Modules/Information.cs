@@ -592,19 +592,19 @@ namespace Skuld.Bot.Commands
         #region Leaderboards
 
         [
-            Name("leaderboard"),
+            Name("Leaderboard"),
             Group("leaderboard"),
-            Summary("Get the leaderboard \"money\" or \"levels\""),
             Alias("lb"),
             Ratelimit(20, 1, Measure.Minutes)
         ]
-        public class Leaderboard : ModuleBase<ShardedCommandContext>
+        public class LeaderboardModule : ModuleBase<ShardedCommandContext>
         {
             [
-                Name("money"),
+                Command("money"),
+                Summary("Get the money leaderboard"),
                 Usage("true", "false")
             ]
-            public async Task MoneyLeaderboard(bool global = false)
+            public async Task MoneyLeaderboard(bool global = true)
             {
                 if (global)
                 {
@@ -641,7 +641,8 @@ namespace Skuld.Bot.Commands
                 }
             }
             [
-                Name("levels"),
+                Command("levels"),
+                Summary("Get the experience leaderboard"),
                 Usage("true", "false")
             ]
             public async Task ExperienceLeaderboard(bool global = false)
@@ -704,129 +705,128 @@ namespace Skuld.Bot.Commands
                     ).QueueMessageAsync(Context)
                 .ConfigureAwait(false);
             }
-        }
 
-        [
-            Command("commandusage"),
-            Summary("Get the usage for the command specified"),
-            Ratelimit(20, 1, Measure.Minutes),
-            Usage("ping")
-        ]
-        public async Task GetCommandUsage([Remainder]string command)
-        {
-            bool existsButNoData = false;
-            CommandLeaderboardInfo info = null;
+            [
+                Command("command"),
+                Summary("Get the usage for the command specified"),
+                Usage("ping")
+            ]
+            public async Task GetCommandUsage([Remainder]string command)
             {
-                using var Database = new SkuldDbContextFactory()
-                    .CreateDbContext();
-
-                if (Database.CustomCommands.Any(x => x.Name == command))
-                {
-                    var first =
-                        Database.CustomCommands
-                        .FirstOrDefault(x => x.Name == command);
-                    var usage =
-                        Database.UserCommandUsage
-                        .FirstOrDefault(x =>
-                        x.UserId == Context.User.Id && x.Command == command);
-                    var ranking = await
-                        Database.UserCommandUsage.AsAsyncEnumerable()
-                        .Where(x => x.Command == command)
-                        .OrderByDescending(x => x.Usage)
-                    .ToListAsync();
-
-                    if (first != null && usage != null && ranking.Any())
-                    {
-                        info = new CommandLeaderboardInfo
-                        {
-                            Name = first.Name,
-                            Usage = usage.Usage,
-                            Rank = (ulong)ranking.IndexOf(
-                                ranking.FirstOrDefault(x =>
-                                x.UserId == Context.User.Id)
-                            ) + 1,
-                            Total = (ulong)ranking.Count
-                        };
-                    }
-                    else if (first != null)
-                    {
-                        existsButNoData = true;
-                    }
-                }
-            }
-
-            if (info == null)
-            {
-                var result = BotService.CommandService.Search(command);
-
-                if (result.IsSuccess)
+                bool existsButNoData = false;
+                CommandLeaderboardInfo info = null;
                 {
                     using var Database = new SkuldDbContextFactory()
                         .CreateDbContext();
-                    var usage = Database.UserCommandUsage
-                        .FirstOrDefault(x =>
-                        x.UserId == Context.User.Id && x.Command == command);
-                    var ranking = await
-                        Database.UserCommandUsage.AsAsyncEnumerable()
-                        .Where(x => x.Command == command)
-                        .OrderByDescending(x => x.Usage)
-                    .ToListAsync();
 
-                    if (usage != null && ranking.Any())
+                    if (Database.CustomCommands.Any(x => x.Name == command))
                     {
-                        info = new CommandLeaderboardInfo
+                        var first =
+                            Database.CustomCommands
+                            .FirstOrDefault(x => x.Name == command);
+                        var usage =
+                            Database.UserCommandUsage
+                            .FirstOrDefault(x =>
+                            x.UserId == Context.User.Id && x.Command == command);
+                        var ranking = await
+                            Database.UserCommandUsage.AsAsyncEnumerable()
+                            .Where(x => x.Command == command)
+                            .OrderByDescending(x => x.Usage)
+                        .ToListAsync();
+
+                        if (first != null && usage != null && ranking.Any())
                         {
-                            Name = result.Commands.FirstOrDefault()
-                                .Command.Name,
-                            Usage = usage.Usage,
-                            Rank = (ulong)ranking.IndexOf(
-                                ranking.FirstOrDefault(x =>
-                                x.UserId == Context.User.Id)
-                            ) + 1,
-                            Total = (ulong)ranking.Count
-                        };
-                    }
-                    else
-                    {
-                        existsButNoData = true;
+                            info = new CommandLeaderboardInfo
+                            {
+                                Name = first.Name,
+                                Usage = usage.Usage,
+                                Rank = (ulong)ranking.IndexOf(
+                                    ranking.FirstOrDefault(x =>
+                                    x.UserId == Context.User.Id)
+                                ) + 1,
+                                Total = (ulong)ranking.Count
+                            };
+                        }
+                        else if (first != null)
+                        {
+                            existsButNoData = true;
+                        }
                     }
                 }
-            }
 
-            if (info == null && !existsButNoData)
-            {
+                if (info == null)
+                {
+                    var result = BotService.CommandService.Search(command);
+
+                    if (result.IsSuccess)
+                    {
+                        using var Database = new SkuldDbContextFactory()
+                            .CreateDbContext();
+                        var usage = Database.UserCommandUsage
+                            .FirstOrDefault(x =>
+                            x.UserId == Context.User.Id && x.Command == command);
+                        var ranking = await
+                            Database.UserCommandUsage.AsAsyncEnumerable()
+                            .Where(x => x.Command == command)
+                            .OrderByDescending(x => x.Usage)
+                        .ToListAsync();
+
+                        if (usage != null && ranking.Any())
+                        {
+                            info = new CommandLeaderboardInfo
+                            {
+                                Name = result.Commands.FirstOrDefault()
+                                    .Command.Name,
+                                Usage = usage.Usage,
+                                Rank = (ulong)ranking.IndexOf(
+                                    ranking.FirstOrDefault(x =>
+                                    x.UserId == Context.User.Id)
+                                ) + 1,
+                                Total = (ulong)ranking.Count
+                            };
+                        }
+                        else
+                        {
+                            existsButNoData = true;
+                        }
+                    }
+                }
+
+                if (info == null && !existsButNoData)
+                {
+                    await
+                        EmbedExtensions.FromError(
+                            $"Couldn't find a command like: `{command}`. " +
+                            "Please verify input and try again.",
+                            Context
+                        )
+                        .QueueMessageAsync(Context).ConfigureAwait(false);
+                    return;
+                }
+                else if (existsButNoData)
+                {
+                    await
+                        EmbedExtensions.FromError(
+                            $"You haven't used the command: `{command}`. " +
+                            "Please use it and try again",
+                            Context
+                        )
+                        .QueueMessageAsync(Context).ConfigureAwait(false);
+                    return;
+                }
+
+                var rank = $"{info.Rank.ToFormattedString()}/" +
+                    info.Total.ToFormattedString();
+
                 await
-                    EmbedExtensions.FromError(
-                        $"Couldn't find a command like: `{command}`. " +
-                        "Please verify input and try again.",
-                        Context
-                    )
-                    .QueueMessageAsync(Context).ConfigureAwait(false);
-                return;
+                    new EmbedBuilder()
+                    .AddAuthor(Context.Client)
+                    .AddFooter(Context)
+                    .AddInlineField("Command", info.Name)
+                    .AddInlineField("Usage", info.Usage.ToFormattedString())
+                    .AddInlineField("Rank", rank)
+                .QueueMessageAsync(Context).ConfigureAwait(false);
             }
-            else if (existsButNoData)
-            {
-                await
-                    EmbedExtensions.FromError(
-                        $"You haven't used the command: `{command}`. " +
-                        "Please use it and try again",
-                        Context
-                    )
-                    .QueueMessageAsync(Context).ConfigureAwait(false);
-                return;
-            }
-
-            var rank = $"{info.Rank.ToFormattedString()}/" +
-                info.Total.ToFormattedString();
-
-            await
-                new EmbedBuilder()
-                .AddAuthor(Context.Client)
-                .AddFooter(Context)
-                .AddInlineField("Command", info.Name)
-                .AddInlineField("Usage", info.Usage.ToFormattedString())
-                .AddInlineField("Rank", rank)
-            .QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         private class CommandLeaderboardInfo
