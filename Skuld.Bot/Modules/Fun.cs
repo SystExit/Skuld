@@ -200,7 +200,9 @@ namespace Skuld.Bot.Commands
 
             ushort localId = (ushort)SkuldRandom.Next(0, ushort.MaxValue);
 
-            while(Database.Reminders.ToList().Any(x=>x.LocalId == localId && x.UserId == Context.User.Id))
+            while(Database.Reminders.ToList()
+                .Any(x=>x.LocalId == localId && x.UserId == Context.User.Id)
+            )
             {
                 localId = (ushort)SkuldRandom.Next(0, ushort.MaxValue);
             }
@@ -1177,12 +1179,20 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("cah"), Summary("Gets a Random Cynaide & Happiness Comic"), Alias("cyanide&happiness", "c&h"), Ratelimit(5, 1, Measure.Minutes)]
+        [
+            Command("cah"), 
+            Summary("Gets a Random Cynaide & Happiness Comic"), 
+            Alias("cyanide&happiness", "c&h"), 
+            Ratelimit(5, 1, Measure.Minutes)
+        ]
         public async Task CAH()
         {
             try
             {
-                var comic = await ComicClients.GetCAHComicAsync().ConfigureAwait(false) as CAHComic;
+                var comic = await 
+                    ComicClients.GetCAHComicAsync()
+                .ConfigureAwait(false) as CAHComic;
+
                 DogStatsd.Increment("web.get");
 
                 await new EmbedBuilder()
@@ -1203,15 +1213,24 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("cad"), Summary("Gets a random CAD comic"), Ratelimit(5, 1, Measure.Minutes)]
+        [
+            Command("cad"), 
+            Summary("Gets a random CAD comic"), 
+            Ratelimit(5, 1, Measure.Minutes)
+        ]
         public async Task CAD()
         {
             try
             {
-                var comic = await ComicClients.GetCADComicAsync().ConfigureAwait(false) as CADComic;
+                var comic = await 
+                    ComicClients.GetCADComicAsync()
+                .ConfigureAwait(false) as CADComic;
                 DogStatsd.Increment("web.get");
                 await
-                    EmbedExtensions.FromImage(comic.ImageURL, EmbedExtensions.RandomEmbedColor(), Context)
+                    EmbedExtensions.FromImage(
+                        comic.ImageURL, 
+                        EmbedExtensions.RandomEmbedColor(), 
+                        Context)
                         .WithAuthor(
                             new EmbedAuthorBuilder()
                             .WithName("Tim Buckley")
@@ -1223,7 +1242,10 @@ namespace Skuld.Bot.Commands
             catch (Exception ex)
             {
                 Log.Error("CAD-Cmd", "Error parsing website", Context, ex);
-                await EmbedExtensions.FromError($"Error parsing website, try again later", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(
+                    $"Error parsing website, try again later", 
+                    Context).QueueMessageAsync(Context)
+                .ConfigureAwait(false);
             }
         }
 
