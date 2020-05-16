@@ -625,19 +625,30 @@ namespace Skuld.Bot.Commands
                                     }
                                     else
                                     {
-                                        Database.Pastas.Add(new Pasta
+                                        if(pasta.Content != null)
                                         {
-                                            OwnerId = Context.User.Id,
-                                            Name = title,
-                                            Content = content,
-                                            Created = DateTime.UtcNow.ToEpoch()
-                                        });
+                                            Database.Pastas.Add(new Pasta
+                                            {
+                                                OwnerId = Context.User.Id,
+                                                Name = title,
+                                                Content = content,
+                                                Created = DateTime.UtcNow.ToEpoch()
+                                            });
 
-                                        await Database.SaveChangesAsync().ConfigureAwait(false);
+                                            if(Context.Message.Attachments.Any())
+                                            {
+                                                foreach(var att in Context.Message.Attachments)
+                                                {
+                                                    content += $"\n{att.Url}";
+                                                }
+                                            }
 
-                                        if (Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower()) != null)
-                                        {
-                                            await EmbedExtensions.FromSuccess($"Added: **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                                            await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                                            if (Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower()) != null)
+                                            {
+                                                await EmbedExtensions.FromSuccess($"Added: **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                                            }
                                         }
                                     }
                                 }
@@ -920,7 +931,9 @@ namespace Skuld.Bot.Commands
                     {
                         if (pasta != null)
                         {
-                            if(pasta.Content.IsImageExtension())
+                            var owner = Context.Client.GetUser(pasta.OwnerId);
+
+                            if (pasta.Content.IsImageExtension())
                             {
                                 var links = new List<string>();
                                 MatchCollection mactches = SkuldAppContext.LinkRegex.Matches(pasta.Content);
@@ -929,19 +942,13 @@ namespace Skuld.Bot.Commands
                                     links.Add(match.Value);
                                 }
 
-                                string embedContent = pasta.Content;
-
-                                if(links.Any())
-                                {
-                                    embedContent = pasta.Content.Replace(links.FirstOrDefault(), "");
-                                }
-
                                 await
                                     EmbedExtensions.FromImage(
                                         links.FirstOrDefault(),
-                                        embedContent,
+                                        pasta.Content,
                                         Context
-                                    ).WithTitle("Pasta Kitchen")
+                                    )
+                                    .WithTitle($"{pasta.Name} - {owner.FullName()}")
                                     .QueueMessageAsync(Context)
                                 .ConfigureAwait(false);
                             }
@@ -949,7 +956,7 @@ namespace Skuld.Bot.Commands
                             {
                                 await
                                     EmbedExtensions.FromMessage(
-                                        "Pasta Kitchen",
+                                        $"{pasta.Name} - {owner.FullName()}",
                                         pasta.Content,
                                         Context
                                     )
