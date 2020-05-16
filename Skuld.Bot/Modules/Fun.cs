@@ -518,9 +518,14 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("yn"), Summary("Yes, no, maybe. I don't know, can you repeat the question?")]
-        [Usage("Will it rain today?")]
-        [Ratelimit(20, 1, Measure.Minutes)]
+        [
+            Command("yn"),
+            Summary(
+                "Yes, no, maybe. I don't know, can you repeat the question?"
+            ),
+            Usage("Will it rain today?"),
+            Ratelimit(20, 1, Measure.Minutes)
+        ]
         public async Task YN([Remainder]string question = null)
         {
             var YNResp = await YNWTFcli.AskYNWTF().ConfigureAwait(false);
@@ -552,10 +557,28 @@ namespace Skuld.Bot.Commands
 
         #region Pasta
 
-        [Command("pasta"), Summary("Pastas are nice"), RequireDatabase]
-        [Usage("new naenae dab", "edit naenae watch me whip", "who naenae", "upvote naenae", "downvote naenae", "delete naenae", "naenae", "help", "list")]
-        [Ratelimit(20, 1, Measure.Minutes)]
-        public async Task Pasta(string cmd, string title = null, [Remainder]string content = null)
+        [
+            Command("pasta"), 
+            Summary("Pastas are nice"), 
+            RequireDatabase,
+            Usage(
+                "new naenae dab",
+                "edit naenae watch me whip",
+                "who naenae",
+                "upvote naenae",
+                "downvote naenae",
+                "delete naenae",
+                "naenae",
+                "help",
+                "list"
+            ),
+            Ratelimit(20, 1, Measure.Minutes)
+        ]
+        public async Task Pasta(
+            string cmd,
+            string title = null,
+            [Remainder]string content = null
+        )
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
@@ -1588,13 +1611,20 @@ namespace Skuld.Bot.Commands
 
         #endregion Images
 
-        [Command("wikismash"), Summary("Smash the image of the first article, with the content of the second"), Usage("Joker_(character) Insanity")]
+        [
+            Command("wikismash"), 
+            Summary("Smash the image of the first article, with the content of the second"), 
+            Usage("Joker_(character) Insanity")
+        ]
         public async Task WikiSmash(string firstArticle, string secondArticle)
         {
             if(string.IsNullOrEmpty(firstArticle))
             {
                 await
-                    EmbedExtensions.FromError("Incorrect Argument for firstArticle", Context)
+                    EmbedExtensions.FromError(
+                        "Incorrect Argument for firstArticle", 
+                        Context
+                    )
                     .QueueMessageAsync(Context)
                 .ConfigureAwait(false);
                 return;
@@ -1602,7 +1632,10 @@ namespace Skuld.Bot.Commands
             if (string.IsNullOrEmpty(secondArticle))
             { 
                 await
-                    EmbedExtensions.FromError("Incorrect Argument for secondArticle", Context)
+                    EmbedExtensions.FromError(
+                        "Incorrect Argument for secondArticle", 
+                        Context
+                    )
                     .QueueMessageAsync(Context)
                 .ConfigureAwait(false);
                 return;
@@ -1612,14 +1645,19 @@ namespace Skuld.Bot.Commands
 
             try
             {
-                first = await WikiClient.GetArticleAsync("en", firstArticle).ConfigureAwait(false);
+                first = await 
+                    WikiClient.GetArticleAsync("en", firstArticle)
+                .ConfigureAwait(false);
 
                 if (first != null)
                 {
                     if (first.Original == null)
                     {
                         await
-                            EmbedExtensions.FromError("firstArticle doesn't have an image", Context)
+                            EmbedExtensions.FromError(
+                                "firstArticle doesn't have an image", 
+                                Context
+                            )
                             .QueueMessageAsync(Context)
                         .ConfigureAwait(false);
 
@@ -1629,7 +1667,10 @@ namespace Skuld.Bot.Commands
                 else
                 {
                     await
-                        EmbedExtensions.FromError("firstArticle doesn't exist", Context)
+                        EmbedExtensions.FromError(
+                            "firstArticle doesn't exist", 
+                            Context
+                        )
                         .QueueMessageAsync(Context)
                     .ConfigureAwait(false);
 

@@ -461,8 +461,10 @@ namespace Skuld.Bot.Commands
             .ConfigureAwait(false);
         }
 
-        [Command("me")]
-        [Ratelimit(20, 1, Measure.Minutes)]
+        [
+            Command("me"),
+            Ratelimit(20, 1, Measure.Minutes)
+        ]
         public async Task Whois()
         {
             if (!Context.IsPrivate)
