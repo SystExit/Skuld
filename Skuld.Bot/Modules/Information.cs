@@ -591,6 +591,56 @@ namespace Skuld.Bot.Commands
             .QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
+        [
+            Command("youngest"),
+            Summary("Get's the youngest created account in the server"),
+            Ratelimit(20, 1, Measure.Minutes),
+            RequireContext(ContextType.Guild)
+        ]
+        public async Task GetYoungestMember()
+        {
+            var usrs = Context.Guild.Users.OrderByDescending(x => x.CreatedAt);
+
+            var young = usrs.FirstOrDefault();
+
+            await 
+                EmbedExtensions
+                    .FromMessage(
+                        "Server Members", 
+                        "The youngest server member is " +
+                        $"{young.FullNameWithNickname()} - " +
+                        $"{young.Mention}", 
+                        Context
+                    )
+                .QueueMessageAsync(Context)
+            .ConfigureAwait(false);
+        }
+
+        [
+            Command("oldest"),
+            Summary("Get's the oldest created account in the server"),
+            Ratelimit(20, 1, Measure.Minutes),
+            RequireContext(ContextType.Guild)
+        ]
+        public async Task GetOldestMember()
+        {
+            var usrs = Context.Guild.Users.OrderBy(x => x.CreatedAt);
+
+            var old = usrs.FirstOrDefault();
+
+            await 
+                EmbedExtensions
+                    .FromMessage(
+                        "Server Members", 
+                        "The oldest server member is " +
+                        $"{old.FullNameWithNickname()} - " +
+                        $"{old.Mention}", 
+                        Context
+                    )
+                .QueueMessageAsync(Context)
+            .ConfigureAwait(false);
+        }
+
         #region Leaderboards
 
         [
