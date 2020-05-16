@@ -1723,8 +1723,16 @@ namespace Skuld.Bot.Commands
             .ConfigureAwait(false);
         }
 
-        [Command("yandev"), Summary("I, EvaX humbly submit a toast"), Usage("@Skuld instability be a discord bot")]
-        public async Task YanDev(IGuildUser target, string finish, [Remainder]string action)
+        [
+            Command("yandev"), 
+            Summary("I, EvaX humbly submit a toast"), 
+            Usage("@Skuld instability be a discord bot")
+        ]
+        public async Task YanDev(
+            IGuildUser target, 
+            string finish, 
+            [Remainder]string action
+        )
         {
             ITextChannel channel = Context.Channel as ITextChannel;
             if(Context.Message.MentionedChannels.Any())
