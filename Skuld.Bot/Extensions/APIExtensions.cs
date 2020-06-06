@@ -9,6 +9,7 @@ using Skuld.APIS.Utilities;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Localisation;
 using Skuld.Core.Utilities;
+using SteamStorefrontAPI;
 using SteamStoreQuery;
 using System;
 using System.Globalization;
@@ -91,8 +92,7 @@ namespace Skuld.Bot.Extensions
 
         public static async Task<EmbedBuilder> GetEmbedAsync(this Listing game)
         {
-            var SteamStore = new SteamWebAPI2.Interfaces.SteamStore();
-            var app = await SteamStore.GetStoreAppDetailsAsync(Convert.ToUInt32(game.AppId)).ConfigureAwait(false);
+            var app = await AppDetails.GetAsync(game.AppId).ConfigureAwait(false);
 
             string releasetext = app.ReleaseDate.ComingSoon ? "Coming soon! (Date Number may not be accurate)" : "Released on:";
 

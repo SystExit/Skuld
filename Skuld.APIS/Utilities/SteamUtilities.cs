@@ -1,4 +1,5 @@
 ﻿using Skuld.APIS.Extensions;
+using SteamStorefrontAPI.Classes;
 using SteamStoreQuery;
 using System.Linq;
 
@@ -9,7 +10,7 @@ namespace Skuld.APIS.Utilities
         private static readonly string BaseSteamRunUrl = "https://skuldbot.uk/tools/steam.php?action=run&appid=";
         private static readonly string BaseSteamStoreUrl = "https://skuldbot.uk/tools/steam.php?action=store&appid=";
 
-        public static string GetSteamGameDescription(Listing game, Steam.Models.SteamStore.StoreAppDetailsDataModel appdata)
+        public static string GetSteamGameDescription(Listing game, SteamApp appdata)
         {
             var launchurl = BaseSteamRunUrl + appdata.SteamAppId;
             var storeurl = BaseSteamStoreUrl + appdata.SteamAppId;

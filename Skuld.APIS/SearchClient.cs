@@ -106,15 +106,15 @@ namespace Skuld.APIS
         {
             try
             {
-                var items = await Youtube.SearchVideosAsync(query, 1);
+                var items = await Youtube.Search.GetVideosAsync(query);
                 var item = items.FirstOrDefault();
-                var totalreactions = item.Statistics.LikeCount + item.Statistics.DislikeCount;
-                double ratiog = ((double)item.Statistics.LikeCount / totalreactions) * 100;
-                double ratiob = ((double)item.Statistics.DislikeCount / totalreactions) * 100;
+                var totalreactions = item.Engagement.LikeCount + item.Engagement.DislikeCount;
+                double ratiog = ((double)item.Engagement.LikeCount / totalreactions) * 100;
+                double ratiob = ((double)item.Engagement.DislikeCount / totalreactions) * 100;
 
                 return $"<:youtube:314349922885566475> | http://youtu.be/{item.Id}\n" +
-                    $"`👀: {item.Statistics.ViewCount.ToFormattedString()}`\n" +
-                    $"`👍: {item.Statistics.LikeCount.ToFormattedString()} ({ratiog.ToString("0.0")}%)\t👎: {item.Statistics.DislikeCount.ToString("N0")} ({ratiob.ToString("0.0")}%)`\n" +
+                    $"`👀: {item.Engagement.ViewCount.ToFormattedString()}`\n" +
+                    $"`👍: {item.Engagement.LikeCount.ToFormattedString()} ({ratiog.ToString("0.0")}%)\t👎: {item.Engagement.DislikeCount.ToString("N0")} ({ratiob.ToString("0.0")}%)`\n" +
                     $"`Duration: {item.Duration}`";
             }
             catch (Exception ex)
@@ -126,7 +126,7 @@ namespace Skuld.APIS
         public static async Task<IReadOnlyCollection<Result>> SearchGoogleAsync(string query)
         {
             if (GoogleSearchService == null) return null;
-            try
+            /*try
             {
                 var listRequest = GoogleSearchService.Cse.List(query);
                 listRequest.Cx = GoogleCxKey;
@@ -151,7 +151,7 @@ namespace Skuld.APIS
                     return null;
                 }
             }
-            catch
+            catch*/
             {
                 return null;
             }
