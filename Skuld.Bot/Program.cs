@@ -97,16 +97,14 @@ namespace Skuld.Bot
                 using (SentrySdk.Init(sentryKey))
                 {
                     await BotService.StartBotAsync().ConfigureAwait(false);
-
-                    await Task.Delay(-1).ConfigureAwait(false);
                 }
             }
             else
             {
                 await BotService.StartBotAsync().ConfigureAwait(false);
-
-                await Task.Delay(-1).ConfigureAwait(false);
             }
+
+            await Task.Delay(-1).ConfigureAwait(false);
 
             BotService.WebSocket.ShutdownServer();
 
