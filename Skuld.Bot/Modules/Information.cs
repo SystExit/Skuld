@@ -1359,7 +1359,11 @@ namespace Skuld.Bot.Commands
 
             if (guildExperience != null)
             {
-                if (guildExperience.Level < roleconf.LevelRequired && 
+                var lvl = DatabaseUtilities.GetLevelFromTotalXP(
+                    guildExperience.TotalXP,
+                    DiscordUtilities.LevelModifier
+                );
+                if (lvl < roleconf.LevelRequired && 
                     Database.Features
                     .FirstOrDefault(x => x.Id == sguild.Id)
                     .Experience
