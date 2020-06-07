@@ -1575,24 +1575,34 @@ namespace Skuld.Bot.Commands
         [Alias("safe")]
         public async Task Safebooru(params string[] tags)
         {
-            var test = tags.ContainsBlacklistedTags();
-            if (test.Successful)
-            {
-                await $"Your tags contains {test.Data.Count()} banned tags, please remove them.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
-                return;
-            }
-            else
-            {
-                var posts = await SafebooruClient.GetImagesAsync(tags).ConfigureAwait(false);
-                DogStatsd.Increment("web.get");
-                var post = GetSafeImage(posts);
-                if (post != null)
+            tags
+                .ContainsBlacklistedTags()
+                .IsSuccessAsync(x => LewdModule.containsIllegalTags(x, tags, Context))
+                .IsErrorAsync(async x =>
                 {
-                    await post.GetMessage(Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    return;
-                }
-                await EmbedExtensions.FromError("Couldn't find an image", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-            }
+                    var posts = await SafebooruClient
+                        .GetImagesAsync(tags)
+                    .ConfigureAwait(false);
+
+                    DogStatsd.Increment("web.get");
+
+                    if (posts == null || !posts.Any())
+                    {
+                        await EmbedExtensions
+                            .FromError(
+                                "Couldn't find an image.",
+                                Context
+                            )
+                            .QueueMessageAsync(Context)
+                        .ConfigureAwait(false);
+                        return;
+                    }
+
+                    await GetSafeImage(posts)
+                            .GetMessage(Context)
+                            .QueueMessageAsync(Context)
+                            .ConfigureAwait(false);
+                });
         }
 
         public SafebooruImage GetSafeImage(IReadOnlyList<SafebooruImage> posts, int EdgeCase = 0)
