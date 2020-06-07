@@ -294,7 +294,7 @@ namespace Skuld.Bot.Commands
                         return;
                     }
 
-                    EventResult<bool> transactionResult = TransactionService.DoTransaction(new TransactionStruct
+                    TransactionService.DoTransaction(new TransactionStruct
                     {
                         Amount = bet,
                         Sender = user
@@ -313,7 +313,7 @@ namespace Skuld.Bot.Commands
 
                     case WinResult.PlayerWin:
                         {
-                            EventResult<bool> transactionResult = TransactionService.DoTransaction(new TransactionStruct
+                            TransactionService.DoTransaction(new TransactionStruct
                             {
                                 Amount = bet * 2,
                                 Receiver = user
@@ -327,7 +327,7 @@ namespace Skuld.Bot.Commands
 
                     case WinResult.Draw:
                         {
-                            EventResult<bool> transactionResult = TransactionService.DoTransaction(new TransactionStruct
+                            TransactionService.DoTransaction(new TransactionStruct
                             {
                                 Amount = bet,
                                 Receiver = user
@@ -388,7 +388,7 @@ namespace Skuld.Bot.Commands
                     return;
                 }
 
-                EventResult<bool> result = TransactionService.DoTransaction(new TransactionStruct
+                TransactionService.DoTransaction(new TransactionStruct
                 {
                     Amount = bet,
                     Sender = user
@@ -427,7 +427,7 @@ namespace Skuld.Bot.Commands
             {
                 var amount = (ulong)Math.Round(bet * percentageMod);
 
-                EventResult<bool> result = TransactionService.DoTransaction(new TransactionStruct
+                TransactionService.DoTransaction(new TransactionStruct
                 {
                     Amount = amount,
                     Receiver = user

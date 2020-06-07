@@ -372,7 +372,7 @@ namespace Skuld.Bot.Commands
                 await 
                     EmbedExtensions.FromImage(doggo, Color.Red, Context)
                     .QueueMessageAsync(
-                        Context, 
+                        Context,
                         content: "Both the api's are down, that makes the sad a big sad. <:blobcry:350681079415439361>"
                     )
                 .ConfigureAwait(false);

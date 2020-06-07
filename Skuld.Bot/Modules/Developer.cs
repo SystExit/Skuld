@@ -407,7 +407,8 @@ namespace Skuld.Bot.Commands
         {
             if (Context.Client.GetUser(newId) == null)
             {
-                await $"No. {newId} is not a valid user Id".QueueMessageAsync(Context).ConfigureAwait(false);
+                await $"No. {newId} is not a valid user Id"
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
                 return;
             }
             if (newId == oldId)
@@ -419,7 +420,8 @@ namespace Skuld.Bot.Commands
             {
                 //UserAccount
                 {
-                    using var db = new SkuldDbContextFactory().CreateDbContext();
+                    using var db = new SkuldDbContextFactory()
+                        .CreateDbContext();
 
                     var oldUser = db.Users.FirstOrDefault(x => x.Id == oldId);
                     var newUser = db.Users.FirstOrDefault(x => x.Id == newId);
@@ -444,16 +446,24 @@ namespace Skuld.Bot.Commands
 
                 //Reputation
                 {
-                    using var db = new SkuldDbContextFactory().CreateDbContext();
+                    using var db = new SkuldDbContextFactory()
+                        .CreateDbContext();
 
-                    var repee = db.Reputations.AsQueryable().Where(x => x.Repee == oldId);
-                    var reper = db.Reputations.AsQueryable().Where(x => x.Reper == oldId);
+                    var repee = db.Reputations.AsQueryable()
+                        .Where(x => x.Repee == oldId);
+                    var reper = db.Reputations.AsQueryable()
+                        .Where(x => x.Reper == oldId);
 
                     if (repee.Any())
                     {
                         foreach (var rep in repee)
                         {
-                            if (!db.Reputations.Any(x => x.Repee == newId && x.Reper == rep.Reper))
+                            if (!db.Reputations
+                                .Any(x => 
+                                        x.Repee == newId && 
+                                        x.Reper == rep.Reper
+                                    )
+                            )
                             {
                                 rep.Repee = newId;
                             }
@@ -464,7 +474,12 @@ namespace Skuld.Bot.Commands
                     {
                         foreach (var rep in reper)
                         {
-                            if (!db.Reputations.Any(x => x.Reper == newId && x.Repee == rep.Repee))
+                            if (!db.Reputations
+                                .Any(x => 
+                                        x.Reper == newId && 
+                                        x.Repee == rep.Repee
+                                    )
+                            )
                             {
                                 rep.Reper = newId;
                             }
@@ -479,9 +494,11 @@ namespace Skuld.Bot.Commands
 
                 //Pastas
                 {
-                    using var db = new SkuldDbContextFactory().CreateDbContext();
+                    using var db = new SkuldDbContextFactory()
+                        .CreateDbContext();
 
-                    var pastas = db.Pastas.AsQueryable().Where(x => x.OwnerId == oldId);
+                    var pastas = db.Pastas.AsQueryable()
+                        .Where(x => x.OwnerId == oldId);
 
                     if (pastas.Any())
                     {
@@ -496,9 +513,11 @@ namespace Skuld.Bot.Commands
 
                 //PastaVotes
                 {
-                    using var db = new SkuldDbContextFactory().CreateDbContext();
+                    using var db = new SkuldDbContextFactory()
+                        .CreateDbContext();
 
-                    var pastaVotes = db.PastaVotes.AsQueryable().Where(x => x.VoterId == oldId);
+                    var pastaVotes = db.PastaVotes.AsQueryable()
+                        .Where(x => x.VoterId == oldId);
 
                     if (pastaVotes.Any())
                     {
@@ -513,9 +532,11 @@ namespace Skuld.Bot.Commands
 
                 //CommandUsage
                 {
-                    using var db = new SkuldDbContextFactory().CreateDbContext();
+                    using var db = new SkuldDbContextFactory()
+                        .CreateDbContext();
 
-                    var commands = db.UserCommandUsage.AsQueryable().Where(x => x.UserId == oldId);
+                    var commands = db.UserCommandUsage.AsQueryable()
+                        .Where(x => x.UserId == oldId);
 
                     if (commands.Any())
                     {
@@ -530,19 +551,44 @@ namespace Skuld.Bot.Commands
 
                 //Experience
                 {
-                    using var db = new SkuldDbContextFactory().CreateDbContext();
+                    using var db = new SkuldDbContextFactory()
+                        .CreateDbContext();
 
-                    var experiences = db.UserXp.AsQueryable().Where(x => x.UserId == oldId);
+                    var experiences = db.UserXp.AsQueryable()
+                        .Where(x => x.UserId == oldId);
 
-                    if (experiences.Any())
+                    var newExperiences = db.UserXp.AsQueryable()
+                        .Where(x => x.UserId == newId);
+
+                    if (experiences.Any() && !newExperiences.Any())
                     {
                         foreach (var experience in experiences)
                         {
                             experience.UserId = newId;
                         }
-
-                        await db.SaveChangesAsync().ConfigureAwait(false);
                     }
+                    else if (experiences.Any() && newExperiences.Any())
+                    {
+                        foreach(var experience in experiences)
+                        {
+                            if(newExperiences
+                                .Any(x=>
+                                    x.GuildId == experience.GuildId
+                                    )
+                            )
+                            {
+                                var xp = newExperiences
+                                    .FirstOrDefault(x =>
+                                        x.GuildId == experience.GuildId
+                                    );
+
+                                xp.TotalXP = xp.TotalXP
+                                    .Add(experience.TotalXP);
+                            }
+                        }
+                    }
+
+                    await db.SaveChangesAsync().ConfigureAwait(false);
                 }
 
                 //Prune Old User
@@ -587,7 +633,10 @@ namespace Skuld.Bot.Commands
 
             await db.SaveChangesAsync().ConfigureAwait(false);
 
-            await message.QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.DMS).ConfigureAwait(false);
+            await message.QueueMessageAsync(
+                Context, 
+                type: Services.Messaging.Models.MessageType.DMS
+            ).ConfigureAwait(false);
         }
 
         [Command("resetdaily")]
@@ -599,7 +648,8 @@ namespace Skuld.Bot.Commands
 
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(user)
+                .ConfigureAwait(false);
 
             usr.LastDaily = 0;
 
@@ -618,7 +668,8 @@ namespace Skuld.Bot.Commands
 
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(user)
+                .ConfigureAwait(false);
 
             usr.Streak = streak;
 
@@ -636,6 +687,11 @@ namespace Skuld.Bot.Commands
 
             var keys = Database.DonatorKeys.ToList().Where(x => x.Redeemer == user.Id);
 
+            StringBuilder message = new StringBuilder();
+
+            message.Append(user.Mention)
+                .Append(" is ");
+
             if (keys.Any())
             {
                 var keysordered = keys.OrderBy(x => x.RedeemedWhen);
@@ -646,12 +702,15 @@ namespace Skuld.Bot.Commands
 
                 time = time.AddDays(amount);
 
-                await $"{user.Mention} is a donator til {time.ToDMYString()}".QueueMessageAsync(Context).ConfigureAwait(false);
+                message.Append("a donator until ")
+                    .Append(time.ToDMYString());
             }
             else
             {
-                await $"{user.Mention} is not a donator 🙁".QueueMessageAsync(Context).ConfigureAwait(false);
+                message.Append("not a donator 🙁");
             }
+
+            await message.QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("checkkey")]
@@ -661,25 +720,43 @@ namespace Skuld.Bot.Commands
         {
             using var db = new SkuldDbContextFactory().CreateDbContext();
 
-            var donorkey = db.DonatorKeys.FirstOrDefault(x => x.KeyCode == key);
+            var donorkey = db.DonatorKeys
+                .FirstOrDefault(x => x.KeyCode == key);
+
+            StringBuilder message = new StringBuilder();
+
+            message
+                .Append("Key: `")
+                .Append(key)
+                .Append("` ");
 
             if (donorkey != null)
             {
-                await Context.Channel.SendMessageAsync($"Key: `{key}` is{(donorkey.Redeemed ? "" : " not")} redeemed");
+                message
+                    .Append("is")
+                    .Append(donorkey.Redeemed ? "" : " not ")
+                    .Append("redeemed");
             }
             else
             {
-                await Context.Channel.SendMessageAsync($"Key `{key}` doesn't exist").ConfigureAwait(false);
+                message.Append("doesn't exist");
             }
+
+            await message.QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
-        [Command("moneyadd"), Summary("Gives money to people"), RequireDatabase]
+        [
+            Command("moneyadd"), 
+            Summary("Gives money to people"), 
+            RequireDatabase
+        ]
         [RequireBotFlag(BotAccessLevel.BotOwner)]
         public async Task GiveMoney(IGuildUser user, long amount)
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
+            var usr = await Database.InsertOrGetUserAsync(user)
+                .ConfigureAwait(false);
 
             if (amount < 0)
             {
@@ -700,7 +777,21 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            await $"User {user.Username} now has: {(await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false)).MoneyIcon}{usr.Money.ToFormattedString()}".QueueMessageAsync(Context).ConfigureAwait(false);
+            var icon = (
+                await Database.InsertOrGetGuildAsync(Context.Guild)
+                .ConfigureAwait(false)
+            ).MoneyIcon;
+
+            StringBuilder message = new StringBuilder();
+
+            message
+                .Append("User ")
+                .Append(user.Username)
+                .Append(" now has: ")
+                .Append(icon)
+                .Append(usr.Money.ToFormattedString());
+
+            await message.QueueMessageAsync(Context).ConfigureAwait(false);
         }
 
         [Command("setmoney")]
@@ -715,7 +806,10 @@ namespace Skuld.Bot.Commands
 
             await Database.SaveChangesAsync().ConfigureAwait(false);
 
-            await EmbedExtensions.FromSuccess($"Set money of {user.Mention} to {usr.Money}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+            await EmbedExtensions.FromSuccess(
+                $"Set money of {user.Mention} to {usr.Money}", 
+                Context).QueueMessageAsync(Context)
+            .ConfigureAwait(false);
         }
 
         [Command("leave"), Summary("Leaves a server by id")]
@@ -727,11 +821,17 @@ namespace Skuld.Bot.Commands
             {
                 if (Context.Client.GetGuild(id) == null)
                 {
-                    await EmbedExtensions.FromSuccess($"Left guild **{guild.Name}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromSuccess(
+                        $"Left guild **{guild.Name}**", 
+                        Context).QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
                 }
                 else
                 {
-                    await EmbedExtensions.FromError($"Hmm, I haven't left **{guild.Name}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError(
+                        $"Hmm, I haven't left **{guild.Name}**", 
+                        Context).QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
                 }
             }).ConfigureAwait(false);
         }
@@ -740,34 +840,90 @@ namespace Skuld.Bot.Commands
         [RequireBotFlag(BotAccessLevel.BotOwner)]
         public async Task PubStats()
         {
-            await "Ok, publishing stats to the Discord Bot lists.".QueueMessageAsync(Context).ConfigureAwait(false);
-            string list = "";
+            await 
+                "Ok, publishing stats to the Discord Bot lists."
+                .QueueMessageAsync(Context)
+            .ConfigureAwait(false);
+
+            StringBuilder list = new StringBuilder();
             int shardcount = Context.Client.Shards.Count;
-            await Context.Client.SendDataAsync(Configuration.IsDevelopmentBuild, Configuration.DiscordGGKey, Configuration.DBotsOrgKey, Configuration.B4DToken).ConfigureAwait(false);
+
+            await Context.Client.SendDataAsync(
+                Configuration.IsDevelopmentBuild, 
+                Configuration.DiscordGGKey, 
+                Configuration.DBotsOrgKey, 
+                Configuration.B4DToken)
+            .ConfigureAwait(false);
+
             foreach (var shard in Context.Client.Shards)
             {
-                list += $"I sent ShardID: {shard.ShardId} Guilds: {shard.Guilds.Count} Shards: {shardcount}\n";
+                list
+                    .Append("I sent ShardID: ")
+                    .Append(shard.ShardId)
+                    .Append(" Guilds: ")
+                    .Append(shard.Guilds.Count)
+                    .Append(" Shards: ")
+                    .AppendLine(shardcount.ToString());
             }
+
             await list.QueueMessageAsync(Context).ConfigureAwait(false);
         }
+
+        public static Globals evalGlobals = new Globals();
+        public static ScriptOptions scriptOptions = null;
 
         [Command("eval"), Summary("no")]
         [RequireBotFlag(BotAccessLevel.BotOwner)]
         public async Task EvalStuff([Remainder]string code)
         {
+            evalGlobals.Context = Context as ShardedCommandContext;
+
+            if (scriptOptions == null)
+            {
+                scriptOptions = ScriptOptions
+                .Default
+                .WithReferences(typeof(SkuldDbContext).Assembly)
+                .WithReferences(
+                             typeof(ShardedCommandContext).Assembly,
+                             typeof(ShardedCommandContext).Assembly,
+                             typeof(SocketGuildUser).Assembly,
+                             typeof(Task).Assembly,
+                             typeof(Queryable).Assembly,
+                             typeof(BotService).Assembly
+                )
+                .WithImports(typeof(SkuldDbContext).FullName)
+                .WithImports(typeof(ShardedCommandContext).FullName,
+                             typeof(ShardedCommandContext).FullName,
+                             typeof(SocketGuildUser).FullName,
+                             typeof(Task).FullName,
+                             typeof(Queryable).FullName,
+                             typeof(BotService).FullName
+                );
+            }
+
             try
             {
-                if (code.ToLowerInvariant().Contains("token") || code.ToLowerInvariant().Contains("key"))
+                if (code.ToLowerInvariant().Contains("token") || 
+                    code.ToLowerInvariant().Contains("key") ||
+                    code.ToLowerInvariant().Contains("configuration"))
                 {
-                    await EmbedExtensions.FromError("Nope.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    await EmbedExtensions.FromError(
+                        "Script Evaluation",
+                        "Nope.", 
+                        Context)
+                    .QueueMessageAsync(Context).ConfigureAwait(false);
                     return;
                 }
 
-                if((code.StartsWith("```cs", StringComparison.Ordinal) || code.StartsWith("```", StringComparison.Ordinal)) && !code.EndsWith("```", StringComparison.Ordinal))
+                if((code.StartsWith("```cs", StringComparison.Ordinal) || 
+                    code.StartsWith("```", StringComparison.Ordinal)) && 
+                    !code.EndsWith("```", StringComparison.Ordinal))
                 {
                     await 
                         EmbedExtensions.FromError(
-                            "Starting Codeblock tags does not finish with closing Codeblock tags",
+                            "Script Evaluation",
+                            "Starting Codeblock tags does not " +
+                            "finish with closing Codeblock tags",
                             Context
                         ).QueueMessageAsync(Context)
                     .ConfigureAwait(false);
@@ -784,31 +940,16 @@ namespace Skuld.Bot.Commands
                     code = code.Replace("```", "");
                 }
 
-                var globals = new Globals().Context = Context as ShardedCommandContext;
-                var soptions = ScriptOptions
-                    .Default
-                    .WithReferences(typeof(SkuldDbContext).Assembly)
-                    .WithReferences(
-                                 typeof(ShardedCommandContext).Assembly,
-                                 typeof(ShardedCommandContext).Assembly,
-                                 typeof(SocketGuildUser).Assembly,
-                                 typeof(Task).Assembly,
-                                 typeof(Queryable).Assembly,
-                                 typeof(BotService).Assembly
-                    )
-                    .WithImports(typeof(SkuldDbContext).FullName)
-                    .WithImports(typeof(ShardedCommandContext).FullName, 
-                                 typeof(ShardedCommandContext).FullName,
-                                 typeof(SocketGuildUser).FullName, 
-                                 typeof(Task).FullName,
-                                 typeof(Queryable).FullName,
-                                 typeof(BotService).FullName
-                    );
+                var script = CSharpScript.Create(
+                    code, 
+                    scriptOptions,
+                    typeof(Globals));
 
-                var script = CSharpScript.Create(code, soptions, globalsType: typeof(ShardedCommandContext));
                 script.Compile();
 
-                var execution = await script.RunAsync(globals: globals).ConfigureAwait(false);
+                var execution = await 
+                    script.RunAsync(globals: evalGlobals)
+                .ConfigureAwait(false);
 
                 var result = execution.ReturnValue;
 
@@ -819,9 +960,21 @@ namespace Skuld.Bot.Commands
                     type = result.GetType().ToString();
                 }
 
-                var embed = EmbedExtensions.FromMessage("Script Evaluation", $"Execution Result:\nReturned Type: {type})\nValue: {result}", Context);
+                StringBuilder evalDesc = new StringBuilder();
 
-                await embed.QueueMessageAsync(Context).ConfigureAwait(false);
+                evalDesc
+                    .Append("__**Execution Result**__")
+                    .AppendLine()
+                    .Append("Returned Type: ")
+                    .AppendLine(type)
+                    .Append("Value: ")
+                    .Append(result);
+
+                await EmbedExtensions.FromMessage(
+                    "Script Evaluation", 
+                    evalDesc.ToString(), 
+                    Context
+                ).QueueMessageAsync(Context).ConfigureAwait(false);
             }
 #pragma warning disable CS0168 // Variable is declared but never used
             catch (NullReferenceException ex) { /*Do nothing here*/ }
@@ -834,11 +987,15 @@ namespace Skuld.Bot.Commands
                     Context,
                     ex);
 
-                await EmbedExtensions.FromError("Script Evaluation", $"Error with eval command\n\n{ex.Message}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await EmbedExtensions.FromError(
+                    "Script Evaluation", 
+                    $"Error with eval command\n\n{ex.Message}", 
+                    Context
+                ).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }
 
-        internal class Globals
+        public class Globals
         {
             public ShardedCommandContext Context { get; set; }
         }
