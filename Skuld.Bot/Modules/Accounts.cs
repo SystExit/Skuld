@@ -46,10 +46,7 @@ namespace Skuld.Bot.Commands
 
             xp.ToList().ForEach(x =>
             {
-                globalLevel += DatabaseUtilities.GetLevelFromTotalXP(
-                    x.TotalXP,
-                    DiscordUtilities.LevelModifier
-                );
+                globalLevel += x.Level;
             });
 
             if(globalLevel > PrestigeRequirement * nextPrestige)
@@ -295,11 +292,6 @@ namespace Skuld.Bot.Commands
 
             if(exp != null)
             {
-                var lvl = DatabaseUtilities.GetLevelFromTotalXP(
-                    exp.TotalXP, 
-                    DiscordUtilities.LevelModifier
-                );
-
                 if (rankraw != null && rankraw.Any(x => x.UserId == profileuser.Id))
                 {
                     image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: {(rankraw.ToList().IndexOf(exp) + 1).ToFormattedString()}/{rankraw.Count().ToFormattedString()}"));
@@ -317,11 +309,11 @@ namespace Skuld.Bot.Commands
                 image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel2, $"Fav. Cmd: {(favcommand == null ? "N/A" : favcommand.Command)} ({(favcommand == null ? "0" : favcommand.Usage.ToFormattedString())})"));
 
                 //YLevel 3
-                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {lvl.ToFormattedString()} ({exp.TotalXP.ToFormattedString()})"));
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToFormattedString()} ({exp.TotalXP.ToFormattedString()})"));
                 image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: {profileuser.Pats.ToFormattedString()}/Patted: {profileuser.Patted.ToFormattedString()}"));
 
                 ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(
-                    lvl + 1, 
+                    exp.Level + 1, 
                     DiscordUtilities.LevelModifier
                 );
 
@@ -624,11 +616,6 @@ namespace Skuld.Bot.Commands
 
             if(xp != null)
             {
-                var lvl = DatabaseUtilities.GetLevelFromTotalXP(
-                    xp.TotalXP,
-                    DiscordUtilities.LevelModifier
-                );
-
                 //Username
                 using (MagickImage label3 = new MagickImage($"label:{user.FullName()}", new MagickReadSettings
                 {
@@ -644,10 +631,10 @@ namespace Skuld.Bot.Commands
                 }
 
                 image.Draw(font, fontmed, encoding, white, new DrawableText(220, 170, $"Rank {index + 1}/{xps.Count()}"));
-                image.Draw(font, fontmed, encoding, white, new DrawableText(220, 210, $"Level: {lvl} ({xp.TotalXP.ToFormattedString()})"));
+                image.Draw(font, fontmed, encoding, white, new DrawableText(220, 210, $"Level: {xp.Level} ({xp.TotalXP.ToFormattedString()})"));
 
                 ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(
-                    lvl + 1,
+                    xp.Level + 1,
                     DiscordUtilities.LevelModifier
                 );
 
@@ -1096,7 +1083,7 @@ namespace Skuld.Bot.Commands
                     TotalXP = 1234567890
                 };
 
-                var lvl = DatabaseUtilities.GetLevelFromTotalXP(exp.TotalXP, 2.5);
+                var lvl = DatabaseUtilities.GetLevelFromTotalXP(exp.TotalXP, DiscordUtilities.LevelModifier);
 
                 int ylevel1 = 365, ylevel2 = 405, ylevel3 = 445;
 

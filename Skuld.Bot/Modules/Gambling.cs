@@ -549,6 +549,42 @@ namespace Skuld.Bot.Commands
                 return str.ToString();
             }
 
+            [Command("")]
+            public async Task EntryPoint()
+                => EmbedExtensions
+                    .FromInfo("Mia", "", Context)
+                    .Then(async x=>
+                    {
+                        var embed = (EmbedBuilder)x;
+
+                        var message = new StringBuilder();
+
+                        string Prefix = BotService.MessageServiceConfig.Prefix;
+
+                        if(!Context.IsPrivate)
+                        {
+                            using var Database = new SkuldDbContextFactory()
+                                .CreateDbContext();
+
+                            var gld = await Database
+                                    .InsertOrGetGuildAsync(Context.Guild)
+                                .ConfigureAwait(false);
+
+                            Prefix = gld.Prefix;
+                        }
+
+
+                        message
+                            .AppendLine($"To create a new game, use `{Prefix}mia new [amount]`")
+                            .AppendLine($"To roll within a game, use `{Prefix}mia roll`")
+                            .Append($"To end a game, use `{Prefix}mia stay`");
+
+                        await 
+                            embed.WithDescription(message.ToString())
+                            .QueueMessageAsync(Context)
+                            .ConfigureAwait(false);
+                    });
+
             [Command("new"), Usage("250")]
             public async Task NewMia(ulong bet)
             {
@@ -573,110 +609,113 @@ namespace Skuld.Bot.Commands
 
                 if (!Context.IsPrivate)
                 {
-                    var guild = 
-                        await 
+                    var guild =
+                        await
                             Database.InsertOrGetGuildAsync(Context.Guild)
                         .ConfigureAwait(false);
                     MoneyPrefix = guild.MoneyIcon;
                     Prefix = guild.Prefix;
                 }
 
-                var user = await Database.InsertOrGetUserAsync(Context.User)
-                    .ConfigureAwait(false);
-
-                {
-                    if (IsValidBet(bet))
-                    {
-                        if (user.Money < bet)
-                        {
-                            await 
-                                EmbedExtensions.FromError(
-                                    "Mia", 
-                                    "You don't have enough money available " +
-                                    "to make that bet, you have " +
-                                    $"{MoneyPrefix}" +
-                                    $"{user.Money.ToFormattedString()} " +
-                                    $"available", 
-                                    Context
-                                ).QueueMessageAsync(Context)
-                            .ConfigureAwait(false);
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        await 
-                            EmbedExtensions.FromError(
-                                "Mia", 
-                                "You have not specified a valid bet, " +
-                                "minimum is " +
-                                $"{MoneyPrefix}" +
-                                $"{MinimumBet.ToFormattedString()}",
-                                Context
-                            ).QueueMessageAsync(Context)
-                        .ConfigureAwait(false);
-                        return;
-                    }
-                }
-
-                try
-                {
-                    var bot = new Dice(2);
-                    var player = new Dice(2);
-
-                    for (int x = 0; x < SkuldRandom.Next(1, 11); x++)
-                    {
-                        bot.Roll();
-                        player.Roll();
-                    }
-
-                    string botRoll = GetRollString(bot, true);
-                    string plaRoll = GetRollString(player, false);
-
-                    var msg = await
-                        EmbedExtensions.FromMessage(
-                            "Mia",
-                            $"Type `{Prefix}mia roll` or `{Prefix}mia stay`",
-                            Context
-                        )
-                        .AddInlineField(
-                            Context.Client.CurrentUser.Username,
-                            botRoll
-                        )
-                        .AddInlineField(
-                            Context.User.Username,
-                            plaRoll
-                        )
-                        .WithRandomColor()
-                        .QueueMessageAsync(
-                            Context,
-                            type: Services.Messaging.Models.MessageType.Mention
-                        )
-                    .ConfigureAwait(false);
-
-                    MiaHandler.NewSession(Context.User, bet, player, bot, msg);
-                }
-                catch (DuplicateSessionException exception)
+                if (!IsValidBet(bet))
                 {
                     await
                         EmbedExtensions.FromError(
                             "Mia",
-                            "You already have a session in progress. " +
-                            $"To end it, use `{Prefix}mia stay`",
+                            "You have not specified a valid bet, " +
+                            "minimum is " +
+                            $"{MoneyPrefix}" +
+                            $"{MinimumBet.ToFormattedString()}",
                             Context
-                        )
-                        .QueueMessageAsync(
-                            Context,
-                            type: Services.Messaging.Models.MessageType.Mention
-                        )
+                        ).QueueMessageAsync(Context)
                     .ConfigureAwait(false);
-
-                    Log.Error("Mia", exception.Message, Context, exception);
                     return;
                 }
+
+                var user = await Database.InsertOrGetUserAsync(Context.User)
+                    .ConfigureAwait(false);
+
+                TransactionService.DoTransaction(new TransactionStruct
+                {
+                    Amount = bet,
+                    Sender = user
+                })
+                    .IsSuccess(async z =>
+                    {
+                        try
+                        {
+                            var bot = new Dice(2);
+                            var player = new Dice(2);
+
+                            for (int x = 0; x < SkuldRandom.Next(1, 11); x++)
+                            {
+                                bot.Roll();
+                                player.Roll();
+                            }
+
+                            string botRoll = GetRollString(bot, true);
+                            string plaRoll = GetRollString(player, false);
+
+                            var msg = await
+                                EmbedExtensions.FromMessage(
+                                    "Mia",
+                                    $"Type `{Prefix}mia roll` or `{Prefix}mia stay`",
+                                    Context
+                                )
+                                .AddInlineField(
+                                    Context.Client.CurrentUser.Username,
+                                    botRoll
+                                )
+                                .AddInlineField(
+                                    Context.User.Username,
+                                    plaRoll
+                                )
+                                .WithRandomColor()
+                                .QueueMessageAsync(
+                                    Context,
+                                    type: Services.Messaging.Models.MessageType.Mention
+                                )
+                            .ConfigureAwait(false);
+
+                            MiaHandler.NewSession(Context.User, bet, player, bot, msg);
+                        }
+                        catch (DuplicateSessionException exception)
+                        {
+                            await
+                                EmbedExtensions.FromError(
+                                    "Mia",
+                                    "You already have a session in progress. " +
+                                    $"To end it, use `{Prefix}mia stay`",
+                                    Context
+                                )
+                                .QueueMessageAsync(
+                                    Context,
+                                    type: Services.Messaging.Models.MessageType.Mention
+                                )
+                            .ConfigureAwait(false);
+
+                            Log.Error("Mia", exception.Message, Context, exception);
+                            return;
+                        }
+                    })
+                    .IsError(async x =>
+                    {
+                        await EmbedExtensions
+                            .FromError
+                            (
+                                "Mia", 
+                                "You don't have enough money available " +
+                                "to make that bet, you have " +
+                                $"{MoneyPrefix}{user.Money.ToFormattedString()} " +
+                                "available", 
+                                Context
+                            )
+                            .QueueMessageAsync(Context)
+                        .ConfigureAwait(false);
+                    });
             }
 
-            public async Task DoFinishAsync(ulong bet, Dice bot, Dice player)
+            public async Task DoFinishAsync(ulong bet, Dice bot, Dice player, ushort rerolls)
             {
                 using var Database = new
                     SkuldDbContextFactory().CreateDbContext();
@@ -703,10 +742,12 @@ namespace Skuld.Bot.Commands
                 {
                     case WinResult.PlayerWin:
                         {
+                            var amountToGive = bet * 2 - bet * ((ulong)rerolls / 10);
+
                             TransactionService.DoTransaction(
                                 new TransactionStruct
                                 {
-                                    Amount = bet * 2,
+                                    Amount = amountToGive,
                                     Receiver = user
                                 }
                             ).IsSuccess(x =>
@@ -800,55 +841,70 @@ namespace Skuld.Bot.Commands
                 {
                     var session = MiaHandler.GetSession(Context.User);
 
-                    if(session.PreviousMessage != null)
+                    if (session.PreviousMessage != null)
                     {
-                        await 
+                        await
                             session.PreviousMessage.DeleteAsync()
                         .ConfigureAwait(false);
                     }
 
-                    await Context.Message.DeleteAsync().ConfigureAwait(false);
-
-                    if (SkuldRandom.Next(1, 101) > 50)
+                    if (session.ReRolls >= MiaHandler.MaxReRolls)
                     {
+                        await
+                            EmbedExtensions
+                            .FromError("Mia", "You have expended the maximum amount of rerolls", Context)
+                            .QueueMessageAsync(Context, timeout: 10)
+                        .ConfigureAwait(false);
+
+                        await MiaStay().ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await Context.Message.DeleteAsync().ConfigureAwait(false);
+
+                        if (SkuldRandom.Next(1, 101) > 50)
+                        {
+                            for (int x = 0; x < SkuldRandom.Next(1, 11); x++)
+                            {
+                                session.BotDice.Roll();
+                            }
+                        }
+
                         for (int x = 0; x < SkuldRandom.Next(1, 11); x++)
                         {
-                            session.BotDice.Roll();
+                            session.PlayerDice.Roll();
                         }
+
+                        string botRoll = GetRollString(session.BotDice, true);
+                        string plaRoll = GetRollString(session.PlayerDice, false);
+
+                        var msg = await
+                            EmbedExtensions.FromMessage(
+                                "Mia",
+                                $"Type `{Prefix}mia roll` or `{Prefix}mia stay`",
+                                Context
+                            )
+                            .AddInlineField(
+                                Context.Client.CurrentUser.Username,
+                                botRoll
+                            )
+                            .AddInlineField(
+                                Context.User.Username,
+                                plaRoll
+                            )
+                            .WithRandomColor()
+                            .QueueMessageAsync(
+                                Context,
+                                type: Services.Messaging.Models.MessageType.Mention
+                            )
+                        .ConfigureAwait(false);
+
+                        session.PreviousMessage = msg;
+
+                        session.ReRolls += 1;
+
+                        MiaHandler.UpdateSession(session);
                     }
-
-                    for (int x = 0; x < SkuldRandom.Next(1, 11); x++)
-                    {
-                        session.PlayerDice.Roll();
-                    }
-
-                    string botRoll = GetRollString(session.BotDice, true);
-                    string plaRoll = GetRollString(session.PlayerDice, false);
-
-                    var msg = await
-                        EmbedExtensions.FromMessage(
-                            "Mia",
-                            $"Type `{Prefix}mia roll` or `{Prefix}mia stay`",
-                            Context
-                        )
-                        .AddInlineField(
-                            Context.Client.CurrentUser.Username,
-                            botRoll
-                        )
-                        .AddInlineField(
-                            Context.User.Username,
-                            plaRoll
-                        )
-                        .WithRandomColor()
-                        .QueueMessageAsync(
-                            Context,
-                            type: Services.Messaging.Models.MessageType.Mention
-                        )
-                    .ConfigureAwait(false);
-
-                    session.PreviousMessage = msg;
-
-                    MiaHandler.UpdateSession(session);
                 }
                 catch (SessionNotFoundException exception)
                 {
@@ -888,7 +944,8 @@ namespace Skuld.Bot.Commands
 
                     await DoFinishAsync(session.Amount,
                         session.BotDice,
-                        session.PlayerDice
+                        session.PlayerDice,
+                        session.ReRolls
                     ).ConfigureAwait(false);
                 }
                 catch (SessionNotFoundException exception)
