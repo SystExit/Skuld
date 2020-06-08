@@ -69,16 +69,16 @@ namespace Skuld.Bot
                 Configuration,
                 new DiscordSocketConfig
                 {
-                    MessageCacheSize = 1000,
+                    MessageCacheSize = 100,
                     DefaultRetryMode = RetryMode.AlwaysRetry,
-                    LogLevel = LogSeverity.Verbose,
+                    LogLevel = LogSeverity.Debug,
                     TotalShards = Configuration.Shards
                 },
                 new DiscordNetCommands.CommandServiceConfig
                 {
                     CaseSensitiveCommands = false,
                     DefaultRunMode = DiscordNetCommands.RunMode.Async,
-                    LogLevel = LogSeverity.Verbose,
+                    LogLevel = LogSeverity.Debug,
                     IgnoreExtraArgs = true
                 },
                 new MessageServiceConfig
