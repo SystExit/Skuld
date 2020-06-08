@@ -21,6 +21,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Transactions;
 
 namespace Skuld.Bot.Commands
 {
@@ -864,37 +865,77 @@ namespace Skuld.Bot.Commands
         {
             public SkuldConfig Configuration { get; set; }
 
-            [Command("buy"), Summary("Buy permanent custom backgrounds"), RequireDatabase]
+            [
+                Command("buy"), 
+                Summary("Buy permanent custom backgrounds"), 
+                RequireDatabase
+            ]
             public async Task BuyCBG()
             {
-                using var Database = new SkuldDbContextFactory().CreateDbContext();
+                using var Database = new SkuldDbContextFactory()
+                    .CreateDbContext();
 
-                var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-                var gld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
+                var usr = await Database.InsertOrGetUserAsync(Context.User)
+                    .ConfigureAwait(false);
+                var gld = await Database.InsertOrGetGuildAsync(Context.Guild)
+                    .ConfigureAwait(false);
 
-                if (!usr.UnlockedCustBG)
+                if (usr.UnlockedCustBG)
                 {
-                    if (usr.Money >= 40000)
-                    {
-                        TransactionService.DoTransaction(new TransactionStruct
-                        {
-                            Amount = 40000,
-                            Sender = usr
-                        });
-                        usr.UnlockedCustBG = true;
-
-                        await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                        await EmbedExtensions.FromSuccess($"You've successfully unlocked custom backgrounds, use: {gld.Prefix ?? Configuration.Prefix}set-custombg [URL] to set your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}40,000 to unlock custom backgrounds", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    }
+                    await
+                        EmbedExtensions.FromInfo(
+                            "You already unlocked custom backgrounds, use: " +
+                            $"{gld.Prefix ?? Configuration.Prefix}" +
+                            "set-custombg [URL] to set your background",
+                            Context
+                        )
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
                 }
                 else
                 {
-                    await EmbedExtensions.FromInfo($"You already unlocked custom backgrounds, use: {gld.Prefix ?? Configuration.Prefix}set-custombg [URL] to set your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    TransactionService.DoTransaction(
+                        new TransactionStruct
+                        {
+                            Amount = 40000,
+                            Sender = usr
+                        })
+                        .IsSuccessAsync(async x =>
+                        {
+                            usr.UnlockedCustBG = true;
+
+                            await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                            await
+                                EmbedExtensions
+                                    .FromSuccess(
+                                        "You've successfully unlocked custom " +
+                                        "backgrounds, use: " +
+                                        $"{gld.Prefix ?? Configuration.Prefix}" +
+                                        "set-custombg [URL] to set your background",
+                                        Context
+                                    )
+                                .QueueMessageAsync(Context)
+                            .ConfigureAwait(false);
+                        })
+                        .IsError(x =>
+                        {
+                            x.Exception.Is<TransactionException>().Then(
+                                async z =>
+                                {
+                                    await
+                                        EmbedExtensions
+                                            .FromError(
+                                            $"You need at least {gld.MoneyIcon}" +
+                                             "40,000 to unlock custom backgrounds",
+                                                Context
+                                            )
+                                        .QueueMessageAsync(Context)
+                                    .ConfigureAwait(false);
+                                }
+                            );
+                        }
+                    );
                 }
             }
 
@@ -909,23 +950,26 @@ namespace Skuld.Bot.Commands
 
                 if (Uri.TryCreate(link, UriKind.Absolute, out var res))
                 {
-                    if (usr.Money >= 900)
+                    TransactionService.DoTransaction(new TransactionStruct
                     {
-                        TransactionService.DoTransaction(new TransactionStruct
+                        Amount = 900,
+                        Sender = usr
+                    })
+                        .IsSuccess(async x =>
                         {
-                            Amount = 900,
-                            Sender = usr
+                            usr.Background = res.OriginalString;
+
+                            await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                            await EmbedExtensions.FromSuccess("Set your Background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        })
+                        .IsError(async x =>
+                        {
+                            x.Exception.Is<TransactionException>().Then(async x =>
+                            {
+                                await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}900 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            });
                         });
-                        usr.Background = res.OriginalString;
-
-                        await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                        await EmbedExtensions.FromSuccess("Set your Background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}900 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    }
                     return;
                 }
                 else if (link.ToLowerInvariant() == "reset")
@@ -939,24 +983,24 @@ namespace Skuld.Bot.Commands
                 }
                 else if (int.TryParse(link[0] != '#' ? link : link.Remove(0, 1), System.Globalization.NumberStyles.HexNumber, null, out _))
                 {
-                    if (usr.Money >= 300)
+                    TransactionService.DoTransaction(new TransactionStruct
                     {
-                        TransactionService.DoTransaction(new TransactionStruct
-                        {
-                            Amount = 300,
-                            Sender = usr
-                        });
-
+                        Amount = 300,
+                        Sender = usr
+                    }).IsSuccess(async x =>
+                    {
                         usr.Background = link[0] != '#' ? "#" + link : link;
 
                         await Database.SaveChangesAsync().ConfigureAwait(false);
 
                         await EmbedExtensions.FromSuccess("Set your Background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    }
-                    else
+                    }).IsError(async x =>
                     {
-                        await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}300 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    }
+                        x.Exception.Is<TransactionException>().Then(async x =>
+                        {
+                            await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}300 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        });
+                    });
                 }
                 else
                 {

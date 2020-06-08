@@ -5,7 +5,6 @@ using Discord.Commands;
 using Discord.WebSocket;
 using ImageMagick;
 using IqdbApi;
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Skuld.APIS;
 using Skuld.APIS.Animals.Models;
@@ -1577,7 +1576,7 @@ namespace Skuld.Bot.Commands
         {
             tags
                 .ContainsBlacklistedTags()
-                .IsSuccessAsync(x => LewdModule.containsIllegalTags(x, tags, Context))
+                .IsSuccessAsync(x => LewdModule.containsIllegalTags(x.Data, tags, Context))
                 .IsErrorAsync(async x =>
                 {
                     var posts = await SafebooruClient

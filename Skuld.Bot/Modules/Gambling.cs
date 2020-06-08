@@ -709,15 +709,16 @@ namespace Skuld.Bot.Commands
                                     Amount = bet * 2,
                                     Receiver = user
                                 }
-                            );
-
-                            embed = EmbedExtensions.FromSuccess(
-                                "Mia",
-                                "You Win! You now have " +
-                                $"{MoneyPrefix}" +
-                                $"{user.Money.ToFormattedString()}",
-                                Context
-                            );
+                            ).IsSuccess(x =>
+                            {
+                                embed = EmbedExtensions.FromSuccess(
+                                    "Mia",
+                                    "You Win! You now have " +
+                                    $"{MoneyPrefix}" +
+                                    $"{user.Money.ToFormattedString()}",
+                                    Context
+                                );
+                            });
                         }
                         break;
 
@@ -729,15 +730,17 @@ namespace Skuld.Bot.Commands
                                     Amount = bet,
                                     Sender = user
                                 }
-                            );
-                            embed = 
-                                EmbedExtensions.FromError(
-                                    "Mia", 
-                                    "You Lost! You now have " +
-                                    $"{MoneyPrefix}" +
-                                    $"{user.Money.ToFormattedString()}",
-                                    Context
-                                );
+                            ).IsSuccess(x =>
+                            {
+                                embed =
+                                    EmbedExtensions.FromError(
+                                        "Mia",
+                                        "You Lost! You now have " +
+                                        $"{MoneyPrefix}" +
+                                        $"{user.Money.ToFormattedString()}",
+                                        Context
+                                    );
+                            });
                         }
                         break;
 
