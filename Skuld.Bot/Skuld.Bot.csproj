@@ -19,7 +19,7 @@
   <ItemGroup>
     <PackageReference Include="Akitaux.Twitch.Helix" Version="0.1.0-build-00012" />
     <PackageReference Include="CoreCLR-NCalc" Version="2.2.74" />
-    <PackageReference Include="Discord.Net" Version="2.3.0-dev-20200525.6" />
+    <PackageReference Include="Discord.Net" Version="2.2.0" />
     <PackageReference Include="DogStatsD-CSharp-Client" Version="5.0.2" />
     <PackageReference Include="FIGlet.Net" Version="1.1.1" />
     <PackageReference Include="Fleck" Version="1.1.0" />
