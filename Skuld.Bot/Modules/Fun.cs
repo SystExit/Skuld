@@ -624,30 +624,27 @@ namespace Skuld.Bot.Commands
                                     }
                                     else
                                     {
-                                        if(pasta.Content != null)
+                                        if (Context.Message.Attachments.Any())
                                         {
-                                            Database.Pastas.Add(new Pasta
+                                            foreach (var att in Context.Message.Attachments)
                                             {
-                                                OwnerId = Context.User.Id,
-                                                Name = title,
-                                                Content = content,
-                                                Created = DateTime.UtcNow.ToEpoch()
-                                            });
-
-                                            if(Context.Message.Attachments.Any())
-                                            {
-                                                foreach(var att in Context.Message.Attachments)
-                                                {
-                                                    content += $"\n{att.Url}";
-                                                }
+                                                content += $"\n{att.Url}";
                                             }
+                                        }
 
-                                            await Database.SaveChangesAsync().ConfigureAwait(false);
+                                        Database.Pastas.Add(new Pasta
+                                        {
+                                            OwnerId = Context.User.Id,
+                                            Name = title,
+                                            Content = content,
+                                            Created = DateTime.UtcNow.ToEpoch()
+                                        });
 
-                                            if (Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower()) != null)
-                                            {
-                                                await EmbedExtensions.FromSuccess($"Added: **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                                            }
+                                        await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                                        if (Database.Pastas.FirstOrDefault(x => x.Name.ToLower() == title.ToLower()) != null)
+                                        {
+                                            await EmbedExtensions.FromSuccess($"Added: **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
                                         }
                                     }
                                 }
