@@ -512,7 +512,7 @@ namespace Skuld.Bot.Commands
         ]
         public class MiaModule : InteractiveBase<ShardedCommandContext>
         {
-            static readonly string PenaltyNotice = "**Note:** Re-rolling costs 10% of your final winnings up to 50%";
+            static readonly string PenaltyNotice = "**Note:** Re-rolling costs 25% of your bet up to 75%";
 
             [Command, Priority(1)]
             public async Task EntryPoint()
