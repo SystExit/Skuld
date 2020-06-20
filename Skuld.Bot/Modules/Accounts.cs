@@ -288,13 +288,13 @@ namespace Skuld.Bot.Commands
             var rightPos = 600 - (dmetr.TextWidth * 2);
 
             var rankraw = Database.GetOrderedGlobalExperienceLeaderboard();
-            var exp = rankraw.FirstOrDefault(x => x.UserId == profileuser.Id);
+            var xp = rankraw.FirstOrDefault(x => x.UserId == profileuser.Id);
 
-            if(exp != null)
+            if(xp != null)
             {
                 if (rankraw != null && rankraw.Any(x => x.UserId == profileuser.Id))
                 {
-                    image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: {(rankraw.ToList().IndexOf(exp) + 1).ToFormattedString()}/{rankraw.Count().ToFormattedString()}"));
+                    image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: {(rankraw.ToList().IndexOf(xp) + 1).ToFormattedString()}/{rankraw.Count().ToFormattedString()}"));
                 }
                 else
                 {
@@ -309,21 +309,27 @@ namespace Skuld.Bot.Commands
                 image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel2, $"Fav. Cmd: {(favcommand == null ? "N/A" : favcommand.Command)} ({(favcommand == null ? "0" : favcommand.Usage.ToFormattedString())})"));
 
                 //YLevel 3
-                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToFormattedString()} ({exp.TotalXP.ToFormattedString()})"));
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {xp.Level.ToFormattedString()} ({xp.TotalXP.ToFormattedString()})"));
                 image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: {profileuser.Pats.ToFormattedString()}/Patted: {profileuser.Patted.ToFormattedString()}"));
 
-                ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(
-                    exp.Level + 1, 
+                ulong xpCurrentLevel = DatabaseUtilities
+                    .GetStackedXPLevelRequirement(
+                        xp.Level,
+                        DiscordUtilities.LevelModifier
+                );
+
+                ulong xpNextLevel = DatabaseUtilities.GetXPLevelRequirement(
+                    xp.Level + 1,
                     DiscordUtilities.LevelModifier
                 );
 
-                var currXp = exp.TotalXP.Subtract(xpToNextLevel);
+                var currXp = xp.TotalXP - xpCurrentLevel;
 
                 //Progressbar
                 image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, 471, 580, 500));
                 image.Draw(new DrawableFillColor(new MagickColor("#dfdfdf")), new DrawableRectangle(22, 473, 578, 498));
 
-                var percentage = (double)currXp / xpToNextLevel * 100;
+                var percentage = (double)currXp / xpNextLevel * 100;
                 var mapped = percentage.Remap(0, 100, 22, 578);
 
                 image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, 473, mapped, 498));
@@ -333,7 +339,7 @@ namespace Skuld.Bot.Commands
 
                 //XP To Next
                 using MagickImage label5 = new MagickImage(
-                    $"label:{xpToNextLevel.ToFormattedString()}XP",
+                    $"label:{xpNextLevel.ToFormattedString()}XP",
                     new MagickReadSettings
                     {
                         BackgroundColor = MagickColors.Transparent,
@@ -633,12 +639,18 @@ namespace Skuld.Bot.Commands
                 image.Draw(font, fontmed, encoding, white, new DrawableText(220, 170, $"Rank {index + 1}/{xps.Count()}"));
                 image.Draw(font, fontmed, encoding, white, new DrawableText(220, 210, $"Level: {xp.Level} ({xp.TotalXP.ToFormattedString()})"));
 
-                ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(
+                ulong xpCurrentLevel = DatabaseUtilities
+                    .GetStackedXPLevelRequirement(
+                        xp.Level,
+                        DiscordUtilities.LevelModifier
+                );
+
+                ulong xpNextLevel = DatabaseUtilities.GetXPLevelRequirement(
                     xp.Level + 1,
                     DiscordUtilities.LevelModifier
                 );
 
-                var currXp = xp.TotalXP.Subtract(xpToNextLevel);
+                var currXp = xp.TotalXP - xpCurrentLevel;
 
                 int innerHeight = 256;
 
@@ -646,8 +658,9 @@ namespace Skuld.Bot.Commands
                 image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, innerHeight - 2, 730, 280));
                 image.Draw(new DrawableFillColor(new MagickColor("#dfdfdf")), new DrawableRectangle(22, innerHeight, 728, 278));
 
-                var percentage = (double)currXp / xpToNextLevel * 100;
-                var mapped = percentage.Remap(0, 100, 22, 728);
+                var percentage = (double)currXp / xpNextLevel * 100;
+                var mapped = percentage.Remap(0, 100, 22, 578);
+                mapped = Math.Clamp(mapped, 22, 578);
 
                 image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, innerHeight, mapped, 278));
 
@@ -655,7 +668,7 @@ namespace Skuld.Bot.Commands
                 image.Draw(font, fontmedd, encoding, new DrawableText(25, 277, currXp.ToFormattedString() + "XP"));
 
                 //XP To Next
-                using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToFormattedString()}XP", new MagickReadSettings
+                using (MagickImage label5 = new MagickImage($"label:{xpNextLevel.ToFormattedString()}XP", new MagickReadSettings
                 {
                     BackgroundColor = MagickColors.Transparent,
                     FillColor = MagickColors.Black,
@@ -1083,7 +1096,7 @@ namespace Skuld.Bot.Commands
                     TotalXP = 1234567890
                 };
 
-                var lvl = DatabaseUtilities.GetLevelFromTotalXP(exp.TotalXP, DiscordUtilities.LevelModifier);
+                exp.Level = DatabaseUtilities.GetLevelFromTotalXP(exp.TotalXP, DiscordUtilities.LevelModifier);
 
                 int ylevel1 = 365, ylevel2 = 405, ylevel3 = 445;
 
@@ -1160,15 +1173,21 @@ namespace Skuld.Bot.Commands
                 image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel2, $"Fav. Cmd: profile (123,456,789)"));
 
                 //YLevel 3
-                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {lvl.ToFormattedString()} ({exp.TotalXP.ToFormattedString()})"));
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToFormattedString()} ({exp.TotalXP.ToFormattedString()})"));
                 image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: 7,777/Patted: 7,777"));
 
-                ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(
-                    lvl + 1,
+                ulong xpToNextLevel = DatabaseUtilities.GetStackedXPLevelRequirement(
+                    exp.Level + 1,
                     DiscordUtilities.LevelModifier
                 );
 
-                var currXp = xpToNextLevel / 2;
+                ulong xpCurrentLevel = DatabaseUtilities
+                    .GetStackedXPLevelRequirement(
+                        exp.Level,
+                        DiscordUtilities.LevelModifier
+                );
+
+                var currXp = exp.TotalXP / 2;
 
                 //Progressbar
                 image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, 471, 580, 500));
@@ -1183,7 +1202,7 @@ namespace Skuld.Bot.Commands
                 image.Draw(font, fontsize, encoding, new DrawableText(25, 493, currXp.ToFormattedString() + "XP"));
 
                 //XP To Next
-                using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToFormattedString()}XP", new MagickReadSettings
+                using (MagickImage label5 = new MagickImage($"label:{xpToNextLevel.ToFormattedString()}XP", new MagickReadSettings
                 {
                     BackgroundColor = MagickColors.Transparent,
                     FillColor = MagickColors.Black,

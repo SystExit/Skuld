@@ -1006,6 +1006,7 @@ namespace Skuld.Bot.Commands
         {
             if (page != 0)
                 page -= 1;
+
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
             if (Context.IsPrivate)
