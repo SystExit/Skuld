@@ -836,7 +836,7 @@ namespace Skuld.Bot.Commands
                                 using var sw = new StreamWriter(stream);
                                 sw.Write(pastanames);
 
-                                await $"Here's a list".QueueMessageAsync(Context, stream, fileName: "pastas.txt", type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
+                                await $"Here's a list".QueueMessageAsync(Context, fileStream: stream, fileName: "pastas.txt", type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
                             }
                         }
                         else
@@ -1304,16 +1304,8 @@ namespace Skuld.Bot.Commands
                     }
                     if (embed.Thumbnail.HasValue)
                     {
-                        url = embed.Image.Value.Url;
+                        url = embed.Thumbnail.Value.Url;
                         break;
-                    }
-                    if (embed.Author.HasValue)
-                    {
-                        if (!string.IsNullOrEmpty(embed.Author.Value.IconUrl))
-                        {
-                            url = embed.Author.Value.IconUrl;
-                            break;
-                        }
                     }
                 }
             }
@@ -1356,7 +1348,7 @@ namespace Skuld.Bot.Commands
 
             stream.Position = 0;
 
-            await "".QueueMessageAsync(Context, stream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
+            await "".QueueMessageAsync(Context, fileStream: stream, fileName: "image.png", type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
         }
 
         [Command("magik"), Summary("Magiks an image"), Alias("magick", "magic", "liquify"), Ratelimit(5, 1, Measure.Minutes)]

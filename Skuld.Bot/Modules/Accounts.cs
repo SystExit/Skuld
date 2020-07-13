@@ -361,7 +361,7 @@ namespace Skuld.Bot.Commands
 
             outputStream.Position = 0;
 
-            await "".QueueMessageAsync(Context, outputStream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
+            await "".QueueMessageAsync(Context, outputStream, filename: "image.png", type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
         }
 
         [Command("daily"), Summary("Daily Money")]
@@ -688,7 +688,7 @@ namespace Skuld.Bot.Commands
 
                 outputStream.Position = 0;
 
-                await "".QueueMessageAsync(Context, outputStream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
+                await "".QueueMessageAsync(Context, outputStream, filename: "image.png", type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
             }
             else
             {
@@ -1243,7 +1243,7 @@ namespace Skuld.Bot.Commands
 
                 outputStream.Position = 0;
 
-                await "".QueueMessageAsync(Context, outputStream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
+                await "".QueueMessageAsync(Context, outputStream, filename: "image.png", type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
             }
         }
 
