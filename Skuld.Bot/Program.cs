@@ -90,19 +90,7 @@ namespace Skuld.Bot
 
             Log.Info("HostService", "Loaded Skuld v" + SkuldAppContext.Skuld.Key.Version);
 
-            var sentryKey = Environment.GetEnvironmentVariable(SkuldAppContext.SentryIOEnvVar);
-
-            if(sentryKey != null)
-            {
-                using (SentrySdk.Init(sentryKey))
-                {
-                    await BotService.StartBotAsync().ConfigureAwait(false);
-                }
-            }
-            else
-            {
-                await BotService.StartBotAsync().ConfigureAwait(false);
-            }
+            await BotService.StartBotAsync().ConfigureAwait(false);
 
             await Task.Delay(-1).ConfigureAwait(false);
 

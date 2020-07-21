@@ -747,7 +747,7 @@ namespace Skuld.Bot.Commands
                         TransactionService.DoTransaction(new TransactionStruct
                         {
                             Sender = User,
-                            Amount = MiaHandler.GetAmountFromReRolls(session.Amount, session.ReRolls)
+                            Amount = MiaHandler.GetAmountFromReRolls(session.Amount, 1)
                         })
                             .IsSuccess(async _ =>
                             {
