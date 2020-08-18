@@ -57,7 +57,22 @@ namespace Skuld.Bot.Commands
         [Command("ping"), Summary("Print Ping")]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Ping()
-            => await $"PONG: {Context.Client.GetShardFor(Context.Guild).Latency}ms".QueueMessageAsync(Context).ConfigureAwait(false);
+            => (await $"Please Wait!!!".QueueMessageAsync(Context).ConfigureAwait(false)).ThenAfter(async x=>
+            {
+                var mainOffset = Context.Client.GetShardFor(Context.Guild).Latency;
+
+                if(x is IUserMessage msg)
+                {
+                    var msgOffset = (msg.Timestamp - Context.Message.Timestamp).TotalMilliseconds;
+
+                    var ping = msgOffset + mainOffset;
+
+                    await msg.ModifyAsync(z =>
+                    {
+                        z.Content = $"PONG: {ping:N0}ms";
+                    }).ConfigureAwait(false);
+                }
+            }, 200);
 
         [Command("stats"), Summary("All stats")]
         [Ratelimit(20, 1, Measure.Minutes)]
@@ -112,7 +127,7 @@ namespace Skuld.Bot.Commands
             }
             catch (Exception ex)
             {
-                Log.Error("Stats-Cmd", ex.Message, ex);
+                Log.Error("Stats-Cmd", ex.Message, Context, ex);
                 await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
             }
         }

@@ -1,7 +1,6 @@
 ﻿using Discord;
 using Discord.Commands;
 using Skuld.APIS;
-using Skuld.APIS.Extensions;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Verification;
 using Skuld.Services.Discord.Attributes;

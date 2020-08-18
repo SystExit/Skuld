@@ -21,6 +21,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Transactions;
 
 namespace Skuld.Bot.Commands
 {
@@ -287,13 +288,13 @@ namespace Skuld.Bot.Commands
             var rightPos = 600 - (dmetr.TextWidth * 2);
 
             var rankraw = Database.GetOrderedGlobalExperienceLeaderboard();
-            var exp = rankraw.FirstOrDefault(x => x.UserId == profileuser.Id);
+            var xp = rankraw.FirstOrDefault(x => x.UserId == profileuser.Id);
 
-            if(exp != null)
+            if(xp != null)
             {
                 if (rankraw != null && rankraw.Any(x => x.UserId == profileuser.Id))
                 {
-                    image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: {(rankraw.IndexOf(exp) + 1).ToFormattedString()}/{rankraw.Count().ToFormattedString()}"));
+                    image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel1, $"Global Rank: {(rankraw.ToList().IndexOf(xp) + 1).ToFormattedString()}/{rankraw.Count().ToFormattedString()}"));
                 }
                 else
                 {
@@ -308,25 +309,37 @@ namespace Skuld.Bot.Commands
                 image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel2, $"Fav. Cmd: {(favcommand == null ? "N/A" : favcommand.Command)} ({(favcommand == null ? "0" : favcommand.Usage.ToFormattedString())})"));
 
                 //YLevel 3
-                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToFormattedString()} ({exp.TotalXP.ToFormattedString()})"));
+                image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {xp.Level.ToFormattedString()} ({xp.TotalXP.ToFormattedString()})"));
                 image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: {profileuser.Pats.ToFormattedString()}/Patted: {profileuser.Patted.ToFormattedString()}"));
 
-                ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(exp.Level + 1, 2.5);
+                ulong xpCurrentLevel = DatabaseUtilities
+                    .GetStackedXPLevelRequirement(
+                        xp.Level,
+                        DiscordUtilities.LevelModifier
+                );
+
+                ulong xpNextLevel = DatabaseUtilities.GetXPLevelRequirement(
+                    xp.Level + 1,
+                    DiscordUtilities.LevelModifier
+                );
+
+                var currXp = xp.TotalXP - xpCurrentLevel;
 
                 //Progressbar
                 image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, 471, 580, 500));
                 image.Draw(new DrawableFillColor(new MagickColor("#dfdfdf")), new DrawableRectangle(22, 473, 578, 498));
 
-                var percentage = (double)exp.XP / xpToNextLevel * 100;
+                var percentage = (double)currXp / xpNextLevel * 100;
                 var mapped = percentage.Remap(0, 100, 22, 578);
 
                 image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, 473, mapped, 498));
 
                 //Current XP
-                image.Draw(font, fontsize, encoding, new DrawableText(25, 493, (exp.XP).ToFormattedString() + "XP"));
+                image.Draw(font, fontsize, encoding, new DrawableText(25, 493, currXp.ToFormattedString() + "XP"));
 
                 //XP To Next
-                using (MagickImage label5 = new MagickImage($"label:{xpToNextLevel.ToFormattedString()}XP",
+                using MagickImage label5 = new MagickImage(
+                    $"label:{xpNextLevel.ToFormattedString()}XP",
                     new MagickReadSettings
                     {
                         BackgroundColor = MagickColors.Transparent,
@@ -336,10 +349,10 @@ namespace Skuld.Bot.Commands
                         TextGravity = Gravity.East,
                         FontPointsize = 20,
                         Font = fontFile
-                    }))
-                {
-                    image.Composite(label5, 0, 475, CompositeOperator.Over);
-                }
+                    }
+                );
+
+                image.Composite(label5, 0, 475, CompositeOperator.Over);
             }
 
             MemoryStream outputStream = new MemoryStream();
@@ -348,7 +361,7 @@ namespace Skuld.Bot.Commands
 
             outputStream.Position = 0;
 
-            await "".QueueMessageAsync(Context, outputStream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
+            await "".QueueMessageAsync(Context, outputStream, filename: "image.png", type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
         }
 
         [Command("daily"), Summary("Daily Money")]
@@ -373,14 +386,14 @@ namespace Skuld.Bot.Commands
                 target = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
             }
 
-            ulong MoneyAmount = self.GetDailyAmount(Configuration);
-
             var previousAmount = user == null ? self.Money : target.Money;
 
             if (self.IsStreakReset(Configuration))
             {
                 self.Streak = 0;
             }
+
+            ulong MoneyAmount = self.GetDailyAmount(Configuration);
 
             if ((user == null ? self : target).ProcessDaily(MoneyAmount, self))
             {
@@ -410,7 +423,10 @@ namespace Skuld.Bot.Commands
 
                 if (self.Streak > 0)
                 {
-                    embed.AddField("Streak", $"You're on a streak of {self.Streak} days!!");
+                    embed.AddField(
+                        "Streak",
+                        $"You're on a streak of {self.Streak} days!!"
+                    );
                 }
 
                 self.Streak = self.Streak.Add(1);
@@ -420,9 +436,7 @@ namespace Skuld.Bot.Commands
                     self.MaxStreak = self.Streak;
                 }
 
-                await
-                    embed.QueueMessageAsync(Context)
-                .ConfigureAwait(false);
+                await embed.QueueMessageAsync(Context).ConfigureAwait(false);
             }
             else
             {
@@ -625,7 +639,18 @@ namespace Skuld.Bot.Commands
                 image.Draw(font, fontmed, encoding, white, new DrawableText(220, 170, $"Rank {index + 1}/{xps.Count()}"));
                 image.Draw(font, fontmed, encoding, white, new DrawableText(220, 210, $"Level: {xp.Level} ({xp.TotalXP.ToFormattedString()})"));
 
-                ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(xp.Level + 1, 2.5);
+                ulong xpCurrentLevel = DatabaseUtilities
+                    .GetStackedXPLevelRequirement(
+                        xp.Level,
+                        DiscordUtilities.LevelModifier
+                );
+
+                ulong xpNextLevel = DatabaseUtilities.GetXPLevelRequirement(
+                    xp.Level + 1,
+                    DiscordUtilities.LevelModifier
+                );
+
+                var currXp = xp.TotalXP - xpCurrentLevel;
 
                 int innerHeight = 256;
 
@@ -633,16 +658,17 @@ namespace Skuld.Bot.Commands
                 image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, innerHeight - 2, 730, 280));
                 image.Draw(new DrawableFillColor(new MagickColor("#dfdfdf")), new DrawableRectangle(22, innerHeight, 728, 278));
 
-                var percentage = (double)xp.XP / xpToNextLevel * 100;
-                var mapped = percentage.Remap(0, 100, 22, 728);
+                var percentage = (double)currXp / xpNextLevel * 100;
+                var mapped = percentage.Remap(0, 100, 22, 578);
+                mapped = Math.Clamp(mapped, 22, 578);
 
                 image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, innerHeight, mapped, 278));
 
                 //Current XP
-                image.Draw(font, fontmedd, encoding, new DrawableText(25, 277, xp.XP.ToFormattedString() + "XP"));
+                image.Draw(font, fontmedd, encoding, new DrawableText(25, 277, currXp.ToFormattedString() + "XP"));
 
                 //XP To Next
-                using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToFormattedString()}XP", new MagickReadSettings
+                using (MagickImage label5 = new MagickImage($"label:{xpNextLevel.ToFormattedString()}XP", new MagickReadSettings
                 {
                     BackgroundColor = MagickColors.Transparent,
                     FillColor = MagickColors.Black,
@@ -662,7 +688,7 @@ namespace Skuld.Bot.Commands
 
                 outputStream.Position = 0;
 
-                await "".QueueMessageAsync(Context, outputStream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
+                await "".QueueMessageAsync(Context, outputStream, filename: "image.png", type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
             }
             else
             {
@@ -839,37 +865,77 @@ namespace Skuld.Bot.Commands
         {
             public SkuldConfig Configuration { get; set; }
 
-            [Command("buy"), Summary("Buy permanent custom backgrounds"), RequireDatabase]
+            [
+                Command("buy"), 
+                Summary("Buy permanent custom backgrounds"), 
+                RequireDatabase
+            ]
             public async Task BuyCBG()
             {
-                using var Database = new SkuldDbContextFactory().CreateDbContext();
+                using var Database = new SkuldDbContextFactory()
+                    .CreateDbContext();
 
-                var usr = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
-                var gld = await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false);
+                var usr = await Database.InsertOrGetUserAsync(Context.User)
+                    .ConfigureAwait(false);
+                var gld = await Database.InsertOrGetGuildAsync(Context.Guild)
+                    .ConfigureAwait(false);
 
-                if (!usr.UnlockedCustBG)
+                if (usr.UnlockedCustBG)
                 {
-                    if (usr.Money >= 40000)
-                    {
-                        TransactionService.DoTransaction(new TransactionStruct
-                        {
-                            Amount = 40000,
-                            Sender = usr
-                        });
-                        usr.UnlockedCustBG = true;
-
-                        await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                        await EmbedExtensions.FromSuccess($"You've successfully unlocked custom backgrounds, use: {gld.Prefix ?? Configuration.Prefix}set-custombg [URL] to set your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}40,000 to unlock custom backgrounds", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    }
+                    await
+                        EmbedExtensions.FromInfo(
+                            "You already unlocked custom backgrounds, use: " +
+                            $"{gld.Prefix ?? Configuration.Prefix}" +
+                            "set-custombg [URL] to set your background",
+                            Context
+                        )
+                        .QueueMessageAsync(Context)
+                    .ConfigureAwait(false);
                 }
                 else
                 {
-                    await EmbedExtensions.FromInfo($"You already unlocked custom backgrounds, use: {gld.Prefix ?? Configuration.Prefix}set-custombg [URL] to set your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                    TransactionService.DoTransaction(
+                        new TransactionStruct
+                        {
+                            Amount = 40000,
+                            Sender = usr
+                        })
+                        .IsSuccessAsync(async x =>
+                        {
+                            usr.UnlockedCustBG = true;
+
+                            await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                            await
+                                EmbedExtensions
+                                    .FromSuccess(
+                                        "You've successfully unlocked custom " +
+                                        "backgrounds, use: " +
+                                        $"{gld.Prefix ?? Configuration.Prefix}" +
+                                        "set-custombg [URL] to set your background",
+                                        Context
+                                    )
+                                .QueueMessageAsync(Context)
+                            .ConfigureAwait(false);
+                        })
+                        .IsError(x =>
+                        {
+                            x.Exception.Is<TransactionException>().Then(
+                                async z =>
+                                {
+                                    await
+                                        EmbedExtensions
+                                            .FromError(
+                                            $"You need at least {gld.MoneyIcon}" +
+                                             "40,000 to unlock custom backgrounds",
+                                                Context
+                                            )
+                                        .QueueMessageAsync(Context)
+                                    .ConfigureAwait(false);
+                                }
+                            );
+                        }
+                    );
                 }
             }
 
@@ -884,23 +950,26 @@ namespace Skuld.Bot.Commands
 
                 if (Uri.TryCreate(link, UriKind.Absolute, out var res))
                 {
-                    if (usr.Money >= 900)
+                    TransactionService.DoTransaction(new TransactionStruct
                     {
-                        TransactionService.DoTransaction(new TransactionStruct
+                        Amount = 900,
+                        Sender = usr
+                    })
+                        .IsSuccess(async x =>
                         {
-                            Amount = 900,
-                            Sender = usr
+                            usr.Background = res.OriginalString;
+
+                            await Database.SaveChangesAsync().ConfigureAwait(false);
+
+                            await EmbedExtensions.FromSuccess("Set your Background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        })
+                        .IsError(async x =>
+                        {
+                            x.Exception.Is<TransactionException>().Then(async x =>
+                            {
+                                await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}900 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                            });
                         });
-                        usr.Background = res.OriginalString;
-
-                        await Database.SaveChangesAsync().ConfigureAwait(false);
-
-                        await EmbedExtensions.FromSuccess("Set your Background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}900 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    }
                     return;
                 }
                 else if (link.ToLowerInvariant() == "reset")
@@ -914,24 +983,24 @@ namespace Skuld.Bot.Commands
                 }
                 else if (int.TryParse(link[0] != '#' ? link : link.Remove(0, 1), System.Globalization.NumberStyles.HexNumber, null, out _))
                 {
-                    if (usr.Money >= 300)
+                    TransactionService.DoTransaction(new TransactionStruct
                     {
-                        TransactionService.DoTransaction(new TransactionStruct
-                        {
-                            Amount = 300,
-                            Sender = usr
-                        });
-
+                        Amount = 300,
+                        Sender = usr
+                    }).IsSuccess(async x =>
+                    {
                         usr.Background = link[0] != '#' ? "#" + link : link;
 
                         await Database.SaveChangesAsync().ConfigureAwait(false);
 
                         await EmbedExtensions.FromSuccess("Set your Background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    }
-                    else
+                    }).IsError(async x =>
                     {
-                        await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}300 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    }
+                        x.Exception.Is<TransactionException>().Then(async x =>
+                        {
+                            await EmbedExtensions.FromError($"You need at least {gld.MoneyIcon}300 to change your background", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                        });
+                    });
                 }
                 else
                 {
@@ -1027,9 +1096,7 @@ namespace Skuld.Bot.Commands
                     TotalXP = 1234567890
                 };
 
-                exp.Level = DatabaseUtilities.GetLevelFromTotalXP(exp.TotalXP, 2.5);
-
-                exp.XP = DatabaseUtilities.GetXPLevelRequirement(exp.Level, 2.5) / 2;
+                exp.Level = DatabaseUtilities.GetLevelFromTotalXP(exp.TotalXP, DiscordUtilities.LevelModifier);
 
                 int ylevel1 = 365, ylevel2 = 405, ylevel3 = 445;
 
@@ -1109,22 +1176,33 @@ namespace Skuld.Bot.Commands
                 image.Draw(font, fontsize, encoding, white, new DrawableText(22, ylevel3, $"Level: {exp.Level.ToFormattedString()} ({exp.TotalXP.ToFormattedString()})"));
                 image.Draw(font, fontsize, encoding, white, new DrawableText(rightPos, ylevel3, $"Pats: 7,777/Patted: 7,777"));
 
-                ulong xpToNextLevel = DatabaseUtilities.GetXPLevelRequirement(exp.Level + 1, 2.5);
+                ulong xpToNextLevel = DatabaseUtilities.GetStackedXPLevelRequirement(
+                    exp.Level + 1,
+                    DiscordUtilities.LevelModifier
+                );
+
+                ulong xpCurrentLevel = DatabaseUtilities
+                    .GetStackedXPLevelRequirement(
+                        exp.Level,
+                        DiscordUtilities.LevelModifier
+                );
+
+                var currXp = exp.TotalXP / 2;
 
                 //Progressbar
                 image.Draw(new DrawableFillColor(new MagickColor("#212121")), new DrawableRectangle(20, 471, 580, 500));
                 image.Draw(new DrawableFillColor(new MagickColor("#dfdfdf")), new DrawableRectangle(22, 473, 578, 498));
 
-                var percentage = (double)exp.XP / xpToNextLevel * 100;
+                var percentage = (double)currXp / xpToNextLevel * 100;
                 var mapped = percentage.Remap(0, 100, 22, 578);
 
                 image.Draw(new DrawableFillColor(new MagickColor("#009688")), new DrawableRectangle(22, 473, mapped, 498));
 
                 //Current XP
-                image.Draw(font, fontsize, encoding, new DrawableText(25, 493, (exp.XP).ToFormattedString() + "XP"));
+                image.Draw(font, fontsize, encoding, new DrawableText(25, 493, currXp.ToFormattedString() + "XP"));
 
                 //XP To Next
-                using (MagickImage label5 = new MagickImage($"label:{(xpToNextLevel).ToFormattedString()}XP", new MagickReadSettings
+                using (MagickImage label5 = new MagickImage($"label:{xpToNextLevel.ToFormattedString()}XP", new MagickReadSettings
                 {
                     BackgroundColor = MagickColors.Transparent,
                     FillColor = MagickColors.Black,
@@ -1165,7 +1243,7 @@ namespace Skuld.Bot.Commands
 
                 outputStream.Position = 0;
 
-                await "".QueueMessageAsync(Context, outputStream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
+                await "".QueueMessageAsync(Context, outputStream, filename: "image.png", type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
             }
         }
 

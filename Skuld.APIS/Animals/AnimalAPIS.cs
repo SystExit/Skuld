@@ -9,7 +9,7 @@ namespace Skuld.APIS
 {
     public class AnimalClient
     {
-        private readonly Uri BIRDAPI = new Uri("https://random.birb.pw/tweet.json/");
+        private readonly Uri BIRDAPI = new Uri("https://random.birb.pw/tweet.json");
         private readonly Uri KITTYAPI = new Uri("https://aws.random.cat/meow");
         private readonly Uri KITTYAPI2 = new Uri("http://thecatapi.com/api/images/get");
         private readonly Uri DOGGOAPI = new Uri("https://random.dog/woof");

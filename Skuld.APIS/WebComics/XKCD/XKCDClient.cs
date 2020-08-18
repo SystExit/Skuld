@@ -16,10 +16,9 @@ namespace Skuld.APIS.WebComics.XKCD
         public XKCDClient()
         {
             rateLimiter = new RateLimiter();
-            GetLastPageAsync().GetAwaiter().GetResult();
         }
 
-        private async Task<int?> GetLastPageAsync()
+        private static async Task<int?> GetLastPageAsync()
         {
             var rawresp = await HttpWebClient.ReturnStringAsync(new Uri("https://xkcd.com/info.0.json")).ConfigureAwait(false);
 
@@ -38,18 +37,13 @@ namespace Skuld.APIS.WebComics.XKCD
 
         public async Task<XKCDComic> GetRandomComicAsync()
         {
-            if (rateLimiter.IsRatelimited()) return null;
-
             if (!XKCDLastPage.HasValue)
             {
                 XKCDLastPage = await GetLastPageAsync().ConfigureAwait(false);
+            }
+            if (rateLimiter.IsRatelimited()) return null;
 
-                return await GetComicAsync(SkuldRandom.Next(0, XKCDLastPage.Value)).ConfigureAwait(false);
-            }
-            else
-            {
-                return await GetComicAsync(SkuldRandom.Next(0, XKCDLastPage.Value)).ConfigureAwait(false);
-            }
+            return await GetComicAsync(SkuldRandom.Next(0, XKCDLastPage.Value)).ConfigureAwait(false);
         }
 
         public async Task<XKCDComic> GetComicAsync(int comicid)

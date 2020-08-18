@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using Sentry;
 using Skuld.Core;
 using Skuld.Core.Utilities;
 using Skuld.Models;
@@ -48,7 +49,7 @@ namespace Skuld.Bot
                     var conf = new SkuldConfig();
                     database.Configurations.Add(conf);
                     await database.SaveChangesAsync().ConfigureAwait(false);
-                    Log.Verbose("HostService", $"Created new configuration with Id: {conf.Id}");
+                    Log.Verbose("HostService", $"Created new configuration with Id: {conf.Id}", null);
                 }
 
                 var configId = SkuldAppContext.GetEnvVar(SkuldAppContext.ConfigEnvVar);
@@ -61,14 +62,14 @@ namespace Skuld.Bot
             }
             catch (Exception ex)
             {
-                Log.Critical("HostService", ex.Message, ex);
+                Log.Critical("HostService", ex.Message, null, ex);
             }
 
             await BotService.ConfigureBotAsync(
                 Configuration,
                 new DiscordSocketConfig
                 {
-                    MessageCacheSize = 1000,
+                    MessageCacheSize = 100,
                     DefaultRetryMode = RetryMode.AlwaysRetry,
                     LogLevel = LogSeverity.Verbose,
                     TotalShards = Configuration.Shards

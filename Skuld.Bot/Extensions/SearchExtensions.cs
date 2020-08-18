@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Skuld.Bot.Extensions
 {
-    public static class Search
+    public static class SearchExtensions
     {
         public static async Task<Embed> GetEmbedAsync(this PokemonSpecies pokemon, PokemonDataGroup group)
         {

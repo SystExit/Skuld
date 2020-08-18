@@ -204,7 +204,7 @@ namespace Skuld.Bot.Commands
             catch (Exception ex)
             {
                 await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                Log.Error("CMD-HELP", ex.Message, ex);
+                Log.Error("CMD-HELP", ex.Message, Context, ex);
             }
         }
 

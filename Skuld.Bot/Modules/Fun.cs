@@ -5,7 +5,6 @@ using Discord.Commands;
 using Discord.WebSocket;
 using ImageMagick;
 using IqdbApi;
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Skuld.APIS;
 using Skuld.APIS.Animals.Models;
@@ -82,6 +81,12 @@ namespace Skuld.Bot.Commands
             "SKULD_FUN_8BALL_NO5"
         };
 
+        private readonly string PokemonUrl = 
+            "http://images.alexonsager.net/pokemon/fused/{1}/{1}.{2}.png";
+
+        private readonly StringComparison Comparison =
+            StringComparison.InvariantCultureIgnoreCase;
+
         [Command("fuse")]
         [Summary("Fuses 2 of the 1st generation pokemon")]
         [Usage("5 96")]
@@ -90,19 +95,30 @@ namespace Skuld.Bot.Commands
         {
             if (int1 > 151 || int1 < 0)
             {
-                await EmbedExtensions.FromError($"{int1} over/under limit. (151)", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await 
+                    EmbedExtensions
+                        .FromError($"{int1} over/under limit. (151)", Context)
+                    .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
             }
             else if (int2 > 151 || int2 < 0)
             {
-                await EmbedExtensions.FromError($"{int2} over/under limit. (151)", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                await 
+                    EmbedExtensions
+                        .FromError($"{int2} over/under limit. (151)", Context)
+                    .QueueMessageAsync(Context)
+                .ConfigureAwait(false);
             }
             else
             {
+                var url = PokemonUrl
+                    .Replace("{1}", Convert.ToString(int1, null), Comparison)
+                    .Replace("{2}", Convert.ToString(int2, null), Comparison);
                 await
                     EmbedExtensions
                         .FromMessage(Context)
-                        .WithImageUrl($"http://images.alexonsager.net/pokemon/fused/{int1}/{int1}.{int2}.png")
-                        .QueueMessageAsync(Context)
+                        .WithImageUrl(url)
+                    .QueueMessageAsync(Context)
                 .ConfigureAwait(false);
             }
         }
@@ -112,7 +128,11 @@ namespace Skuld.Bot.Commands
         [Command("reminder")]
         [Alias("remind")]
         [Summary("What was that thing I needed to do again?")]
-        [Usage("Get eggs in 1h 30m", "Get eggs in 1h 30m --repeat", "dab on the haters in 2d 1h 30m 5s", "dab on the haters in 2d 1h 30m 5s --repeat")]
+        [Usage(
+            "Get eggs in 1h 30m", "Get eggs in 1h 30m --repeat",
+            "dab on the haters in 2d 1h 30m 5s",
+            "dab on the haters in 2d 1h 30m 5s --repeat"
+        )]
         [RequireDatabase]
         [Ratelimit(20, 1, Measure.Minutes)]
         public async Task Reminder([Remainder]string Reminder)
@@ -179,7 +199,9 @@ namespace Skuld.Bot.Commands
 
             ushort localId = (ushort)SkuldRandom.Next(0, ushort.MaxValue);
 
-            while(Database.Reminders.ToList().Any(x=>x.LocalId == localId && x.UserId == Context.User.Id))
+            while(Database.Reminders.ToList()
+                .Any(x=>x.LocalId == localId && x.UserId == Context.User.Id)
+            )
             {
                 localId = (ushort)SkuldRandom.Next(0, ushort.MaxValue);
             }
@@ -349,7 +371,7 @@ namespace Skuld.Bot.Commands
                 await 
                     EmbedExtensions.FromImage(doggo, Color.Red, Context)
                     .QueueMessageAsync(
-                        Context, 
+                        Context,
                         content: "Both the api's are down, that makes the sad a big sad. <:blobcry:350681079415439361>"
                     )
                 .ConfigureAwait(false);
@@ -495,9 +517,14 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("yn"), Summary("Yes, no, maybe. I don't know, can you repeat the question?")]
-        [Usage("Will it rain today?")]
-        [Ratelimit(20, 1, Measure.Minutes)]
+        [
+            Command("yn"),
+            Summary(
+                "Yes, no, maybe. I don't know, can you repeat the question?"
+            ),
+            Usage("Will it rain today?"),
+            Ratelimit(20, 1, Measure.Minutes)
+        ]
         public async Task YN([Remainder]string question = null)
         {
             var YNResp = await YNWTFcli.AskYNWTF().ConfigureAwait(false);
@@ -529,10 +556,28 @@ namespace Skuld.Bot.Commands
 
         #region Pasta
 
-        [Command("pasta"), Summary("Pastas are nice"), RequireDatabase]
-        [Usage("new naenae dab", "edit naenae watch me whip", "who naenae", "upvote naenae", "downvote naenae", "delete naenae", "naenae", "help", "list")]
-        [Ratelimit(20, 1, Measure.Minutes)]
-        public async Task Pasta(string cmd, string title = null, [Remainder]string content = null)
+        [
+            Command("pasta"), 
+            Summary("Pastas are nice"), 
+            RequireDatabase,
+            Usage(
+                "new naenae dab",
+                "edit naenae watch me whip",
+                "who naenae",
+                "upvote naenae",
+                "downvote naenae",
+                "delete naenae",
+                "naenae",
+                "help",
+                "list"
+            ),
+            Ratelimit(20, 1, Measure.Minutes)
+        ]
+        public async Task Pasta(
+            string cmd,
+            string title = null,
+            [Remainder]string content = null
+        )
         {
             using var Database = new SkuldDbContextFactory().CreateDbContext();
 
@@ -579,6 +624,14 @@ namespace Skuld.Bot.Commands
                                     }
                                     else
                                     {
+                                        if (Context.Message.Attachments.Any())
+                                        {
+                                            foreach (var att in Context.Message.Attachments)
+                                            {
+                                                content += $"\n{att.Url}";
+                                            }
+                                        }
+
                                         Database.Pastas.Add(new Pasta
                                         {
                                             OwnerId = Context.User.Id,
@@ -783,7 +836,7 @@ namespace Skuld.Bot.Commands
                                 using var sw = new StreamWriter(stream);
                                 sw.Write(pastanames);
 
-                                await $"Here's a list".QueueMessageAsync(Context, stream, fileName: "pastas.txt", type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
+                                await $"Here's a list".QueueMessageAsync(Context, fileStream: stream, fileName: "pastas.txt", type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
                             }
                         }
                         else
@@ -799,14 +852,113 @@ namespace Skuld.Bot.Commands
                     }
                     break;
 
+                case "search":
+                    {
+                        var names = Database.Pastas.ToList().Select(x => x.Name).ToList();
+
+                        Dictionary<string, int> orderedPastas = new Dictionary<string, int>();
+
+                        names.ForEach(x =>
+                        {
+                            var confidence = FuzzyString.ComparisonMetrics.LevenshteinDistance(title, x);
+                            orderedPastas.Add(x, confidence);
+                        });
+
+                        var searchResults = orderedPastas.OrderByDescending(x => x.Value);
+
+                        if (searchResults.Any())
+                        {
+                            StringBuilder pastas = new StringBuilder();
+
+                            foreach (var entry in searchResults)
+                            {
+                                var p = Database.Pastas.FirstOrDefault(x => x.Name == entry.Key);
+
+                                pastas.Append(p.Name);
+
+                                if (p.Name != searchResults.LastOrDefault().Key)
+                                {
+                                    pastas.Append(", ");
+                                }
+                            }
+
+                            if (pastas.Length >= 900)
+                            {
+                                using MemoryStream stream = new MemoryStream();
+                                using StreamWriter writer = new StreamWriter(stream);
+                                writer.Write(pastas.ToString());
+
+                                stream.Position = 0;
+
+                                await Context.Channel.SendFileAsync(stream, "pastas.txt", $"Here's all that are related to the search term: \"{title}\"").ConfigureAwait(false);
+
+                                writer.Close();
+                                stream.Close();
+
+                                await writer.DisposeAsync().ConfigureAwait(false);
+                                await stream.DisposeAsync().ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                StringBuilder response = new StringBuilder("`");
+
+                                response.Append(pastas);
+
+                                response.Append("`");
+
+                                await
+                                    EmbedExtensions.FromMessage("Pasta Kitchen", $"Here's all that are related to the search term: \"{title}\"\n{response.ToString()}", Context)
+                                    .QueueMessageAsync(Context)
+                                    .ConfigureAwait(false);
+                            }
+                        }
+                        else
+                        {
+                            await
+                                EmbedExtensions.FromError("Pasta Kitchen", "You have no pastas", Context)
+                                .QueueMessageAsync(Context)
+                            .ConfigureAwait(false);
+                        }
+
+                    }
+                    break;
+
                 default:
                     {
                         if (pasta != null)
                         {
-                            await 
-                                EmbedExtensions.FromMessage("Pasta Kitchen", pasta.Content, Context)
-                                .QueueMessageAsync(Context)
-                            .ConfigureAwait(false);
+                            var owner = Context.Client.GetUser(pasta.OwnerId);
+
+                            if (pasta.Content.IsImageExtension())
+                            {
+                                var links = new List<string>();
+                                MatchCollection mactches = SkuldAppContext.LinkRegex.Matches(pasta.Content);
+                                foreach (Match match in mactches)
+                                {
+                                    links.Add(match.Value);
+                                }
+
+                                await
+                                    EmbedExtensions.FromImage(
+                                        links.FirstOrDefault(),
+                                        pasta.Content,
+                                        Context
+                                    )
+                                    .WithTitle($"{pasta.Name} - {owner.FullName()}")
+                                    .QueueMessageAsync(Context)
+                                .ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                await
+                                    EmbedExtensions.FromMessage(
+                                        $"{pasta.Name} - {owner.FullName()}",
+                                        pasta.Content,
+                                        Context
+                                    )
+                                    .QueueMessageAsync(Context)
+                                .ConfigureAwait(false);
+                            }
                         }
                         else
                         {
@@ -972,73 +1124,6 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("pasta search"), Summary("Search for a pasta"), RequireDatabase]
-        [Ratelimit(20, 1, Measure.Minutes)]
-        public async Task SearchPasta([Remainder] string search)
-        {
-            SkuldDbContext database = new SkuldDbContextFactory().CreateDbContext();
-
-            var names = database.Pastas.ToList().Select(x => x.Name).ToList();
-
-            Dictionary<string, int> orderedPastas = new Dictionary<string, int>();
-
-            names.ForEach(x =>
-            {
-                var confidence = FuzzyString.ComparisonMetrics.LevenshteinDistance(search, x);
-                orderedPastas.Add(x, confidence);
-            });
-
-            var searchResults = orderedPastas.OrderByDescending(x => x.Value);
-
-            if (searchResults.Any())
-            {
-                StringBuilder pastas = new StringBuilder();
-
-                foreach (var entry in searchResults)
-                {
-                    var pasta = database.Pastas.FirstOrDefault(x => x.Name == entry.Key);
-
-                    pastas.Append(pasta.Name);
-
-                    if (pasta.Name != searchResults.LastOrDefault().Key)
-                    {
-                        pastas.Append(", ");
-                    }
-                }
-
-                if (pastas.Length >= 900)
-                {
-                    using MemoryStream stream = new MemoryStream();
-                    using StreamWriter writer = new StreamWriter(stream);
-                    writer.Write(pastas.ToString());
-
-                    stream.Position = 0;
-
-                    await Context.Channel.SendFileAsync(stream, "pastas.txt", $"Here's all that are related to the search term: \"{search}\"").ConfigureAwait(false);
-                }
-                else
-                {
-                    StringBuilder response = new StringBuilder("`");
-
-                    response.Append(pastas);
-
-                    response.Append("`");
-
-                    await
-                        EmbedExtensions.FromMessage("Pasta Kitchen", $"Here's all that are related to the search term: \"{search}\"\n{response.ToString()}", Context)
-                        .QueueMessageAsync(Context)
-                        .ConfigureAwait(false);
-                }
-            }
-            else
-            {
-                await
-                    EmbedExtensions.FromError("Pasta Kitchen", "You have no pastas", Context)
-                    .QueueMessageAsync(Context)
-                    .ConfigureAwait(false);
-            }
-        }
-
         #endregion Pasta
 
         #region Emoji
@@ -1120,12 +1205,20 @@ namespace Skuld.Bot.Commands
             }
         }
 
-        [Command("cah"), Summary("Gets a Random Cynaide & Happiness Comic"), Alias("cyanide&happiness", "c&h"), Ratelimit(5, 1, Measure.Minutes)]
+        [
+            Command("cah"), 
+            Summary("Gets a Random Cynaide & Happiness Comic"), 
+            Alias("cyanide&happiness", "c&h"), 
+            Ratelimit(5, 1, Measure.Minutes)
+        ]
         public async Task CAH()
         {
             try
             {
-                var comic = await ComicClients.GetCAHComicAsync().ConfigureAwait(false) as CAHComic;
+                var comic = await 
+                    ComicClients.GetCAHComicAsync()
+                .ConfigureAwait(false) as CAHComic;
+
                 DogStatsd.Increment("web.get");
 
                 await new EmbedBuilder()
@@ -1142,19 +1235,28 @@ namespace Skuld.Bot.Commands
             }
             catch (Exception ex)
             {
-                Log.Error("CAH-Cmd", "Error parsing website", ex);
+                Log.Error("CAH-Cmd", "Error parsing website", Context, ex);
             }
         }
 
-        [Command("cad"), Summary("Gets a random CAD comic"), Ratelimit(5, 1, Measure.Minutes)]
+        [
+            Command("cad"), 
+            Summary("Gets a random CAD comic"), 
+            Ratelimit(5, 1, Measure.Minutes)
+        ]
         public async Task CAD()
         {
             try
             {
-                var comic = await ComicClients.GetCADComicAsync().ConfigureAwait(false) as CADComic;
+                var comic = await 
+                    ComicClients.GetCADComicAsync()
+                .ConfigureAwait(false) as CADComic;
                 DogStatsd.Increment("web.get");
                 await
-                    EmbedExtensions.FromImage(comic.ImageURL, EmbedExtensions.RandomEmbedColor(), Context)
+                    EmbedExtensions.FromImage(
+                        comic.ImageURL, 
+                        EmbedExtensions.RandomEmbedColor(), 
+                        Context)
                         .WithAuthor(
                             new EmbedAuthorBuilder()
                             .WithName("Tim Buckley")
@@ -1165,8 +1267,11 @@ namespace Skuld.Bot.Commands
             }
             catch (Exception ex)
             {
-                Log.Error("CAD-Cmd", "Error parsing website", ex);
-                await EmbedExtensions.FromError($"Error parsing website, try again later", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+                Log.Error("CAD-Cmd", "Error parsing website", Context, ex);
+                await EmbedExtensions.FromError(
+                    $"Error parsing website, try again later", 
+                    Context).QueueMessageAsync(Context)
+                .ConfigureAwait(false);
             }
         }
 
@@ -1199,16 +1304,8 @@ namespace Skuld.Bot.Commands
                     }
                     if (embed.Thumbnail.HasValue)
                     {
-                        url = embed.Image.Value.Url;
+                        url = embed.Thumbnail.Value.Url;
                         break;
-                    }
-                    if (embed.Author.HasValue)
-                    {
-                        if (!string.IsNullOrEmpty(embed.Author.Value.IconUrl))
-                        {
-                            url = embed.Author.Value.IconUrl;
-                            break;
-                        }
                     }
                 }
             }
@@ -1251,7 +1348,7 @@ namespace Skuld.Bot.Commands
 
             stream.Position = 0;
 
-            await "".QueueMessageAsync(Context, stream, type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
+            await "".QueueMessageAsync(Context, fileStream: stream, fileName: "image.png", type: Services.Messaging.Models.MessageType.File).ConfigureAwait(false);
         }
 
         [Command("magik"), Summary("Magiks an image"), Alias("magick", "magic", "liquify"), Ratelimit(5, 1, Measure.Minutes)]
@@ -1466,24 +1563,34 @@ namespace Skuld.Bot.Commands
         [Alias("safe")]
         public async Task Safebooru(params string[] tags)
         {
-            var test = tags.ContainsBlacklistedTags();
-            if (test.Successful)
-            {
-                await $"Your tags contains {test.Data.Count()} banned tags, please remove them.\nBanned Tags Found:{string.Join(", ", test.Data)}".QueueMessageAsync(Context).ConfigureAwait(false);
-                return;
-            }
-            else
-            {
-                var posts = await SafebooruClient.GetImagesAsync(tags).ConfigureAwait(false);
-                DogStatsd.Increment("web.get");
-                var post = GetSafeImage(posts);
-                if (post != null)
+            tags
+                .ContainsBlacklistedTags()
+                .IsSuccessAsync(x => LewdModule.containsIllegalTags(x.Data, tags, Context))
+                .IsErrorAsync(async x =>
                 {
-                    await post.GetMessage(Context).QueueMessageAsync(Context).ConfigureAwait(false);
-                    return;
-                }
-                await EmbedExtensions.FromError("Couldn't find an image", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-            }
+                    var posts = await SafebooruClient
+                        .GetImagesAsync(tags)
+                    .ConfigureAwait(false);
+
+                    DogStatsd.Increment("web.get");
+
+                    if (posts == null || !posts.Any())
+                    {
+                        await EmbedExtensions
+                            .FromError(
+                                "Couldn't find an image.",
+                                Context
+                            )
+                            .QueueMessageAsync(Context)
+                        .ConfigureAwait(false);
+                        return;
+                    }
+
+                    await GetSafeImage(posts)
+                            .GetMessage(Context)
+                            .QueueMessageAsync(Context)
+                            .ConfigureAwait(false);
+                });
         }
 
         public SafebooruImage GetSafeImage(IReadOnlyList<SafebooruImage> posts, int EdgeCase = 0)
@@ -1509,13 +1616,20 @@ namespace Skuld.Bot.Commands
 
         #endregion Images
 
-        [Command("wikismash"), Summary("Smash the image of the first article, with the content of the second"), Usage("Joker_(character) Insanity")]
+        [
+            Command("wikismash"), 
+            Summary("Smash the image of the first article, with the content of the second"), 
+            Usage("Joker_(character) Insanity")
+        ]
         public async Task WikiSmash(string firstArticle, string secondArticle)
         {
             if(string.IsNullOrEmpty(firstArticle))
             {
                 await
-                    EmbedExtensions.FromError("Incorrect Argument for firstArticle", Context)
+                    EmbedExtensions.FromError(
+                        "Incorrect Argument for firstArticle", 
+                        Context
+                    )
                     .QueueMessageAsync(Context)
                 .ConfigureAwait(false);
                 return;
@@ -1523,7 +1637,10 @@ namespace Skuld.Bot.Commands
             if (string.IsNullOrEmpty(secondArticle))
             { 
                 await
-                    EmbedExtensions.FromError("Incorrect Argument for secondArticle", Context)
+                    EmbedExtensions.FromError(
+                        "Incorrect Argument for secondArticle", 
+                        Context
+                    )
                     .QueueMessageAsync(Context)
                 .ConfigureAwait(false);
                 return;
@@ -1533,14 +1650,19 @@ namespace Skuld.Bot.Commands
 
             try
             {
-                first = await WikiClient.GetArticleAsync("en", firstArticle).ConfigureAwait(false);
+                first = await 
+                    WikiClient.GetArticleAsync("en", firstArticle)
+                .ConfigureAwait(false);
 
                 if (first != null)
                 {
                     if (first.Original == null)
                     {
                         await
-                            EmbedExtensions.FromError("firstArticle doesn't have an image", Context)
+                            EmbedExtensions.FromError(
+                                "firstArticle doesn't have an image", 
+                                Context
+                            )
                             .QueueMessageAsync(Context)
                         .ConfigureAwait(false);
 
@@ -1550,7 +1672,10 @@ namespace Skuld.Bot.Commands
                 else
                 {
                     await
-                        EmbedExtensions.FromError("firstArticle doesn't exist", Context)
+                        EmbedExtensions.FromError(
+                            "firstArticle doesn't exist", 
+                            Context
+                        )
                         .QueueMessageAsync(Context)
                     .ConfigureAwait(false);
 
@@ -1563,7 +1688,7 @@ namespace Skuld.Bot.Commands
                     EmbedExtensions.FromError("firstArticle doesn't exist", Context)
                     .QueueMessageAsync(Context)
                 .ConfigureAwait(false);
-                Log.Error("WikiSmash", ex.Message, ex);
+                Log.Error("WikiSmash", ex.Message, Context, ex);
 
                 return;
             }
@@ -1590,7 +1715,7 @@ namespace Skuld.Bot.Commands
                     EmbedExtensions.FromError("secondArticle doesn't exist", Context)
                     .QueueMessageAsync(Context)
                 .ConfigureAwait(false);
-                Log.Error("WikiSmash", ex.Message, ex);
+                Log.Error("WikiSmash", ex.Message, Context, ex);
 
                 return;
             }
@@ -1603,8 +1728,16 @@ namespace Skuld.Bot.Commands
             .ConfigureAwait(false);
         }
 
-        [Command("yandev"), Summary("I, EvaX humbly submit a toast"), Usage("@Skuld instability be a discord bot")]
-        public async Task YanDev(IGuildUser target, string finish, [Remainder]string action)
+        [
+            Command("yandev"), 
+            Summary("I, EvaX humbly submit a toast"), 
+            Usage("@Skuld instability be a discord bot")
+        ]
+        public async Task YanDev(
+            IGuildUser target, 
+            string finish, 
+            [Remainder]string action
+        )
         {
             ITextChannel channel = Context.Channel as ITextChannel;
             if(Context.Message.MentionedChannels.Any())

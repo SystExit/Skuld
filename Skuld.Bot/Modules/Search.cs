@@ -14,7 +14,6 @@ using Skuld.Services.Discord.Attributes;
 using Skuld.Services.Discord.Preconditions;
 using Skuld.Services.Messaging.Extensions;
 using SteamStoreQuery;
-using SteamWebAPI2.Interfaces;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -26,7 +25,6 @@ namespace Skuld.Bot.Commands
     public class SearchModule : InteractiveBase<ShardedCommandContext>
     {
         public SocialAPIS Social { get; set; }
-        public SteamStore SteamStoreClient { get; set; }
         public UrbanDictionaryClient UrbanDictionary { get; set; }
         public WikipediaClient Wikipedia { get; set; }
         public GiphyClient Giphy { get; set; }
