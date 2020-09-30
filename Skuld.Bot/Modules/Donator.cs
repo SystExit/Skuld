@@ -7,9 +7,9 @@ using Skuld.Models;
 using Skuld.Services.Accounts.Banking.Models;
 using Skuld.Services.Banking;
 using Skuld.Services.Bot;
-using Skuld.Services.Discord.Attributes;
-using Skuld.Services.Discord.Models;
-using Skuld.Services.Discord.Preconditions;
+using Skuld.Bot.Discord.Attributes;
+using Skuld.Bot.Discord.Models;
+using Skuld.Bot.Discord.Preconditions;
 using Skuld.Services.Messaging.Extensions;
 using StatsdClient;
 using System;
@@ -115,7 +115,7 @@ namespace Skuld.Bot.Modules
                     await
                         EmbedExtensions
                         .FromSuccess("Donator Module",
-                                    $"You just sold your donator key for {BotService.MessageServiceConfig.MoneyIcon}{25000.ToFormattedString()}",
+                                    $"You just sold your donator key for {SkuldApp.MessageServiceConfig.MoneyIcon}{25000.ToFormattedString()}",
                                      Context)
                         .QueueMessageAsync(Context)
                         .ConfigureAwait(false);

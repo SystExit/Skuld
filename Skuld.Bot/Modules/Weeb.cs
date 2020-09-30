@@ -7,7 +7,7 @@ using Skuld.APIS.Extensions;
 using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
 using Skuld.Models;
-using Skuld.Services.Discord.Attributes;
+using Skuld.Bot.Discord.Attributes;
 using Skuld.Services.Globalization;
 using Skuld.Services.Messaging.Extensions;
 using SysEx.Net;

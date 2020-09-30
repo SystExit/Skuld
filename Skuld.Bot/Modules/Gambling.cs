@@ -11,8 +11,8 @@ using Skuld.Models;
 using Skuld.Services.Accounts.Banking.Models;
 using Skuld.Services.Banking;
 using Skuld.Services.Bot;
-using Skuld.Services.Discord.Attributes;
-using Skuld.Services.Discord.Preconditions;
+using Skuld.Bot.Discord.Attributes;
+using Skuld.Bot.Discord.Preconditions;
 using Skuld.Services.Exceptions;
 using Skuld.Services.Gambling;
 using Skuld.Services.Globalization;
@@ -130,8 +130,8 @@ namespace Skuld.Bot.Commands
             using var Database = new SkuldDbContextFactory().CreateDbContext();
             var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
-            string MoneyPrefix = BotService.MessageServiceConfig.MoneyIcon;
-            string Prefix = BotService.MessageServiceConfig.Prefix;
+            string MoneyPrefix = SkuldApp.MessageServiceConfig.MoneyIcon;
+            string Prefix = SkuldApp.MessageServiceConfig.Prefix;
 
             if (!Context.IsPrivate)
             {
@@ -251,7 +251,7 @@ namespace Skuld.Bot.Commands
 
                 var throwName = Locale.GetLocale(user.Language).GetString(rps.FirstOrDefault(x => x.Key == skuldThrow).Value);
 
-                string MoneyPrefix = BotService.MessageServiceConfig.MoneyIcon;
+                string MoneyPrefix = SkuldApp.MessageServiceConfig.MoneyIcon;
 
                 if (!Context.IsPrivate)
                 {
@@ -345,7 +345,7 @@ namespace Skuld.Bot.Commands
             using var Database = new SkuldDbContextFactory().CreateDbContext();
             var user = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
-            string MoneyPrefix = BotService.MessageServiceConfig.MoneyIcon;
+            string MoneyPrefix = SkuldApp.MessageServiceConfig.MoneyIcon;
 
             if (!Context.IsPrivate)
             {
@@ -524,7 +524,7 @@ namespace Skuld.Bot.Commands
 
                         var message = new StringBuilder();
 
-                        string Prefix = BotService.MessageServiceConfig.Prefix;
+                        string Prefix = SkuldApp.MessageServiceConfig.Prefix;
 
                         if(!Context.IsPrivate)
                         {
@@ -582,8 +582,8 @@ namespace Skuld.Bot.Commands
                         return;
                     }
 
-                    string MoneyPrefix = BotService.MessageServiceConfig.MoneyIcon;
-                    string Prefix = BotService.MessageServiceConfig.Prefix;
+                    string MoneyPrefix = SkuldApp.MessageServiceConfig.MoneyIcon;
+                    string Prefix = SkuldApp.MessageServiceConfig.Prefix;
 
                     if (!Context.IsPrivate)
                     {
@@ -684,7 +684,7 @@ namespace Skuld.Bot.Commands
                 using var Database = new
                     SkuldDbContextFactory().CreateDbContext();
 
-                string Prefix = BotService.MessageServiceConfig.Prefix;
+                string Prefix = SkuldApp.MessageServiceConfig.Prefix;
 
                 if (!Context.IsPrivate)
                 {
@@ -864,7 +864,7 @@ namespace Skuld.Bot.Commands
                         using var Database = new
                                 SkuldDbContextFactory().CreateDbContext();
 
-                        string MoneyPrefix = BotService.MessageServiceConfig.MoneyIcon;
+                        string MoneyPrefix = SkuldApp.MessageServiceConfig.MoneyIcon;
 
                         if (!Context.IsPrivate)
                         {
@@ -963,7 +963,7 @@ namespace Skuld.Bot.Commands
                     using var Database = new SkuldDbContextFactory()
                         .CreateDbContext();
 
-                    string Prefix = BotService.MessageServiceConfig.Prefix;
+                    string Prefix = SkuldApp.MessageServiceConfig.Prefix;
 
                     if (!Context.IsPrivate)
                     {
