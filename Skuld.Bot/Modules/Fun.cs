@@ -23,8 +23,8 @@ using Skuld.Core.Helpers;
 using Skuld.Core.Utilities;
 using Skuld.Models;
 using Skuld.Services.Bot;
-using Skuld.Services.Discord.Attributes;
-using Skuld.Services.Discord.Preconditions;
+using Skuld.Bot.Discord.Attributes;
+using Skuld.Bot.Discord.Preconditions;
 using Skuld.Services.Globalization;
 using Skuld.Services.Messaging.Extensions;
 using StatsdClient;
@@ -158,7 +158,7 @@ namespace Skuld.Bot.Commands
 
             if(Reminder.Split(" in ").Count() < 2)
             {
-                string Prefix = Context.IsPrivate ? BotService.MessageServiceConfig.Prefix : (await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix;
+                string Prefix = Context.IsPrivate ? SkuldApp.MessageServiceConfig.Prefix : (await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix;
                 await
                     EmbedExtensions.FromError($"Try using `{Prefix}help reminder` to learn how to format a reminder", Context)
                     .QueueMessageAsync(Context)
@@ -848,7 +848,7 @@ namespace Skuld.Bot.Commands
 
                 case "help":
                     {
-                        await (await BotService.CommandService.GetCommandHelpAsync(Context, "pasta", prefix).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
+                        await (await SkuldApp.CommandService.GetCommandHelpAsync(Context, "pasta", prefix).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
                     }
                     break;
 
@@ -907,7 +907,7 @@ namespace Skuld.Bot.Commands
                                 response.Append("`");
 
                                 await
-                                    EmbedExtensions.FromMessage("Pasta Kitchen", $"Here's all that are related to the search term: \"{title}\"\n{response.ToString()}", Context)
+                                    EmbedExtensions.FromMessage("Pasta Kitchen", $"Here's all that are related to the search term: \"{title}\"\n{response}", Context)
                                     .QueueMessageAsync(Context)
                                     .ConfigureAwait(false);
                             }
@@ -950,9 +950,16 @@ namespace Skuld.Bot.Commands
                             }
                             else
                             {
+                                string username = "Unknown User";
+
+                                if(owner != null)
+                                {
+                                    username = owner.FullName();
+                                }
+
                                 await
                                     EmbedExtensions.FromMessage(
-                                        $"{pasta.Name} - {owner.FullName()}",
+                                        $"{pasta.Name} - {username}",
                                         pasta.Content,
                                         Context
                                     )
