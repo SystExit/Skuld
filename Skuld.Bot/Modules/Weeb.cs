@@ -74,6 +74,7 @@ namespace Skuld.Bot.Commands
                 if (response == null)
                 {
                     await sentmessage.DeleteAsync().ConfigureAwait(false);
+                    return;
                 }
 
                 var selection = Convert.ToInt32(response.Content);
@@ -144,6 +145,7 @@ namespace Skuld.Bot.Commands
                 if (response == null)
                 {
                     await sentmessage.DeleteAsync().ConfigureAwait(false);
+                    return;
                 }
 
                 var selection = Convert.ToInt32(response.Content);
