@@ -82,7 +82,7 @@ namespace Skuld.APIS
             var rawresp = await HttpWebClient.ReturnStringAsync(uri).ConfigureAwait(false);
             dynamic item = JObject.Parse(rawresp);
             var img = item["url"];
-            if (img == null) return null;
+            if (img is null) return null;
             return img;
         }
 
@@ -93,7 +93,7 @@ namespace Skuld.APIS
             var rawresp = await HttpWebClient.ReturnStringAsync(new Uri("https://nekos.life/api/v2/fact")).ConfigureAwait(false);
             dynamic item = JObject.Parse(rawresp);
             var fact = item["fact"];
-            if (fact == null) return null;
+            if (fact is null) return null;
             return fact;
         }
     }

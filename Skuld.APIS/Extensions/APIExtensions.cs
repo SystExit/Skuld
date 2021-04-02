@@ -43,10 +43,10 @@ namespace Skuld.APIS.Extensions
 		//https://gist.github.com/starquake/8d72f1e55c0176d8240ed336f92116e3
 		public static string StripHtml(this string value)
 		{
-			HtmlDocument htmlDoc = new HtmlDocument();
+			HtmlDocument htmlDoc = new();
 			htmlDoc.LoadHtml(value);
 
-			if (htmlDoc == null)
+			if (htmlDoc is null)
 			{
 				return value;
 			}
@@ -123,7 +123,7 @@ namespace Skuld.APIS.Extensions
 		{
 			var Pages = new List<string>();
 
-			StringBuilder pagetext = new StringBuilder();
+			StringBuilder pagetext = new();
 
 			for (int x = 0; x < posts.Length; x++)
 			{
@@ -164,7 +164,7 @@ namespace Skuld.APIS.Extensions
 
 		public static EventResult<IEnumerable<string>> ContainsBlacklistedTags(this IEnumerable<string> tags)
 		{
-			List<string> bannedTags = new List<string>();
+			List<string> bannedTags = new();
 			foreach (var tag in tags)
 			{
 				if (BlacklistedTags.Contains(tag.ToLowerInvariant()))
@@ -172,10 +172,12 @@ namespace Skuld.APIS.Extensions
 					bannedTags.Add(tag);
 				}
 			}
-			if (bannedTags.Any())
+			if (bannedTags.Count > 0)
+			{
 				return EventResult<IEnumerable<string>>.FromSuccess(bannedTags.AsEnumerable());
+			}
 
-			return EventResult<IEnumerable<string>>.FromFailure("Banned Tags found");
+			return EventResult<IEnumerable<string>>.FromFailure(bannedTags.AsEnumerable(), "Banned Tags found");
 		}
 
 		public static object GetMessage(this DanbooruImage image, ICommandContext context, bool forceString = false)

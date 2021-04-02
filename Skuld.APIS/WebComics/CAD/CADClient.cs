@@ -1,6 +1,7 @@
 ﻿using Skuld.APIS.WebComics.CAD.Models;
 using Skuld.Core.Utilities;
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -41,7 +42,7 @@ namespace Skuld.APIS.WebComics.CAD
             {
                 ImageURL = comicholder.FirstChild.Attributes["src"].Value,
                 Title = comicurl.InnerText,
-                Uploaded = DateTime.Parse(comicdate).ToString("dd'/'MM'/'yyyy"),
+                Uploaded = DateTime.Parse(comicdate, CultureInfo.InvariantCulture).ToString("dd'/'MM'/'yyyy", CultureInfo.InvariantCulture),
                 URL = comicurl.Attributes["href"].Value
             };
         }

@@ -20,6 +20,7 @@ namespace Skuld.APIS
 		private static YoutubeClient Youtube;
 		private static ImgurClient ImgurClient;
 		private static string GoogleCxKey;
+		private static GalleryEndpoint galleryEndpoint;
 
 		public static void Configure(string GoogleAPIKey, string GoogleCx, string imgurClientID, string imgurClientSecret)
 		{
@@ -41,92 +42,80 @@ namespace Skuld.APIS
 
 		public static async Task<string> SearchImgurAsync(string query)
 		{
-			if (ImgurClient == null) return null;
-			try
+			if (ImgurClient is null) return null;
+
+			if (galleryEndpoint is null)
 			{
-				var endpoint = new GalleryEndpoint(ImgurClient);
-				var images = await endpoint.SearchGalleryAsync(query).ConfigureAwait(false);
-				var albm = images.RandomValue();
-				dynamic album = null;
-				if (albm is GalleryImage)
-				{
-					album = albm as IGalleryImage;
-				}
-				if (albm is GalleryAlbum)
-				{
-					album = albm as IGalleryAlbum;
-				}
-				if (album != null && !album.Nsfw)
-				{
-					return "I found this:\n" + album.Link;
-				}
-				else
-				{
-					return "I found nothing sorry. :/";
-				}
+				galleryEndpoint = new GalleryEndpoint(ImgurClient);
 			}
-			catch (Exception ex)
+
+			var images = await galleryEndpoint.SearchGalleryAsync(query).ConfigureAwait(false);
+
+			if (images is not null)
 			{
-				return $"Error with search: {ex.Message}";
+				return GetAlbumLink(images);
 			}
+
+			return "I found nothing sorry. :/";
 		}
 
-		public static async Task<string> SearchImgurNSFWAsync(string query)
+		static bool CheckNSFWState(dynamic album, bool isChannelNSFW)
+			=> isChannelNSFW && album.Nsfw;
+
+		private static string GetAlbumLink(IEnumerable<IGalleryItem> images, bool isChannelNSFW = false)
 		{
-			if (ImgurClient == null) return null;
-			try
+			var albm = images.Random();
+			dynamic album = null;
+
+			if (albm is GalleryImage)
 			{
-				var endpoint = new GalleryEndpoint(ImgurClient);
-				var images = await endpoint.SearchGalleryAsync(query).ConfigureAwait(false);
-				var albm = images.RandomValue();
-				dynamic album = null;
-				if (albm is GalleryImage)
-				{
-					album = albm as IGalleryImage;
-				}
-				if (albm is GalleryAlbum)
-				{
-					album = albm as IGalleryAlbum;
-				}
-				if (album != null && !album.Nsfw)
-				{
-					return "I found this:\n" + album.Link;
-				}
-				else
-				{
-					return "I found nothing sorry. :/";
-				}
+				album = albm as IGalleryImage;
 			}
-			catch
+			if (albm is GalleryAlbum)
 			{
-				return null;
+				album = albm as IGalleryAlbum;
 			}
+
+			if (album is not null && CheckNSFWState(album, isChannelNSFW))
+			{
+				return "I found this:\n" + album.Link;
+			}
+
+			return null;
 		}
 
 		public static async Task<string> SearchYoutubeAsync(string query)
 		{
 			try
 			{
-				var items = await Youtube.Search.GetVideosAsync(query);
-				var item = items.FirstOrDefault();
-				var totalreactions = item.Engagement.LikeCount + item.Engagement.DislikeCount;
-				double ratiog = ((double)item.Engagement.LikeCount / totalreactions) * 100;
-				double ratiob = ((double)item.Engagement.DislikeCount / totalreactions) * 100;
+				var items = await Youtube.Search.GetVideosAsync(query, 0, 1);
 
-				return $"<:youtube:314349922885566475> | http://youtu.be/{item.Id}\n" +
-					$"`👀: {item.Engagement.ViewCount.ToFormattedString()}`\n" +
-					$"`👍: {item.Engagement.LikeCount.ToFormattedString()} ({ratiog:0.0}%)\t👎: {item.Engagement.DislikeCount:N0} ({ratiob:0.0}%)`\n" +
-					$"`Duration: {item.Duration}`";
+				if (items.Count > 0)
+				{
+					var video = await Youtube.Videos.GetAsync(items[0].Id);
+
+					var totalreactions = video.Engagement.LikeCount + video.Engagement.DislikeCount;
+					double ratiog = ((double)video.Engagement.LikeCount / totalreactions) * 100;
+					double ratiob = ((double)video.Engagement.DislikeCount / totalreactions) * 100;
+
+					return $"<:youtube:314349922885566475> | http://youtu.be/{video.Id}\n" +
+						$"`👀: {video.Engagement.ViewCount.ToFormattedString()}`\n" +
+						$"`👍: {video.Engagement.LikeCount.ToFormattedString()} ({ratiog:0.0}%)\t👎: {video.Engagement.DislikeCount:N0} ({ratiob:0.0}%)`\n" +
+						$"`Duration: {video.Duration}`";
+				}
+
+				return "Nothing found";
 			}
 			catch (Exception ex)
 			{
-				return $"Error with search: {ex.Message}";
+				Log.Error("YOUTUBE", ex.Message, null, ex);
+				return null;
 			}
 		}
 
 		public static async Task<IReadOnlyCollection<Result>> SearchGoogleAsync(string query)
 		{
-			if (GoogleSearchService == null) return null;
+			if (GoogleSearchService is null) return null;
 			try
 			{
 				var listRequest = GoogleSearchService.Cse.List();
@@ -135,7 +124,7 @@ namespace Skuld.APIS
 				listRequest.Safe = CseResource.ListRequest.SafeEnum.High;
 				var search = await listRequest.ExecuteAsync().ConfigureAwait(false);
 				var items = search.Items;
-				if (items != null)
+				if (items is not null)
 				{
 					var item = items.FirstOrDefault();
 					var item2 = items.ElementAtOrDefault(1);
