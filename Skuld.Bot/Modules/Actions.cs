@@ -17,13 +17,14 @@ using System.Threading.Tasks;
 namespace Skuld.Bot.Commands
 {
 	[Group, Name("Actions"), RequireEnabledModule]
+	[Remarks("💥 Slap users")]
 	public class ActionsModule : ModuleBase<ShardedCommandContext>
 	{
 		public ImghoardClient Imghoard { get; set; }
 
 		private EmbedBuilder DoAction(string gif, string action, string target)
 		{
-			List<ulong> prune = new List<ulong>();
+			List<ulong> prune = new();
 
 			{
 				using SkuldDbContext Database = new SkuldDbContextFactory().CreateDbContext(null);
@@ -34,7 +35,7 @@ namespace Skuld.Bot.Commands
 					{
 						var res = Database.BlockedActions.FirstOrDefault(x => x.Blocker == mentionedUser.Id && x.Blockee == Context.User.Id);
 
-						if (res != null)
+						if (res is not null)
 							prune.Add(mentionedUser.Id);
 					}
 				}
@@ -55,7 +56,7 @@ namespace Skuld.Bot.Commands
 		}
 
 		private string GetMessage(string target, string isnull, string notnull)
-			=> target == null ? isnull : notnull;
+			=> target is null ? isnull : notnull;
 
 		[Command("slap"), Summary("Slap a user")]
 		[Usage("<@0>", "you")]
@@ -63,7 +64,7 @@ namespace Skuld.Bot.Commands
 		{
 			var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-			var image = images.Images.RandomValue().Url;
+			var image = images.Images.Random().Url;
 
 			var action = DoAction(
 				image,
@@ -83,7 +84,7 @@ namespace Skuld.Bot.Commands
 		{
 			var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-			var image = images.Images.RandomValue().Url;
+			var image = images.Images.Random().Url;
 
 			var action = DoAction(
 				image,
@@ -103,7 +104,7 @@ namespace Skuld.Bot.Commands
 		{
 			var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-			var image = images.Images.RandomValue().Url;
+			var image = images.Images.Random().Url;
 
 			var action = DoAction(
 				image,
@@ -123,7 +124,7 @@ namespace Skuld.Bot.Commands
 		{
 			var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-			var image = images.Images.RandomValue().Url;
+			var image = images.Images.Random().Url;
 
 			var action = DoAction(
 				image,
@@ -142,7 +143,7 @@ namespace Skuld.Bot.Commands
 		{
 			var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-			var image = images.Images.RandomValue().Url;
+			var image = images.Images.Random().Url;
 
 			await
 				new EmbedBuilder()
@@ -161,7 +162,7 @@ namespace Skuld.Bot.Commands
 		{
 			var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-			var image = images.Images.RandomValue().Url;
+			var image = images.Images.Random().Url;
 
 			var action = DoAction(
 				image,
@@ -181,7 +182,7 @@ namespace Skuld.Bot.Commands
 		{
 			var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-			var image = images.Images.RandomValue().Url;
+			var image = images.Images.Random().Url;
 
 			var action = DoAction(
 				image,
@@ -201,7 +202,7 @@ namespace Skuld.Bot.Commands
 		{
 			var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-			var image = images.Images.RandomValue().Url;
+			var image = images.Images.Random().Url;
 
 			var action = DoAction(
 				image,
@@ -221,7 +222,7 @@ namespace Skuld.Bot.Commands
 		{
 			var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-			var image = images.Images.RandomValue().Url;
+			var image = images.Images.Random().Url;
 
 			var action =
 				new EmbedBuilder()
@@ -231,11 +232,11 @@ namespace Skuld.Bot.Commands
 				.AddAuthor(Context.Client)
 				.AddFooter(Context);
 
-			if (target != null)
+			if (target is not null)
 			{
 				if (Context.Message.MentionedUsers.Any())
 				{
-					List<ulong> prune = new List<ulong>();
+					List<ulong> prune = new();
 
 					{
 						using SkuldDbContext Database = new SkuldDbContextFactory().CreateDbContext(null);
@@ -244,7 +245,7 @@ namespace Skuld.Bot.Commands
 						{
 							var res = Database.BlockedActions.FirstOrDefault(x => x.Blockee == Context.User.Id && x.Blocker == mentionedUser.Id);
 
-							if (res != null)
+							if (res is not null)
 								prune.Add(mentionedUser.Id);
 						}
 					}
@@ -253,7 +254,7 @@ namespace Skuld.Bot.Commands
 						using SkuldDbContext Database = new SkuldDbContextFactory().CreateDbContext(null);
 						var initiator = await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false);
 
-						StringBuilder message = new StringBuilder($"{Context.User.Mention} pets ");
+						StringBuilder message = new($"{Context.User.Mention} pets ");
 
 						var msg = target;
 
@@ -307,7 +308,7 @@ namespace Skuld.Bot.Commands
 		{
 			var images = await Imghoard.GetImagesAsync(SkuldAppContext.GetCaller().LowercaseFirstLetter()).ConfigureAwait(false);
 
-			var image = images.Images.RandomValue().Url;
+			var image = images.Images.Random().Url;
 
 			var action = DoAction(
 				image,

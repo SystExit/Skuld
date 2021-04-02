@@ -2,19 +2,24 @@
 using Discord.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Skuld.APIS;
-using Skuld.Core.Extensions;
-using Skuld.Core.Extensions.Verification;
-using Skuld.Services.Bot;
 using Skuld.Bot.Discord.Attributes;
 using Skuld.Bot.Discord.Preconditions;
+using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Verification;
 using Skuld.Services.Messaging.Extensions;
 using StatsdClient;
 using System;
+using System.Globalization;
 using System.Threading.Tasks;
 
 namespace Skuld.Bot.Modules
 {
-	[Group, Name("Space"), RequireEnabledModule]
+	[
+		Group,
+		Name("Space"),
+		RequireEnabledModule,
+		Remarks("👩‍🚀 This is Ground Control to Majour Tom")
+	]
 	public class SpaceModule : ModuleBase<ShardedCommandContext>
 	{
 		public ISSClient ISSClient { get; set; }
@@ -27,14 +32,14 @@ namespace Skuld.Bot.Modules
 			var aPOD = await NASAClient.GetAPODAsync().ConfigureAwait(false);
 			DogStatsd.Increment("web.get");
 
-			if (aPOD.HDUrl != null && (!aPOD.HDUrl.IsVideoFile() || (!aPOD.Url.Contains("youtube") || !aPOD.Url.Contains("youtu.be"))))
+			if (aPOD.HD is not null && (!aPOD.HD.IsVideoFile() || (!aPOD.Url.OriginalString.Contains("youtube") || !aPOD.Url.OriginalString.Contains("youtu.be"))))
 			{
 				await new EmbedBuilder()
 					.WithColor(EmbedExtensions.RandomEmbedColor())
 					.WithTitle(aPOD.Title)
 					.WithUrl("https://apod.nasa.gov/")
-					.WithImageUrl(aPOD.HDUrl)
-					.WithTimestamp(Convert.ToDateTime(aPOD.Date))
+					.WithImageUrl(aPOD.HD.OriginalString)
+					.WithTimestamp(Convert.ToDateTime(aPOD.Date, CultureInfo.InvariantCulture))
 					.WithAuthor(aPOD.CopyRight)
 					.QueueMessageAsync(Context).ConfigureAwait(false);
 			}

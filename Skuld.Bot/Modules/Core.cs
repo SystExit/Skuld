@@ -7,10 +7,10 @@ using Skuld.Bot.Extensions;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
+using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Utilities;
 using Skuld.Models;
 using Skuld.Services.Messaging.Extensions;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
-	[Group, Name("Core")]
+	[Group, Name("Core"), Remarks("🏢 Core Commands")]
 	public class CoreModule : ModuleBase<ShardedCommandContext>
 	{
 		public SkuldConfig Configuration { get; set; }
@@ -32,180 +32,137 @@ namespace Skuld.Bot.Commands
 		{
 			using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-			try
+			if (command.IsNullOrWhiteSpace())
 			{
-				if (command == null)
-				{
-					string title = $"Commands of: {Context.Client.CurrentUser} that can be invoked in: ";
+				string title = $"Commands of: {Context.Client.CurrentUser} that can be invoked in: ";
 
-					if (Context.IsPrivate)
+				title += Context.IsPrivate ?
+					$"DMS/{Context.User.Username}#{Context.User.Discriminator}" :
+					$"{Context.Guild.Name}/{Context.Channel.Name}";
+
+				var embed =
+					new EmbedBuilder()
+						.AddAuthor(Context.Client)
+						.WithRandomColor()
+						.WithDescription($"The prefix of **{(Context.Guild is null ? Context.User.FullName() : Context.Guild.Name)}** is: `{(Context.Guild is null ? Configuration.Prefix : (await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix)}`");
+
+				Dictionary<ModuleInfo, string> helpBuilder = new();
+
+				foreach (var module in SkuldApp.CommandService.Modules)
+				{
+					if (helpBuilder.ContainsKey(module)) continue;
+					if (module.IsSubmodule) continue;
+
+					string desc = module.Remarks ?? "ERR";
+
+					if (module.Submodules.Count != 0)
 					{
-						title += $"DMS/{Context.User.Username}#{Context.User.Discriminator}";
+						string suffix = "submodule";
+						if (module.Submodules.Count >= 2)
+						{
+							suffix += "s";
+						}
+
+						embed.AddInlineField(module.GetModulePath(), $"{desc} - {module.Submodules.Count} {suffix}");
 					}
 					else
 					{
-						title += $"{Context.Guild.Name}/{Context.Channel.Name}";
+						embed.AddInlineField(module.GetModulePath(), desc);
 					}
+				}
 
-					var embed =
-						new EmbedBuilder()
-							.AddAuthor(Context.Client)
-							.WithRandomColor()
-							.WithDescription($"The prefix of **{(Context.Guild == null ? Context.User.FullName() : Context.Guild.Name)}** is: `{(Context.Guild == null ? Configuration.Prefix : (await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix)}`");
-
-					Dictionary<ModuleInfo, string> helpBuilder = new Dictionary<ModuleInfo, string>();
-
-					foreach (var module in SkuldApp.CommandService.Modules)
+				if (Context.Guild is not null)
+				{
+					if (await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false) is not null)
 					{
-						var commands = await module.GetExecutableCommandsAsync(Context, SkuldApp.Services).ConfigureAwait(false);
-
+						var commands = Database.CustomCommands.ToList().Where(x => x.GuildId == Context.Guild.Id);
 						if (commands.Any())
 						{
-							if (module.IsSubmodule)
+							string commandsText = "";
+							foreach (var cmd in commands)
 							{
-								var topParent = module.GetTopLevelParent();
-								if (helpBuilder.ContainsKey(topParent))
-								{
-									var value = helpBuilder.GetValueOrDefault(topParent);
-
-									List<string> desc = new List<string>();
-									foreach (var cmd in commands)
-									{
-										if (cmd.Module == module)
-										{
-											desc.Add(cmd.Aliases[0]);
-										}
-									}
-
-									string description = $"\n\nSubmodule: **{module.Name}**\n`";
-									foreach (var str in desc.Distinct())
-									{
-										description += str + ", ";
-									}
-									description += "`";
-
-									value += description.ReplaceLast(", ", "");
-
-									helpBuilder.Remove(topParent);
-
-									helpBuilder.Add(topParent, value);
-								}
+								commandsText += $"{cmd.Name}, ";
 							}
-							else
-							{
-								string desc = "";
-								foreach (var cmd in commands)
-								{
-									if (cmd.Module == module)
-									{
-										desc += $"{cmd.Aliases[0]}, ";
-									}
-								}
-
-								string description = "`";
-								foreach (var str in desc.Split(' ').Distinct())
-								{
-									description += str + " ";
-								}
-								description += "`";
-
-								description = description.ReplaceLast(",  ", "");
-
-								helpBuilder.Add(module, description);
-							}
+							commandsText = commandsText[0..^2];
+							embed.AddField("Custom Commands", $"`{commandsText}`");
 						}
 					}
+				}
 
-					foreach (var helpSection in helpBuilder)
-					{
-						if (!string.IsNullOrWhiteSpace(helpSection.Value))
-						{
-							var section = helpSection.Value.ReplaceLast(",  ", "");
-							embed.AddField(helpSection.Key.Name, section);
-						}
-					}
-
-					if (Context.Guild != null)
-					{
-						if (await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false) != null)
-						{
-							var commands = Database.CustomCommands.ToList().Where(x => x.GuildId == Context.Guild.Id);
-							if (commands.Any())
-							{
-								string commandsText = "";
-								foreach (var cmd in commands)
-								{
-									commandsText += $"{cmd.Name}, ";
-								}
-								commandsText = commandsText[0..^2];
-								embed.AddField("Custom Commands", $"`{commandsText}`");
-							}
-						}
-					}
-
+				try
+				{
 					var dmchan = await Context.User.GetOrCreateDMChannelAsync().ConfigureAwait(false);
 
-					await embed.QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.DMS).ConfigureAwait(false);
+					if (dmchan is not null)
+					{
+						await embed.QueueMessageAsync(Context, type: Services.Messaging.Models.MessageType.DMS).ConfigureAwait(false);
+					}
+				}
+				catch { }
+			}
+			else
+			{
+				string prefix = Configuration.Prefix;
+
+				if (Context.Guild is not null)
+				{
+					prefix = (await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix;
+
+					var ccs = Database.CustomCommands.ToList().Where(x => x.GuildId == Context.Guild.Id);
+					if (ccs.Any())
+					{
+						if (ccs.Any(x => x.Name.ToUpperInvariant() == command.ToUpperInvariant()))
+						{
+							var comd = ccs.FirstOrDefault(x => x.Name.ToUpperInvariant() == command.ToUpperInvariant());
+
+							StringBuilder desc = new();
+
+							desc.AppendLine("**Summary:**")
+								.Append("Custom Command")
+								.AppendLine()
+								.AppendLine()
+								.AppendLine("**Can Execute:**")
+								.Append("True")
+								.AppendLine()
+								.AppendLine()
+								.AppendLine("**Usage**")
+								.Append(prefix)
+								.Append(comd.Name)
+								.AppendLine();
+
+
+							await
+								EmbedExtensions
+									.FromMessage(Context)
+									.WithTitle(comd.Name)
+									.WithDescription(desc.ToString())
+									.QueueMessageAsync(Context)
+								.ConfigureAwait(false);
+
+							return;
+						}
+					}
+				}
+
+				var cmd = await SkuldApp.CommandService.GetCommandHelpAsync(Context, command, prefix).ConfigureAwait(false);
+
+				if (cmd is null)
+				{
+					var mod = SkuldApp.CommandService.GetModuleHelp(Context, command);
+
+					if (mod is null)
+					{
+						await $"Sorry, I couldn't find a command or module like **{command}**.".QueueMessageAsync(Context).ConfigureAwait(false);
+					}
+					else
+					{
+						await mod.QueueMessageAsync(Context).ConfigureAwait(false);
+					}
 				}
 				else
 				{
-					string prefix = Configuration.Prefix;
-
-					if (Context.Guild != null)
-					{
-						prefix = (await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix;
-
-						var ccs = Database.CustomCommands.ToList().Where(x => x.GuildId == Context.Guild.Id);
-						if (ccs.Any())
-						{
-							if (ccs.Any(x => x.Name.ToUpperInvariant() == command.ToUpperInvariant()))
-							{
-								var comd = ccs.FirstOrDefault(x => x.Name.ToUpperInvariant() == command.ToUpperInvariant());
-
-								StringBuilder desc = new StringBuilder();
-
-								desc.AppendLine("**Summary:**")
-									.Append("Custom Command")
-									.AppendLine()
-									.AppendLine()
-									.AppendLine("**Can Execute:**")
-									.Append("True")
-									.AppendLine()
-									.AppendLine()
-									.AppendLine("**Usage**")
-									.Append(prefix)
-									.Append(comd.Name)
-									.AppendLine();
-
-
-								await
-									EmbedExtensions
-										.FromMessage(Context)
-										.WithTitle(comd.Name)
-										.WithDescription(desc.ToString())
-										.QueueMessageAsync(Context)
-									.ConfigureAwait(false);
-
-								return;
-							}
-						}
-					}
-
-					var cmd = await SkuldApp.CommandService.GetCommandHelpAsync(Context, command, prefix).ConfigureAwait(false);
-					if (cmd == null)
-					{
-						await $"Sorry, I couldn't find a command like **{command}**.".QueueMessageAsync(Context).ConfigureAwait(false);
-					}
-					else
-					{
-						await cmd.QueueMessageAsync(Context).ConfigureAwait(false);
-					}
+					await cmd.QueueMessageAsync(Context).ConfigureAwait(false);
 				}
-			}
-			catch (Exception ex)
-			{
-				await EmbedExtensions.FromError(ex.Message, Context).QueueMessageAsync(Context).ConfigureAwait(false);
-				Log.Error("CMD-HELP", ex.Message, Context, ex);
 			}
 		}
 
@@ -267,7 +224,7 @@ namespace Skuld.Bot.Commands
 				{
 					var issue = await GitClient.Issue.Get(Configuration.GithubRepository, number).ConfigureAwait(false);
 
-					if (issue != null)
+					if (issue is not null)
 					{
 						var Labels = new StringBuilder();
 
@@ -275,7 +232,7 @@ namespace Skuld.Bot.Commands
 						{
 							Labels.Append(label.Name);
 
-							if (label != issue.Labels.LastOrDefault())
+							if (label != issue.Labels[issue.Labels.Count - 1])
 							{
 								Labels.Append(", ");
 							}
@@ -304,7 +261,7 @@ namespace Skuld.Bot.Commands
 
 					var issue = issues.FirstOrDefault(x => x.Title.ToUpperInvariant() == title.ToUpperInvariant());
 
-					if (issue != null)
+					if (issue is not null)
 					{
 						var Labels = new StringBuilder();
 
@@ -312,7 +269,7 @@ namespace Skuld.Bot.Commands
 						{
 							Labels.Append(label.Name);
 
-							if (label != issue.Labels.LastOrDefault())
+							if (label != issue.Labels[issue.Labels.Count - 1])
 							{
 								Labels.Append(", ");
 							}
