@@ -26,27 +26,27 @@ namespace Skuld.Bot.Extensions
 				.WithImageUrl(attr.PosterImage.Large)
 				.WithTitle(attr.CanonicalTitle.CheckEmptyWithLocale(loc));
 
-			if (attr.AbbreviatedTitles != null && attr.AbbreviatedTitles.Any())
+			if (attr.AbbreviatedTitles is not null && attr.AbbreviatedTitles.Any())
 			{
-				embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNON"), attr.AbbreviatedTitles.CheckEmptyWithLocale(", ", loc));
+				embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNON", CultureInfo.InvariantCulture), attr.AbbreviatedTitles.CheckEmptyWithLocale(", ", loc));
 			}
 
-			embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_EPS"), attr.EpisodeCount.CheckEmptyWithLocale(loc));
-			embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SDATE"), attr.StartDate.CheckEmptyWithLocale(loc));
-			embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_EDATE"), attr.EndDate.CheckEmptyWithLocale(loc));
-			embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SCORE"), attr.RatingRank.CheckEmptyWithLocale(loc));
+			embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_EPS", CultureInfo.InvariantCulture), attr.EpisodeCount.CheckEmptyWithLocale(loc));
+			embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SDATE", CultureInfo.InvariantCulture), attr.StartDate.CheckEmptyWithLocale(loc));
+			embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_EDATE", CultureInfo.InvariantCulture), attr.EndDate.CheckEmptyWithLocale(loc));
+			embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SCORE", CultureInfo.InvariantCulture), attr.RatingRank.CheckEmptyWithLocale(loc));
 
-			if (attr.Synopsis.CheckEmptyWithLocale(loc) != loc.GetString("SKULD_GENERIC_EMPTY"))
+			if (attr.Synopsis.CheckEmptyWithLocale(loc) != loc.GetString("SKULD_GENERIC_EMPTY", CultureInfo.InvariantCulture))
 			{
 				var syno = attr.Synopsis;
 
 				if (syno.Length > 1024)
 				{
-					embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), attr.Synopsis.Substring(0, 1021) + "...");
+					embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP", CultureInfo.InvariantCulture), attr.Synopsis.Substring(0, 1021) + "...");
 				}
 				else
 				{
-					embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), attr.Synopsis);
+					embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP", CultureInfo.InvariantCulture), attr.Synopsis);
 				}
 			}
 
@@ -63,21 +63,21 @@ namespace Skuld.Bot.Extensions
 				ImageUrl = attr.PosterImage.Large
 			};
 
-			if (attr.AbbreviatedTitles != null && attr.AbbreviatedTitles.Any())
-				embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNON"), attr.AbbreviatedTitles.CheckEmptyWithLocale(", ", loc));
+			if (attr.AbbreviatedTitles is not null && attr.AbbreviatedTitles.Any())
+				embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNON", CultureInfo.InvariantCulture), attr.AbbreviatedTitles.CheckEmptyWithLocale(", ", loc));
 
-			embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_EPS"), attr.ChapterCount.CheckEmptyWithLocale(loc));
-			embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SDATE"), attr.StartDate.CheckEmptyWithLocale(loc));
-			embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_EDATE"), attr.EndDate.CheckEmptyWithLocale(loc));
-			embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SCORE"), attr.RatingRank.CheckEmptyWithLocale(loc));
+			embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_EPS", CultureInfo.InvariantCulture), attr.ChapterCount.CheckEmptyWithLocale(loc));
+			embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SDATE", CultureInfo.InvariantCulture), attr.StartDate.CheckEmptyWithLocale(loc));
+			embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_EDATE", CultureInfo.InvariantCulture), attr.EndDate.CheckEmptyWithLocale(loc));
+			embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SCORE", CultureInfo.InvariantCulture), attr.RatingRank.CheckEmptyWithLocale(loc));
 
-			if (attr.Synopsis.CheckEmptyWithLocale(loc) != loc.GetString("SKULD_GENERIC_EMPTY"))
+			if (attr.Synopsis.CheckEmptyWithLocale(loc) != loc.GetString("SKULD_GENERIC_EMPTY", CultureInfo.InvariantCulture))
 			{
 				var syno = attr.Synopsis;
 				if (syno.Length > 1024)
-					embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), attr.Synopsis.Substring(0, 1021) + "...");
+					embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP", CultureInfo.InvariantCulture), attr.Synopsis.Substring(0, 1021) + "...");
 				else
-					embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP"), attr.Synopsis);
+					embed.AddInlineField(loc.GetString("SKULD_SEARCH_WEEB_SYNOP", CultureInfo.InvariantCulture), attr.Synopsis);
 			}
 
 			embed.WithColor(Color.Purple);
@@ -98,7 +98,7 @@ namespace Skuld.Bot.Extensions
 						.WithName(string.Join(", ", app.Developers))
 					)
 					.WithDescription(SteamUtilities.GetSteamGameDescription(game, app))
-					.WithImageUrl(app.Screenshots.RandomValue().PathFull)
+					.WithImageUrl(app.Screenshots.Random().PathFull)
 					.WithRandomColor()
 					.WithUrl($"https://store.steampowered.com/app/{game.AppId}/")
 					.WithTitle(game.Name)

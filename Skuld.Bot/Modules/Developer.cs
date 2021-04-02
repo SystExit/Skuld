@@ -22,8 +22,11 @@ using Skuld.Services.Messaging.Extensions;
 using StatsdClient;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -32,6 +35,7 @@ namespace Skuld.Bot.Commands
 {
 	[Group, Name("Developer")]
 	[RequireBotFlag(BotAccessLevel.BotAdmin)]
+	[Remarks("👩‍💻 Dev Only")]
 	public class DeveloperModule : ModuleBase<ShardedCommandContext>
 	{
 		public SkuldConfig Configuration { get; set; }
@@ -55,7 +59,7 @@ namespace Skuld.Bot.Commands
 			}
 			else
 			{
-				if (reason == null)
+				if (reason is null)
 				{
 					await
 						EmbedExtensions.FromError($"{nameof(reason)} needs a value", Context)
@@ -89,7 +93,12 @@ namespace Skuld.Bot.Commands
 			};
 			foreach (var item in Context.Client.Shards)
 			{
-				lines.Add(new string[] { item.ShardId.ToString(), item.ConnectionState.ToString(), item.Latency.ToString(), item.Guilds.Count.ToString() });
+				lines.Add(new string[] {
+					Convert.ToString(item.ShardId, CultureInfo.InvariantCulture),
+					Convert.ToString(item.ConnectionState, CultureInfo.InvariantCulture),
+					Convert.ToString(item.Latency, CultureInfo.InvariantCulture),
+					Convert.ToString(item.Guilds, CultureInfo.InvariantCulture)
+				});
 			}
 
 			await $"```\n{lines.PrettyLines(2)}```".QueueMessageAsync(Context).ConfigureAwait(false);
@@ -121,7 +130,7 @@ namespace Skuld.Bot.Commands
 				Timestamp = DateTime.Now,
 				Color = EmbedExtensions.RandomEmbedColor()
 			};
-			embed.AddInlineField("Guilds", shard.Guilds.Count.ToString());
+			embed.AddInlineField("Guilds", Convert.ToString(shard.Guilds.Count, CultureInfo.InvariantCulture));
 			embed.AddInlineField("Status", shard.ConnectionState);
 			embed.AddInlineField("Latency", shard.Latency + "ms");
 			embed.AddField("Game", shard.Activity.Name);
@@ -170,7 +179,7 @@ namespace Skuld.Bot.Commands
 		[Command("grantxp"), Summary("Grant Exp")]
 		public async Task GrantExp(ulong amount, [Remainder] IGuildUser user = null)
 		{
-			if (user == null)
+			if (user is null)
 				user = Context.Guild.GetUser(Context.User.Id);
 
 			using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -198,7 +207,7 @@ namespace Skuld.Bot.Commands
 		[RequireBotFlag(BotAccessLevel.BotOwner)]
 		public async Task SetFlag(BotAccessLevel level, bool give = true, [Remainder] IUser user = null)
 		{
-			if (user == null)
+			if (user is null)
 			{
 				user = Context.User;
 			}
@@ -282,7 +291,7 @@ namespace Skuld.Bot.Commands
 		[Command("flags")]
 		public async Task GetFlags([Remainder] IUser user = null)
 		{
-			if (user == null)
+			if (user is null)
 			{
 				user = Context.User;
 			}
@@ -291,7 +300,7 @@ namespace Skuld.Bot.Commands
 
 			var dbUser = await Database.InsertOrGetUserAsync(user).ConfigureAwait(false);
 
-			List<BotAccessLevel> flags = new List<BotAccessLevel>();
+			List<BotAccessLevel> flags = new();
 
 			if (dbUser.Flags.IsBitSet(DiscordUtilities.BotCreator))
 			{
@@ -325,7 +334,7 @@ namespace Skuld.Bot.Commands
 			{
 				if (!module.Attributes.Any(x => x.GetType() == typeof(DisabledAttribute)))
 				{
-					ModuleSkuld mod = new ModuleSkuld
+					ModuleSkuld mod = new()
 					{
 						Name = module.GetTopLevelParent().Name,
 						ModulePath = module.GetModulePath(),
@@ -378,6 +387,39 @@ namespace Skuld.Bot.Commands
 			await Context.Client.SetStatusAsync(status).ConfigureAwait(false);
 		}
 
+		[Command("debug"), Summary("Get Debug stuff")]
+		[RequireBotFlag(BotAccessLevel.BotOwner)]
+		public async Task Debug()
+		{
+			using MemoryStream stream = new();
+			using TextWriter writer = new StreamWriter(stream);
+
+			await writer.WriteLineAsync($"SKULD VERSION {Assembly.GetExecutingAssembly().GetName().Version}");
+
+			await writer.WriteLineAsync($"\tINFORMATION");
+
+			await writer.WriteLineAsync($"\t\tRUNTIME");
+			await writer.WriteLineAsync($"\t\t\tSTARTED {Process.GetCurrentProcess().StartTime.ToDMYString()}");
+			await writer.WriteLineAsync($"\t\t\tUPTIME {DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime).ToDifferenceString()}");
+			await writer.WriteLineAsync($"\t\t\tCOMMANDS: {SkuldApp.CommandService.Commands.Count()}");
+			await writer.WriteLineAsync($"\t\t\tMODULES: {SkuldApp.CommandService.Modules.Count()}");
+			await writer.WriteLineAsync($"\t\t\tMEMORY USAGE: {SkuldAppContext.MemoryStats.GetMBUsage}MB");
+			await writer.WriteLineAsync($"\t\t\tCPU Usage: {await SkuldAppContext.GetCurrentCPUUsage()}%");
+
+			await writer.WriteLineAsync($"\t\tDEPENDENCIES");
+
+			foreach (AssemblyName dependent in Assembly.GetExecutingAssembly().GetReferencedAssemblies())
+			{
+				await writer.WriteLineAsync($"\t\t\t{dependent.Name} VERSION {dependent.Version}");
+			}
+
+			await writer.FlushAsync();
+
+			stream.Position = 0;
+
+			await Context.User.SendFileAsync(stream, "debug.txt");
+		}
+
 		[Command("dropuser")]
 		[RequireBotFlag(BotAccessLevel.BotOwner)]
 		public async Task DropUser(ulong userId)
@@ -404,7 +446,7 @@ namespace Skuld.Bot.Commands
 		[RequireBotFlag(BotAccessLevel.BotOwner)]
 		public async Task Merge(ulong oldId, ulong newId)
 		{
-			if (Context.Client.GetUser(newId) == null)
+			if (Context.Client.GetUser(newId) is null)
 			{
 				await $"No. {newId} is not a valid user Id"
 					.QueueMessageAsync(Context).ConfigureAwait(false);
@@ -425,7 +467,7 @@ namespace Skuld.Bot.Commands
 					var oldUser = db.Users.Find(oldId);
 					var newUser = db.Users.Find(newId);
 
-					if (oldUser != null && newUser != null)
+					if (oldUser is not null && newUser is not null)
 					{
 						TransactionService.DoTransaction(new TransactionStruct
 						{
@@ -613,7 +655,7 @@ namespace Skuld.Bot.Commands
 		{
 			using var db = new SkuldDbContextFactory().CreateDbContext();
 
-			StringBuilder message = new StringBuilder($"Keycodes:");
+			StringBuilder message = new($"Keycodes:");
 
 			message.AppendLine();
 
@@ -642,7 +684,7 @@ namespace Skuld.Bot.Commands
 		[RequireBotFlag(BotAccessLevel.BotOwner)]
 		public async Task ResetDaily([Remainder] IUser user = null)
 		{
-			if (user == null)
+			if (user is null)
 				user = Context.User;
 
 			using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -662,7 +704,7 @@ namespace Skuld.Bot.Commands
 		[Command("setstreak")]
 		public async Task SetStreak(ushort streak, [Remainder] IUser user = null)
 		{
-			if (user == null)
+			if (user is null)
 				user = Context.User;
 
 			using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -686,7 +728,7 @@ namespace Skuld.Bot.Commands
 
 			var keys = Database.DonatorKeys.ToList().Where(x => x.Redeemer == user.Id);
 
-			StringBuilder message = new StringBuilder();
+			StringBuilder message = new();
 
 			message.Append(user.Mention)
 				.Append(" is ");
@@ -722,14 +764,14 @@ namespace Skuld.Bot.Commands
 			var donorkey = db.DonatorKeys
 				.FirstOrDefault(x => x.KeyCode == key);
 
-			StringBuilder message = new StringBuilder();
+			StringBuilder message = new();
 
 			message
 				.Append("Key: `")
 				.Append(key)
 				.Append("` ");
 
-			if (donorkey != null)
+			if (donorkey is not null)
 			{
 				message
 					.Append("is")
@@ -781,7 +823,7 @@ namespace Skuld.Bot.Commands
 				.ConfigureAwait(false)
 			).MoneyIcon;
 
-			StringBuilder message = new StringBuilder();
+			StringBuilder message = new();
 
 			message
 				.Append("User ")
@@ -818,7 +860,7 @@ namespace Skuld.Bot.Commands
 			var guild = Context.Client.GetGuild(id);
 			await guild.LeaveAsync().ContinueWith(async x =>
 			{
-				if (Context.Client.GetGuild(id) == null)
+				if (Context.Client.GetGuild(id) is null)
 				{
 					await EmbedExtensions.FromSuccess(
 						$"Left guild **{guild.Name}**",
@@ -844,7 +886,7 @@ namespace Skuld.Bot.Commands
 				.QueueMessageAsync(Context)
 			.ConfigureAwait(false);
 
-			StringBuilder list = new StringBuilder();
+			StringBuilder list = new();
 			int shardcount = Context.Client.Shards.Count;
 
 			await Context.Client.SendDataAsync(
@@ -862,13 +904,13 @@ namespace Skuld.Bot.Commands
 					.Append(" Guilds: ")
 					.Append(shard.Guilds.Count)
 					.Append(" Shards: ")
-					.AppendLine(shardcount.ToString());
+					.AppendLine(Convert.ToString(shardcount, CultureInfo.InvariantCulture));
 			}
 
 			await list.QueueMessageAsync(Context).ConfigureAwait(false);
 		}
 
-		public static Globals evalGlobals = new Globals();
+		public static Globals evalGlobals = new();
 		public static ScriptOptions scriptOptions = null;
 
 		[Command("eval"), Summary("no")]
@@ -877,7 +919,7 @@ namespace Skuld.Bot.Commands
 		{
 			evalGlobals.Context = Context as ShardedCommandContext;
 
-			if (scriptOptions == null)
+			if (scriptOptions is null)
 			{
 				scriptOptions = ScriptOptions
 				.Default
@@ -954,12 +996,12 @@ namespace Skuld.Bot.Commands
 
 				string type = "N/A";
 
-				if (result != null)
+				if (result is not null)
 				{
 					type = result.GetType().ToString();
 				}
 
-				StringBuilder evalDesc = new StringBuilder();
+				StringBuilder evalDesc = new();
 
 				evalDesc
 					.Append("__**Execution Result**__")

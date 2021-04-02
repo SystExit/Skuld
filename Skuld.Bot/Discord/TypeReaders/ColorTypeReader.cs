@@ -25,7 +25,7 @@ namespace Skuld.Bot.Discord.TypeReaders
 				result = Color.FromName(input);
 			}
 
-			if (result != null)
+			if (result is not null)
 			{
 				return Task.FromResult(TypeReaderResult.FromSuccess(result));
 			}

@@ -2,12 +2,12 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-    <Version>2020.09.1</Version>
+    <TargetFramework>net5.0</TargetFramework>
+    <Version>2021.3.1</Version>
     <StartupObject>Skuld.Bot.SkuldApp</StartupObject>
     <ApplicationIcon />
-    <AssemblyVersion>2020.9.1.0</AssemblyVersion>
-    <FileVersion>2020.9.1.0</FileVersion>
+    <AssemblyVersion>2021.3.1.0</AssemblyVersion>
+    <FileVersion>2021.3.1.0</FileVersion>
     <LangVersion>preview</LangVersion>
     <NeutralLanguage>en-GB</NeutralLanguage>
   </PropertyGroup>
@@ -22,38 +22,41 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CoreCLR-NCalc" Version="2.2.88" />
-    <PackageReference Include="Discord.Net" Version="2.2.0" />
-    <PackageReference Include="DogStatsD-CSharp-Client" Version="5.1.0" />
-    <PackageReference Include="FIGlet.Net" Version="1.1.1" />
+    <PackageReference Include="CachNet" Version="0.0.3" />
+    <PackageReference Include="CoreCLR-NCalc" Version="2.2.92" />
+    <PackageReference Include="Discord.Net" Version="2.3.1" />
+    <PackageReference Include="DogStatsD-CSharp-Client" Version="6.0.0" />
+    <PackageReference Include="FIGlet.Net" Version="1.1.2" />
     <PackageReference Include="Fleck" Version="1.1.0" />
     <PackageReference Include="FuzzyString" Version="1.0.0" />
-    <PackageReference Include="IqdbApi" Version="1.4.0" />
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="7.22.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.3.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.Scripting" Version="3.7.0" />
-    <PackageReference Include="Microsoft.CodeQuality.Analyzers" Version="3.3.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="NodaTime" Version="3.0.0" />
-    <PackageReference Include="Octokit" Version="0.48.0" />
-    <PackageReference Include="OpenCover" Version="4.7.922" />
+    <PackageReference Include="IqdbApi" Version="2.0.0" />
+	<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.10.0-1.final" />
+	<PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.3.2">
+	  <PrivateAssets>all</PrivateAssets>
+	  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	</PackageReference>
+	<PackageReference Include="Microsoft.CodeQuality.Analyzers" Version="3.3.2">
+	  <PrivateAssets>all</PrivateAssets>
+	  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	</PackageReference>
+	<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="3.10.0-1.final" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="NodaTime" Version="3.0.5" />
+    <PackageReference Include="Octokit" Version="0.50.0" />
+    <PackageReference Include="OpenCover" Version="4.7.1138-rc" />
     <PackageReference Include="PokeApi.NET" Version="1.1.2" />
-    <PackageReference Include="SauceNET" Version="1.1.0" />
-    <PackageReference Include="Sentry" Version="2.1.6" />
-    <PackageReference Include="System.Drawing.Common" Version="5.0.0-preview.4.20251.6" />
-    <PackageReference Include="TimeZoneConverter" Version="3.3.0" />
+    <PackageReference Include="SauceNET" Version="1.1.1" />
+    <PackageReference Include="System.Drawing.Common" Version="6.0.0-preview.2.21154.6" />
+    <PackageReference Include="TimeZoneConverter" Version="3.4.0" />
     <PackageReference Include="TraceMoe.NET" Version="1.0.5" />
     <PackageReference Include="Weeb.net" Version="1.0.7" />
+    <PackageReference Include="YoutubeExplode" Version="6.0.0-alpha" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Skuld.APIS\Skuld.APIS.csproj" />
+    <ProjectReference Include="..\Skuld.API\Skuld.API.csproj" />
     <ProjectReference Include="..\Skuld.Core\Skuld.Core\Skuld.Core.csproj" />
     <ProjectReference Include="..\Skuld.Models\Skuld.Models\Skuld.Models.csproj" />
     <ProjectReference Include="..\Skuld.Services\Skuld.Services\Skuld.Services.csproj" />
@@ -70,8 +73,4 @@
       <HintPath>..\References\SteamStoreQuery.dll</HintPath>
     </Reference>
   </ItemGroup>
-
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="c:\windows\system32\xcopy.exe &quot;$(SolutionDir).env&quot; &quot;$(TargetDir).env&quot; /Y" />
-  </Target>
 </Project>

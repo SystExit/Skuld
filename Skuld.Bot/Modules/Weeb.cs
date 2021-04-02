@@ -3,15 +3,16 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Kitsu.Anime;
 using Kitsu.Manga;
+using Miki.API.Images;
 using Skuld.APIS.Extensions;
+using Skuld.Bot.Discord.Attributes;
 using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
 using Skuld.Models;
-using Skuld.Bot.Discord.Attributes;
 using Skuld.Services.Globalization;
 using Skuld.Services.Messaging.Extensions;
-using SysEx.Net;
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -22,10 +23,11 @@ using TraceMoe.NET.DataStructures;
 namespace Skuld.Bot.Commands
 {
     [Group, Name("Weeb")]
+	[Remarks("📺 Weeb paraphernalia")]
     public class WeebModule : InteractiveBase<ShardedCommandContext>
     {
         public Locale Locale { get; set; }
-        public SysExClient SysExClient { get; set; }
+		public ImghoardClient Imghoard { get; set; }
 
         [
             Command("anime"),
@@ -71,9 +73,10 @@ namespace Skuld.Bot.Commands
                     TimeSpan.FromSeconds(30)
                 ).ConfigureAwait(false);
 
-                if (response == null)
+                if (response is null)
                 {
                     await sentmessage.DeleteAsync().ConfigureAwait(false);
+                    return;
                 }
 
                 var selection = Convert.ToInt32(response.Content);
@@ -141,9 +144,10 @@ namespace Skuld.Bot.Commands
                     TimeSpan.FromSeconds(30)
                 ).ConfigureAwait(false);
 
-                if (response == null)
+                if (response is null)
                 {
                     await sentmessage.DeleteAsync().ConfigureAwait(false);
+                    return;
                 }
 
                 var selection = Convert.ToInt32(response.Content);
@@ -172,21 +176,19 @@ namespace Skuld.Bot.Commands
             Ratelimit(20, 1, Measure.Minutes)
         ]
         public async Task WeebGif()
-        {
-            var gif = await SysExClient
-                .GetWeebReactionGifAsync()
-            .ConfigureAwait(false);
+		{
+			var gif = await Imghoard.GetImagesAsync();
 
-            await
-                EmbedExtensions
-                .FromImage(
-                    gif,
-                    EmbedExtensions.RandomEmbedColor(),
-                    Context
-                )
-                .QueueMessageAsync(Context)
-            .ConfigureAwait(false);
-        }
+			await
+				EmbedExtensions
+				.FromImage(
+					gif.Images.Random().Url,
+					EmbedExtensions.RandomEmbedColor(),
+					Context
+				)
+				.QueueMessageAsync(Context)
+			.ConfigureAwait(false);
+		}
 
         [
             Command("whatanime"),
@@ -196,7 +198,7 @@ namespace Skuld.Bot.Commands
         ]
         public async Task WhatAnime(Uri url = null)
         {
-            if (url == null)
+            if (url is null)
             {
                 if (Context.Message.Attachments.Any())
                 {

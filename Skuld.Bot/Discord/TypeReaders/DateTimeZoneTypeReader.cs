@@ -11,7 +11,7 @@ namespace Skuld.Bot.Discord.TypeReaders
         {
             var result = DateTimeZoneProviders.Tzdb.GetZoneOrNull(input);
 
-            if (result == null)
+            if (result is null)
             {
                 return Task.FromResult(TypeReaderResult.FromError(CommandError.ParseFailed, $"`{input}` is not a valid TimeZone Input"));
             }

@@ -9,12 +9,12 @@ using Skuld.Bot.Discord.Preconditions;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Utilities;
-using Skuld.Services.Bot;
 using Skuld.Services.Messaging.Extensions;
 using SysEx.Net;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -24,37 +24,45 @@ using Weeb.net;
 
 namespace Skuld.Bot.Commands
 {
-	[Group, Name("Stats"), RequireEnabledModule]
+	[
+		Group,
+		Name("Stats"),
+		RequireEnabledModule,
+		Remarks("📊 Statistics")
+	]
 	public class StatsModule : ModuleBase<ShardedCommandContext>
 	{
-		public static readonly KeyValuePair<AssemblyName, GitRepoStruct> SysEx = new KeyValuePair<AssemblyName, GitRepoStruct>(
+		public static readonly KeyValuePair<AssemblyName, GitRepoStruct> SysEx = new(
 			Assembly.GetAssembly(typeof(SysExClient)).GetName(),
 			new GitRepoStruct("exsersewo", "SysEx.Net"));
 
-		public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Booru = new KeyValuePair<AssemblyName, GitRepoStruct>(
+		public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Booru = new(
 			Assembly.GetAssembly(typeof(DanbooruClient)).GetName(),
 			new GitRepoStruct("exsersewo", "Booru.Net"));
 
-		public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Weebsh = new KeyValuePair<AssemblyName, GitRepoStruct>(
+		public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Weebsh = new(
 			Assembly.GetAssembly(typeof(WeebClient)).GetName(),
 			new GitRepoStruct("Daniele122898", "Weeb.net"));
 
-		public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Twitch = new KeyValuePair<AssemblyName, GitRepoStruct>(
+		public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Twitch = new(
 			Assembly.GetAssembly(typeof(TwitchLib.Api.TwitchAPI)).GetName(),
 			new GitRepoStruct("TwitchLib", "TwitchLib"));
 
-		public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Imghoard = new KeyValuePair<AssemblyName, GitRepoStruct>(
+		public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Imghoard = new(
 			Assembly.GetAssembly(typeof(ImghoardClient)).GetName(),
 			new GitRepoStruct("Mikibot", "dotnet-miki-api"));
 
-		public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Discord = new KeyValuePair<AssemblyName, GitRepoStruct>(
+		public static readonly KeyValuePair<AssemblyName, GitRepoStruct> Discord = new(
 			Assembly.GetAssembly(typeof(DiscordShardedClient)).GetName(),
 			new GitRepoStruct("discord-net", "Discord.Net"));
 
-		[Command("ping"), Summary("Print Ping")]
-		[Ratelimit(20, 1, Measure.Minutes)]
+		[
+			Command("ping"),
+			Summary("Print Ping"),
+			Ratelimit(20, 1, Measure.Minutes)
+		]
 		public async Task Ping()
-			=> (await $"Please Wait!!!".QueueMessageAsync(Context).ConfigureAwait(false)).ThenAfter(async x =>
+			=> (await $"Please Wait!!!".QueueMessageAsync(Context).ConfigureAwait(false)).Then(async x =>
 			{
 				var mainOffset = Context.Client.GetShardFor(Context.Guild).Latency;
 
@@ -69,10 +77,13 @@ namespace Skuld.Bot.Commands
 						z.Content = $"PONG: {ping:N0}ms";
 					}).ConfigureAwait(false);
 				}
-			}, 200);
+			});
 
-		[Command("stats"), Summary("All stats")]
-		[Ratelimit(20, 1, Measure.Minutes)]
+		[
+			Command("stats"),
+			Summary("All stats"),
+			Ratelimit(20, 1, Measure.Minutes)
+		]
 		public async Task StatsAll()
 		{
 			var GitClient = SkuldApp.Services.GetService<Octokit.GitHubClient>();
@@ -104,13 +115,13 @@ namespace Skuld.Bot.Commands
 
 				string botstats = "";
 				botstats += $"[Skuld: {SkuldAppContext.Skuld.Key.Version}]({SkuldAppContext.Skuld.Value})\n";
-				botstats += $"Uptime: {string.Format("{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}\n";
+				botstats += $"Uptime: {string.Format(CultureInfo.InvariantCulture, "{0:dd}d {0:hh}:{0:mm}", DateTime.Now.Subtract(Process.GetCurrentProcess().StartTime))}\n";
 				botstats += $"Ping: {Context.Client.GetShardFor(Context.Guild).Latency}ms\n";
 				botstats += $"Guilds: {Context.Client.Guilds.Count}\n";
 				botstats += $"Shards: {Context.Client.Shards.Count}\n";
 				botstats += $"Commands: {SkuldApp.CommandService.Commands.Count()}\n";
 
-				if (GitClient != null)
+				if (GitClient is not null)
 				{
 					var commits = await GitClient.Repository.Commit.GetAll(SkuldAppContext.Skuld.Value.Owner, SkuldAppContext.Skuld.Value.Repo).ConfigureAwait(false);
 
@@ -120,7 +131,7 @@ namespace Skuld.Bot.Commands
 
 				string systemstats =
 					"Memory Used: " + SkuldAppContext.MemoryStats.GetMBUsage + "MB\n" +
-					"Operating System: " + SkuldAppContext.WindowsVersion;
+					"Operating System: " + SkuldAppContext.OSVersion;
 
 				embed.AddField("Bot", botstats);
 				embed.AddField("APIs", apiversions);

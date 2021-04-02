@@ -6,12 +6,11 @@ using PokeAPI;
 using Skuld.APIS;
 using Skuld.APIS.Extensions;
 using Skuld.APIS.Pokemon.Models;
+using Skuld.Bot.Discord.Attributes;
+using Skuld.Bot.Discord.Preconditions;
 using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
 using Skuld.Models;
-using Skuld.Services.Bot;
-using Skuld.Bot.Discord.Attributes;
-using Skuld.Bot.Discord.Preconditions;
 using Skuld.Services.Extensions;
 using Skuld.Services.Messaging.Extensions;
 using SteamStoreQuery;
@@ -23,6 +22,7 @@ using TwitchLib.Api.Interfaces;
 namespace Skuld.Bot.Commands
 {
 	[Group, Name("Search"), RequireEnabledModule]
+	[Remarks("🔍 Find information")]
 	public class SearchModule : InteractiveBase<ShardedCommandContext>
 	{
 		public SocialAPIS Social { get; set; }
@@ -51,7 +51,7 @@ namespace Skuld.Bot.Commands
 
 				var streams = await TwitchClient.V5.Streams.GetStreamByUserAsync(user.Id).ConfigureAwait(false);
 
-				await (await user.GetEmbedAsync(channel, streams.Stream).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
+				await (user.GetEmbed(channel, streams.Stream)).QueueMessageAsync(Context).ConfigureAwait(false);
 			}
 			else
 			{
@@ -89,53 +89,60 @@ namespace Skuld.Bot.Commands
 		[Usage("g How to use google", "yt super awesome megamix #1")]
 		public async Task GetSearch(string platform, [Remainder] string query)
 		{
-			platform = platform.ToLowerInvariant();
-			if (platform == "google" || platform == "g")
+			switch (platform.ToLowerInvariant())
 			{
-				await $"🔍 Searching Google for: {query}".QueueMessageAsync(Context).ConfigureAwait(false);
-				var result = await SearchClient.SearchGoogleAsync(query).ConfigureAwait(false);
+				case "google":
+				case "g":
+					{
+						await $"🔍 Searching Google for: {query}".QueueMessageAsync(Context).ConfigureAwait(false);
+						var result = await SearchClient.SearchGoogleAsync(query).ConfigureAwait(false);
 
-				if (result == null)
-				{
-					await EmbedExtensions.FromError($"I couldn't find anything matching: `{query}`, please try again.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-					return;
-				}
+						if (result is null)
+						{
+							await EmbedExtensions.FromError($"I couldn't find anything matching: `{query}`, please try again.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+							return;
+						}
 
-				var item1 = result.FirstOrDefault();
-				var item2 = result.ElementAt(1);
-				var item3 = result.LastOrDefault();
+						var item1 = result.FirstOrDefault();
+						var item2 = result.ElementAt(1);
+						var item3 = result.LastOrDefault();
 
-				string desc = "I found this:\n" +
-					$"**{item1.Title}**\n" +
-					$"<{item1.Link}>\n\n" +
-					"__**Also Relevant**__\n" +
-					$"**{item2.Title}**\n<{item2.Link}>\n\n" +
-					$"**{item3.Title}**\n<{item3.Link}>\n\n" +
-					"If I didn't find what you're looking for, use this link:\n" +
-					$"https://google.com/search?q={query.Replace(" ", "%20")}";
+						string desc = "I found this:\n" +
+							$"**{item1.Title}**\n" +
+							$"<{item1.Link}>\n\n" +
+							"__**Also Relevant**__\n" +
+							$"**{item2.Title}**\n<{item2.Link}>\n\n" +
+							$"**{item3.Title}**\n<{item3.Link}>\n\n" +
+							"If I didn't find what you're looking for, use this link:\n" +
+							$"https://google.com/search?q={query.Replace(" ", "%20")}";
 
-				await
-					new EmbedBuilder()
-					.WithAuthor(new EmbedAuthorBuilder()
-						.WithName($"Google search for: {query}")
-						.WithIconUrl("https://upload.wikimedia.org/wikipedia/commons/0/09/IOS_Google_icon.png")
-						.WithUrl($"https://google.com/search?q={query.Replace(" ", "%20")}")
-					)
-					.AddFooter(Context)
-					.WithDescription(desc)
-					.QueueMessageAsync(Context).ConfigureAwait(false);
-			}
-			if (platform == "youtube" || platform == "yt")
-			{
-				await $"🔍 Searching Youtube for: {query}".QueueMessageAsync(Context).ConfigureAwait(false);
-				var result = await SearchClient.SearchYoutubeAsync(query).ConfigureAwait(false);
-				await result.QueueMessageAsync(Context).ConfigureAwait(false);
-			}
-			if (platform == "imgur")
-			{
-				await "🔍 Searching Imgur for: {query}".QueueMessageAsync(Context).ConfigureAwait(false);
-				var result = await SearchClient.SearchImgurAsync(query).ConfigureAwait(false);
-				await result.QueueMessageAsync(Context).ConfigureAwait(false);
+						await
+							new EmbedBuilder()
+							.WithAuthor(new EmbedAuthorBuilder()
+								.WithName($"Google search for: {query}")
+								.WithIconUrl("https://upload.wikimedia.org/wikipedia/commons/0/09/IOS_Google_icon.png")
+								.WithUrl($"https://google.com/search?q={query.Replace(" ", "%20")}")
+							)
+							.AddFooter(Context)
+							.WithDescription(desc)
+							.QueueMessageAsync(Context).ConfigureAwait(false);
+					}
+					break;
+				case "youtube":
+				case "yt":
+					{
+						await $"🔍 Searching Youtube for: {query}".QueueMessageAsync(Context).ConfigureAwait(false);
+						var result = await SearchClient.SearchYoutubeAsync(query).ConfigureAwait(false);
+						await result.QueueMessageAsync(Context).ConfigureAwait(false);
+					}
+					break;
+				case "imgur":
+					{
+						await "🔍 Searching Imgur for: {query}".QueueMessageAsync(Context).ConfigureAwait(false);
+						var result = await SearchClient.SearchImgurAsync(query).ConfigureAwait(false);
+						await result.QueueMessageAsync(Context).ConfigureAwait(false);
+					}
+					break;
 			}
 		}
 
@@ -183,10 +190,10 @@ namespace Skuld.Bot.Commands
 		[Usage("naenae")]
 		public async Task Urban([Remainder] string phrase = null)
 		{
-			if (phrase == null)
-				await (await UrbanDictionary.GetRandomWordAsync().ConfigureAwait(false)).ToEmbed().QueueMessageAsync(Context).ConfigureAwait(false);
+			if (phrase is null)
+				await (await UrbanDictionary.GetRandomWordAsync()).ToEmbed().QueueMessageAsync(Context);
 			else
-				await (await UrbanDictionary.GetPhrasesAsync(phrase).ConfigureAwait(false)).RandomValue().ToEmbed().QueueMessageAsync(Context).ConfigureAwait(false);
+				await (await UrbanDictionary.GetPhrasesAsync(phrase)).Random().ToEmbed().QueueMessageAsync(Context);
 		}
 
 		[Command("wikipedia"), Summary("Gets wikipedia information, supports all languages that wikipedia offers"), Alias("wiki")]
@@ -282,7 +289,7 @@ namespace Skuld.Bot.Commands
 
 		public async Task SendPokemonAsync(PokemonSpecies pokemon, string group)
 		{
-			if (pokemon == null)
+			if (pokemon is null)
 			{
 				StatsdClient.DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
 

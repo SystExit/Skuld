@@ -9,6 +9,8 @@ using Skuld.Bot.Extensions;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
+using Skuld.Core.Extensions.Verification;
+using Skuld.Core.Helpers;
 using Skuld.Core.Utilities;
 using Skuld.Models;
 using Skuld.Services.Accounts.Banking.Models;
@@ -26,7 +28,12 @@ using System.Threading.Tasks;
 
 namespace Skuld.Bot.Commands
 {
-	[Group, Name("Information"), RequireEnabledModule]
+	[
+		Group,
+		Name("Information"),
+		RequireEnabledModule,
+		Remarks("📚 Information Module")
+	]
 	public class InformationModule : ModuleBase<ShardedCommandContext>
 	{
 		public SkuldConfig Configuration { get; set; }
@@ -53,8 +60,11 @@ namespace Skuld.Bot.Commands
 			await embed.QueueMessageAsync(Context).ConfigureAwait(false);
 		}
 
-		[Command("server-emojis"), RequireContext(ContextType.Guild)]
-		[Ratelimit(20, 1, Measure.Minutes)]
+		[
+			Command("server-emojis"),
+			RequireContext(ContextType.Guild),
+			Ratelimit(20, 1, Measure.Minutes)
+		]
 		public async Task ServerEmoji()
 		{
 			var guild = Context.Guild;
@@ -86,8 +96,11 @@ namespace Skuld.Bot.Commands
 			await message.QueueMessageAsync(Context).ConfigureAwait(false);
 		}
 
-		[Command("server-roles"), RequireContext(ContextType.Guild)]
-		[Ratelimit(20, 1, Measure.Minutes)]
+		[
+			Command("server-roles"),
+			RequireContext(ContextType.Guild),
+			Ratelimit(20, 1, Measure.Minutes)
+		]
 		public async Task ServerRoles()
 		{
 			var guild = Context.Guild;
@@ -131,11 +144,14 @@ namespace Skuld.Bot.Commands
 			.ConfigureAwait(false);
 		}
 
-		[Command("id"), Summary("Gets a users ID")]
-		[Ratelimit(20, 1, Measure.Minutes)]
+		[
+			Command("id"),
+			Summary("Gets a users ID"),
+			Ratelimit(20, 1, Measure.Minutes)
+		]
 		public async Task GetID([Remainder] IUser user = null)
 		{
-			if (user == null)
+			if (user is null)
 			{
 				user = Context.User;
 			}
@@ -160,9 +176,12 @@ namespace Skuld.Bot.Commands
 			.ConfigureAwait(false);
 		}
 
-		[Command("roleinfo"), RequireContext(ContextType.Guild)]
-		[Ratelimit(20, 1, Measure.Minutes)]
-		[Usage("Super Awesome Role")]
+		[
+			Command("roleinfo"),
+			RequireContext(ContextType.Guild),
+			Ratelimit(20, 1, Measure.Minutes),
+			Usage("Super Awesome Role")
+		]
 		public async Task RoleInfo([Remainder] IRole role)
 		{
 			var memberString = new StringBuilder();
@@ -191,7 +210,7 @@ namespace Skuld.Bot.Commands
 				{
 					memberString.Append(member.Mention);
 
-					if (member != members.LastOrDefault())
+					if (member != members[members.Count - 1])
 					{
 						memberString.Append(", ");
 					}
@@ -200,7 +219,7 @@ namespace Skuld.Bot.Commands
 			else
 			{
 				memberString.Append(role.Mention);
-				memberString.Append(" ");
+				memberString.Append(' ');
 				memberString.Append("😝");
 			}
 
@@ -219,12 +238,12 @@ namespace Skuld.Bot.Commands
 			}
 
 			string RolePosition = $"{role.Position}";
-			if (previousRole != null)
+			if (previousRole is not null)
 			{
 				RolePosition += "\nBelow " +
 					$"{previousRole.Mention}({previousRole.Position})";
 			}
-			if (nextRole != null)
+			if (nextRole is not null)
 			{
 				RolePosition += "\nAbove " +
 					$"{nextRole.Mention}({nextRole.Position})";
@@ -268,61 +287,68 @@ namespace Skuld.Bot.Commands
 			.ConfigureAwait(false);
 		}
 
-		[Command("support"), Summary("Gives discord invite")]
-		[Ratelimit(20, 1, Measure.Minutes)]
+		[
+			Command("support"),
+			Summary("Gives discord invite"),
+			Ratelimit(20, 1, Measure.Minutes)
+		]
 		public async Task DevDisc()
 		{
-			await
-				(
-					"Join the support server! " +
-					$"<https://discord.skuldbot.uk/discord?ref=bot>"
-				)
+			await "Join the support server! <https://discord.skuld.bot/discord?ref=bot>"
 				.QueueMessageAsync(Context)
-			.ConfigureAwait(false);
+				.ConfigureAwait(false);
 		}
 
-		[Command("invite"), Summary("OAuth2 Invite")]
-		[Ratelimit(20, 1, Measure.Minutes)]
+		[
+			Command("invite"),
+			Summary("OAuth2 Invite"),
+			Ratelimit(20, 1, Measure.Minutes)
+		]
 		public async Task BotInvite()
 		{
 			await
-				$"Invite me! <https://discord.skuldbot.uk/bot?ref=bot>"
+				$"Invite me! <https://discord.skuld.bot/bot?ref=bot>"
 				.QueueMessageAsync(Context)
 			.ConfigureAwait(false);
 		}
 
-		[Command("userratio"), Summary("Gets the ratio of users to bots")]
-		[RequireContext(ContextType.Guild)]
-		[Ratelimit(20, 1, Measure.Minutes)]
+		[
+			Command("userratio"),
+			Summary("Gets the ratio of users to bots"),
+			RequireContext(ContextType.Guild),
+			Ratelimit(20, 1, Measure.Minutes)
+		]
 		public async Task HumanToBotRatio()
 		{
-			var guild = Context.Guild as SocketGuild;
-			var bots = await guild.RobotMembersAsync()
+			var bots = await Context.Guild.RobotMembersAsync()
 				.ConfigureAwait(false);
-			var users = await guild.HumanMembersAsync()
+			var users = await Context.Guild.HumanMembersAsync()
 				.ConfigureAwait(false);
-			var ratio = await guild.GetBotUserRatioAsync()
+			var ratio = await Context.Guild.GetBotUserRatioAsync()
 				.ConfigureAwait(false);
-			var usercount = guild.Users.Count;
+
 			await
 				(
 					$"Current Bots are: {bots}\n" +
 					$"Current Users are: {users}\n" +
-					$"Total Guild Users: {usercount}\n" +
+					$"Total Guild Users: {Context.Guild.MemberCount}\n" +
 					$"{ratio}% of the Guild Users are bots"
 				)
 				.QueueMessageAsync(Context)
 			.ConfigureAwait(false);
 		}
 
-		[Command("avatar"), Summary("Gets your/target's avatar")]
-		[Ratelimit(20, 1, Measure.Minutes)]
-		[Usage("<@0>")]
+		[
+			Command("avatar"),
+			Summary("Gets your/target's avatar"),
+			Ratelimit(20, 1, Measure.Minutes),
+			Usage("<@0>")
+		]
 		public async Task Avatar([Remainder] IUser user = null)
 		{
-			if (user == null)
+			if (user is null)
 			{
-				user = Context.User as IUser;
+				user = Context.User;
 			}
 
 			var avatar =
@@ -348,79 +374,6 @@ namespace Skuld.Bot.Commands
 			.QueueMessageAsync(Context).ConfigureAwait(false);
 		}
 
-		[Command("mods"), Summary("Gives online status of Moderators/Admins")]
-		[Ratelimit(20, 1, Measure.Minutes)]
-		public async Task ModsOnline()
-		{
-			IGuild guild = Context.Guild;
-			await guild.DownloadUsersAsync().ConfigureAwait(false);
-			Dictionary<string, bool> Staff = new Dictionary<string, bool>();
-			var users = await guild.GetUsersAsync().ConfigureAwait(false);
-			foreach (var user in users)
-			{
-				if (user.IsBot) { }
-				else
-				{
-					if (user.GuildPermissions.Administrator ||
-						user.GuildPermissions.RawValue >=
-						DiscordUtilities.ModeratorPermissions.RawValue)
-					{
-						if (user.Activity != null &&
-							user.Activity.Type == ActivityType.Streaming)
-						{
-							Staff.Add(
-								 $"{DiscordUtilities.Streaming_Emote} " +
-								 $"{user.FullNameWithNickname()}",
-								user.GuildPermissions.Administrator
-							);
-							continue;
-						}
-
-						Staff.Add(
-							$"{user.Status.StatusToEmote()} " +
-							$"{user.FullNameWithNickname()}",
-							user.GuildPermissions.Administrator
-						);
-					}
-				}
-			}
-
-			StringBuilder message = new StringBuilder();
-
-			if (Staff.ContainsValue(true))
-			{
-				var admin = Staff.Where(x => x.Value == true).ToList();
-
-				StringBuilder admins = new StringBuilder();
-
-				admin.ForEach(x =>
-				{
-					admins.AppendLine(x.Key);
-				});
-
-				message.Append("__Administrators__");
-				message.Append(Environment.NewLine);
-				message.AppendLine(admins.ToString());
-			}
-			if (Staff.ContainsValue(false))
-			{
-				var mod = Staff.Where(x => x.Value == false).ToList();
-
-				StringBuilder mods = new StringBuilder();
-
-				mod.ForEach(x =>
-				{
-					mods.AppendLine(x.Key);
-				});
-
-				message.Append("__Moderators__");
-				message.Append(Environment.NewLine);
-				message.AppendLine(mods.ToString());
-			}
-
-			await message.QueueMessageAsync(Context).ConfigureAwait(false);
-		}
-
 		[
 			Command("createinvite", RunMode = RunMode.Async),
 			Summary("Creates a new invite to the guild"),
@@ -428,21 +381,23 @@ namespace Skuld.Bot.Commands
 			Ratelimit(20, 1, Measure.Minutes),
 			Usage(
 				"#general",
-				"#general 86400",
-				"#general 86400 5",
-				"#general 86400 5 true",
-				"#general 86400 5 true true"
+				"#general \"1d\"",
+				"#general \"1d 30m\" 5",
+				"#general \"1d 30m 5s\" 5 true",
+				"#general \"1d 30m 5s\" 5 true true"
 			)
 		]
 		public async Task NewInvite([NotNull] ITextChannel channel,
-			int? maxAge = null,
+			string timespan = null,
 			int? maxUses = null,
 			bool permanent = true,
 			bool unique = true)
 		{
+			var timeSpan = StringTimeHelper.Parse(timespan);
+
 			IInviteMetadata invite =
 				await channel.CreateInviteAsync(
-					maxAge,
+					(int)timeSpan.Value.TotalSeconds,
 					maxUses,
 					!permanent,
 					unique
@@ -451,7 +406,7 @@ namespace Skuld.Bot.Commands
 			await ("I created the invite with the following settings:\n" +
 				"```cs\n" +
 				$"       Channel : {channel.Name}\n" +
-				(maxAge.HasValue ? $"   Maximum Age : {maxAge}\n" : "") +
+				(!timespan.IsNullOrWhiteSpace() ? $"   Maximum Age : {timespan}\n" : "") +
 				(maxUses.HasValue ? $"  Maximum Uses : {maxUses}\n" : "") +
 				$"     Permanent : {!permanent}\n" +
 				$"        Unique : {unique}" +
@@ -498,7 +453,7 @@ namespace Skuld.Bot.Commands
 		{
 			if (!Context.IsPrivate)
 			{
-				if (whois == null)
+				if (whois is null)
 				{
 					whois = Context.User;
 				}
@@ -538,7 +493,7 @@ namespace Skuld.Bot.Commands
 		]
 		public async Task GetRole(SocketGuildUser user = null)
 		{
-			if (user == null)
+			if (user is null)
 			{
 				user = (SocketGuildUser)Context.User;
 			}
@@ -566,7 +521,7 @@ namespace Skuld.Bot.Commands
 		]
 		public async Task Calculate([Remainder] string expression)
 		{
-			Expression exp = new Expression(expression);
+			Expression exp = new(expression);
 
 			exp.Parameters.Add("Pi", Math.PI);
 			exp.Parameters.Add("e", Math.E);
@@ -646,7 +601,8 @@ namespace Skuld.Bot.Commands
 			Name("Leaderboard"),
 			Group("leaderboard"),
 			Alias("lb"),
-			Ratelimit(20, 1, Measure.Minutes)
+			Ratelimit(20, 1, Measure.Minutes),
+			Remarks("🏆 Get's people's rankings")
 		]
 		public class LeaderboardModule : ModuleBase<ShardedCommandContext>
 		{
@@ -731,8 +687,7 @@ namespace Skuld.Bot.Commands
 							.InsertOrGetGuildAsync(Context.Guild)
 						.ConfigureAwait(false);
 
-					feats = database.Features.FirstOrDefault(x =>
-							x.Id == dbGuild.Id);
+					feats = database.Features.Find(dbGuild.Id);
 				}
 
 				if (!feats.Experience && !global)
@@ -785,7 +740,7 @@ namespace Skuld.Bot.Commands
 							.OrderByDescending(x => x.Usage)
 						.ToListAsync();
 
-						if (first != null && usage != null && ranking.Any())
+						if (first is not null && usage is not null && ranking.Any())
 						{
 							info = new CommandLeaderboardInfo
 							{
@@ -798,14 +753,14 @@ namespace Skuld.Bot.Commands
 								Total = (ulong)ranking.Count
 							};
 						}
-						else if (first != null)
+						else if (first is not null)
 						{
 							existsButNoData = true;
 						}
 					}
 				}
 
-				if (info == null)
+				if (info is null)
 				{
 					var result = SkuldApp.CommandService.Search(command);
 
@@ -822,11 +777,11 @@ namespace Skuld.Bot.Commands
 							.OrderByDescending(x => x.Usage)
 						.ToListAsync();
 
-						if (usage != null && ranking.Any())
+						if (usage is not null && ranking.Any())
 						{
 							info = new CommandLeaderboardInfo
 							{
-								Name = result.Commands.FirstOrDefault()
+								Name = result.Commands[0]
 									.Command.Name,
 								Usage = usage.Usage,
 								Rank = (ulong)ranking.IndexOf(
@@ -843,7 +798,7 @@ namespace Skuld.Bot.Commands
 					}
 				}
 
-				if (info == null && !existsButNoData)
+				if (info is null && !existsButNoData)
 				{
 					await
 						EmbedExtensions.FromError(
@@ -878,22 +833,25 @@ namespace Skuld.Bot.Commands
 					.AddInlineField("Rank", rank)
 				.QueueMessageAsync(Context).ConfigureAwait(false);
 			}
-		}
 
-		private class CommandLeaderboardInfo
-		{
-			public string Name;
-			public ulong Usage;
-			public ulong Rank;
-			public ulong Total;
+			private class CommandLeaderboardInfo
+			{
+				public string Name;
+				public ulong Usage;
+				public ulong Rank;
+				public ulong Total;
+			}
 		}
 
 		#endregion Leaderboards
 
 		#region Time
 
-		[Command("time"), Summary("Gets current time")]
-		[Ratelimit(20, 1, Measure.Minutes)]
+		[
+			Command("time"),
+			Summary("Gets current time"),
+			Ratelimit(20, 1, Measure.Minutes)
+		]
 		public async Task Time()
 		{
 			using var Database = new SkuldDbContextFactory().CreateDbContext();
@@ -913,7 +871,7 @@ namespace Skuld.Bot.Commands
 
 			var time = timeZone.ToDateTimeUnspecified().ToDMYString();
 
-			if (sUser.TimeZone != null)
+			if (sUser.TimeZone is not null)
 			{
 				await
 					$"Your time is currently; {time}"
@@ -932,14 +890,17 @@ namespace Skuld.Bot.Commands
 			}
 		}
 
-		[Command("time"), Summary("Converts a time to a set of times")]
-		[Ratelimit(20, 1, Measure.Minutes)]
-		[Usage("<@0> @Friend2")]
+		[
+			Command("time"),
+			Summary("Converts a time to a set of times"),
+			Ratelimit(20, 1, Measure.Minutes),
+			Usage("<@0> @Friend2")
+		]
 		public async Task ConvertTime(params IGuildUser[] users)
 		{
 			using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-			var message = new StringBuilder("```cs\n");
+			StringBuilder message = new("```cs\n");
 
 			foreach (var user in users)
 			{
@@ -957,7 +918,7 @@ namespace Skuld.Bot.Commands
 						Database.InsertOrGetUserAsync(user)
 					.ConfigureAwait(false);
 
-					if (sUser.TimeZone != null)
+					if (sUser.TimeZone is not null)
 					{
 						ZonedDateTime timeZone =
 							Instant.FromDateTimeUtc(DateTime.UtcNow)
@@ -978,7 +939,7 @@ namespace Skuld.Bot.Commands
 					}
 					else
 					{
-						message.Append("\"");
+						message.Append('"');
 						message.Append(sUser.Username);
 						message.Append(" has not given me their timezone\"\n");
 					}
@@ -997,10 +958,14 @@ namespace Skuld.Bot.Commands
 
 		#region IAmRole
 
-		[Command("addrole"), Summary("Adds yourself to a role")]
-		[Alias("iam"), RequireDatabase]
-		[Ratelimit(20, 1, Measure.Minutes)]
-		[Usage("5")]
+		[
+			Command("addrole"),
+			Summary("Adds yourself to a role"),
+			Alias("iam"),
+			RequireDatabase,
+			Ratelimit(20, 1, Measure.Minutes),
+			Usage("5")
+		]
 		public async Task IamRole(int page = 0)
 		{
 			if (page != 0)
@@ -1097,7 +1062,7 @@ namespace Skuld.Bot.Commands
 			{
 				var r = iamlist.FirstOrDefault(x => x.RoleId == role.Id);
 
-				if (r != null)
+				if (r is not null)
 				{
 					var gUsr = Context.User as IGuildUser;
 					var usr = await Database
@@ -1357,11 +1322,11 @@ namespace Skuld.Bot.Commands
 						x.GuildId == guild.Id
 				);
 
-			if (guildExperience != null)
+			if (guildExperience is not null)
 			{
 				if (guildExperience.Level < roleconf.LevelRequired &&
 					Database.Features
-					.FirstOrDefault(x => x.Id == sguild.Id)
+					.Find(sguild.Id)
 					.Experience
 				)
 				{

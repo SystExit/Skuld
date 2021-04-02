@@ -2,6 +2,7 @@
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using Octokit;
+using Skuld.API;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Verification;
@@ -23,13 +24,12 @@ namespace Skuld.Bot
 	internal static class BotEvents
 	{
 		public const string Key = "DiscordLog";
-		private static readonly List<int> ShardsReady = new List<int>();
+		private static readonly List<int> ShardsReady = new();
 		static DiscordShardedClient Client => SkuldApp.DiscordClient;
-		static readonly List<Tuple<string, ActivityType>> Statuses = new List<Tuple<string, ActivityType>>
+		static readonly List<Tuple<string, ActivityType>> Statuses = new()
 		{
 			new Tuple<string, ActivityType>("{{PREFIX}}help | {{SHARDID}}/{{SHARDCOUNT}}", ActivityType.Listening),
 			new Tuple<string, ActivityType>("with {{TOTALSERVERCOUNT}} servers", ActivityType.Playing),
-			new Tuple<string, ActivityType>("{{TOTALUSERCOUNT}} users", ActivityType.Watching),
 			new Tuple<string, ActivityType>(SkuldAppContext.Website, ActivityType.Playing),
 		};
 
@@ -116,10 +116,6 @@ namespace Skuld.Bot
 			DogStatsd.Increment("messages.reactions.added");
 			IUser usr;
 
-			var msg = await arg1.GetOrDownloadAsync().ConfigureAwait(false);
-
-			if (msg == null) return;
-
 			if (!arg3.User.IsSpecified) return;
 			else
 			{
@@ -127,6 +123,10 @@ namespace Skuld.Bot
 			}
 
 			if (usr.IsBot || usr.IsWebhook) return;
+
+			var msg = await arg1.GetOrDownloadAsync().ConfigureAwait(false);
+
+			if (msg is null) return;
 
 			if (arg2 is IGuildChannel)
 			{
@@ -155,7 +155,7 @@ namespace Skuld.Bot
 								.FirstOrDefault(x =>
 									x.IssueChannelMessageId == arg1.Id
 								);
-							if (message != null)
+							if (message is not null)
 							{
 								var emote = arg3.Emote as Emote;
 
@@ -329,6 +329,8 @@ namespace Skuld.Bot
 			var message = await arg1.GetOrDownloadAsync()
 				.ConfigureAwait(false);
 
+			if (message is null) return;
+
 			await StarboardService.ExecuteRemovalAsync(message, usr.Id)
 				.ConfigureAwait(false);
 		}
@@ -377,7 +379,7 @@ namespace Skuld.Bot
 			DiscordSocketClient client
 		)
 		{
-			Tuple<string, ActivityType> pickedStatus = Statuses.RandomValue();
+			Tuple<string, ActivityType> pickedStatus = Statuses.Random();
 
 			string replacedString = pickedStatus.Item1
 				.Replace("{{PREFIX}}", SkuldApp.Configuration.Prefix)
@@ -537,13 +539,15 @@ namespace Skuld.Bot
 		{
 			DogStatsd.Increment("guild.users.joined");
 
+			if (arg is null) return;
+
 			//Insert into Database
 			try
 			{
 				using SkuldDbContext database = new SkuldDbContextFactory()
 					.CreateDbContext();
 
-				await database.InsertOrGetUserAsync(arg as IUser)
+				await database.InsertOrGetUserAsync(arg)
 					.ConfigureAwait(false);
 			}
 			catch (Exception ex)
@@ -592,32 +596,67 @@ namespace Skuld.Bot
 				var gld = await database.InsertOrGetGuildAsync(arg.Guild)
 					.ConfigureAwait(false);
 
-				if (gld != null)
+				if (gld is not null)
 				{
-					if (gld.JoinRole != 0)
+					try
 					{
-						var joinrole = arg.Guild.GetRole(gld.JoinRole);
-						await arg
-							.AddRoleAsync(joinrole)
-						.ConfigureAwait(false);
+						if (gld.JoinRole != 0)
+						{
+							var joinrole = arg.Guild.GetRole(gld.JoinRole);
+							await arg
+								.AddRoleAsync(joinrole)
+							.ConfigureAwait(false);
+						}
+					}
+					catch
+					{
+						Log.Error("UsrJoin", "Couldn't Give Join Role", null);
 					}
 
-					if (gld.JoinChannel != 0 &&
-						!string.IsNullOrEmpty(gld.JoinMessage)
-					)
+					try
 					{
-						var channel = arg.Guild
-							.GetTextChannel(gld.JoinChannel);
+						if (gld.JoinChannel != 0)
+						{
+							if (!gld.JoinImage && !string.IsNullOrEmpty(gld.JoinMessage))
+							{
+								var channel = arg.Guild
+									.GetTextChannel(gld.JoinChannel);
 
-						var message = gld.JoinMessage
-							.ReplaceGuildEventMessage(
-								arg,
-								arg.Guild
-							);
+								var message = gld.JoinMessage
+									.ReplaceGuildEventMessage(
+										arg,
+										arg.Guild
+									);
 
-						await channel
-							.SendMessageAsync(message)
-						.ConfigureAwait(false);
+								await channel
+									.SendMessageAsync(message)
+								.ConfigureAwait(false);
+							}
+							else if (gld.JoinImage)
+							{
+								var skuldAPI = SkuldApp.Services.GetRequiredService<ISkuldAPIClient>();
+
+								var channel = arg.Guild
+									.GetTextChannel(gld.JoinChannel);
+
+								var message = !string.IsNullOrEmpty(gld.JoinMessage) ? gld.JoinMessage
+									.ReplaceGuildEventMessage(
+										arg,
+										arg.Guild
+									) : "";
+
+								var image = await skuldAPI.GetJoinCardAsync(arg.Id, arg.Guild.Id);
+
+								if (image is not null)
+								{
+									await channel.SendFileAsync(image, "image.png", message);
+								}
+							}
+						}
+					}
+					catch
+					{
+						Log.Error("UsrJoin", "Couldn't Send Join Message", null);
 					}
 				}
 			}
@@ -680,13 +719,13 @@ namespace Skuld.Bot
 							.OrderByDescending(x => x.LevelRequired)
 							.FirstOrDefault();
 
-						if (r != null)
+						if (r is not null)
 						{
 							var role = arg.Guild.Roles.FirstOrDefault(z =>
 								rolesToGive.Contains(r.Id)
 							);
 
-							if (role != null)
+							if (role is not null)
 							{
 								try
 								{
@@ -724,29 +763,56 @@ namespace Skuld.Bot
 					.InsertOrGetGuildAsync(arg.Guild)
 				.ConfigureAwait(false);
 
-				if (gld != null)
+				if (gld is not null)
 				{
-					if (gld.LeaveChannel != 0 &&
-						!string.IsNullOrEmpty(gld.LeaveMessage)
-					)
+					try
 					{
-						var channel = arg.Guild.GetTextChannel(gld.JoinChannel);
+						if (gld.LeaveChannel != 0)
+						{
+							if (!gld.LeaveImage && !string.IsNullOrEmpty(gld.LeaveMessage))
+							{
+								var channel = arg.Guild.GetTextChannel(gld.LeaveChannel);
 
-						var message = gld.LeaveMessage
-							.ReplaceGuildEventMessage(
-								arg,
-								arg.Guild
-							);
+								var message = gld.LeaveMessage
+									.ReplaceGuildEventMessage(
+										arg,
+										arg.Guild
+									);
 
-						await channel
-							.SendMessageAsync(message)
-						.ConfigureAwait(false);
+								await channel
+									.SendMessageAsync(message)
+								.ConfigureAwait(false);
+							}
+							else if (gld.LeaveImage)
+							{
+								var skuldAPI = SkuldApp.Services.GetRequiredService<ISkuldAPIClient>();
+
+								var channel = arg.Guild.GetTextChannel(gld.LeaveChannel);
+
+								var message = !string.IsNullOrEmpty(gld.LeaveMessage) ? gld.LeaveMessage
+									.ReplaceGuildEventMessage(
+										arg,
+										arg.Guild
+									) : "";
+
+								var image = await skuldAPI.GetLeaveCardAsync(arg.Id, arg.Guild.Id);
+
+								if (image is not null)
+								{
+									await channel.SendFileAsync(image, "image.png", message);
+								}
+							}
+						}
+					}
+					catch
+					{
+						Log.Error("UsrLeft", "Couldn't send leave message", null);
 					}
 				}
 			}
 			catch (Exception ex)
 			{
-				Log.Error("UsrJoin", ex.Message, null, ex);
+				Log.Error("UsrLeft", ex.Message, null, ex);
 			}
 
 			Log.Verbose(Key, $"{arg} left {arg.Guild}", null);
@@ -757,14 +823,14 @@ namespace Skuld.Bot
 			SocketUser arg2
 		)
 		{
-			if (arg1.IsBot || arg1.IsWebhook) return;
+			if (arg1.IsBot || arg1.IsWebhook || arg2.IsBot || arg2.IsWebhook || arg2.DiscriminatorValue == 0) return;
 
 			try
 			{
 				using SkuldDbContext database = new SkuldDbContextFactory()
 					.CreateDbContext();
 
-				Skuld.Models.User suser = await database
+				User suser = await database
 					.InsertOrGetUserAsync(arg2)
 					.ConfigureAwait(false);
 
@@ -780,7 +846,7 @@ namespace Skuld.Bot
 			}
 			catch (Exception ex)
 			{
-				Log.Error("UsrJoin", ex.Message, null, ex);
+				Log.Error("UsrUpdt", ex.Message, null, ex);
 			}
 		}
 
@@ -792,7 +858,6 @@ namespace Skuld.Bot
 			SocketGuild arg
 		)
 		{
-
 			Log.Verbose(Key, $"Just left {arg}", null);
 			DogStatsd.Increment("guilds.left");
 
@@ -821,7 +886,7 @@ namespace Skuld.Bot
 		)
 		{
 			DogStatsd.Increment("guilds.joined");
-			Log.Verbose(Key, $"Just left {arg}", null);
+			Log.Verbose(Key, $"Just joined {arg}", null);
 
 			try
 			{
@@ -958,11 +1023,10 @@ namespace Skuld.Bot
 			SocketGuildUser arg2
 		)
 		{
-			if (arg1.IsBot || arg1.IsWebhook) return;
+			if (arg1.IsBot || arg1.IsWebhook || arg2.IsBot || arg2.IsWebhook || arg2.DiscriminatorValue == 0) return;
 
 			//Resync Data
 			{
-
 				using SkuldDbContext database = new SkuldDbContextFactory()
 					.CreateDbContext();
 
@@ -982,14 +1046,19 @@ namespace Skuld.Bot
 				}
 			}
 
-			if (arg1.Roles.Count != arg2.Roles.Count)
+			try
 			{
-				//Add Persistent Role
-				await HandlePersistentRoleAdd(arg2).ConfigureAwait(false);
+				if (arg1.Roles.Count != arg2.Roles.Count)
+				{
+					//Add Persistent Role
+					await HandlePersistentRoleAdd(arg2).ConfigureAwait(false);
 
-				//Remove Persistent Role
-				await HandlePersistentRoleRemove(arg1, arg2).ConfigureAwait(false);
+					//Remove Persistent Role
+					await HandlePersistentRoleRemove(arg1, arg2).ConfigureAwait(false);
+				}
 			}
+			catch
+			{ }
 		}
 
 		private static async Task Bot_GuildUpdated(
@@ -1006,13 +1075,13 @@ namespace Skuld.Bot
 					Database.InsertOrGetGuildAsync(arg2)
 				.ConfigureAwait(false);
 
-				if (sguild.Name == null ||
+				if (sguild.Name is null ||
 					!sguild.Name.Equals(arg2.Name))
 				{
 					sguild.Name = arg2.Name;
 				}
 
-				if (sguild.IconUrl == null ||
+				if (sguild.IconUrl is null ||
 					!sguild.IconUrl.Equals(arg2.IconUrl))
 				{
 					sguild.IconUrl = arg2.IconUrl;
@@ -1039,7 +1108,7 @@ namespace Skuld.Bot
 				.DistinctBy(x => x.RoleId)
 				.ToList();
 
-			if (guildPersistentRoles.Any())
+			if (guildPersistentRoles.Count > 0)
 			{
 				guildPersistentRoles.ForEach(z =>
 				{
@@ -1104,7 +1173,7 @@ namespace Skuld.Bot
 				}
 			});
 
-			if (roles.Any())
+			if (roles.Count > 0)
 			{
 				database.PersistentRoles.RemoveRange(
 					database.PersistentRoles.ToList()
