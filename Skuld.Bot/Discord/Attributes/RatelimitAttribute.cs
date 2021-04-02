@@ -19,7 +19,7 @@ namespace Skuld.Bot.Discord.Attributes
 		private readonly bool _noLimitForAdmins;
 		private readonly bool _applyPerGuild;
 		private readonly TimeSpan _invokeLimitPeriod;
-		private readonly Dictionary<(ulong, ulong?), CommandTimeout> _invokeTracker = new Dictionary<(ulong, ulong?), CommandTimeout>();
+		private readonly Dictionary<(ulong, ulong?), CommandTimeout> _invokeTracker = new();
 
 		/// <summary> Sets how often a user is allowed to use this command. </summary>
 		/// <param name="times">The number of times a user may use the command within a certain period.</param>

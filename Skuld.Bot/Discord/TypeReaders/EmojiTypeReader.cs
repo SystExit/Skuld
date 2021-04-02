@@ -10,7 +10,7 @@ namespace Skuld.Bot.Discord.TypeReaders
         public override Task<TypeReaderResult> ReadAsync(ICommandContext context, string input, IServiceProvider services)
         {
             var unicode = EmojiOne.EmojiOne.ShortnameToUnicode(input);
-            if (unicode != null)
+            if (unicode is not null)
             {
                 return Task.FromResult(TypeReaderResult.FromSuccess(new Emoji(unicode)));
             }

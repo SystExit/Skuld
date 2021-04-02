@@ -9,7 +9,7 @@ namespace Skuld.Bot.Discord.Preconditions
     {
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
-            bool isInChannel = (context.User as IGuildUser)?.VoiceChannel != null;
+            bool isInChannel = (context.User as IGuildUser)?.VoiceChannel is not null;
 
             if (isInChannel)
                 return Task.FromResult(PreconditionResult.FromSuccess());

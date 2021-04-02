@@ -76,7 +76,7 @@ namespace Skuld.Bot
 
 				name = cmd.Module.GetModulePath();
 
-				if (cmd.Name != null)
+				if (cmd.Name is not null)
 				{
 					name += "." + cmd.Name;
 				}
@@ -115,7 +115,7 @@ namespace Skuld.Bot
 
 					string cmdName = "";
 
-					if (arg2.Guild != null)
+					if (arg2.Guild is not null)
 					{
 						using var Database = new SkuldDbContextFactory().CreateDbContext();
 
@@ -126,12 +126,12 @@ namespace Skuld.Bot
 						);
 					}
 
-					if (cmd != null && cmd.Module.Group != null)
+					if (cmd is not null && cmd.Module.Group is not null)
 					{
 						string pfx = "";
 
 						ModuleInfo mod = cmd.Module;
-						while (mod.Group != null)
+						while (mod.Group is not null)
 						{
 							pfx += $"{mod.Group} ";
 
@@ -271,20 +271,20 @@ namespace Skuld.Bot
 				User suser = await Database.InsertOrGetUserAsync(message.Author).ConfigureAwait(false);
 
 				{
-					var keys = Database.DonatorKeys.AsAsyncEnumerable().Where(x => x.Redeemer == suser.Id);
+					var keys = Database.DonatorKeys.ToList().Where(x => x.Redeemer == suser.Id).ToList();
 
-					if (await keys.AnyAsync().ConfigureAwait(false))
+					if (keys.Count > 0)
 					{
 						bool hasChanged = false;
 						var current = DateTime.Now;
-						await keys.ForEachAsync(x =>
+						keys.ForEach(x =>
 						{
 							if (current > x.RedeemedWhen.FromEpoch().AddDays(365))
 							{
 								Database.DonatorKeys.Remove(x);
 								hasChanged = true;
 							}
-						}).ConfigureAwait(false);
+						});
 
 						if (hasChanged)
 						{
@@ -330,34 +330,37 @@ namespace Skuld.Bot
 				arg.Author.DiscriminatorValue == 0 ||
 				arg is not SocketUserMessage message) return;
 
-			ShardedCommandContext context = new ShardedCommandContext(
-				SkuldApp.DiscordClient,
-				message
-			);
+			using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+			User suser = await Database.InsertOrGetUserAsync(arg.Author).ConfigureAwait(false);
+
+			if (suser is not null &&
+				suser.Flags.IsBitSet(DiscordUtilities.Banned) &&
+				(!suser.Flags.IsBitSet(DiscordUtilities.BotCreator) ||
+				!suser.Flags.IsBitSet(DiscordUtilities.BotAdmin))
+			) return;
+
+			ShardedCommandContext context = new(SkuldApp.DiscordClient, message);
 
 			Guild sguild = null;
 
-			if (context.Guild != null)
+			if (context.Guild is not null)
 			{
-				if (!await CheckPermissionToSendMessageAsync(context.Channel as ITextChannel).ConfigureAwait(false)) return;
-
 				if (SkuldApp.DiscordClient.GetShardFor(context.Guild).ConnectionState != ConnectionState.Connected) return;
 
-				_ = Task.Run(() => HandleSideTasksAsync(context));
+				if (!await CheckPermissionToSendMessageAsync(context.Channel as ITextChannel).ConfigureAwait(false)) return;
 
 				var guser = await
 					(context.Guild as IGuild).GetCurrentUserAsync()
 				.ConfigureAwait(false);
 
+				if (!guser.GetPermissions(context.Channel as IGuildChannel).SendMessages) return;
+
 				var guildMem = await
 					(context.Guild as IGuild).GetUserAsync(message.Author.Id)
 				.ConfigureAwait(false);
 
-				if (!guser.GetPermissions(context.Channel as IGuildChannel).SendMessages) return;
-
 				if (!MessageTools.IsEnabledChannel(guildMem, context.Channel as ITextChannel)) return;
-
-				using var Database = new SkuldDbContextFactory().CreateDbContext();
 
 				sguild = await
 				   Database.InsertOrGetGuildAsync(context.Guild)
@@ -380,70 +383,49 @@ namespace Skuld.Bot
 
 			if (!MessageTools.HasPrefix(message, SkuldApp.Configuration.Prefix, SkuldApp.Configuration.AltPrefix, sguild?.Prefix)) return;
 
-			try
+			await Task.WhenAll(ProcessCommandAsync(context, sguild), ProcessExperienceAsync(context, sguild), ProcessCustomCommand(context, sguild));
+		}
+
+		public static async Task ProcessCommandAsync(ICommandContext context, Guild sguild)
+		{
+			var prefix = MessageTools.GetPrefixFromCommand(context.Message.Content, SkuldApp.Configuration.Prefix, SkuldApp.Configuration.AltPrefix, sguild?.Prefix);
+
+			if (prefix is not null)
 			{
-				using var Database = new SkuldDbContextFactory().CreateDbContext();
-
-				User suser = await Database.InsertOrGetUserAsync(message.Author).ConfigureAwait(false);
-
-				if (suser != null &&
-					suser.Flags.IsBitSet(DiscordUtilities.Banned) &&
-					(!suser.Flags.IsBitSet(DiscordUtilities.BotCreator) ||
-					!suser.Flags.IsBitSet(DiscordUtilities.BotAdmin))
-				) return;
-
-				var prefix = MessageTools.GetPrefixFromCommand(context.Message.Content, SkuldApp.Configuration.Prefix, SkuldApp.Configuration.AltPrefix, sguild?.Prefix);
-
-				if (prefix != null)
-				{
-					await DispatchCommandAsync(context, prefix).ConfigureAwait(false);
-				}
-			}
-			catch (Exception ex)
-			{
-				Log.Critical(Key, ex.Message, context, ex);
+				await DispatchCommandAsync(context, prefix).ConfigureAwait(false);
 			}
 		}
 
-		public static async Task HandleSideTasksAsync(ICommandContext context)
+		public static async Task ProcessExperienceAsync(ICommandContext context, Guild sguild)
 		{
+			if (sguild is null) return;
+
 			using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-			Guild sguild = null;
-
-			if (context.Guild != null)
+			if (!Database.Features.Any(x => x.Id == sguild.Id))
 			{
-				sguild = await
-				   Database.InsertOrGetGuildAsync(context.Guild)
-				.ConfigureAwait(false);
+				Database.Features.Add(new GuildFeatures
+				{
+					Id = sguild.Id
+				});
+				await Database.SaveChangesAsync().ConfigureAwait(false);
 			}
 
-			if (sguild != null)
+			GuildFeatures features = Database.Features.Find(sguild.Id);
+			if (features.Experience)
 			{
-				if (!Database.Features.Any(x => x.Id == sguild.Id))
-				{
-					Database.Features.Add(new GuildFeatures
-					{
-						Id = sguild.Id
-					});
-					await Database.SaveChangesAsync().ConfigureAwait(false);
-				}
+				await ExperienceService.HandleExperienceAsync(context);
+			}
+		}
 
-				GuildFeatures features = Database.Features.Find(sguild.Id);
-				if (features.Experience)
-				{
-					_ = Task.Run(() => ExperienceService.HandleExperienceAsync(context));
-				}
+		public static async Task ProcessCustomCommand(ICommandContext context, Guild sguild)
+		{
+			if (sguild is null) return;
 
-				if (!Database.Modules.Any(x => x.Id == sguild.Id))
-				{
-					Database.Modules.Add(new GuildModules
-					{
-						Id = sguild.Id
-					});
-					await Database.SaveChangesAsync().ConfigureAwait(false);
-				}
+			using var Database = new SkuldDbContextFactory().CreateDbContext();
 
+			if (sguild is not null)
+			{
 				GuildModules modules;
 				if (!Database.Modules.Any(x => x.Id == sguild.Id))
 				{
@@ -458,7 +440,7 @@ namespace Skuld.Bot
 
 				if (modules.Custom)
 				{
-					_ = Task.Run(() => CustomCommandService.HandleCustomCommandAsync(context, SkuldApp.Configuration));
+					await CustomCommandService.HandleCustomCommandAsync(context, SkuldApp.Configuration);
 				}
 			}
 		}
@@ -517,8 +499,8 @@ namespace Skuld.Bot
 
 			using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-			var experience = Database.UserCommandUsage.FirstOrDefault(x => x.UserId == user.Id && x.Command.ToLower() == name.ToLower());
-			if (experience != null)
+			var experience = await Database.UserCommandUsage.AsAsyncEnumerable().FirstOrDefaultAsync(x => x.UserId == user.Id && x.Command.IsSameUpperedInvariant(name));
+			if (experience is not null)
 			{
 				experience.Usage += 1;
 			}
@@ -539,7 +521,7 @@ namespace Skuld.Bot
 
 		public static async Task<bool> CheckPermissionToSendMessageAsync(ITextChannel channel)
 		{
-			if (channel.Guild != null)
+			if (channel.Guild is not null)
 			{
 				var currentuser = await channel.Guild.GetCurrentUserAsync().ConfigureAwait(false);
 				var chan = await channel.Guild.GetChannelAsync(channel.Id).ConfigureAwait(false);

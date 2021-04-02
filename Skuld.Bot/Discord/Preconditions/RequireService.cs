@@ -25,7 +25,7 @@ namespace Skuld.Bot.Discord.Preconditions
 		{
 			object service = services.GetService(reqService);
 
-			return service != null;
+			return service is not null;
 		}
 	}
 }
