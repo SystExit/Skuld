@@ -98,7 +98,7 @@ namespace Skuld.Bot.Extensions
 
 		public static IList<string> Paginate(this IReadOnlyList<IAmRole> roles, Guild sguild, IGuild guild, IGuildUser user, int pagehoist = 10)
 		{
-			if (sguild == null || guild == null)
+			if (sguild is null || guild is null)
 			{
 				return null;
 			}

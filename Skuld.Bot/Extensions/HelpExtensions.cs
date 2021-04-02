@@ -2,6 +2,7 @@
 using Discord.Commands;
 using Skuld.Bot.Discord.Attributes;
 using Skuld.Core.Extensions;
+using Skuld.Core.Extensions.Verification;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,7 +18,7 @@ namespace Skuld.Bot.Extensions
 
 			var summ = await search.GetSummaryAsync(context, prefix).ConfigureAwait(false);
 
-			if (summ == null)
+			if (summ is null)
 			{
 				return null;
 			}
@@ -29,13 +30,55 @@ namespace Skuld.Bot.Extensions
 			return embed;
 		}
 
+		public static EmbedBuilder GetModuleHelp(this CommandService commandService, ICommandContext context, string modulename)
+		{
+			var module = commandService.Modules.FirstOrDefault(x => x.Name.ToLowerInvariant() == modulename.ToLowerInvariant());
+			bool didLevenstein = false;
+
+			if (module is null)
+			{
+				didLevenstein = true;
+				module = commandService.Modules.OrderByDescending(x => x.Name.Like(modulename)).FirstOrDefault();
+			}
+
+			if (module is null) return null;
+			if (module.Commands.Count == 0) return null;
+
+			string prefix = "";
+
+			if (didLevenstein && module.Name.PercentageSimilarity(modulename) != 100)
+			{
+				prefix += "I assume you mean this module\n\n";
+			}
+
+			prefix += $"{module.Remarks}\n";
+
+			if (!module.Group.IsNullOrWhiteSpace())
+			{
+				prefix += $"Prefix: {module.Group}\n\n";
+			}
+
+			var embed = EmbedExtensions.FromMessage(
+				$"Help - {module.GetModulePath()}",
+				$"{prefix}`{string.Join(", ", module.Commands.Select(cmd => cmd.Name))}`",
+				Color.Teal,
+				context);
+
+			if (module.Submodules.Count > 0)
+			{
+				embed.AddField("Submodules:", $"`{string.Join(", ", module.Submodules.Select(mod => mod.Name))}`");
+			}
+
+			return embed;
+		}
+
 		public static async Task<string> GetSummaryAsync(this IReadOnlyList<CommandMatch> Variants, ICommandContext context, string prefix)
 		{
-			if (Variants != null)
+			if (Variants is not null)
 			{
 				if (Variants.Any())
 				{
-					StringBuilder summ = new StringBuilder();
+					StringBuilder summ = new();
 
 					int counter = 1;
 					foreach (var variant in Variants)
@@ -58,12 +101,9 @@ namespace Skuld.Bot.Extensions
 
 						string pref = "";
 
-						if (variant.Command.Module != null)
+						if (variant.Command.Module is not null && !variant.Command.Module.Group.IsNullOrWhiteSpace())
 						{
-							if (!string.IsNullOrEmpty(variant.Command.Module.Group) || !string.IsNullOrWhiteSpace(variant.Command.Module.Group))
-							{
-								pref = $"{variant.Command.Module.Group} ";
-							}
+							pref = $"{variant.Command.Module.Group} ";
 						}
 
 						if (!variant.Command.Parameters.Any() || variant.Command.Parameters.All(x => x.IsOptional))
