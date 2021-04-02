@@ -1,4 +1,7 @@
 ﻿using Booru.Net;
+using CachNet;
+using CachNet.Entities;
+using CachNet.Net;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
@@ -9,10 +12,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Miki.API.Images;
 using NodaTime;
 using Octokit;
+using Skuld.API;
 using Skuld.APIS;
 using Skuld.Bot.Discord.Models;
 using Skuld.Bot.Discord.TypeReaders;
 using Skuld.Core;
+using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Models;
@@ -37,29 +42,141 @@ using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Api.Core;
 using TwitchLib.Api.Interfaces;
-using DiscordNetCommands = Discord.Commands;
 using Emoji = Discord.Emoji;
 
 namespace Skuld.Bot
 {
 	public static class SkuldApp
 	{
+		const string Key = "SYSTEM";
 		public static DiscordShardedClient DiscordClient;
 		public static CommandService CommandService;
 		public static CommandServiceConfig CommandServiceConfig;
 		public static MessageServiceConfig MessageServiceConfig;
 		public static IServiceProvider Services;
-
-		internal static SkuldConfig Configuration;
-
 		public static WebSocketService WebSocket;
+		internal static SkuldConfig Configuration;
+		static ICachetClient cachetClient;
 
-		private static void Main(string[] args)
-			=> CreateAsync(args).GetAwaiter().GetResult();
+		public static async Task Main(string[] args = null)
+		{
+			string defaultEnv = Path.Combine(SkuldAppContext.BaseDirectory, ".env");
+			if (!File.Exists(defaultEnv))
+			{
+				Console.WriteLine("Copy .env.default into .env and enter details");
+				return;
+			}
+
+			DotEnv.Load(new DotEnvOptions(envFilePaths: new[] { defaultEnv }));
+
+			if (args.Contains("--pq"))
+			{
+				GeneratePixelQuery();
+				return;
+			}
+
+			SkuldConfig Configuration = null;
+
+			Log.Configure();
+
+			if (!Directory.Exists(SkuldAppContext.StorageDirectory))
+			{
+				Directory.CreateDirectory(SkuldAppContext.StorageDirectory);
+				Log.Verbose(Key, "Created Storage Directory", null);
+			}
+			if (!Directory.Exists(SkuldAppContext.FontDirectory))
+			{
+				Directory.CreateDirectory(SkuldAppContext.FontDirectory);
+				Log.Verbose(Key, "Created Font Directory", null);
+			}
+
+			try
+			{
+				var database = new SkuldDbContextFactory().CreateDbContext();
+
+				if (!database.Configurations.Any() ||
+					args.Contains("--newconf") ||
+					args.Contains("-nc"))
+				{
+					var conf = new SkuldConfig();
+					database.Configurations.Add(conf);
+					await database.SaveChangesAsync().ConfigureAwait(false);
+					Log.Verbose(Key, $"Created new configuration with Id: {conf.Id}", null);
+
+					Log.Info(Key, $"Please fill out the configuration information in the database matching the Id \"{database.Configurations.LastOrDefault().Id}\"");
+					Console.ReadKey();
+					Environment.Exit(0);
+				}
+
+				var configId = SkuldAppContext.GetEnvVar(SkuldAppContext.ConfigEnvVar);
+
+				var c = database.Configurations.Find(configId);
+
+				Configuration = c ?? database.Configurations.FirstOrDefault();
+
+				SkuldAppContext.SetConfigurationId(Configuration.Id);
+			}
+			catch (Exception ex)
+			{
+				Log.Critical(Key, ex.Message, null, ex);
+			}
+
+			if (Configuration.DiscordToken.IsNullOrWhiteSpace())
+			{
+				Log.Critical(Key, "You haven't provided a discord token, exiting", null);
+				return;
+			}
+
+			await ConfigureBotAsync(
+				Configuration,
+				new DiscordSocketConfig
+				{
+					MessageCacheSize = 100,
+					DefaultRetryMode = RetryMode.AlwaysRetry,
+					LogLevel = LogSeverity.Verbose,
+					GatewayIntents = GatewayIntents.Guilds |
+						GatewayIntents.GuildMembers |
+						GatewayIntents.GuildBans |
+						GatewayIntents.GuildEmojis |
+						GatewayIntents.GuildIntegrations |
+						GatewayIntents.GuildWebhooks |
+						GatewayIntents.GuildInvites |
+						GatewayIntents.GuildVoiceStates |
+						GatewayIntents.GuildMessages |
+						GatewayIntents.GuildMessageReactions |
+						GatewayIntents.DirectMessages |
+						GatewayIntents.DirectMessageReactions
+				},
+				new CommandServiceConfig
+				{
+					CaseSensitiveCommands = false,
+					DefaultRunMode = RunMode.Async,
+					LogLevel = LogSeverity.Verbose,
+					IgnoreExtraArgs = true
+				},
+				new MessageServiceConfig
+				{
+					Prefix = Configuration.Prefix,
+					AltPrefix = Configuration.AltPrefix
+				}
+			).ConfigureAwait(false);
+
+			Log.Info(Key, "Loaded Skuld v" + SkuldAppContext.Skuld.Key.Version);
+
+			await StartBotAsync().ConfigureAwait(false);
+
+			await Task.Delay(-1).ConfigureAwait(false);
+
+			await StopBotAsync(Key);
+
+			WebSocket.ShutdownServer();
+
+			Environment.Exit(0);
+		}
 
 		static void GeneratePixelQuery()
 		{
-			StringBuilder stb = new StringBuilder("INSERT INTO `placepixeldata` (XPos, YPos, R, G, B) VALUES ");
+			StringBuilder stb = new("INSERT INTO `placepixeldata` (XPos, YPos, R, G, B) VALUES ");
 
 			for (int x = 1; x < SkuldAppContext.PLACEIMAGESIZE + 1; x++)
 			{
@@ -96,11 +213,22 @@ namespace Skuld.Bot
 
 			MessageServiceConfig = msgConfig;
 
+			DiscordClient = new DiscordShardedClient();
+
+			await DiscordClient.LoginAsync(TokenType.Bot, Configuration.DiscordToken);
+
+			var recommendedShards = await DiscordClient.GetRecommendedShardCountAsync();
+			Log.Verbose(Key, $"Discord recommends using: {recommendedShards}, using that", null);
+
+			config.TotalShards = recommendedShards;
+
+			await DiscordClient.LogoutAsync();
+
 			DiscordClient = new DiscordShardedClient(config);
 
-			InstallServices(Configuration);
+			InstallServices();
 
-			InitializeServices(Configuration);
+			InitializeServices();
 
 			BotMessaging.Configure();
 
@@ -110,12 +238,12 @@ namespace Skuld.Bot
 
 			modules
 				.IsSuccess(x => Log.Info(
-						"Framework",
+						Key,
 						"Successfully built Command Tree"
 					)
 				)
 				.IsError(x => Log.Error(
-						"Framework",
+						Key,
 						"Failure building Command Tree",
 						null,
 						x.Exception
@@ -152,103 +280,11 @@ namespace Skuld.Bot
 			Environment.Exit(0);
 		}
 
-		public static async Task CreateAsync(string[] args = null)
-		{
-			DotEnv.Config(filePath: Path.Combine(SkuldAppContext.BaseDirectory, ".env"));
-
-			if (args.Contains("--pq"))
-			{
-				GeneratePixelQuery();
-				return;
-			}
-
-			SkuldConfig Configuration = null;
-
-			if (!Directory.Exists(SkuldAppContext.LogDirectory))
-			{
-				Directory.CreateDirectory(SkuldAppContext.LogDirectory);
-			}
-			if (!Directory.Exists(SkuldAppContext.StorageDirectory))
-			{
-				Directory.CreateDirectory(SkuldAppContext.StorageDirectory);
-			}
-			if (!Directory.Exists(SkuldAppContext.FontDirectory))
-			{
-				Directory.CreateDirectory(SkuldAppContext.FontDirectory);
-			}
-
-			try
-			{
-				var database = new SkuldDbContextFactory().CreateDbContext();
-
-				await database.ApplyPendingMigrations().ConfigureAwait(false);
-
-				if (!database.Configurations.Any() ||
-					args.Contains("--newconf") ||
-					args.Contains("-nc"))
-				{
-					var conf = new SkuldConfig();
-					database.Configurations.Add(conf);
-					await database.SaveChangesAsync().ConfigureAwait(false);
-					Log.Verbose("HostService", $"Created new configuration with Id: {conf.Id}", null);
-
-					Log.Info("HostService", $"Please fill out the configuration information in the database matching the Id \"{database.Configurations.LastOrDefault().Id}\"");
-					Console.ReadKey();
-					Environment.Exit(0);
-				}
-
-				var configId = SkuldAppContext.GetEnvVar(SkuldAppContext.ConfigEnvVar);
-
-				var c = database.Configurations.Find(configId);
-
-				Configuration = c ?? database.Configurations.FirstOrDefault();
-
-				SkuldAppContext.SetConfigurationId(Configuration.Id);
-			}
-			catch (Exception ex)
-			{
-				Log.Critical("HostService", ex.Message, null, ex);
-			}
-
-			await SkuldApp.ConfigureBotAsync(
-				Configuration,
-				new DiscordSocketConfig
-				{
-					MessageCacheSize = 100,
-					DefaultRetryMode = RetryMode.AlwaysRetry,
-					LogLevel = LogSeverity.Verbose,
-					TotalShards = Configuration.Shards
-				},
-				new DiscordNetCommands.CommandServiceConfig
-				{
-					CaseSensitiveCommands = false,
-					DefaultRunMode = DiscordNetCommands.RunMode.Async,
-					LogLevel = LogSeverity.Verbose,
-					IgnoreExtraArgs = true
-				},
-				new MessageServiceConfig
-				{
-					Prefix = Configuration.Prefix,
-					AltPrefix = Configuration.AltPrefix
-				}
-			).ConfigureAwait(false);
-
-			Log.Info("HostService", "Loaded Skuld v" + SkuldAppContext.Skuld.Key.Version);
-
-			await SkuldApp.StartBotAsync().ConfigureAwait(false);
-
-			await Task.Delay(-1).ConfigureAwait(false);
-
-			SkuldApp.WebSocket.ShutdownServer();
-
-			Environment.Exit(0);
-		}
-
-
 		#region Services
 
 		internal static async Task<EventResult<IEnumerable<ModuleInfo>>> ConfigureCommandServiceAsync()
 		{
+			IEnumerable<ModuleInfo> modules = null;
 			try
 			{
 				CommandService = new CommandService(CommandServiceConfig);
@@ -266,7 +302,7 @@ namespace Skuld.Bot
 				CommandService.AddTypeReader<DateTimeZone>(new DateTimeZoneTypeReader());
 				CommandService.AddTypeReader<GuildRoleConfig>(new GuildRoleConfigTypeReader());
 
-				IEnumerable<ModuleInfo> modules = await
+				modules = await
 					CommandService.AddModulesAsync(
 						Assembly.GetEntryAssembly(),
 						Services
@@ -277,11 +313,11 @@ namespace Skuld.Bot
 			}
 			catch (Exception ex)
 			{
-				return EventResult<IEnumerable<ModuleInfo>>.FromFailureException(ex.Message, ex);
+				return EventResult<IEnumerable<ModuleInfo>>.FromFailureException(modules, ex.Message, ex);
 			}
 		}
 
-		private static void InstallServices(SkuldConfig Configuration)
+		private static void InstallServices()
 		{
 			try
 			{
@@ -290,7 +326,7 @@ namespace Skuld.Bot
 					.AddSingleton<ISSClient>()
 					.AddSingleton<SocialAPIS>()
 					.AddSingleton<IqdbClient>()
-					.AddSingleton<GiphyClient>()
+					.AddSingleton(new GiphyClient(Configuration.IsDevelopmentBuild ? "dc6zaTOxFJmzC" : null))
 					.AddSingleton<YNWTFClient>()
 					.AddSingleton<SysExClient>()
 					.AddSingleton<AnimalClient>()
@@ -356,37 +392,54 @@ namespace Skuld.Bot
 					var sentryKey = Environment.GetEnvironmentVariable(SkuldAppContext.SentryIOEnvVar);
 
 					Sentry.ISentryClient sentryClient = null;
-					if (sentryKey != null)
+					if (sentryKey is not null)
 					{
-						Log.Info("HostService", "Sentry Key provided, enabling Sentry");
+						Log.Info(Key, "Sentry Key provided, enabling Sentry");
 						sentryClient = new Sentry.SentryClient(new Sentry.SentryOptions
 						{
-							Dsn = new Sentry.Dsn(sentryKey)
+							Dsn = sentryKey
 						});
 						localServices.AddSingleton(sentryClient);
 					}
 					else
 					{
-						Log.Info("HostService", "Sentry Key not provided, not using Sentry");
+						Log.Info(Key, "Sentry Key not provided, not using Sentry");
 					}
 
-					Log.Configure(sentryClient);
+					Log.ConfigureSentry(sentryClient);
+				}
+
+				//SkuldApi
+				if (!Configuration.SkuldAPIBase.IsNullOrWhiteSpace() && !Configuration.SkuldAPIToken.IsNullOrWhiteSpace())
+				{
+					localServices.AddSingleton<ISkuldAPIClient>(new SkuldAPI(Configuration.SkuldAPIBase, Configuration.SkuldAPIToken));
+				}
+				else
+				{
+					localServices.AddSingleton<ISkuldAPIClient>(new SkuldAPI());
 				}
 
 				localServices.AddSingleton(new InteractiveService(DiscordClient, TimeSpan.FromSeconds(60)));
 
 				Services = localServices.BuildServiceProvider();
 
-				Log.Info("HostService", "Successfully built service provider");
+				Log.Info(Key, "Successfully built service provider");
 			}
 			catch (Exception ex)
 			{
-				Log.Critical("HostService", ex.Message, null, ex);
+				Log.Critical(Key, ex.Message, null, ex);
 			}
 		}
 
-		private static void InitializeServices(SkuldConfig Configuration)
+		private static void InitializeServices()
 		{
+			if (!Configuration.CachetBase.IsNullOrWhiteSpace() &&
+				!Configuration.CachetToken.IsNullOrWhiteSpace() &&
+				Configuration.CachetShardGroup != -1)
+			{
+				cachetClient = new CachetClient(Configuration.CachetBase, Configuration.CachetToken);
+			}
+
 			VoiceExpService.Configure(DiscordClient, Configuration);
 
 			WebSocket = new WebSocketService(DiscordClient, Configuration);
@@ -412,10 +465,8 @@ namespace Skuld.Bot
 			});
 		}
 
-		private static Task SendDataToDataDog()
+		private static async Task HandleDataDog()
 		{
-			using var Database = new SkuldDbContextFactory().CreateDbContext();
-
 			while (true)
 			{
 				DogStatsd.Gauge("shards.count", DiscordClient.Shards.Count);
@@ -426,7 +477,115 @@ namespace Skuld.Bot
 				{
 					DogStatsd.Gauge("guilds.total", DiscordClient.Guilds.Count);
 				}
+				Log.Debug(Key, "Pushed to DogstatsD", null);
 				Thread.Sleep(TimeSpan.FromSeconds(5));
+			}
+		}
+
+		static bool didSyncComponents = false;
+		private static async Task HandleCachet()
+		{
+			//wait for first connection
+			while (true)
+			{
+				if (DiscordClient.Shards.All(shard => shard.ConnectionState == ConnectionState.Connected))
+				{
+					break;
+				}
+
+				Log.Verbose(Key, "Waiting for first connection, Cachet", null);
+				Thread.Sleep(TimeSpan.FromSeconds(10));
+			}
+
+			while (true)
+			{
+				try
+				{
+					var components = await cachetClient.GetAllComponentsAsync();
+
+					var shardComponents = components.Data.Where(c => c.Name.StartsWith("Shard #"));
+
+					if (!didSyncComponents)
+					{
+						bool didModify = false;
+						if (shardComponents.Count() > DiscordClient.Shards.Count)
+						{
+							for (int s = DiscordClient.Shards.Count; s < shardComponents.Count(); s++)
+							{
+								int trueShard = s + 1;
+
+								var sComponent = shardComponents.FirstOrDefault(c => c.Name == $"Shard #{trueShard}");
+
+								await cachetClient.DeleteComponentAsync(sComponent.Id);
+							}
+							didModify = true;
+						}
+						else if (shardComponents.Count() < DiscordClient.Shards.Count)
+						{
+							for (int s = shardComponents.Count(); s < DiscordClient.Shards.Count; s++)
+							{
+								int trueShard = s + 1;
+
+								await cachetClient.AddComponentAsync(new()
+								{
+									Name = $"Shard #{trueShard}"
+								});
+							}
+
+							didModify = true;
+						}
+
+						if (didModify)
+						{
+							components = await cachetClient.GetAllComponentsAsync();
+						}
+
+						didSyncComponents = true;
+					}
+
+					foreach (var component in components.Data)
+					{
+						if (component.Name.StartsWith("Shard #"))
+						{
+							foreach (var shard in DiscordClient.Shards)
+							{
+								if (component.GroupId == Configuration.CachetShardGroup &&
+									component.Name.Equals($"Shard #{shard.ShardId + 1}"))
+								{
+									ComponentStatus status = ComponentStatus.Operational;
+
+									switch (shard.ConnectionState)
+									{
+										case ConnectionState.Connected:
+											status = ComponentStatus.Operational;
+											break;
+										case ConnectionState.Connecting:
+											status = ComponentStatus.PerformanceIssues;
+											break;
+										case ConnectionState.Disconnecting:
+											status = ComponentStatus.PartialOutage;
+											break;
+										case ConnectionState.Disconnected:
+											status = ComponentStatus.MajorOutage;
+											break;
+									}
+
+									await cachetClient.UpdateComponentAsync(component.Id, new()
+									{
+										Status = status
+									});
+								}
+							}
+						}
+					}
+
+					Log.Debug(Key, "Pushed to Cachet", null);
+				}
+				catch (Exception ex)
+				{
+					Log.Error(Key, ex.Message, null, ex);
+				}
+				Thread.Sleep(TimeSpan.FromMinutes(1));
 			}
 		}
 
@@ -436,9 +595,22 @@ namespace Skuld.Bot
 				async () =>
 				{
 					Thread.CurrentThread.IsBackground = true;
-					await SendDataToDataDog().ConfigureAwait(false);
+					await HandleDataDog().ConfigureAwait(false);
+					Log.Verbose(Key, "Started DogstatsD", null);
 				}
 			).Start();
+
+			if (cachetClient is not null)
+			{
+				new Thread(
+					async () =>
+					{
+						Thread.CurrentThread.IsBackground = true;
+						await HandleCachet().ConfigureAwait(false);
+						Log.Verbose(Key, "Started Cachet", null);
+					}
+				).Start();
+			}
 
 			new Thread(
 				() =>
@@ -446,20 +618,23 @@ namespace Skuld.Bot
 					Thread.CurrentThread.IsBackground = true;
 					ReminderService.Configure(DiscordClient);
 					ReminderService.Run();
+					Log.Verbose(Key, "Started Reminders", null);
 				}
 			).Start();
 
 			TwitterListener.Configure(DiscordClient);
 
 			TwitterListener.Run();
+			Log.Verbose(Key, "Started Twitter", null);
 
 			{
 				var twitchAPI = Services.GetService<ITwitchAPI>();
-				if (twitchAPI != null)
+				if (twitchAPI is not null)
 				{
 					TwitchListener.Configure(DiscordClient);
 
 					TwitchListener.Run(twitchAPI);
+					Log.Verbose(Key, "Started Twitch", null);
 				}
 			}
 		}
