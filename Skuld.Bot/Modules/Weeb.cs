@@ -3,15 +3,17 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Kitsu.Anime;
 using Kitsu.Manga;
+using Miki.API.Images;
 using Skuld.APIS.Extensions;
+using Skuld.Bot.Discord.Attributes;
 using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
 using Skuld.Models;
-using Skuld.Bot.Discord.Attributes;
 using Skuld.Services.Globalization;
 using Skuld.Services.Messaging.Extensions;
 using SysEx.Net;
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -21,271 +23,279 @@ using TraceMoe.NET.DataStructures;
 
 namespace Skuld.Bot.Commands
 {
-    [Group, Name("Weeb")]
-    public class WeebModule : InteractiveBase<ShardedCommandContext>
-    {
-        public Locale Locale { get; set; }
-        public SysExClient SysExClient { get; set; }
+	[Group, Name("Weeb")]
+	[Remarks("📺 Weeb paraphernalia")]
+	public class WeebModule : InteractiveBase<ShardedCommandContext>
+	{
+		public Locale Locale { get; set; }
+		public SysExClient SysExClient { get; set; }
+		public ImghoardClient Imghoard { get; set; }
 
-        [
-            Command("anime"),
-            Summary("Gets information about an anime"),
-            Ratelimit(20, 1, Measure.Minutes),
-            Usage("JoJo's Bizarre Adventure")
-        ]
-        public async Task GetAnime([Remainder]string animetitle)
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
+		[
+			Command("anime"),
+			Summary("Gets information about an anime"),
+			Ratelimit(20, 1, Measure.Minutes),
+			Usage("JoJo's Bizarre Adventure")
+		]
+		public async Task GetAnime([Remainder] string animetitle)
+		{
+			using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database
-                .InsertOrGetUserAsync(Context.User)
-            .ConfigureAwait(false);
+			var usr = await Database
+				.InsertOrGetUserAsync(Context.User)
+			.ConfigureAwait(false);
 
-            var loc = Locale.GetLocale(
-                usr.Language ?? Locale.DefaultLocale
-            );
+			var loc = Locale.GetLocale(
+				usr.Language ?? Locale.DefaultLocale
+			);
 
-            var raw = await Anime
-                .GetAnimeAsync(animetitle)
-            .ConfigureAwait(false);
+			var raw = await Anime
+				.GetAnimeAsync(animetitle)
+			.ConfigureAwait(false);
 
-            var data = raw.Data;
-            if (data.Count > 1) // do pagination
-            {
-                var pages = data.PaginateList(25);
+			var data = raw.Data;
+			if (data.Count > 1) // do pagination
+			{
+				var pages = data.PaginateList(25);
 
-                IUserMessage sentmessage = await ReplyAsync(null, false,
-                    EmbedExtensions
-                        .FromMessage(
-                            loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s",
-                            pages[0],
-                            Context
-                        )
-                        .WithColor(Color.Purple)
-                    .Build()
-                ).ConfigureAwait(false);
+				IUserMessage sentmessage = await ReplyAsync(null, false,
+					EmbedExtensions
+						.FromMessage(
+							loc.GetString("SKULD_SEARCH_MKSLCTN", CultureInfo.InvariantCulture) + " 30s",
+							pages[0],
+							Context
+						)
+						.WithColor(Color.Purple)
+					.Build()
+				).ConfigureAwait(false);
 
-                var response = await NextMessageAsync(
-                    true,
-                    true,
-                    TimeSpan.FromSeconds(30)
-                ).ConfigureAwait(false);
+				var response = await NextMessageAsync(
+					true,
+					true,
+					TimeSpan.FromSeconds(30)
+				).ConfigureAwait(false);
 
-                if (response == null)
-                {
-                    await sentmessage.DeleteAsync().ConfigureAwait(false);
-                }
+				if (response is null)
+				{
+					await sentmessage.DeleteAsync().ConfigureAwait(false);
+				}
 
-                var selection = Convert.ToInt32(response.Content);
+				var selection = Convert.ToInt32(response.Content, CultureInfo.InvariantCulture);
 
-                var anime = data[selection - 1];
+				var anime = data[selection - 1];
 
-                await anime
-                    .ToEmbed(loc)
-                    .QueueMessageAsync(Context)
-                .ConfigureAwait(false);
-            }
-            else
-            {
-                var anime = data[0];
+				await anime
+					.ToEmbed(loc)
+					.QueueMessageAsync(Context)
+				.ConfigureAwait(false);
+			}
+			else if (data.Count == 1)
+			{
+				var anime = data[0];
 
-                await anime
-                    .ToEmbed(loc)
-                    .QueueMessageAsync(Context)
-                .ConfigureAwait(false);
-            }
-        }
+				await anime
+					.ToEmbed(loc)
+					.QueueMessageAsync(Context)
+				.ConfigureAwait(false);
+			}
+			else
+			{
+				await EmbedExtensions.FromInfo("I couldn't find anything", Context).QueueMessageAsync(Context);
+			}
+		}
 
-        [
-            Command("manga"), 
-            Summary("Gets information about a manga"),
-            Ratelimit(20, 1, Measure.Minutes),
-            Usage("JoJo's Bizarre Adventure")
-        ]
-        public async Task GetMangaAsync([Remainder]string mangatitle)
-        {
-            using var Database = new SkuldDbContextFactory().CreateDbContext();
+		[
+			Command("manga"),
+			Summary("Gets information about a manga"),
+			Ratelimit(20, 1, Measure.Minutes),
+			Usage("JoJo's Bizarre Adventure")
+		]
+		public async Task GetMangaAsync([Remainder] string mangatitle)
+		{
+			using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-            var usr = await Database
-                .InsertOrGetUserAsync(Context.User)
-            .ConfigureAwait(false);
+			var usr = await Database
+				.InsertOrGetUserAsync(Context.User)
+			.ConfigureAwait(false);
 
-            var loc = Locale.GetLocale(
-                usr.Language ?? Locale.DefaultLocale
-            );
+			var loc = Locale.GetLocale(
+				usr.Language ?? Locale.DefaultLocale
+			);
 
-            var raw = await Manga
-                .GetMangaAsync(mangatitle)
-            .ConfigureAwait(false);
-            var data = raw.Data;
-            if (data.Count > 1) // do pagination
-            {
-                var pages = data.PaginateList(25);
+			var raw = await Manga
+				.GetMangaAsync(mangatitle)
+			.ConfigureAwait(false);
+			var data = raw.Data;
+			if (data.Count > 1) // do pagination
+			{
+				var pages = data.PaginateList(25);
 
-                IUserMessage sentmessage = await ReplyAsync(
-                    null,
-                    false,
-                    EmbedExtensions
-                        .FromMessage(
-                            loc.GetString("SKULD_SEARCH_MKSLCTN") + " 30s",
-                            pages[0],
-                            Context
-                        )
-                        .WithColor(Color.Purple)
-                    .Build()
-                ).ConfigureAwait(false);
+				IUserMessage sentmessage = await ReplyAsync(
+					null,
+					false,
+					EmbedExtensions
+						.FromMessage(
+							loc.GetString("SKULD_SEARCH_MKSLCTN", CultureInfo.InvariantCulture) + " 30s",
+							pages[0],
+							Context
+						)
+						.WithColor(Color.Purple)
+					.Build()
+				).ConfigureAwait(false);
 
-                var response = await NextMessageAsync(
-                    true,
-                    true,
-                    TimeSpan.FromSeconds(30)
-                ).ConfigureAwait(false);
+				var response = await NextMessageAsync(
+					true,
+					true,
+					TimeSpan.FromSeconds(30)
+				).ConfigureAwait(false);
 
-                if (response == null)
-                {
-                    await sentmessage.DeleteAsync().ConfigureAwait(false);
-                }
+				if (response is null)
+				{
+					await sentmessage.DeleteAsync().ConfigureAwait(false);
+				}
 
-                var selection = Convert.ToInt32(response.Content);
+				var selection = Convert.ToInt32(response.Content, CultureInfo.InvariantCulture);
 
-                var manga = data[selection - 1];
+				var manga = data[selection - 1];
 
-                await manga
-                    .ToEmbed(loc)
-                    .QueueMessageAsync(Context)
-                .ConfigureAwait(false);
-            }
-            else
-            {
-                var manga = data[0];
+				await manga
+					.ToEmbed(loc)
+					.QueueMessageAsync(Context)
+				.ConfigureAwait(false);
+			}
+			else if (data.Count == 1)
+			{
+				var manga = data[0];
 
-                await manga
-                        .ToEmbed(loc)
-                        .QueueMessageAsync(Context)
-                .ConfigureAwait(false);
-            }
-        }
+				await manga
+						.ToEmbed(loc)
+						.QueueMessageAsync(Context)
+				.ConfigureAwait(false);
+			}
+			else
+			{
+				await EmbedExtensions.FromInfo("I couldn't find anything", Context).QueueMessageAsync(Context);
+			}
+		}
 
-        [
-            Command("weebgif"),
-            Summary("Gets a weeb gif"),
-            Ratelimit(20, 1, Measure.Minutes)
-        ]
-        public async Task WeebGif()
-        {
-            var gif = await SysExClient
-                .GetWeebReactionGifAsync()
-            .ConfigureAwait(false);
+		[
+			Command("weebgif"),
+			Summary("Gets a weeb gif"),
+			Ratelimit(20, 1, Measure.Minutes)
+		]
+		public async Task WeebGif()
+		{
+			var gif = await Imghoard.GetImagesAsync();
 
-            await
-                EmbedExtensions
-                .FromImage(
-                    gif,
-                    EmbedExtensions.RandomEmbedColor(),
-                    Context
-                )
-                .QueueMessageAsync(Context)
-            .ConfigureAwait(false);
-        }
+			await
+				EmbedExtensions
+				.FromImage(
+					gif.Images.Random().Url,
+					EmbedExtensions.RandomEmbedColor(),
+					Context
+				)
+				.QueueMessageAsync(Context)
+			.ConfigureAwait(false);
+		}
 
-        [
-            Command("whatanime"),
-            Summary("Searches Trace.Moe"),
-            Ratelimit(20, 1, Measure.Minutes),
-            Usage("[Image/Link] Screenshot of Anime")
-        ]
-        public async Task WhatAnime(Uri url = null)
-        {
-            if (url == null)
-            {
-                if (Context.Message.Attachments.Any())
-                {
-                    var attach = Context.Message.Attachments.First();
+		[
+			Command("whatanime"),
+			Summary("Searches Trace.Moe"),
+			Ratelimit(20, 1, Measure.Minutes),
+			Usage("[Image/Link] Screenshot of Anime")
+		]
+		public async Task WhatAnime(Uri url = null)
+		{
+			if (url is null)
+			{
+				if (Context.Message.Attachments.Any())
+				{
+					var attach = Context.Message.Attachments.First();
 
-                    var data = await 
-                        new ApiConversion()
-                        .TraceAnimeByUrlAsync(attach.Url)
-                    .ConfigureAwait(false);
+					var data = await
+						new ApiConversion()
+						.TraceAnimeByUrlAsync(attach.Url)
+					.ConfigureAwait(false);
 
-                    if (data.docs.Any())
-                    {
-                        await GetWhatAnimeMessage(
-                                data.docs.OrderByDescending(x => x.similarity)
-                            )
-                            .QueueMessageAsync(Context)
-                        .ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        await 
-                            "Couldn't find anything with the image provided"
-                            .QueueMessageAsync(Context)
-                        .ConfigureAwait(false);
-                    }
-                }
-            }
-            else
-            {
-                var data = await 
-                    new ApiConversion()
-                    .TraceAnimeByUrlAsync(url.OriginalString)
-                .ConfigureAwait(false);
+					if (data.docs.Any())
+					{
+						await GetWhatAnimeMessage(
+								data.docs.OrderByDescending(x => x.similarity)
+							)
+							.QueueMessageAsync(Context)
+						.ConfigureAwait(false);
+					}
+					else
+					{
+						await
+							"Couldn't find anything with the image provided"
+							.QueueMessageAsync(Context)
+						.ConfigureAwait(false);
+					}
+				}
+			}
+			else
+			{
+				var data = await
+					new ApiConversion()
+					.TraceAnimeByUrlAsync(url.OriginalString)
+				.ConfigureAwait(false);
 
-                if (data.docs.Any())
-                {
-                    await GetWhatAnimeMessage(
-                        data.docs.OrderByDescending(x => x.similarity)
-                        )
-                        .QueueMessageAsync(Context)
-                    .ConfigureAwait(false);
-                }
-                else
-                {
-                    await 
-                        "Couldn't find anything with the image provided"
-                        .QueueMessageAsync(Context)
-                    .ConfigureAwait(false);
-                }
-            }
-        }
+				if (data.docs.Any())
+				{
+					await GetWhatAnimeMessage(
+						data.docs.OrderByDescending(x => x.similarity)
+						)
+						.QueueMessageAsync(Context)
+					.ConfigureAwait(false);
+				}
+				else
+				{
+					await
+						"Couldn't find anything with the image provided"
+						.QueueMessageAsync(Context)
+					.ConfigureAwait(false);
+				}
+			}
+		}
 
-        private string GetWhatAnimeMessage(IOrderedEnumerable<Doc> results)
-        {
-            var mostLikely = results.First();
+		private string GetWhatAnimeMessage(IOrderedEnumerable<Doc> results)
+		{
+			var mostLikely = results.First();
 
-            var mlpercentage = Math.Round(mostLikely.similarity * 100);
-            var mlstringedPerc = string.Format("{0:0.00}", mlpercentage);
+			var mlpercentage = Math.Round(mostLikely.similarity * 100);
+			var mlstringedPerc = string.Format(CultureInfo.InvariantCulture, "{0:0.00}", mlpercentage);
 
-            var message = new StringBuilder(
-                $"The image is most likely from: " +
-                $"{mostLikely.title}/{mostLikely.title_romaji}\n" +
-                $"Similarity Rating: {mlstringedPerc}%"
-            );
+			var message = new StringBuilder(
+				$"The image is most likely from: " +
+				$"{mostLikely.title}/{mostLikely.title_romaji}\n" +
+				$"Similarity Rating: {mlstringedPerc}%"
+			);
 
-            var take = results
-                .Skip(1)
-                .Where(x => x.similarity < mostLikely.similarity)
-            .Take(5);
+			var take = results
+				.Skip(1)
+				.Where(x => x.similarity < mostLikely.similarity)
+			.Take(5);
 
-            if (!take.All(x => x.mal_id == mostLikely.mal_id))
-            {
-                var appendix = new StringBuilder(
-                    "\nOther potential candidates:\n"
-                );
+			if (!take.All(x => x.mal_id == mostLikely.mal_id))
+			{
+				var appendix = new StringBuilder(
+					"\nOther potential candidates:\n"
+				);
 
-                foreach (var took in take)
-                {
-                    var percentage = Math.Round(took.similarity * 100);
-                    var stringedPerc = string.Format("{0:0.00}", percentage);
+				foreach (var took in take)
+				{
+					var percentage = Math.Round(took.similarity * 100);
+					var stringedPerc = string.Format(CultureInfo.InvariantCulture, "{0:0.00}", percentage);
 
-                    appendix = appendix.Append(
-                        $"{took.title}/{took.title_romaji} - {stringedPerc}%\n"
-                    );
-                }
-                message = message.Append(appendix);
-            }
+					appendix = appendix.Append(
+						$"{took.title}/{took.title_romaji} - {stringedPerc}%\n"
+					);
+				}
+				message = message.Append(appendix);
+			}
 
-            return message.ToString();
-        }
-    }
+			return message.ToString();
+		}
+	}
 }
