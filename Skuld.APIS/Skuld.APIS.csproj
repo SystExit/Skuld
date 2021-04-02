@@ -20,28 +20,29 @@
 
   <ItemGroup>
     <PackageReference Include="Booru.Net" Version="2.0.5" />
-    <PackageReference Include="Discord.Net" Version="2.2.0" />
+    <PackageReference Include="CXuesong.MW.WikiClientLibrary.Wikibase" Version="0.8.0-int.0" />
+    <PackageReference Include="Discord.Net" Version="2.3.1" />
     <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.49.0.2084" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.24" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.32" />
     <PackageReference Include="Imgur.API" Version="4.0.1" />
     <PackageReference Include="Kitsu" Version="1.4.2" />
-    <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.3.0">
+    <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.3.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.Scripting" Version="3.7.0" />
-    <PackageReference Include="Microsoft.CodeQuality.Analyzers" Version="3.3.0">
+    <PackageReference Include="Microsoft.CodeQuality.Analyzers" Version="3.3.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="SteamStorefrontAPI" Version="1.2.6759.40399" />
-    <PackageReference Include="SysEx.Net" Version="1.0.8" />
-    <PackageReference Include="YoutubeExplode" Version="5.1.5" />
+    <PackageReference Include="SysEx.Net" Version="1.0.9" />
+    <PackageReference Include="YoutubeExplode" Version="6.0.0-alpha" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Skuld.Core\Skuld.Core\Skuld.Core.csproj" />
+    <ProjectReference Include="..\Skuld.Models\Skuld.Models\Skuld.Models.csproj" />
   </ItemGroup>
   
 </Project>
