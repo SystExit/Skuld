@@ -3,17 +3,23 @@ using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using Octokit;
 using Skuld.API;
+using Skuld.Bot.Extensions;
+using Skuld.Bot.Modules;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Utilities;
 using Skuld.Models;
+using Skuld.Services.Accounts.Banking.Models;
+using Skuld.Services.Banking;
 using Skuld.Services.BotListing;
+using Skuld.Services.Gambling;
 using Skuld.Services.Guilds.Pinning;
 using Skuld.Services.Guilds.Starboard;
 using StatsdClient;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,7 +29,7 @@ namespace Skuld.Bot
 {
 	internal static class BotEvents
 	{
-		public const string Key = "DiscordLog";
+		public const string Key = "Discord";
 		private static readonly List<int> ShardsReady = new();
 		static DiscordShardedClient Client => SkuldApp.DiscordClient;
 		static readonly List<Tuple<string, ActivityType>> Statuses = new()
@@ -66,6 +72,7 @@ namespace Skuld.Bot
 				shard.Log -= Bot_Log;
 				shard.UserUpdated -= Bot_UserUpdated;
 				shard.GuildUpdated -= Bot_GuildUpdated;
+				ShardsReady.Remove(shard.ShardId);
 			}
 		}
 
@@ -73,7 +80,7 @@ namespace Skuld.Bot
 			LogMessage arg
 		)
 		{
-			var key = $"{Key} - {arg.Source}";
+			var key = $"{Key}#{arg.Source}";
 			switch (arg.Severity)
 			{
 				case LogSeverity.Info:
@@ -108,10 +115,7 @@ namespace Skuld.Bot
 
 		#region Reactions
 
-		private static async Task Bot_ReactionAdded(
-			Cacheable<IUserMessage, ulong> arg1,
-			ISocketMessageChannel arg2,
-			SocketReaction arg3)
+		private static async Task Bot_ReactionAdded(Cacheable<IUserMessage, ulong> arg1, Cacheable<IMessageChannel, ulong> arg2, SocketReaction arg3)
 		{
 			DogStatsd.Increment("messages.reactions.added");
 			IUser usr;
@@ -128,12 +132,14 @@ namespace Skuld.Bot
 
 			if (msg is null) return;
 
-			if (arg2 is IGuildChannel)
+			var chan = await arg2.GetOrDownloadAsync();
+
+			if (chan is IGuildChannel)
 			{
-				await PinningService.ExecuteAdditionAsync(SkuldApp.DiscordClient, SkuldApp.Configuration, msg, arg2)
+				await PinningService.ExecuteAdditionAsync(SkuldApp.DiscordClient, SkuldApp.Configuration, msg, chan as ISocketMessageChannel)
 					.ConfigureAwait(false);
 
-				await StarboardService.ExecuteAdditionAsync(msg, arg2, arg3)
+				await StarboardService.ExecuteAdditionAsync(msg, chan as ISocketMessageChannel, arg3)
 					.ConfigureAwait(false);
 			}
 
@@ -201,10 +207,7 @@ namespace Skuld.Bot
 															.WithTitle(
 																"Good News!"
 															)
-															.AddAuthor(
-																SkuldApp
-																.DiscordClient
-															)
+															.AddAuthor()
 															.WithDescription(
 													"Your issue:\n" +
 													$"\"[{newissue.Title}]" +
@@ -270,9 +273,7 @@ namespace Skuld.Bot
 												false,
 												new EmbedBuilder()
 													.WithTitle("Bad News")
-													.AddAuthor(
-													SkuldApp.DiscordClient
-													)
+													.AddAuthor()
 													.WithDescription(
 											"Your issue:\n" +
 											$"\"{message.Title}\"" +
@@ -301,18 +302,13 @@ namespace Skuld.Bot
 			}
 		}
 
-		private static Task Bot_ReactionsCleared(
-			Cacheable<IUserMessage, ulong> arg1,
-			ISocketMessageChannel arg2)
+		private static Task Bot_ReactionsCleared(Cacheable<IUserMessage, ulong> arg1, Cacheable<IMessageChannel, ulong> arg2)
 		{
 			DogStatsd.Increment("messages.reactions.cleared");
 			return Task.CompletedTask;
 		}
 
-		private static async Task Bot_ReactionRemoved(
-			Cacheable<IUserMessage, ulong> arg1,
-			ISocketMessageChannel arg2,
-			SocketReaction arg3)
+		private static async Task Bot_ReactionRemoved(Cacheable<IUserMessage, ulong> arg1, Cacheable<IMessageChannel, ulong> arg2, SocketReaction arg3)
 		{
 			DogStatsd.Increment("messages.reactions.removed");
 
@@ -339,9 +335,7 @@ namespace Skuld.Bot
 
 		#region Shards
 
-		private static Task Bot_ShardReady(
-			DiscordSocketClient arg
-		)
+		private static Task Bot_ShardReady(DiscordSocketClient arg)
 		{
 			if (!ShardsReady.Contains(arg.ShardId))
 			{
@@ -375,9 +369,7 @@ namespace Skuld.Bot
 			return Task.CompletedTask;
 		}
 
-		async static Task UpdateStatusAsync(
-			DiscordSocketClient client
-		)
+		async static Task UpdateStatusAsync(DiscordSocketClient client)
 		{
 			Tuple<string, ActivityType> pickedStatus = Statuses.Random();
 
@@ -398,12 +390,11 @@ namespace Skuld.Bot
 			await UpdateStatusAsync(client).ConfigureAwait(false);
 		}
 
-		private static async Task Shard_MessageDeleted(
-			Cacheable<IMessage, ulong> arg1,
-			ISocketMessageChannel arg2
-		)
+		private static async Task Shard_MessageDeleted(Cacheable<IMessage, ulong> arg1,Cacheable<IMessageChannel, ulong> arg2)
 		{
-			if (arg2 is IGuildChannel guildChannel)
+			var channel = await arg2.GetOrDownloadAsync();
+
+			if (channel is IGuildChannel guildChannel)
 			{
 				using var Database = new SkuldDbContextFactory().CreateDbContext();
 
@@ -446,14 +437,13 @@ namespace Skuld.Bot
 			}
 		}
 
-		private static async Task Shard_MessagesBulkDeleted(
-			IReadOnlyCollection<Cacheable<IMessage, ulong>> arg1,
-			ISocketMessageChannel arg2
-		)
+		private static async Task Shard_MessagesBulkDeleted(IReadOnlyCollection<Cacheable<IMessage, ulong>> arg1, Cacheable<IMessageChannel, ulong> arg2)
 		{
+			var channel = await arg2.GetOrDownloadAsync();
+
 			using var Database = new SkuldDbContextFactory().CreateDbContext();
 
-			if (arg2 is IGuildChannel guildChannel)
+			if (channel is IGuildChannel guildChannel)
 			{
 				var gld = await Database
 					.InsertOrGetGuildAsync(guildChannel.Guild)
@@ -499,9 +489,7 @@ namespace Skuld.Bot
 			}
 		}
 
-		private static async Task Bot_ShardConnected(
-			DiscordSocketClient arg
-		)
+		private static async Task Bot_ShardConnected(DiscordSocketClient arg)
 		{
 			await arg.SetGameAsync(
 				$"{SkuldApp.Configuration.Prefix}help | " +
@@ -516,10 +504,7 @@ namespace Skuld.Bot
 			);
 		}
 
-		private static Task Bot_ShardDisconnected(
-			Exception arg1,
-			DiscordSocketClient arg2
-		)
+		private static Task Bot_ShardDisconnected(Exception arg1, DiscordSocketClient arg2)
 		{
 			DogStatsd.Event(
 				$"Shard.disconnected",
@@ -533,9 +518,7 @@ namespace Skuld.Bot
 
 		#region Users
 
-		private static async Task Bot_UserJoined(
-			SocketGuildUser arg
-		)
+		private static async Task Bot_UserJoined(SocketGuildUser arg)
 		{
 			DogStatsd.Increment("guild.users.joined");
 
@@ -749,9 +732,7 @@ namespace Skuld.Bot
 			Log.Verbose(Key, $"{arg} joined {arg.Guild}", null);
 		}
 
-		private static async Task Bot_UserLeft(
-			SocketGuildUser arg
-		)
+		private static async Task Bot_UserLeft(SocketGuildUser arg)
 		{
 			DogStatsd.Increment("guild.users.left");
 
@@ -818,10 +799,7 @@ namespace Skuld.Bot
 			Log.Verbose(Key, $"{arg} left {arg.Guild}", null);
 		}
 
-		private static async Task Bot_UserUpdated(
-			SocketUser arg1,
-			SocketUser arg2
-		)
+		private static async Task Bot_UserUpdated(SocketUser arg1, SocketUser arg2)
 		{
 			if (arg1.IsBot || arg1.IsWebhook || arg2.IsBot || arg2.IsWebhook || arg2.DiscriminatorValue == 0) return;
 
@@ -854,9 +832,7 @@ namespace Skuld.Bot
 
 		#region Guilds
 
-		private static async Task Bot_LeftGuild(
-			SocketGuild arg
-		)
+		private static async Task Bot_LeftGuild(SocketGuild arg)
 		{
 			Log.Verbose(Key, $"Just left {arg}", null);
 			DogStatsd.Increment("guilds.left");
@@ -881,9 +857,7 @@ namespace Skuld.Bot
 			}
 		}
 
-		private static async Task Bot_JoinedGuild(
-			SocketGuild arg
-		)
+		private static async Task Bot_JoinedGuild(SocketGuild arg)
 		{
 			DogStatsd.Increment("guilds.joined");
 			Log.Verbose(Key, $"Just joined {arg}", null);
@@ -916,9 +890,7 @@ namespace Skuld.Bot
 			}
 		}
 
-		private static async Task Bot_RoleDeleted(
-			SocketRole arg
-		)
+		private static async Task Bot_RoleDeleted(SocketRole arg)
 		{
 			DogStatsd.Increment("guilds.role.deleted");
 
@@ -1018,12 +990,9 @@ namespace Skuld.Bot
 			Log.Verbose(Key, $"{arg} deleted in {arg.Guild}", null);
 		}
 
-		private static async Task Bot_GuildMemberUpdated(
-			SocketGuildUser arg1,
-			SocketGuildUser arg2
-		)
+		private static async Task Bot_GuildMemberUpdated(Cacheable<SocketGuildUser, ulong> arg1, SocketGuildUser arg2)
 		{
-			if (arg1.IsBot || arg1.IsWebhook || arg2.IsBot || arg2.IsWebhook || arg2.DiscriminatorValue == 0) return;
+			if (arg2.IsBot || arg2.IsWebhook || arg2.IsBot || arg2.IsWebhook || arg2.DiscriminatorValue == 0) return;
 
 			//Resync Data
 			{
@@ -1048,23 +1017,22 @@ namespace Skuld.Bot
 
 			try
 			{
-				if (arg1.Roles.Count != arg2.Roles.Count)
+				var origin = await arg1.GetOrDownloadAsync();
+				
+				if (origin.Roles.Count != arg2.Roles.Count)
 				{
 					//Add Persistent Role
 					await HandlePersistentRoleAdd(arg2).ConfigureAwait(false);
 
 					//Remove Persistent Role
-					await HandlePersistentRoleRemove(arg1, arg2).ConfigureAwait(false);
+					await HandlePersistentRoleRemove(origin, arg2).ConfigureAwait(false);
 				}
 			}
 			catch
 			{ }
 		}
 
-		private static async Task Bot_GuildUpdated(
-			SocketGuild arg1,
-			SocketGuild arg2
-		)
+		private static async Task Bot_GuildUpdated(SocketGuild arg1, SocketGuild arg2)
 		{
 			try
 			{
@@ -1095,9 +1063,7 @@ namespace Skuld.Bot
 			}
 		}
 
-		private static async Task HandlePersistentRoleAdd(
-			SocketGuildUser arg
-		)
+		private static async Task HandlePersistentRoleAdd(SocketGuildUser arg)
 		{
 			using SkuldDbContext database = new SkuldDbContextFactory()
 				.CreateDbContext();
@@ -1139,9 +1105,7 @@ namespace Skuld.Bot
 			}
 		}
 
-		private static async Task HandlePersistentRoleRemove(
-			SocketGuildUser arg1,
-			SocketGuildUser arg2)
+		private static async Task HandlePersistentRoleRemove(SocketGuildUser arg1, SocketGuildUser arg2)
 		{
 			using SkuldDbContext database = new SkuldDbContextFactory()
 				.CreateDbContext();

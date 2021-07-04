@@ -126,7 +126,7 @@ namespace Skuld.Bot
 						);
 					}
 
-					if (cmd is not null && cmd.Module.Group is not null)
+					if (cmd is not null || cmd.Module.Group is not null)
 					{
 						string pfx = "";
 
@@ -145,7 +145,7 @@ namespace Skuld.Bot
 
 						var cmdembed = await SkuldApp.CommandService.GetCommandHelpAsync(arg2, cmdName, prefix).ConfigureAwait(false);
 						await
-							arg2.Channel.SendMessageAsync(
+							arg2.Message.ReplyAsync(
 								"You seem to be missing a parameter or 2, here's the help",
 								embed: cmdembed.Build()
 							)

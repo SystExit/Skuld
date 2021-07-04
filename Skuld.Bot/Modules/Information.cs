@@ -26,7 +26,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Skuld.Bot.Commands
+namespace Skuld.Bot.Modules
 {
 	[
 		Group,
@@ -257,7 +257,7 @@ namespace Skuld.Bot.Commands
 					.AddFooter(Context)
 					.WithTitle(role.Name)
 					.WithColor(role.Color)
-					.AddAuthor(Context.Client)
+					.AddAuthor()
 					.AddInlineField("Hoisted", role.IsHoisted)
 					.AddInlineField("Managed By Discord", role.IsManaged)
 					.AddInlineField("Mentionable", role.IsMentionable)
@@ -434,7 +434,6 @@ namespace Skuld.Bot.Commands
 					(await Context.User.GetWhoisAsync(
 						null,
 						null,
-						Context.Client,
 						Configuration
 					).ConfigureAwait(false)
 				).QueueMessageAsync(Context).ConfigureAwait(false);
@@ -463,7 +462,6 @@ namespace Skuld.Bot.Commands
 						await whois.GetWhoisAsync(
 							whois as IGuildUser,
 							(whois as IGuildUser).RoleIds,
-							Context.Client,
 							Configuration)
 						.ConfigureAwait(false)
 					).QueueMessageAsync(Context)
@@ -476,7 +474,6 @@ namespace Skuld.Bot.Commands
 						await Context.User.GetWhoisAsync(
 							null,
 							null,
-							Context.Client,
 							Configuration
 						).ConfigureAwait(false)
 					).QueueMessageAsync(Context)
@@ -826,7 +823,7 @@ namespace Skuld.Bot.Commands
 
 				await
 					new EmbedBuilder()
-					.AddAuthor(Context.Client)
+					.AddAuthor()
 					.AddFooter(Context)
 					.AddInlineField("Command", info.Name)
 					.AddInlineField("Usage", info.Usage.ToFormattedString())

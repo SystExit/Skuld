@@ -4,7 +4,6 @@ using Discord.Commands;
 using Kitsu.Anime;
 using Kitsu.Manga;
 using Miki.API.Images;
-using Skuld.APIS.Extensions;
 using Skuld.Bot.Discord.Attributes;
 using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
@@ -12,7 +11,6 @@ using Skuld.Models;
 using Skuld.Services.Globalization;
 using Skuld.Services.Messaging.Extensions;
 using System;
-using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -20,9 +18,9 @@ using System.Threading.Tasks;
 using TraceMoe.NET;
 using TraceMoe.NET.DataStructures;
 
-namespace Skuld.Bot.Commands
+namespace Skuld.Bot.Modules
 {
-    [Group, Name("Weeb")]
+	[Group, Name("Weeb")]
 	[Remarks("📺 Weeb paraphernalia")]
     public class WeebModule : InteractiveBase<ShardedCommandContext>
     {

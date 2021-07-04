@@ -2,6 +2,7 @@
 using Skuld.Bot.Discord.Attributes;
 using Skuld.Bot.Discord.Models;
 using Skuld.Bot.Discord.Preconditions;
+using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
 using Skuld.Core.Utilities;

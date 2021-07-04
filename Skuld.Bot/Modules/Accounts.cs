@@ -1,10 +1,12 @@
 ﻿using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
+using Microsoft.EntityFrameworkCore;
 using NodaTime;
 using Skuld.API;
 using Skuld.Bot.Discord.Attributes;
 using Skuld.Bot.Discord.Preconditions;
+using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Conversion;
 using Skuld.Core.Extensions.Formatting;
@@ -20,7 +22,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
 
-namespace Skuld.Bot.Commands
+namespace Skuld.Bot.Modules
 {
 	[Group, Name("Accounts"), RequireEnabledModule, RequireDatabase]
 	[Remarks("👤 Skuld Accounts")]
@@ -668,7 +670,7 @@ namespace Skuld.Bot.Commands
 			await
 				new EmbedBuilder()
 				.AddFooter(Context)
-				.AddAuthor(Context.Client)
+				.AddAuthor()
 				.WithDescription($"Set your timezone to: {timezone.Id}")
 			.QueueMessageAsync(Context).ConfigureAwait(false);
 		}

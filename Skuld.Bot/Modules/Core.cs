@@ -17,7 +17,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Skuld.Bot.Commands
+namespace Skuld.Bot.Modules
 {
 	[Group, Name("Core"), Remarks("🏢 Core Commands")]
 	public class CoreModule : ModuleBase<ShardedCommandContext>
@@ -42,7 +42,7 @@ namespace Skuld.Bot.Commands
 
 				var embed =
 					new EmbedBuilder()
-						.AddAuthor(Context.Client)
+						.AddAuthor()
 						.WithRandomColor()
 						.WithDescription($"The prefix of **{(Context.Guild is null ? Context.User.FullName() : Context.Guild.Name)}** is: `{(Context.Guild is null ? Configuration.Prefix : (await Database.InsertOrGetGuildAsync(Context.Guild).ConfigureAwait(false)).Prefix)}`");
 
@@ -91,7 +91,7 @@ namespace Skuld.Bot.Commands
 
 				try
 				{
-					var dmchan = await Context.User.GetOrCreateDMChannelAsync().ConfigureAwait(false);
+					var dmchan = await Context.User.CreateDMChannelAsync().ConfigureAwait(false);
 
 					if (dmchan is not null)
 					{

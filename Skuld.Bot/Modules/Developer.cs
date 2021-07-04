@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis.Scripting;
 using Newtonsoft.Json;
 using Skuld.Bot.Discord.Models;
 using Skuld.Bot.Discord.Preconditions;
+using Skuld.Bot.Extensions;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
@@ -31,7 +32,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Skuld.Bot.Commands
+namespace Skuld.Bot.Modules
 {
 	[Group, Name("Developer")]
 	[RequireBotFlag(BotAccessLevel.BotAdmin)]

@@ -4,7 +4,6 @@ using Discord.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using PokeAPI;
 using Skuld.APIS;
-using Skuld.APIS.Extensions;
 using Skuld.APIS.Pokemon.Models;
 using Skuld.Bot.Discord.Attributes;
 using Skuld.Bot.Discord.Preconditions;
@@ -19,7 +18,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TwitchLib.Api.Interfaces;
 
-namespace Skuld.Bot.Commands
+namespace Skuld.Bot.Modules
 {
 	[Group, Name("Search"), RequireEnabledModule]
 	[Remarks("🔍 Find information")]

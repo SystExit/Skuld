@@ -2,10 +2,10 @@
 using Discord;
 using Discord.Commands;
 using Skuld.APIS;
-using Skuld.APIS.Extensions;
 using Skuld.APIS.NekoLife.Models;
 using Skuld.Bot.Discord.Attributes;
 using Skuld.Bot.Discord.Preconditions;
+using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
 using Skuld.Services.Messaging.Extensions;
 using StatsdClient;
@@ -17,7 +17,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Skuld.Bot.Commands
+namespace Skuld.Bot.Modules
 {
 	[
 		Group,
@@ -84,7 +84,7 @@ namespace Skuld.Bot.Commands
 		{
 			tags
 				.ContainsBlacklistedTags()
-				.IsSuccessAsync(x => ContainsIllegalTags(x.Data, Context))
+				.IsSuccessAsync(x => ContainsIllegalTags(x.Data.As<IEnumerable<string>>(), Context))
 				.IsErrorAsync(async x =>
 					{
 						var posts = await DanbooruClient.GetImagesAsync(tags).ConfigureAwait(false);
@@ -110,7 +110,7 @@ namespace Skuld.Bot.Commands
 		{
 			tags
 				.ContainsBlacklistedTags()
-				.IsSuccessAsync(x => ContainsIllegalTags(x.Data, Context))
+				.IsSuccessAsync(x => ContainsIllegalTags(x.Data.As<IEnumerable<string>>(), Context))
 				.IsErrorAsync(async x =>
 					{
 						var posts = await GelbooruClient.GetImagesAsync(tags).ConfigureAwait(false);
@@ -136,7 +136,7 @@ namespace Skuld.Bot.Commands
 		{
 			tags
 				.ContainsBlacklistedTags()
-				.IsSuccessAsync(x => ContainsIllegalTags(x.Data, Context))
+				.IsSuccessAsync(x => ContainsIllegalTags(x.Data.As<IEnumerable<string>>(), Context))
 				.IsErrorAsync(async x =>
 					{
 						var posts = await Rule34Client.GetImagesAsync(tags).ConfigureAwait(false);
@@ -161,7 +161,7 @@ namespace Skuld.Bot.Commands
 		{
 			tags
 				.ContainsBlacklistedTags()
-				.IsSuccessAsync(x => ContainsIllegalTags(x.Data, Context))
+				.IsSuccessAsync(x => ContainsIllegalTags(x.Data.As<IEnumerable<string>>(), Context))
 				.IsErrorAsync(async x =>
 					{
 						var posts = await E621Client.GetImagesAsync(tags).ConfigureAwait(false);
@@ -192,7 +192,7 @@ namespace Skuld.Bot.Commands
 			}
 			tags
 				.ContainsBlacklistedTags()
-				.IsSuccessAsync(x => ContainsIllegalTags(x.Data, Context))
+				.IsSuccessAsync(x => ContainsIllegalTags(x.Data.As<IEnumerable<string>>(), Context))
 				.IsErrorAsync(async x =>
 					{
 						var posts = await KonaChanClient.GetImagesAsync(tags).ConfigureAwait(false);
@@ -217,7 +217,7 @@ namespace Skuld.Bot.Commands
 		{
 			tags
 				.ContainsBlacklistedTags()
-				.IsSuccessAsync(x => ContainsIllegalTags(x.Data, Context))
+				.IsSuccessAsync(x => ContainsIllegalTags(x.Data.As<IEnumerable<string>>(), Context))
 				.IsErrorAsync(async x =>
 					{
 						var posts = await YandereClient.GetImagesAsync(tags).ConfigureAwait(false);
@@ -246,7 +246,7 @@ namespace Skuld.Bot.Commands
 		{
 			tags
 				.ContainsBlacklistedTags()
-				.IsSuccessAsync(x => ContainsIllegalTags(x.Data, Context))
+				.IsSuccessAsync(x => ContainsIllegalTags(x.Data.As<IEnumerable<string>>(), Context))
 				.IsErrorAsync(async x =>
 					{
 						var posts = await RealbooruClient.GetImagesAsync(tags).ConfigureAwait(false);
@@ -282,7 +282,7 @@ namespace Skuld.Bot.Commands
 
 			localTags
 				.ContainsBlacklistedTags()
-				.IsSuccessAsync(x => ContainsIllegalTags(x.Data, Context))
+				.IsSuccessAsync(x => ContainsIllegalTags(x.Data.As<IEnumerable<string>>(), Context))
 				.IsError(x =>
 					{
 						""
@@ -397,7 +397,7 @@ namespace Skuld.Bot.Commands
 		{
 			tags
 				.ContainsBlacklistedTags()
-				.IsSuccessAsync(x => LewdModule.ContainsIllegalTags(x.Data, Context))
+				.IsSuccessAsync(x => ContainsIllegalTags(x.Data.As<IEnumerable<string>>(), Context))
 				.IsErrorAsync(async x =>
 				{
 					var posts = await SafebooruClient

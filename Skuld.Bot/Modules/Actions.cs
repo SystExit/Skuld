@@ -3,6 +3,7 @@ using Discord.Commands;
 using Miki.API.Images;
 using Skuld.Bot.Discord.Attributes;
 using Skuld.Bot.Discord.Preconditions;
+using Skuld.Bot.Extensions;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Formatting;
@@ -14,7 +15,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Skuld.Bot.Commands
+namespace Skuld.Bot.Modules
 {
 	[Group, Name("Actions"), RequireEnabledModule]
 	[Remarks("💥 Slap users")]
@@ -51,7 +52,7 @@ namespace Skuld.Bot.Commands
 				.WithTitle(action.CapitaliseFirstLetter())
 				.WithDescription(target)
 				.WithRandomColor()
-				.AddAuthor(Context.Client)
+				.AddAuthor()
 				.AddFooter(Context);
 		}
 
@@ -151,7 +152,7 @@ namespace Skuld.Bot.Commands
 				.WithTitle(SkuldAppContext.GetCaller())
 				.WithDescription($"{Context.User.Mention} shrugs")
 				.WithRandomColor()
-				.AddAuthor(Context.Client)
+				.AddAuthor()
 				.AddFooter(Context)
 			.QueueMessageAsync(Context).ConfigureAwait(false);
 		}
@@ -229,7 +230,7 @@ namespace Skuld.Bot.Commands
 				.WithImageUrl(image)
 				.WithTitle(SkuldAppContext.GetCaller().CapitaliseFirstLetter())
 				.WithRandomColor()
-				.AddAuthor(Context.Client)
+				.AddAuthor()
 				.AddFooter(Context);
 
 			if (target is not null)

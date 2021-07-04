@@ -1,16 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <AssemblyVersion>2020.6.18.0</AssemblyVersion>
     <FileVersion>2020.6.18.0</FileVersion>
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Remove="Extensions\APIExtensions.cs~RF1565ff20.TMP" />
-  </ItemGroup>
 
   <ItemGroup>
     <Reference Include="SteamStoreQuery">
@@ -23,7 +19,7 @@
     <PackageReference Include="CXuesong.MW.WikiClientLibrary.Wikibase" Version="0.8.0-int.0" />
     <PackageReference Include="Discord.Net" Version="2.3.1" />
     <PackageReference Include="Google.Apis.Customsearch.v1" Version="1.49.0.2084" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.32" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.34" />
     <PackageReference Include="Imgur.API" Version="4.0.1" />
     <PackageReference Include="Kitsu" Version="1.4.2" />
     <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.3.2">
@@ -37,7 +33,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="SteamStorefrontAPI" Version="1.2.6759.40399" />
     <PackageReference Include="SysEx.Net" Version="1.0.9" />
-    <PackageReference Include="YoutubeExplode" Version="6.0.0-alpha" />
+    <PackageReference Include="YoutubeExplode" Version="6.0.2" />
   </ItemGroup>
 
   <ItemGroup>

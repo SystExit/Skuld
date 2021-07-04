@@ -1,4 +1,4 @@
-﻿using Skuld.APIS.Extensions;
+﻿using Skuld.Core.Extensions.Formatting;
 using SteamStorefrontAPI.Classes;
 using SteamStoreQuery;
 using System.Linq;

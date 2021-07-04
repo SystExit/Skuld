@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Skuld.Bot.Discord.Attributes;
 using Skuld.Bot.Discord.Models;
 using Skuld.Bot.Discord.Preconditions;
+using Skuld.Bot.Extensions;
 using Skuld.Core;
 using Skuld.Core.Exceptions;
 using Skuld.Core.Extensions;
@@ -12,6 +13,7 @@ using Skuld.Core.Extensions.Pagination;
 using Skuld.Core.Extensions.Verification;
 using Skuld.Core.Utilities;
 using Skuld.Models;
+using Skuld.Services.Extensions;
 using Skuld.Services.Messaging.Extensions;
 using Skuld.Services.Twitter;
 using StatsdClient;
@@ -21,9 +23,10 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Tweetinvi;
 using TwitchLib.Api.Interfaces;
 
-namespace Skuld.Bot.Commands.Admin
+namespace Skuld.Bot.Modules.Admin
 {
 	[Group, Name("Admin"), RequireRole(AccessLevel.ServerMod), RequireContext(ContextType.Guild), RequireEnabledModule]
 	[Remarks("🛠 Administration Module")]
@@ -196,7 +199,7 @@ namespace Skuld.Bot.Commands.Admin
 
 						try
 						{
-							var dmchan = await user.GetOrCreateDMChannelAsync().ConfigureAwait(false);
+							var dmchan = await user.CreateDMChannelAsync().ConfigureAwait(false);
 							await dmchan.SendMessageAsync(msg).ConfigureAwait(false);
 						}
 						catch { }
@@ -212,7 +215,7 @@ namespace Skuld.Bot.Commands.Admin
 
 						try
 						{
-							var dmchan = await user.GetOrCreateDMChannelAsync().ConfigureAwait(false);
+							var dmchan = await user.CreateDMChannelAsync().ConfigureAwait(false);
 							await dmchan.SendMessageAsync(msg).ConfigureAwait(false);
 						}
 						catch { }
@@ -256,7 +259,7 @@ namespace Skuld.Bot.Commands.Admin
 						await EmbedExtensions.FromSuccess($"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
 						try
 						{
-							var dmchan = await user.GetOrCreateDMChannelAsync().ConfigureAwait(false);
+							var dmchan = await user.CreateDMChannelAsync().ConfigureAwait(false);
 							await dmchan.SendMessageAsync(msg).ConfigureAwait(false);
 						}
 						catch { }
@@ -271,7 +274,7 @@ namespace Skuld.Bot.Commands.Admin
 						await EmbedExtensions.FromSuccess($"Successfully banned: `{user.Username}#{user.Discriminator}` Responsible Moderator: {Context.User.Username}#{Context.User.Discriminator}\nReason given: {reason}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
 						try
 						{
-							var dmchan = await user.GetOrCreateDMChannelAsync().ConfigureAwait(false);
+							var dmchan = await user.CreateDMChannelAsync().ConfigureAwait(false);
 							await dmchan.SendMessageAsync(msg).ConfigureAwait(false);
 						}
 						catch { }
@@ -664,7 +667,7 @@ namespace Skuld.Bot.Commands.Admin
 			{
 				await RoleSettingsToEmbed(role)
 					.AddFooter(Context)
-					.AddAuthor(Context.Client)
+					.AddAuthor()
 					.QueueMessageAsync(Context)
 					.ConfigureAwait(false);
 				return;
@@ -2280,13 +2283,15 @@ namespace Skuld.Bot.Commands.Admin
 			]
 			public async Task FollowTwitterUsers(IMessageChannel channel, params string[] users)
 			{
+				var twitterClient = SkuldApp.Services.GetRequiredService<ITwitterClient>();
+
 				using SkuldDbContext database = new SkuldDbContextFactory().CreateDbContext();
 
 				foreach (string user in users)
 				{
-					var usr = Tweetinvi.User.GetUserFromScreenName(user);
+					var usr = await twitterClient.UsersV2.GetUserByNameAsync(user);
 
-					if (database.TwitterFollows.Any(x => x.TwitterAccId == usr.Id))
+					if (database.TwitterFollows.Any(x => x.TwitterAccId == long.Parse(usr.User.Id)))
 					{
 						continue;
 					}
@@ -2296,7 +2301,7 @@ namespace Skuld.Bot.Commands.Admin
 						{
 							ChannelId = channel.Id,
 							GuildId = Context.Guild.Id,
-							TwitterAccId = usr.Id,
+							TwitterAccId = long.Parse(usr.User.Id),
 							TwitterAccName = user.ToLowerInvariant()
 						});
 					}
@@ -2304,7 +2309,7 @@ namespace Skuld.Bot.Commands.Admin
 
 				await database.SaveChangesAsync().ConfigureAwait(false);
 
-				TwitterListener.Run();
+				//TwitterListener.RunAsync();
 
 				await
 					EmbedExtensions.FromSuccess(Context)
@@ -2320,13 +2325,15 @@ namespace Skuld.Bot.Commands.Admin
 			]
 			public async Task FollowTwitterUsers(params string[] users)
 			{
+				var twitterClient = SkuldApp.Services.GetRequiredService<ITwitterClient>();
+
 				using SkuldDbContext database = new SkuldDbContextFactory().CreateDbContext();
 
 				foreach (string user in users)
 				{
-					var usr = Tweetinvi.User.GetUserFromScreenName(user);
+					var usr = await twitterClient.UsersV2.GetUserByNameAsync(user);
 
-					if (database.TwitterFollows.Any(x => x.TwitterAccId == usr.Id))
+					if (database.TwitterFollows.Any(x => x.TwitterAccId == long.Parse(usr.User.Id)))
 					{
 						continue;
 					}
@@ -2336,7 +2343,7 @@ namespace Skuld.Bot.Commands.Admin
 						{
 							ChannelId = Context.Channel.Id,
 							GuildId = Context.Guild.Id,
-							TwitterAccId = usr.Id,
+							TwitterAccId = long.Parse(usr.User.Id),
 							TwitterAccName = user.ToLowerInvariant()
 						});
 					}
@@ -2344,7 +2351,7 @@ namespace Skuld.Bot.Commands.Admin
 
 				await database.SaveChangesAsync().ConfigureAwait(false);
 
-				TwitterListener.Run();
+				//TwitterListener.Run();
 
 				await
 					EmbedExtensions.FromSuccess(Context)
@@ -2360,12 +2367,12 @@ namespace Skuld.Bot.Commands.Admin
 			]
 			public async Task UnfollowTwitterUsers(IMessageChannel channel, params string[] users)
 			{
+				var twitterClient = SkuldApp.Services.GetRequiredService<ITwitterClient>();
+
 				using SkuldDbContext database = new SkuldDbContextFactory().CreateDbContext();
 
 				foreach (string user in users)
 				{
-					var usr = Tweetinvi.User.GetUserFromScreenName(user);
-
 					if (!database.TwitterFollows.Any(x => x.ChannelId == Context.Channel.Id && x.TwitterAccName == user.ToLowerInvariant()))
 					{
 						continue;
@@ -2380,7 +2387,7 @@ namespace Skuld.Bot.Commands.Admin
 
 				await database.SaveChangesAsync().ConfigureAwait(false);
 
-				TwitterListener.Run();
+				//TwitterListener.Run();
 
 				await
 					EmbedExtensions.FromSuccess(Context)
@@ -2396,6 +2403,8 @@ namespace Skuld.Bot.Commands.Admin
 			]
 			public async Task UnfollowTwitterUsers(params string[] users)
 			{
+				var twitterClient = SkuldApp.Services.GetRequiredService<ITwitterClient>();
+
 				using SkuldDbContext database = new SkuldDbContextFactory().CreateDbContext();
 
 				foreach (string user in users)
@@ -2414,7 +2423,7 @@ namespace Skuld.Bot.Commands.Admin
 
 				await database.SaveChangesAsync().ConfigureAwait(false);
 
-				TwitterListener.Run();
+				//TwitterListener.Run();
 
 				await
 					EmbedExtensions.FromSuccess(Context)

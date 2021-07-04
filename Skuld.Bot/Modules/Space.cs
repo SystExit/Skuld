@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Skuld.APIS;
 using Skuld.Bot.Discord.Attributes;
 using Skuld.Bot.Discord.Preconditions;
+using Skuld.Bot.Extensions;
 using Skuld.Core.Extensions;
 using Skuld.Core.Extensions.Verification;
 using Skuld.Services.Messaging.Extensions;

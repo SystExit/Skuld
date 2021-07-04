@@ -16,7 +16,7 @@ namespace Skuld.API
 		/// <param name="id">Guild Id</param>
 		/// <returns><see cref="EventResult{T}"/> wrapped <see cref="Guild"/></returns>
 		[Get("/guild/{id}")]
-		public Task<EventResult<Guild>> GetGuildAsync([Path] ulong id);
+		public Task<EventResult> GetGuildAsync([Path] ulong id);
 		#endregion Guild
 
 		#region User
@@ -26,7 +26,7 @@ namespace Skuld.API
 		/// <param name="id">User Id</param>
 		/// <returns><see cref="EventResult{T}"/> wrapped <see cref="User"/></returns>
 		[Get("/user/{id}")]
-		public Task<EventResult<User>> GetUserAsync([Path] ulong id);
+		public Task<EventResult> GetUserAsync([Path] ulong id);
 		#endregion User
 
 		#region Experience
@@ -37,7 +37,7 @@ namespace Skuld.API
 		/// <param name="page">%10 offset page</param>
 		/// <returns><see cref="EventResult{T}"/> wrapped <see cref="UserExperience"/></returns>
 		[Get("/experience/{guildId}/{page}")]
-		public Task<EventResult<UserExperience>> GetExperienceLeaderboardAsync([Path] ulong guildId, [Path] int page = 0);
+		public Task<EventResult> GetExperienceLeaderboardAsync([Path] ulong guildId, [Path] int page = 0);
 		#endregion Experience
 
 		#region Money
@@ -48,7 +48,7 @@ namespace Skuld.API
 		/// <param name="page">%10 offset page</param>
 		/// <returns><see cref="EventResult{T}"/> wrapped <see cref="User"/></returns>
 		[Get("/money/{guildId}/{page}")]
-		public Task<EventResult<User>> GetMoneyLeaderboardAsync([Path] ulong guildId, [Path] int page = 0);
+		public Task<EventResult> GetMoneyLeaderboardAsync([Path] ulong guildId, [Path] int page = 0);
 		#endregion Money
 
 		#region Profile

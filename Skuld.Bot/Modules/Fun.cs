@@ -42,7 +42,7 @@ using System.Threading.Tasks;
 using TimeZoneConverter;
 using WenceyWang.FIGlet;
 
-namespace Skuld.Bot.Commands
+namespace Skuld.Bot.Modules
 {
 	[Group, Name("Fun"), RequireEnabledModule]
 	[Remarks("🕹 Entertainment commands")]
@@ -245,7 +245,7 @@ namespace Skuld.Bot.Commands
 
 				EmbedBuilder builder = new();
 
-				builder.AddAuthor(Context.Client);
+				builder.AddAuthor();
 				builder.AddFooter(Context);
 
 				StringBuilder message = new();
@@ -505,7 +505,7 @@ namespace Skuld.Bot.Commands
 				{
 					await
 						new EmbedBuilder()
-							.AddAuthor(Context.Client)
+							.AddAuthor()
 							.AddFooter(Context)
 							.WithDescription($"I choose: **{choice}**")
 							.WithThumbnailUrl("https://cdn.discordapp.com/emojis/350673785923567616.png")
@@ -609,289 +609,42 @@ namespace Skuld.Bot.Commands
 				case "new":
 				case "+":
 				case "create":
-					{
-						switch (title.ToLowerInvariant())
-						{
-							case "list":
-							case "help":
-								{
-									await EmbedExtensions.FromError($"Cannot create a Pasta with the name: {title}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-									DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-								}
-								break;
-
-							default:
-								{
-									if (pasta is not null)
-									{
-										await EmbedExtensions.FromError($"Pasta already exists with name: **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-										DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-									}
-									else
-									{
-										if (Context.Message.Attachments.Any())
-										{
-											foreach (var att in Context.Message.Attachments)
-											{
-												content += $"\n{att.Url}";
-											}
-										}
-
-										Database.Pastas.Add(new Pasta
-										{
-											OwnerId = Context.User.Id,
-											Name = title,
-											Content = content,
-											Created = DateTime.UtcNow.ToEpoch()
-										});
-
-										await Database.SaveChangesAsync().ConfigureAwait(false);
-
-										if (Database.Pastas.FirstOrDefault(x => x.Name.IsSameUpperedInvariant(title)) is not null)
-										{
-											await EmbedExtensions.FromSuccess($"Added: **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-										}
-									}
-								}
-								break;
-						}
-					}
+					await PastaAddAsync(pasta, title, content);
 					break;
 
 				case "edit":
 				case "change":
 				case "modify":
-					{
-						if (pasta is not null)
-						{
-							if (pasta.IsOwner(user))
-							{
-								content = content.Replace("\'", "\\\'");
-								content = content.Replace("\"", "\\\"");
-
-								pasta.Content = content;
-
-								await Database.SaveChangesAsync().ConfigureAwait(false);
-
-								await EmbedExtensions.FromSuccess($"Changed the content of **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-							}
-							else
-							{
-								DogStatsd.Increment("commands.errors", 1, 1, new string[] { "unm-precon" });
-								await EmbedExtensions.FromError("I'm sorry, but you don't own the Pasta", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-							}
-						}
-						else
-						{
-							DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-							await $"Whoops, `{title}` doesn't exist".QueueMessageAsync(Context).ConfigureAwait(false);
-						}
-					}
+					await PastaEditAsync(pasta, user, title, content);
 					break;
 
 				case "who":
 				case "?":
-					{
-						if (pasta is not null)
-						{
-							var embed = new EmbedBuilder
-							{
-								Color = EmbedExtensions.RandomEmbedColor(),
-								Title = pasta.Name
-							};
-
-							var usr = Context.Client.GetUser(pasta.OwnerId);
-
-							if (usr is not null)
-							{
-								embed.AddField("Creator", usr.Mention, inline: true);
-							}
-							else
-							{
-								embed.AddField("Creator", $"Unknown User ({pasta.OwnerId})");
-							}
-
-							embed.AddField("Created", pasta.Created.FromEpoch().ToString(new CultureInfo((await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false)).Language)), inline: true);
-							embed.AddField("UpVotes", ":arrow_double_up: " + Database.PastaVotes.ToList().Count(x => x.PastaId == pasta.Id && x.Upvote));
-							embed.AddField("DownVotes", ":arrow_double_down: " + Database.PastaVotes.ToList().Count(x => x.PastaId == pasta.Id && !x.Upvote));
-
-							await embed.QueueMessageAsync(Context).ConfigureAwait(false);
-						}
-						else
-						{
-							DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-							await EmbedExtensions.FromError($"Pasta `{title}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-						}
-					}
+					await PastaInfoAsync(pasta, title);
 					break;
 
 				case "upvote":
-					{
-						if (pasta is not null)
-						{
-							var successful = await PastaManager.AddUpvoteAsync(pasta, user);
-
-							if (successful)
-							{
-								await EmbedExtensions.FromSuccess("Pasta Kitchen", "Successfully casted your vote", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-							}
-							else
-							{
-								await EmbedExtensions.FromError("Pasta Kitchen", $"You have already voted for \"{pasta.Name}\"", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-							}
-						}
-						else
-						{
-							DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-							await EmbedExtensions.FromError($"Pasta `{title}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-						}
-					}
+					await PastaUpvoteAsync(pasta, user, title);
 					break;
 
 				case "downvote":
-					{
-						if (pasta is not null)
-						{
-							var successful = await PastaManager.AddDownvoteAsync(pasta, user);
-
-							if (successful)
-							{
-								await EmbedExtensions.FromSuccess("Pasta Kitchen", "Successfully casted your vote", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-							}
-							else
-							{
-								await EmbedExtensions.FromError("Pasta Kitchen", $"You have already voted for \"{pasta.Name}\"", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-							}
-						}
-						else
-						{
-							DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-							await EmbedExtensions.FromError($"Pasta `{title}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-						}
-					}
+					await PastaDownvoteAsync(pasta, user, title);
 					break;
 
 				case "delete":
-					{
-						if (pasta is not null)
-						{
-							var successful = await PastaManager.DeletePastaAsync(pasta, user);
-
-							if (successful)
-							{
-								await EmbedExtensions.FromSuccess($"Successfully deleted: **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-							}
-							else
-							{
-								await EmbedExtensions.FromError($"Couldn't delete this pasta, are you sure you own it?", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-							}
-						}
-						else
-						{
-							DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
-							await EmbedExtensions.FromError($"Pasta `{title}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-						}
-					}
+					await PastaDeleteAsync(pasta, user, title);
 					break;
 
 				case "list":
-					{
-						var pastas = PastaManager.GetPastas();
-						if (pastas.Any())
-						{
-							string pastaNames = string.Join(", ", pastas.Select(p => p.Name));
-
-							StringBuilder sb = new("I found:\n```\n");
-							sb.AppendLine(pastaNames);
-							sb.AppendLine("```");
-
-							string pastaMessage = sb.ToString();
-
-							if (pastaMessage.Length < 2000)
-							{
-								await pastaMessage.QueueMessageAsync(Context).ConfigureAwait(false);
-							}
-							else
-							{
-								var stream = pastaNames.ToStream();
-
-								await $"Here's a list".QueueMessageAsync(Context, fileStream: stream, fileName: "pastas.txt").ConfigureAwait(false);
-							}
-						}
-						else
-						{
-							await EmbedExtensions.FromError("No pastas exist", Context).QueueMessageAsync(Context).ConfigureAwait(false);
-						}
-					}
+					await PastaListAsync();
 					break;
 
 				case "help":
-					{
-						await (await SkuldApp.CommandService.GetCommandHelpAsync(Context, "pasta", prefix).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
-					}
+					await PastaHelpAsync(prefix);
 					break;
 
 				case "search":
-					{
-						var names = Database.Pastas.ToList().Select(x => x.Name).ToList();
-
-						Dictionary<string, int> orderedPastas = new();
-
-						names.ForEach(x =>
-						{
-							var confidence = FuzzyString.ComparisonMetrics.LevenshteinDistance(title, x);
-							orderedPastas.Add(x, confidence);
-						});
-
-						var searchResults = orderedPastas.OrderByDescending(x => x.Value);
-
-						if (searchResults.Any())
-						{
-							StringBuilder pastas = new();
-
-							foreach (var entry in searchResults)
-							{
-								var p = Database.Pastas.FirstOrDefault(x => x.Name == entry.Key);
-
-								pastas.Append(p.Name);
-
-								if (p.Name != searchResults.LastOrDefault().Key)
-								{
-									pastas.Append(", ");
-								}
-							}
-
-							if (pastas.Length >= 900)
-							{
-								var stream = pastas.ToString().ToStream();
-
-								stream.Position = 0;
-
-								await "Here's all that are related to the search term: \"{title}\"".QueueMessageAsync(Context, true, fileStream: stream, fileName: "pastas.txt");
-							}
-							else
-							{
-								StringBuilder response = new('`');
-
-								response.Append(pastas);
-
-								response.Append('`');
-
-								await
-									EmbedExtensions.FromMessage("Pasta Kitchen", $"Here's all that are related to the search term: \"{title}\"\n{response}", Context)
-									.QueueMessageAsync(Context)
-									.ConfigureAwait(false);
-							}
-						}
-						else
-						{
-							await
-								EmbedExtensions.FromError("Pasta Kitchen", "You have no pastas", Context)
-								.QueueMessageAsync(Context)
-							.ConfigureAwait(false);
-						}
-
-					}
+					await PastaSearchAsync(title);
 					break;
 
 				default:
@@ -950,6 +703,282 @@ namespace Skuld.Bot.Commands
 					break;
 			}
 		}
+
+		#region Pasta Methods
+		internal async Task PastaSearchAsync(string title)
+		{
+			using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+			var names = Database.Pastas.ToList().Select(x => x.Name).ToList();
+
+			Dictionary<string, int> orderedPastas = new();
+
+			names.ForEach(x =>
+			{
+				var confidence = FuzzyString.ComparisonMetrics.LevenshteinDistance(title, x);
+				orderedPastas.Add(x, confidence);
+			});
+
+			var searchResults = orderedPastas.OrderByDescending(x => x.Value);
+
+			if (searchResults.Any())
+			{
+				StringBuilder pastas = new();
+
+				foreach (var entry in searchResults)
+				{
+					var p = Database.Pastas.FirstOrDefault(x => x.Name == entry.Key);
+
+					pastas.Append(p.Name);
+
+					if (p.Name != searchResults.LastOrDefault().Key)
+					{
+						pastas.Append(",\n");
+					}
+				}
+
+				if (pastas.Length >= 900)
+				{
+					var stream = pastas.ToString().ToStream();
+
+					stream.Position = 0;
+
+					await "Here's all that are related to the search term: \"{title}\"".QueueMessageAsync(Context, true, fileStream: stream, fileName: "pastas.txt");
+				}
+				else
+				{
+					StringBuilder response = new('`');
+
+					response.Append(pastas);
+
+					response.Append('`');
+
+					await
+						EmbedExtensions.FromMessage("Pasta Kitchen", $"Here's all that are related to the search term: \"{title}\"\n{response}", Context)
+						.QueueMessageAsync(Context)
+						.ConfigureAwait(false);
+				}
+			}
+			else
+			{
+				await
+					EmbedExtensions.FromError("Pasta Kitchen", "You have no pastas", Context)
+					.QueueMessageAsync(Context)
+				.ConfigureAwait(false);
+			}
+
+		}
+		internal async Task PastaHelpAsync(string prefix)
+		{
+			await (await SkuldApp.CommandService.GetCommandHelpAsync(Context, "pasta", prefix).ConfigureAwait(false)).QueueMessageAsync(Context).ConfigureAwait(false);
+		}
+		internal async Task PastaListAsync()
+		{
+			var pastas = PastaManager.GetPastas();
+			if (pastas.Any())
+			{
+				string pastaNames = string.Join(",\n", pastas.Select(p => p.Name));
+
+				StringBuilder sb = new("I found:\n```\n");
+				sb.AppendLine(pastaNames);
+				sb.AppendLine("```");
+
+				string pastaMessage = sb.ToString();
+
+				if (pastaMessage.Length < 2000)
+				{
+					await pastaMessage.QueueMessageAsync(Context).ConfigureAwait(false);
+				}
+				else
+				{
+					var stream = pastaNames.ToStream();
+
+					await $"Here's a list".QueueMessageAsync(Context, fileStream: stream, fileName: "pastas.txt").ConfigureAwait(false);
+				}
+			}
+			else
+			{
+				await EmbedExtensions.FromError("No pastas exist", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+			}
+		}
+		internal async Task PastaDeleteAsync(Pasta pasta, User user, string title)
+		{
+			if (pasta is not null)
+			{
+				var successful = await PastaManager.DeletePastaAsync(pasta, user);
+
+				if (successful)
+				{
+					await EmbedExtensions.FromSuccess($"Successfully deleted: **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+				}
+				else
+				{
+					await EmbedExtensions.FromError($"Couldn't delete this pasta, are you sure you own it?", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+				}
+			}
+			else
+			{
+				DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+				await EmbedExtensions.FromError($"Pasta `{title}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+			}
+		}
+		internal async Task PastaDownvoteAsync(Pasta pasta, User user, string title)
+		{
+			if (pasta is not null)
+			{
+				var successful = await PastaManager.AddDownvoteAsync(pasta, user);
+
+				if (successful)
+				{
+					await EmbedExtensions.FromSuccess("Pasta Kitchen", "Successfully casted your vote", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+				}
+				else
+				{
+					await EmbedExtensions.FromError("Pasta Kitchen", $"You have already voted for \"{pasta.Name}\"", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+				}
+			}
+			else
+			{
+				DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+				await EmbedExtensions.FromError($"Pasta `{title}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+			}
+		}
+		internal async Task PastaUpvoteAsync(Pasta pasta, User user, string title)
+		{
+			if (pasta is not null)
+			{
+				var successful = await PastaManager.AddUpvoteAsync(pasta, user);
+
+				if (successful)
+				{
+					await EmbedExtensions.FromSuccess("Pasta Kitchen", "Successfully casted your vote", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+				}
+				else
+				{
+					await EmbedExtensions.FromError("Pasta Kitchen", $"You have already voted for \"{pasta.Name}\"", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+				}
+			}
+			else
+			{
+				DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+				await EmbedExtensions.FromError($"Pasta `{title}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+			}
+		}
+		internal async Task PastaInfoAsync(Pasta pasta, string title)
+		{
+			using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+			if (pasta is not null)
+			{
+				var embed = new EmbedBuilder
+				{
+					Color = EmbedExtensions.RandomEmbedColor(),
+					Title = pasta.Name
+				};
+
+				var usr = Context.Client.GetUser(pasta.OwnerId);
+
+				if (usr is not null)
+				{
+					embed.AddField("Creator", usr.Mention, inline: true);
+				}
+				else
+				{
+					embed.AddField("Creator", $"Unknown User ({pasta.OwnerId})");
+				}
+
+				embed.AddField("Created", pasta.Created.FromEpoch().ToString(new CultureInfo((await Database.InsertOrGetUserAsync(Context.User).ConfigureAwait(false)).Language)), inline: true);
+				embed.AddField("UpVotes", ":arrow_double_up: " + Database.PastaVotes.ToList().Count(x => x.PastaId == pasta.Id && x.Upvote));
+				embed.AddField("DownVotes", ":arrow_double_down: " + Database.PastaVotes.ToList().Count(x => x.PastaId == pasta.Id && !x.Upvote));
+
+				await embed.QueueMessageAsync(Context).ConfigureAwait(false);
+			}
+			else
+			{
+				DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+				await EmbedExtensions.FromError($"Pasta `{title}` doesn't exist. :/ Sorry.", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+			}
+		}
+		internal async Task PastaEditAsync(Pasta pasta, User user, string title, string content)
+		{
+			using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+			if (pasta is not null)
+			{
+				if (pasta.IsOwner(user))
+				{
+					content = content.Replace("\'", "\\\'");
+					content = content.Replace("\"", "\\\"");
+
+					pasta.Content = content;
+
+					await Database.SaveChangesAsync().ConfigureAwait(false);
+
+					await EmbedExtensions.FromSuccess($"Changed the content of **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+				}
+				else
+				{
+					DogStatsd.Increment("commands.errors", 1, 1, new string[] { "unm-precon" });
+					await EmbedExtensions.FromError("I'm sorry, but you don't own the Pasta", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+				}
+			}
+			else
+			{
+				DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+				await $"Whoops, `{title}` doesn't exist".QueueMessageAsync(Context).ConfigureAwait(false);
+			}
+		}
+		internal async Task PastaAddAsync(Pasta pasta, string title, string content)
+		{
+			using var Database = new SkuldDbContextFactory().CreateDbContext();
+
+			switch (title.ToLowerInvariant())
+			{
+				case "list":
+				case "help":
+					{
+						await EmbedExtensions.FromError($"Cannot create a Pasta with the name: {title}", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+						DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+					}
+					break;
+
+				default:
+					{
+						if (pasta is not null)
+						{
+							await EmbedExtensions.FromError($"Pasta already exists with name: **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+							DogStatsd.Increment("commands.errors", 1, 1, new string[] { "generic" });
+						}
+						else
+						{
+							if (Context.Message.Attachments.Any())
+							{
+								foreach (var att in Context.Message.Attachments)
+								{
+									content += $"\n{att.Url}";
+								}
+							}
+
+							Database.Pastas.Add(new Pasta
+							{
+								OwnerId = Context.User.Id,
+								Name = title,
+								Content = content,
+								Created = DateTime.UtcNow.ToEpoch()
+							});
+
+							await Database.SaveChangesAsync().ConfigureAwait(false);
+
+							if (Database.Pastas.AsNoTracking().AsEnumerable().FirstOrDefault(x => x.Name.IsSameUpperedInvariant(title)) is not null)
+							{
+								await EmbedExtensions.FromSuccess($"Added: **{title}**", Context).QueueMessageAsync(Context).ConfigureAwait(false);
+							}
+						}
+					}
+					break;
+			}
+		}
+		#endregion
 
 		[Command("pasta give"), Summary("Give someone your pasta"), RequireDatabase]
 		[Usage("give naenae <@0>")]

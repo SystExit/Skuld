@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Miki.API.Images;
 using Skuld.Bot.Discord.Attributes;
 using Skuld.Bot.Discord.Preconditions;
+using Skuld.Bot.Extensions;
 using Skuld.Core;
 using Skuld.Core.Extensions;
 using Skuld.Core.Utilities;
@@ -22,7 +23,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Weeb.net;
 
-namespace Skuld.Bot.Commands
+namespace Skuld.Bot.Modules
 {
 	[
 		Group,

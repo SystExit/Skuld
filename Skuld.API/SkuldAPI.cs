@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json;
 using RestEase;
 using Skuld.Core.Models;
-using Skuld.Models;
 using System;
 using System.IO;
 using System.Net.Http;
@@ -56,10 +55,10 @@ namespace Skuld.API
 			}.For<ISkuldAPIClient>();
 		}
 
-		public Task<EventResult<Guild>> GetGuildAsync(ulong id)
+		public Task<EventResult> GetGuildAsync(ulong id)
 			=> !string.IsNullOrWhiteSpace(Token) ? _api.GetGuildAsync(id) : null;
 
-		public Task<EventResult<User>> GetUserAsync(ulong id)
+		public Task<EventResult> GetUserAsync(ulong id)
 			=> !string.IsNullOrWhiteSpace(Token) ? _api.GetUserAsync(id) : null;
 
 		public Task<Stream> GetProfileCardAsync(ulong id)
@@ -74,10 +73,10 @@ namespace Skuld.API
 		public Task<Stream> GetExampleProfileCardAsync(ulong id, string previewBackground)
 			=> !string.IsNullOrWhiteSpace(Token) ? _api.GetExampleProfileCardAsync(id, previewBackground) : null;
 
-		public Task<EventResult<UserExperience>> GetExperienceLeaderboardAsync(ulong guildId, int page = 0)
+		public Task<EventResult> GetExperienceLeaderboardAsync(ulong guildId, int page = 0)
 			=> !string.IsNullOrWhiteSpace(Token) ? _api.GetExperienceLeaderboardAsync(guildId, page) : null;
 
-		public Task<EventResult<User>> GetMoneyLeaderboardAsync(ulong guildId, int page = 0)
+		public Task<EventResult> GetMoneyLeaderboardAsync(ulong guildId, int page = 0)
 			=> !string.IsNullOrWhiteSpace(Token) ? _api.GetMoneyLeaderboardAsync(guildId, page) : null;
 
 		public Task<Stream> GetLiquidRescaledAsync(string image)

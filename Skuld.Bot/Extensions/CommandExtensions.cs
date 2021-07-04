@@ -35,7 +35,7 @@ namespace Skuld.Bot.Extensions
 				new EmbedBuilder()
 					.AddFooter(context)
 					.WithTitle(guild.Name)
-					.AddAuthor(context.Client)
+					.AddAuthor()
 					.WithColor(EmbedExtensions.RandomEmbedColor())
 					.AddInlineField("Users", $"Users: {humanusers.ToFormattedString()}\nBots: {botusers.ToFormattedString()}\nRatio: {ratio}%")
 					.AddInlineField("Shard", client?.GetShardIdFor(guild))

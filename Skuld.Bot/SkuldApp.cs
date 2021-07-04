@@ -18,9 +18,11 @@ using Skuld.Bot.Discord.Models;
 using Skuld.Bot.Discord.TypeReaders;
 using Skuld.Core;
 using Skuld.Core.Extensions.Verification;
+using Skuld.Core.Helpers;
 using Skuld.Core.Models;
 using Skuld.Core.Utilities;
 using Skuld.Models;
+using Skuld.Services;
 using Skuld.Services.Bot.Discord;
 using Skuld.Services.Globalization;
 using Skuld.Services.Reminders;
@@ -32,6 +34,7 @@ using StatsdClient;
 using SysEx.Net;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -39,6 +42,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Tweetinvi;
 using TwitchLib.Api;
 using TwitchLib.Api.Core;
 using TwitchLib.Api.Interfaces;
@@ -57,6 +61,8 @@ namespace Skuld.Bot
 		public static WebSocketService WebSocket;
 		internal static SkuldConfig Configuration;
 		static ICachetClient cachetClient;
+		static List<IBackgroundService> BackgroundServices = new();
+		public static ISelfUser CurrentUser => DiscordClient.CurrentUser ?? DiscordClient.Shards?.FirstOrDefault(s => s.CurrentUser != null)?.CurrentUser ?? null;
 
 		public static async Task Main(string[] args = null)
 		{
@@ -103,7 +109,7 @@ namespace Skuld.Bot
 					await database.SaveChangesAsync().ConfigureAwait(false);
 					Log.Verbose(Key, $"Created new configuration with Id: {conf.Id}", null);
 
-					Log.Info(Key, $"Please fill out the configuration information in the database matching the Id \"{database.Configurations.LastOrDefault().Id}\"");
+					Log.Info(Key, $"Please fill out the configuration information in the database matching the Id \"{(await database.Configurations.AsAsyncEnumerable().LastOrDefaultAsync()).Id}\"");
 					Console.ReadKey();
 					Environment.Exit(0);
 				}
@@ -121,6 +127,12 @@ namespace Skuld.Bot
 				Log.Critical(Key, ex.Message, null, ex);
 			}
 
+			if (Configuration is null)
+			{
+				Log.Critical(Key, "Couldn't create/get a configuration, exiting", null);
+				return;
+			}
+
 			if (Configuration.DiscordToken.IsNullOrWhiteSpace())
 			{
 				Log.Critical(Key, "You haven't provided a discord token, exiting", null);
@@ -133,7 +145,7 @@ namespace Skuld.Bot
 				{
 					MessageCacheSize = 100,
 					DefaultRetryMode = RetryMode.AlwaysRetry,
-					LogLevel = LogSeverity.Verbose,
+					LogLevel = LogSeverity.Debug,
 					GatewayIntents = GatewayIntents.Guilds |
 						GatewayIntents.GuildMembers |
 						GatewayIntents.GuildBans |
@@ -146,12 +158,13 @@ namespace Skuld.Bot
 						GatewayIntents.GuildMessageReactions |
 						GatewayIntents.DirectMessages |
 						GatewayIntents.DirectMessageReactions
+					AlwaysDownloadUsers = true,
 				},
 				new CommandServiceConfig
 				{
 					CaseSensitiveCommands = false,
 					DefaultRunMode = RunMode.Async,
-					LogLevel = LogSeverity.Verbose,
+					LogLevel = LogSeverity.Debug,
 					IgnoreExtraArgs = true
 				},
 				new MessageServiceConfig
@@ -213,16 +226,23 @@ namespace Skuld.Bot
 
 			MessageServiceConfig = msgConfig;
 
-			DiscordClient = new DiscordShardedClient();
+			try
+			{
+				DiscordClient = new DiscordShardedClient(config);
 
-			await DiscordClient.LoginAsync(TokenType.Bot, Configuration.DiscordToken);
+				await DiscordClient.LoginAsync(TokenType.Bot, Configuration.DiscordToken);
 
-			var recommendedShards = await DiscordClient.GetRecommendedShardCountAsync();
-			Log.Verbose(Key, $"Discord recommends using: {recommendedShards}, using that", null);
+				var recommendedShards = await DiscordClient.GetRecommendedShardCountAsync();
+				Log.Verbose(Key, $"Discord recommends using: {recommendedShards}, using that", null);
 
-			config.TotalShards = recommendedShards;
+				config.TotalShards = recommendedShards;
 
-			await DiscordClient.LogoutAsync();
+				DiscordClient.Dispose();
+			}
+			catch (Exception ex)
+			{
+				Log.Error(Key, "Couldn't grab recommended shards", null, ex);
+			}
 
 			DiscordClient = new DiscordShardedClient(config);
 
@@ -260,17 +280,29 @@ namespace Skuld.Bot
 			await DiscordClient.LoginAsync(TokenType.Bot, Configuration.DiscordToken).ConfigureAwait(false);
 
 			await DiscordClient.StartAsync().ConfigureAwait(false);
+
+			foreach (var backgroundService in BackgroundServices)
+			{
+				backgroundService.Start();
+			}
 		}
 
 		public static async Task StopBotAsync(string source)
 		{
+			Log.Info(source, "Skuld is shutting down");
+
+			foreach (var backgroundService in BackgroundServices)
+			{
+				backgroundService.Stop();
+				backgroundService.Dispose();
+			}
+
 			BotEvents.UnRegisterEvents();
 
 			await DiscordClient.SetStatusAsync(UserStatus.Offline).ConfigureAwait(false);
 			await DiscordClient.StopAsync().ConfigureAwait(false);
 			await DiscordClient.LogoutAsync().ConfigureAwait(false);
 
-			Log.Info(source, "Skuld is shutting down");
 			DogStatsd.Event("FrameWork", $"Bot Stopped", alertType: "info", hostname: "Skuld");
 
 			Log.FlushNewLine();
@@ -282,7 +314,7 @@ namespace Skuld.Bot
 
 		#region Services
 
-		internal static async Task<EventResult<IEnumerable<ModuleInfo>>> ConfigureCommandServiceAsync()
+		internal static async Task<EventResult> ConfigureCommandServiceAsync()
 		{
 			IEnumerable<ModuleInfo> modules = null;
 			try
@@ -309,11 +341,11 @@ namespace Skuld.Bot
 					)
 				.ConfigureAwait(false);
 
-				return EventResult<IEnumerable<ModuleInfo>>.FromSuccess(modules);
+				return EventResult.FromSuccess(modules);
 			}
 			catch (Exception ex)
 			{
-				return EventResult<IEnumerable<ModuleInfo>>.FromFailureException(modules, ex.Message, ex);
+				return EventResult.FromFailureException(modules, ex.Message, ex);
 			}
 		}
 
@@ -373,6 +405,7 @@ namespace Skuld.Bot
 						localServices.AddSingleton(new Stands4Client(Configuration.STANDSUid, Configuration.STANDSToken));
 					}
 				}
+
 				//Twitch
 				{
 					if (!string.IsNullOrEmpty(Configuration.TwitchClientID))
@@ -383,6 +416,21 @@ namespace Skuld.Bot
 								ClientId = Configuration.TwitchClientID,
 								AccessToken = Configuration.TwitchToken
 							})
+						);
+					}
+				}
+
+				//Twitter
+				{
+					if (!string.IsNullOrEmpty(Configuration.TwitterConKey))
+					{
+						localServices.AddSingleton<ITwitterClient>(
+							new TwitterClient(
+								Configuration.TwitterConKey, 
+								Configuration.TwitterConSec, 
+								Configuration.TwitterAccessTok,
+								Configuration.TwitterAccessSec
+							)
 						);
 					}
 				}
@@ -419,7 +467,10 @@ namespace Skuld.Bot
 					localServices.AddSingleton<ISkuldAPIClient>(new SkuldAPI());
 				}
 
-				localServices.AddSingleton(new InteractiveService(DiscordClient, TimeSpan.FromSeconds(60)));
+				localServices.AddSingleton(new InteractiveService(DiscordClient, new InteractiveServiceConfig
+				{
+					DefaultTimeout = TimeSpan.FromSeconds(60)	
+				}));
 
 				Services = localServices.BuildServiceProvider();
 
@@ -449,6 +500,58 @@ namespace Skuld.Bot
 			ConfigureStatsCollector();
 		}
 
+		public static void BackgroundTasks()
+		{
+			new Thread(
+				() =>
+				{
+					Thread.CurrentThread.IsBackground = true;
+					HandleDataDog();
+					Log.Verbose(Key, "Started DogstatsD", null);
+				}
+			).Start();
+
+			if (cachetClient is not null)
+			{
+				new Thread(
+					async () =>
+					{
+						Thread.CurrentThread.IsBackground = true;
+						await HandleCachet().ConfigureAwait(false);
+						Log.Verbose(Key, "Started Cachet", null);
+					}
+				).Start();
+			}
+
+			BackgroundServices.Add(new ReminderService(DiscordClient));
+
+			try
+			{
+				var twitterClient = Services.GetService<ITwitterClient>();
+				if (twitterClient is not null)
+				{
+					BackgroundServices.Add(new TwitterListener(DiscordClient, twitterClient));
+				}
+			}
+			catch (Exception ex)
+			{
+				Log.Warning(Key, "Twitter keys not provided, ignoring TwitterService", null, ex);
+			}
+
+			try
+			{
+				var twitchAPI = Services.GetService<ITwitchAPI>();
+				if (twitchAPI is not null)
+				{
+					BackgroundServices.Add(new TwitchListener(DiscordClient, twitchAPI));
+				}
+			}
+			catch (Exception ex)
+			{
+				Log.Warning(Key, "Twitch keys not provided, ignoring TwitterService", null, ex);
+			}
+		}
+
 		#endregion Services
 
 		#region Statistics
@@ -465,7 +568,7 @@ namespace Skuld.Bot
 			});
 		}
 
-		private static async Task HandleDataDog()
+		private static void HandleDataDog()
 		{
 			while (true)
 			{
@@ -586,56 +689,6 @@ namespace Skuld.Bot
 					Log.Error(Key, ex.Message, null, ex);
 				}
 				Thread.Sleep(TimeSpan.FromMinutes(1));
-			}
-		}
-
-		public static void BackgroundTasks()
-		{
-			new Thread(
-				async () =>
-				{
-					Thread.CurrentThread.IsBackground = true;
-					await HandleDataDog().ConfigureAwait(false);
-					Log.Verbose(Key, "Started DogstatsD", null);
-				}
-			).Start();
-
-			if (cachetClient is not null)
-			{
-				new Thread(
-					async () =>
-					{
-						Thread.CurrentThread.IsBackground = true;
-						await HandleCachet().ConfigureAwait(false);
-						Log.Verbose(Key, "Started Cachet", null);
-					}
-				).Start();
-			}
-
-			new Thread(
-				() =>
-				{
-					Thread.CurrentThread.IsBackground = true;
-					ReminderService.Configure(DiscordClient);
-					ReminderService.Run();
-					Log.Verbose(Key, "Started Reminders", null);
-				}
-			).Start();
-
-			TwitterListener.Configure(DiscordClient);
-
-			TwitterListener.Run();
-			Log.Verbose(Key, "Started Twitter", null);
-
-			{
-				var twitchAPI = Services.GetService<ITwitchAPI>();
-				if (twitchAPI is not null)
-				{
-					TwitchListener.Configure(DiscordClient);
-
-					TwitchListener.Run(twitchAPI);
-					Log.Verbose(Key, "Started Twitch", null);
-				}
 			}
 		}
 

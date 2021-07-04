@@ -88,7 +88,7 @@ namespace Skuld.APIS
 		{
 			try
 			{
-				var items = await Youtube.Search.GetVideosAsync(query, 0, 1);
+				var items = await Youtube.Search.GetVideosAsync(query).ToListAsync();
 
 				if (items.Count > 0)
 				{
